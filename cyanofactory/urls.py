@@ -10,14 +10,24 @@ from django.conf.urls.defaults import patterns, include, url
 from public.views import *
 
 # enable the admin:
-from django.contrib import admin
-admin.autodiscover()
+#from django.contrib import admin
+#admin.autodiscover()
+
+# cyanofactory project
+urlpatterns = patterns('cyano.views',
+    url(r'^cyano/', include("cyano.urls")),
+)
+
+# database crossreference resolver
+urlpatterns += patterns('db_xref.views',
+    url(r'dbxref/', include("db_xref.urls")),
+)
 
 # admin interface
-urlpatterns = patterns('',
-	url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
-	url(r'^admin/', include(admin.site.urls)),
-)
+#urlpatterns = patterns('',
+#	url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
+#	url(r'^admin/', include(admin.site.urls)),
+#)
 
 # authentication
 urlpatterns += patterns('public.views',

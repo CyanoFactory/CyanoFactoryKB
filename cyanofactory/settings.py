@@ -8,7 +8,7 @@ Last updated: 2012-07-17
 
 import os
 
-ROOT_URL = 'http://wholecellkb.stanford.edu'
+ROOT_URL = 'http://localhost:8000'
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 DEBUG = True
@@ -22,12 +22,12 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'wholecellkb',
-        'USER': 'wholecellkb',
-        'PASSWORD': 'wholecellkb',
-        'HOST': 'covertlab.stanford.edu',
-        'PORT': '',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'cyano',
+        'USER': 'cyano',
+        'PASSWORD': 'cyano',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -71,7 +71,7 @@ STATIC_ROOT = ''
 
 # URL prefix for static files.
 # Example: "http://media.lawrence.com/static/"
-STATIC_URL = ROOT_URL + '/static/'
+STATIC_URL = '/static/'
 
 # Additional locations of static files, use absolute paths
 STATICFILES_DIRS = (
@@ -111,7 +111,6 @@ TEMPLATE_DIRS = (
 	ROOT_DIR + "/templates",
 )
 
-import os
 HAYSTACK_SITECONF = 'public.search_indexes'
 HAYSTACK_SEARCH_ENGINE  = 'xapian'
 HAYSTACK_XAPIAN_PATH = os.path.join(os.path.dirname(__file__), 'xapian_index')
@@ -129,6 +128,9 @@ INSTALLED_APPS = (
 	
 	#apps
 	'public',
+    'biosql',
+    'cyano',
+    'db_xref',
 	
 	#helpers
 	'haystack',
@@ -154,6 +156,13 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': True,
         },
+    }
+}
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
+        'LOCATION': 'E:/Programmierung/warehouse/cache',
     }
 }
 

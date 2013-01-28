@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="{{ LANGUAGE_CODE|default:"en-us" }}" xml:lang="{{ LANGUAGE_CODE|default:"en-us" }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>
+<head>
+	<title>db_xref</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta http-equiv="Content-Language" content="en-us" />
+	<meta http-equiv="Cache-Control" content="NO-CACHE" />
+	<meta http-equiv="Pragma" content="NO-CACHE" />
+</head>
+<body>
+<h1>db_xref Webservice</h1>
+<p>
+{% url db_xref.views.dbxref db value as sample_url %}
+This Webservice resolves Genbank db_xref items (e.g. <a href="{{ sample_url }}">{{ item }}</a> into URLs)
+</p>
+<h2>
+Usage:</h2>
+<p>
+Pass the db_xref value as a path to the URL. Default action is a <i>redirect</i> to the corresponding website.</p>
+<p>
+This can be altered by passing a format (GET, <tt>?format=</tt>):<br />
+Supported formats: 
+{% for format in formats %}
+<a href="{{ sample_url }}?format={{ format }}">{{ format }}</a>{% if not forloop.last %}, {% endif %}
+{% endfor %}
+</p>
+
+<p>
+Note that not all databases are supported yet. 
+</p>
+<p>
+<small>
+&copy; 2013 Gabriel Kind, Contact: <a href="mailto:gkind[at]hs-mittweida.de">gkind[at]hs-mittweida.de</a>
+</small>
+</p>
+</body>
+</html>
