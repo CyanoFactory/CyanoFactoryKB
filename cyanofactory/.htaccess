@@ -1,0 +1,4 @@
+AuthType none
+Satisfy Any
+Order Deny,Allow
+Allow from All

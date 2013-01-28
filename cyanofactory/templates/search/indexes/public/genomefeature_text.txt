@@ -1,0 +1,14 @@
+{{ object.id }}
+{{ object.model_type }}
+{{ object.wid }}
+{{ object.name }}
+{{ object.comments }}
+{{ object.created_user.username }}
+{{ object.created_user.get_full_name }}
+{{ object.created_date }}
+{{ object.last_updated_user.username }}
+{{ object.last_updated_user.get_full_name }}
+{{ object.last_updated_date }}
+{{ object.coordinate }}
+{{ object.length }}
+{{ object.direction }}

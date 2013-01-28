@@ -1,0 +1,437 @@
+{% load templatetags %}
+{{ object.id }}
+{{ object.wid }}
+{{ object.name }}
+{% for sub_object in object.synonyms.all %}
+	{{ sub_object.id }}
+	{{ sub_object.name }}
+{% endfor %}
+{% for sub_object in object.cross_references.all %}
+	{{ sub_object.id }}
+	{{ sub_object.xid }}
+	{% get_choice_verbose_name "public" "CrossReference" "source" sub_object.source %}
+{% endfor %}
+{% for sub_object in object.type.all %}
+	{{ sub_object.id }}
+	{{ sub_object.model_type }}
+	{{ sub_object.wid }}
+	{{ sub_object.name }}
+	{{ sub_object.comments }}
+	{% for sub_sub_object in sub_object.synonyms.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.name }}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.cross_references.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.xid }}
+		{% get_choice_verbose_name "public" "CrossReference" "source" sub_sub_object.source %}
+	{% endfor %}
+{% endfor %}
+{% for sub_object in object.biosynthesis.all %}
+	{{ sub_object.id }}
+	{{ sub_object.residue }}
+	{{ sub_object.coefficient }}
+	{% for sub_sub_object in sub_object.evidence.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{{ sub_sub_object.is_experimentally_constrained }}
+		{{ sub_sub_object.species }}
+		{{ sub_sub_object.media }}
+		{{ sub_sub_object.pH }}
+		{{ sub_sub_object.temperature }}
+		{{ sub_sub_object.comments }}
+	{% endfor %}
+{% endfor %}
+{% for sub_object in object.disulfide_bonds.all %}
+	{{ sub_object.id }}
+	{{ sub_object.residue_1 }}
+	{{ sub_object.residue_2 }}
+	{% for sub_sub_object in sub_object.evidence.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{{ sub_sub_object.is_experimentally_constrained }}
+		{{ sub_sub_object.species }}
+		{{ sub_sub_object.media }}
+		{{ sub_sub_object.pH }}
+		{{ sub_sub_object.temperature }}
+		{{ sub_sub_object.comments }}
+	{% endfor %}
+{% endfor %}
+{% for sub_object in object.prosthetic_groups.all %}
+	{{ sub_object.id }}
+	{{ sub_object.coefficient }}
+	{% for sub_sub_object in sub_object.evidence.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{{ sub_sub_object.is_experimentally_constrained }}
+		{{ sub_sub_object.species }}
+		{{ sub_sub_object.media }}
+		{{ sub_sub_object.pH }}
+		{{ sub_sub_object.temperature }}
+		{{ sub_sub_object.comments }}
+	{% endfor %}
+{% endfor %}
+{% with sub_object=object.dna_footprint %}
+	{{ sub_object.id }}
+	{{ sub_object.length }}
+	{% get_choice_verbose_name "public" "DNAFootprint" "binding" sub_object.binding %}
+	{% get_choice_verbose_name "public" "DNAFootprint" "region" sub_object.region %}
+	{% for sub_sub_object in sub_object.evidence.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{{ sub_sub_object.is_experimentally_constrained }}
+		{{ sub_sub_object.species }}
+		{{ sub_sub_object.media }}
+		{{ sub_sub_object.pH }}
+		{{ sub_sub_object.temperature }}
+		{{ sub_sub_object.comments }}
+	{% endfor %}
+{% endwith %}
+{% with sub_object=object.formation_process %}
+	{{ sub_object.id }}
+	{{ sub_object.model_type }}
+	{{ sub_object.wid }}
+	{{ sub_object.name }}
+	{{ sub_object.comments }}
+	{{ sub_object.initialization_order }}
+	{% for sub_sub_object in sub_object.synonyms.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.name }}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.cross_references.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.xid }}
+		{% get_choice_verbose_name "public" "CrossReference" "source" sub_sub_object.source %}
+	{% endfor %}
+{% endwith %}
+{% for sub_object in object.chaperones.all %}
+	{{ sub_object.id }}
+	{{ sub_object.model_type }}
+	{{ sub_object.wid }}
+	{{ sub_object.name }}
+	{{ sub_object.comments }}
+	{% with sub_sub_object=sub_object.dna_footprint %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.length }}
+		{% get_choice_verbose_name "public" "DNAFootprint" "binding" sub_sub_object.binding %}
+		{% get_choice_verbose_name "public" "DNAFootprint" "region" sub_sub_object.region %}
+		{% for sub_sub_sub_object in sub_sub_object.evidence.all %}
+			{{ sub_sub_sub_object.id }}
+			{{ sub_sub_sub_object.value }}
+			{{ sub_sub_sub_object.units }}
+			{{ sub_sub_sub_object.is_experimentally_constrained }}
+			{{ sub_sub_sub_object.species }}
+			{{ sub_sub_sub_object.media }}
+			{{ sub_sub_sub_object.pH }}
+			{{ sub_sub_sub_object.temperature }}
+			{{ sub_sub_sub_object.comments }}
+		{% endfor %}
+	{% endwith %}
+	{% with sub_sub_object=sub_object.regulatory_rule %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{% for sub_sub_sub_object in sub_sub_object.evidence.all %}
+			{{ sub_sub_sub_object.id }}
+			{{ sub_sub_sub_object.value }}
+			{{ sub_sub_sub_object.units }}
+			{{ sub_sub_sub_object.is_experimentally_constrained }}
+			{{ sub_sub_sub_object.species }}
+			{{ sub_sub_sub_object.media }}
+			{{ sub_sub_sub_object.pH }}
+			{{ sub_sub_sub_object.temperature }}
+			{{ sub_sub_sub_object.comments }}
+		{% endfor %}
+	{% endwith %}
+	{% for sub_sub_object in sub_object.synonyms.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.name }}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.cross_references.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.xid }}
+		{% get_choice_verbose_name "public" "CrossReference" "source" sub_sub_object.source %}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.prosthetic_groups.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.coefficient }}
+		{% for sub_sub_sub_object in sub_sub_object.evidence.all %}
+			{{ sub_sub_sub_object.id }}
+			{{ sub_sub_sub_object.value }}
+			{{ sub_sub_sub_object.units }}
+			{{ sub_sub_sub_object.is_experimentally_constrained }}
+			{{ sub_sub_sub_object.species }}
+			{{ sub_sub_sub_object.media }}
+			{{ sub_sub_sub_object.pH }}
+			{{ sub_sub_sub_object.temperature }}
+			{{ sub_sub_sub_object.comments }}
+		{% endfor %}
+	{% endfor %}
+{% endfor %}
+{% with sub_object=object.regulatory_rule %}
+	{{ sub_object.id }}
+	{{ sub_object.value }}
+	{{ sub_object.units }}
+	{% for sub_sub_object in sub_object.evidence.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{{ sub_sub_object.is_experimentally_constrained }}
+		{{ sub_sub_object.species }}
+		{{ sub_sub_object.media }}
+		{{ sub_sub_object.pH }}
+		{{ sub_sub_object.temperature }}
+		{{ sub_sub_object.comments }}
+	{% endfor %}
+{% endwith %}
+{{ object.comments }}
+{% for sub_object in object.references.all %}
+	{{ sub_object.id }}
+	{{ sub_object.model_type }}
+	{{ sub_object.wid }}
+	{{ sub_object.name }}
+	{{ sub_object.comments }}
+	{{ sub_object.authors }}
+	{{ sub_object.editors }}
+	{{ sub_object.year }}
+	{{ sub_object.title }}
+	{{ sub_object.publication }}
+	{{ sub_object.publisher }}
+	{{ sub_object.volume }}
+	{{ sub_object.issue }}
+	{{ sub_object.pages }}
+	{% for sub_sub_object in sub_object.synonyms.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.name }}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.cross_references.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.xid }}
+		{% get_choice_verbose_name "public" "CrossReference" "source" sub_sub_object.source %}
+	{% endfor %}
+{% endfor %}
+{% for sub_object in object.modification_reactions.all %}
+	{{ sub_object.id }}
+	{{ sub_object.position }}
+	{% for sub_sub_object in sub_object.evidence.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{{ sub_sub_object.is_experimentally_constrained }}
+		{{ sub_sub_object.species }}
+		{{ sub_sub_object.media }}
+		{{ sub_sub_object.pH }}
+		{{ sub_sub_object.temperature }}
+		{{ sub_sub_object.comments }}
+	{% endfor %}
+{% endfor %}
+{% for sub_object in object.protein_complex_biosythesis_participants.all %}
+	{{ sub_object.id }}
+	{{ sub_object.residue }}
+	{{ sub_object.coefficient }}
+	{% for sub_sub_object in sub_object.evidence.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{{ sub_sub_object.is_experimentally_constrained }}
+		{{ sub_sub_object.species }}
+		{{ sub_sub_object.media }}
+		{{ sub_sub_object.pH }}
+		{{ sub_sub_object.temperature }}
+		{{ sub_sub_object.comments }}
+	{% endfor %}
+{% endfor %}
+{% for sub_object in object.reaction_stoichiometry_participants.all %}
+	{{ sub_object.id }}
+	{{ sub_object.coefficient }}
+	{% for sub_sub_object in sub_object.evidence.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{{ sub_sub_object.is_experimentally_constrained }}
+		{{ sub_sub_object.species }}
+		{{ sub_sub_object.media }}
+		{{ sub_sub_object.pH }}
+		{{ sub_sub_object.temperature }}
+		{{ sub_sub_object.comments }}
+	{% endfor %}
+{% endfor %}
+{% for sub_object in object.enzyme_participants.all %}
+	{{ sub_object.id }}
+	{% for sub_sub_object in sub_object.evidence.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{{ sub_sub_object.is_experimentally_constrained }}
+		{{ sub_sub_object.species }}
+		{{ sub_sub_object.media }}
+		{{ sub_sub_object.pH }}
+		{{ sub_sub_object.temperature }}
+		{{ sub_sub_object.comments }}
+	{% endfor %}
+{% endfor %}
+{% for sub_object in object.transcriptional_regulations.all %}
+	{{ sub_object.id }}
+	{{ sub_object.model_type }}
+	{{ sub_object.wid }}
+	{{ sub_object.name }}
+	{{ sub_object.comments }}
+	{% with sub_sub_object=sub_object.binding_site %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.coordinate }}
+		{{ sub_sub_object.length }}
+		{% get_choice_verbose_name "public" "BindingSite" "direction" sub_sub_object.direction %}
+		{% for sub_sub_sub_object in sub_sub_object.evidence.all %}
+			{{ sub_sub_sub_object.id }}
+			{{ sub_sub_sub_object.value }}
+			{{ sub_sub_sub_object.units }}
+			{{ sub_sub_sub_object.is_experimentally_constrained }}
+			{{ sub_sub_sub_object.species }}
+			{{ sub_sub_sub_object.media }}
+			{{ sub_sub_sub_object.pH }}
+			{{ sub_sub_sub_object.temperature }}
+			{{ sub_sub_sub_object.comments }}
+		{% endfor %}
+	{% endwith %}
+	{% with sub_sub_object=sub_object.affinity %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{% for sub_sub_sub_object in sub_sub_object.evidence.all %}
+			{{ sub_sub_sub_object.id }}
+			{{ sub_sub_sub_object.value }}
+			{{ sub_sub_sub_object.units }}
+			{{ sub_sub_sub_object.is_experimentally_constrained }}
+			{{ sub_sub_sub_object.species }}
+			{{ sub_sub_sub_object.media }}
+			{{ sub_sub_sub_object.pH }}
+			{{ sub_sub_sub_object.temperature }}
+			{{ sub_sub_sub_object.comments }}
+		{% endfor %}
+	{% endwith %}
+	{% with sub_sub_object=sub_object.activity %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{% for sub_sub_sub_object in sub_sub_object.evidence.all %}
+			{{ sub_sub_sub_object.id }}
+			{{ sub_sub_sub_object.value }}
+			{{ sub_sub_sub_object.units }}
+			{{ sub_sub_sub_object.is_experimentally_constrained }}
+			{{ sub_sub_sub_object.species }}
+			{{ sub_sub_sub_object.media }}
+			{{ sub_sub_sub_object.pH }}
+			{{ sub_sub_sub_object.temperature }}
+			{{ sub_sub_sub_object.comments }}
+		{% endfor %}
+	{% endwith %}
+	{% for sub_sub_object in sub_object.synonyms.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.name }}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.cross_references.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.xid }}
+		{% get_choice_verbose_name "public" "CrossReference" "source" sub_sub_object.source %}
+	{% endfor %}
+{% endfor %}
+{% for sub_object in object.parameters.all %}
+	{{ sub_object.id }}
+	{{ sub_object.model_type }}
+	{{ sub_object.wid }}
+	{{ sub_object.name }}
+	{{ sub_object.comments }}
+	{% with sub_sub_object=sub_object.value %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{% for sub_sub_sub_object in sub_sub_object.evidence.all %}
+			{{ sub_sub_sub_object.id }}
+			{{ sub_sub_sub_object.value }}
+			{{ sub_sub_sub_object.units }}
+			{{ sub_sub_sub_object.is_experimentally_constrained }}
+			{{ sub_sub_sub_object.species }}
+			{{ sub_sub_sub_object.media }}
+			{{ sub_sub_sub_object.pH }}
+			{{ sub_sub_sub_object.temperature }}
+			{{ sub_sub_sub_object.comments }}
+		{% endfor %}
+	{% endwith %}
+	{% for sub_sub_object in sub_object.synonyms.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.name }}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.cross_references.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.xid }}
+		{% get_choice_verbose_name "public" "CrossReference" "source" sub_sub_object.source %}
+	{% endfor %}
+{% endfor %}
+{% for sub_object in object.chaperone_substrates.all %}
+	{{ sub_object.id }}
+	{{ sub_object.model_type }}
+	{{ sub_object.wid }}
+	{{ sub_object.name }}
+	{{ sub_object.comments }}
+	{% with sub_sub_object=sub_object.dna_footprint %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.length }}
+		{% get_choice_verbose_name "public" "DNAFootprint" "binding" sub_sub_object.binding %}
+		{% get_choice_verbose_name "public" "DNAFootprint" "region" sub_sub_object.region %}
+		{% for sub_sub_sub_object in sub_sub_object.evidence.all %}
+			{{ sub_sub_sub_object.id }}
+			{{ sub_sub_sub_object.value }}
+			{{ sub_sub_sub_object.units }}
+			{{ sub_sub_sub_object.is_experimentally_constrained }}
+			{{ sub_sub_sub_object.species }}
+			{{ sub_sub_sub_object.media }}
+			{{ sub_sub_sub_object.pH }}
+			{{ sub_sub_sub_object.temperature }}
+			{{ sub_sub_sub_object.comments }}
+		{% endfor %}
+	{% endwith %}
+	{% with sub_sub_object=sub_object.regulatory_rule %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.value }}
+		{{ sub_sub_object.units }}
+		{% for sub_sub_sub_object in sub_sub_object.evidence.all %}
+			{{ sub_sub_sub_object.id }}
+			{{ sub_sub_sub_object.value }}
+			{{ sub_sub_sub_object.units }}
+			{{ sub_sub_sub_object.is_experimentally_constrained }}
+			{{ sub_sub_sub_object.species }}
+			{{ sub_sub_sub_object.media }}
+			{{ sub_sub_sub_object.pH }}
+			{{ sub_sub_sub_object.temperature }}
+			{{ sub_sub_sub_object.comments }}
+		{% endfor %}
+	{% endwith %}
+	{% for sub_sub_object in sub_object.synonyms.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.name }}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.cross_references.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.xid }}
+		{% get_choice_verbose_name "public" "CrossReference" "source" sub_sub_object.source %}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.prosthetic_groups.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.coefficient }}
+		{% for sub_sub_sub_object in sub_sub_object.evidence.all %}
+			{{ sub_sub_sub_object.id }}
+			{{ sub_sub_sub_object.value }}
+			{{ sub_sub_sub_object.units }}
+			{{ sub_sub_sub_object.is_experimentally_constrained }}
+			{{ sub_sub_sub_object.species }}
+			{{ sub_sub_sub_object.media }}
+			{{ sub_sub_sub_object.pH }}
+			{{ sub_sub_sub_object.temperature }}
+			{{ sub_sub_sub_object.comments }}
+		{% endfor %}
+	{% endfor %}
+{% endfor %}

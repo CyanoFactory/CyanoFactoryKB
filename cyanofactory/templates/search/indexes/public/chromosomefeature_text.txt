@@ -1,0 +1,75 @@
+{% load templatetags %}
+{{ object.id }}
+{{ object.wid }}
+{{ object.name }}
+{% for sub_object in object.synonyms.all %}
+	{{ sub_object.id }}
+	{{ sub_object.name }}
+{% endfor %}
+{% for sub_object in object.cross_references.all %}
+	{{ sub_object.id }}
+	{{ sub_object.xid }}
+	{% get_choice_verbose_name "public" "CrossReference" "source" sub_object.source %}
+{% endfor %}
+{% for sub_object in object.type.all %}
+	{{ sub_object.id }}
+	{{ sub_object.model_type }}
+	{{ sub_object.wid }}
+	{{ sub_object.name }}
+	{{ sub_object.comments }}
+	{% for sub_sub_object in sub_object.synonyms.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.name }}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.cross_references.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.xid }}
+		{% get_choice_verbose_name "public" "CrossReference" "source" sub_sub_object.source %}
+	{% endfor %}
+{% endfor %}
+{% with sub_object=object.chromosome %}
+	{{ sub_object.id }}
+	{{ sub_object.model_type }}
+	{{ sub_object.wid }}
+	{{ sub_object.name }}
+	{{ sub_object.comments }}
+	{{ sub_object.length }}
+	{% for sub_sub_object in sub_object.synonyms.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.name }}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.cross_references.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.xid }}
+		{% get_choice_verbose_name "public" "CrossReference" "source" sub_sub_object.source %}
+	{% endfor %}
+{% endwith %}
+{{ object.coordinate }}
+{{ object.length }}
+{% get_choice_verbose_name "public" "ChromosomeFeature" "direction" object.direction %}
+{{ object.comments }}
+{% for sub_object in object.references.all %}
+	{{ sub_object.id }}
+	{{ sub_object.model_type }}
+	{{ sub_object.wid }}
+	{{ sub_object.name }}
+	{{ sub_object.comments }}
+	{{ sub_object.authors }}
+	{{ sub_object.editors }}
+	{{ sub_object.year }}
+	{{ sub_object.title }}
+	{{ sub_object.publication }}
+	{{ sub_object.publisher }}
+	{{ sub_object.volume }}
+	{{ sub_object.issue }}
+	{{ sub_object.pages }}
+	{% for sub_sub_object in sub_object.synonyms.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.name }}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.cross_references.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.xid }}
+		{% get_choice_verbose_name "public" "CrossReference" "source" sub_sub_object.source %}
+	{% endfor %}
+{% endfor %}

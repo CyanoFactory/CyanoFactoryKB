@@ -1,0 +1,31 @@
+{% load templatetags %}
+{{ object.id }}
+{{ object.wid }}
+{{ object.name }}
+{% for sub_object in object.synonyms.all %}
+	{{ sub_object.id }}
+	{{ sub_object.name }}
+{% endfor %}
+{% for sub_object in object.cross_references.all %}
+	{{ sub_object.id }}
+	{{ sub_object.xid }}
+	{% get_choice_verbose_name "public" "CrossReference" "source" sub_object.source %}
+{% endfor %}
+{% get_choice_verbose_name "public" "Species" "genetic_code" object.genetic_code %}
+{{ object.comments }}
+{% for sub_object in object.components.all %}
+	{{ sub_object.id }}
+	{{ sub_object.model_type }}
+	{{ sub_object.wid }}
+	{{ sub_object.name }}
+	{{ sub_object.comments }}
+	{% for sub_sub_object in sub_object.synonyms.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.name }}
+	{% endfor %}
+	{% for sub_sub_object in sub_object.cross_references.all %}
+		{{ sub_sub_object.id }}
+		{{ sub_sub_object.xid }}
+		{% get_choice_verbose_name "public" "CrossReference" "source" sub_sub_object.source %}
+	{% endfor %}
+{% endfor %}

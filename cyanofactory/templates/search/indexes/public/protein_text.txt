@@ -1,0 +1,29 @@
+{{ object.id }}
+{{ object.model_type }}
+{{ object.wid }}
+{{ object.name }}
+{{ object.comments }}
+{{ object.created_user.username }}
+{{ object.created_user.get_full_name }}
+{{ object.created_date }}
+{{ object.last_updated_user.username }}
+{{ object.last_updated_user.get_full_name }}
+{{ object.last_updated_date }}
+{{ object.chaperones.wid }}
+{{ object.chaperones.name }}
+{{ object.dna_footprint }}
+{{ object.dna_binding }}
+{{ object.dna_region }}
+{{ object.regulatory_rule }}
+{% for relobj in object.child_ptr_protein_complex.all %}
+	{{ relobj.wid }}
+	{{ relobj.name }}
+{% endfor %}
+{% for relobj in object.child_ptr_protein_monomer.all %}
+	{{ relobj.wid }}
+	{{ relobj.name }}
+{% endfor %}
+{% for relobj in object.transcriptional_regulations.all %}
+	{{ relobj.wid }}
+	{{ relobj.name }}
+{% endfor %}
