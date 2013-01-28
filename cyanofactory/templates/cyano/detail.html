@@ -34,8 +34,8 @@ Last updated: 2012-07-17
 {% if request.user.is_anonymous %}
 <a href="mailto:wholecell[at]lists.stanford.edu?subject=WholeCellKB Object Species={{ species.wid }} WID={{ object.wid }}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Suggest an edit" alt="Suggest an edit" /></a>
 {% else %}
-<a href="{% url public.views.edit species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
-<a href="{% url public.views.delete species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
+<a href="{% comment %}{% url public.views.edit species_wid=species.wid wid=queryset.0.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+<a href="{% comment %}{% url public.views.delete species_wid=species.wid wid=queryset.0.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
 {% endif %}
 <a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
 <a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
