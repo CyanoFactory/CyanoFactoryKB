@@ -159,7 +159,7 @@ def format_sequence_as_html(sequence, lineLen=50):
     
     for i in range(int(math.ceil(float(len(sequence)) / float(lineLen)))):
         htmlL += '%s<br/>' % (i * lineLen + 1, )
-        htmlC += '%s<br/>' % sequence[i*lineLen:(i + 1) * lineLen]
+        htmlC += '%s<br/>' % sequence.seq[i*lineLen:(i + 1) * lineLen]
         htmlR += '%s<br/>' % (min(len(sequence), (i + 1) * lineLen), )
     
     return '<div class="sequence"><div>%s</div><div>%s</div><div>%s</div></div>' % (htmlL, htmlC, htmlR)

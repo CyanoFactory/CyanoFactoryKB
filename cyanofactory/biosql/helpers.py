@@ -15,7 +15,8 @@ class Res:
 		
 		self.features = dbrecord.features
 		self.seq = Bio.Seq.Seq(str(dbrecord.seq))
-		
+		self.annotations = dbrecord.annotations
+
 def get_database_handle():
 	dbdata = settings.DATABASES['default']
 	server = BioSeqDatabase.open_database(driver="psycopg2", user=dbdata['USER'],
