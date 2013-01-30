@@ -16,7 +16,9 @@ class Feature(object):
 
     @property
     def name(self):
-        return self.feature.qualifiers["gene"][0]
+        if self.has_qualifier("gene"):
+            return self.feature.qualifiers["gene"][0]
+        return "No Name"
 
     @property
     def start(self):
@@ -376,6 +378,7 @@ class Gene:
         nTus = 0
         iTUs = {}
         tus = []
+
         for i in range(len(genesList)):
             gene = genesList[i]
             
@@ -434,7 +437,7 @@ class Gene:
                 tip_title = gene["gene"][0]
             else:
                 tip_title = gene.wid
-            tip_content = 'Transcription unit: %s' % "FIXME" #tu.name
+            tip_content = 'Locus Tag: %s<br/>Transcription unit: %s' % (gene["locus_tag"][0], "FIXME") #tu.name
             tip_title = tip_title.replace("'", "\'")
             tip_content = tip_content.replace("'", "\'")
                 
