@@ -39,6 +39,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
     data['queryset'] = queryset
     data['request'] = request
     data['queryargs'] = {}
+    data['email'] = "roebbe.wuenschiers@hs-mittweida.de"
     for key, val in request.GET.iterlists():
         data['queryargs'][key] = val
 

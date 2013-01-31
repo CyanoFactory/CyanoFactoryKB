@@ -446,31 +446,42 @@ $(document).ready(function (){
 
 <div><h1>About CyanoFactory</h1>
 <p>
-CyanoFactory is a collection of free, open-source model organism databases designed specifically to enable comprehensive, dynamic simulations of entire cells and organisms. WholeCellKB provides comprehensive, quantitative descriptions of individual species including:
+CyanoFactory is a collaborate research project for design, construction and demonstration of solar biofuel production using novel (photo)synthetic cell factories.
+</p>
+</div>
+
+<div><h1>About CyanoFactory KB</h1>
+<p>
+CyanoFactory KB is a knowledge base that is embracing all data produced by and relevant to the CyanoFactory project partners.
+</p>
+<p>
+It is designed specifically to enable comprehensive, dynamic simulations of entire cells and organisms. CyanoFactory KB is currently centered around  <i>Synechocystis</i> PCC 6803, an extremely small gram-negative bacterium that is capable of photosynthesis and provides comprehensive, quantitative descriptions of individual mutant strains including:
 <ul>
 <li>Cellular chemical composition,</li>
 <li>Growth medium composition,</li>
 <li>Gene locations, lengths, and directions,</li>
 <li>Transcription unit organization and transcriptional regulation,</li>
 <li>Macromolecule composition,</li>
-<li>Reaction stoichiometry, kinetics, and catalysis, and</li>
-<li>Extensive links and cross-links to all references used to construct each database.</li>
+<li>Reaction stoichiometry, kinetics, and catalysis,</li>
+<li>Extensive links and cross-links to all references used to construct each database, and</li>
+<li>Experimental conditions.</li>
 </ul></p>
 
 <p>CyanoFactory currently contains a single database of <i>Mycoplasma genitalium</i>, an extremely small gram-positive bacterium and common human pathogen. This database is the most comprehensive description of any single organism to date, and was used to develop the first whole-cell computational model. The <i>M. genitalium</i> database was curated from over 900 primary research articles, reviews, books, and databases over four years by a team of three researchers at Stanford University.</p>
 </div>
 
 <div><h1>Getting started</h1>
-<p>The best ways to get started are to browse or search this database using the menu or the search box at the top of this page. See the <a href="{% if species %}{% comment %}{% url public.views.tutorial species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.tutorial %}{% endcomment %}{% endif %}">tutorial</a> for additional help getting started.</p>
+<p>The best ways to get started are to browse or search this database using the menu or the search box at the top of this page. See the <a href="">tutorial</a> for additional help getting started.</p>
 </div>
 
 <div><h1>More information</h1>	
-<p>Please see the following for more information or to cite WholeCellKB:</p>
-<p>Karr JR, Sanghvi JC, Macklin DN, Arora A, Covert MW. WholeCellKB: Model Organism Databases for Comprehensive Whole-Cell Models. <i>Nucleic Acids Research</i> <b>41</b>, D787-D792 (2013). <a href="http://nar.oxfordjournals.org/content/early/2012/11/21/nar.gks1108.long">Nucleic Acids Research</a> | <a href="http://www.ncbi.nlm.nih.gov/pubmed/23175606">PubMed</a></p>
-<p>Karr JR, Sanghvi JC, Macklin DN, Gutschow MV, Jacobs JM, Bolival B, Assad-Garcia N, Glass JI, Covert MW. A Whole-Cell Computational Model Predicts Phenotype from Genotype. <i>Cell</i> <b>150</b>, 389-401 (2012). <a href="http://www.cell.com/abstract/S0092-8674(12)00776-3">Cell</a> | <a href="http://www.ncbi.nlm.nih.gov/pubmed/22817898">PubMed</a></p>
+<p>CyanoFactory KB has been developed and further extended on the basis of WholeCellKB (Karr JR, Sanghvi JC, Macklin DN, Arora A, Covert MW.)
+</p>
+
+WholeCellKB: Model Organism Databases for Comprehensive Whole-Cell Models. <i>Nucleic Acids Research</i> <b>41</b>, D787-D792 (2013). <a href="http://nar.oxfordjournals.org/content/early/2012/11/21/nar.gks1108.long">Nucleic Acids Research</a> | <a href="http://www.ncbi.nlm.nih.gov/pubmed/23175606">PubMed</a>, Karr JR, Sanghvi JC, Macklin DN, Gutschow MV, Jacobs JM, Bolival B, Assad-Garcia N, Glass JI, Covert MW. A Whole-Cell Computational Model Predicts Phenotype from Genotype. <i>Cell</i> <b>150</b>, 389-401 (2012). <a href="http://www.cell.com/abstract/S0092-8674(12)00776-3">Cell</a> | <a href="http://www.ncbi.nlm.nih.gov/pubmed/22817898">PubMed</a></p>
 </div>
 
 <div><h1>Need help?</h1>
-<p>Please view the <a href="{% if species %}{% comment %}{% url public.views.tutorial species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.tutorial %}{% endcomment %}{% endif %}">tutorial</a>, <a href="{% if species %}{% comment %}{% url public.views.about species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.about %}{% endcomment %}{% endif %}">about page</a>, or contact us at <a href="mailto:wholecell[at]lists.stanford.edu">wholecell@lists.stanford.edu</a>.</p>
+<p>Please contact us at <a href="mailto:{{ email }}">{{ email }}</a>.</p>
 </div>
 {% endblock %}
