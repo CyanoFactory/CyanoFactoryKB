@@ -1,0 +1,135 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ZoneGroup
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ZoneGroup"></a>ZoneGroup
+      </h1>
+      <hr>Represents MAGE Class ZoneGroup<br>Specifies a repeating area on an array.  This is useful for printing when the same pattern is repeated in a regular fashion.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesign.html">PhysicalArrayDesign_ZoneGroups</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between PhysicalArrayDesign and ZoneGroup<br>In the case where the array design is specified by one or more zones, allows specifying where those zones are located.<br></td>
+         </tr>
+         <tr>
+            <td>SpacingsBetweenZonesX</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute ZoneGroup.spacingsBetweenZonesX<br>Spacing between zones, if applicable.<br></td>
+         </tr>
+         <tr>
+            <td>SpacingsBetweenZonesY</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute ZoneGroup.spacingsBetweenZonesY<br>Spacing between zones, if applicable.<br></td>
+         </tr>
+         <tr>
+            <td>ZonesPerX</td>
+            <td>SMALLINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute ZoneGroup.zonesPerX<br>The number of zones on the x-axis.<br></td>
+         </tr>
+         <tr>
+            <td>ZonesPerY</td>
+            <td>SMALLINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute ZoneGroup.zonesPerY<br>The number of zones on the y-axis.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Unit.html">ZoneGroup_DistanceUnit</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between ZoneGroup and DistanceUnit<br>Unit for the ZoneGroup attributes.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ZoneLayout.html">ZoneGroup_ZoneLayout</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between ZoneGroup and ZoneLayout<br>Describes the rectangular layout of features in the array design.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="Zone.html">Zone</a></td>
+            <td>ZoneGroup_ZoneLocations</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ZoneGroup1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>ZoneGroup2</td>
+            <td>PhysicalArrayDesign_ZoneGroups</td>
+         </tr>
+         <tr>
+            <td>ZoneGroup3</td>
+            <td>SpacingsBetweenZonesX</td>
+         </tr>
+         <tr>
+            <td>ZoneGroup4</td>
+            <td>SpacingsBetweenZonesY</td>
+         </tr>
+         <tr>
+            <td>ZoneGroup5</td>
+            <td>ZonesPerX</td>
+         </tr>
+         <tr>
+            <td>ZoneGroup6</td>
+            <td>ZonesPerY</td>
+         </tr>
+         <tr>
+            <td>ZoneGroup7</td>
+            <td>ZoneGroup_DistanceUnit</td>
+         </tr>
+         <tr>
+            <td>ZoneGroup8</td>
+            <td>ZoneGroup_ZoneLayout</td>
+         </tr>
+      </table><br><br></body>
+</html>

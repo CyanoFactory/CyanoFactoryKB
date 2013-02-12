@@ -1,0 +1,258 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         DesignElement
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="DesignElement"></a>DesignElement
+      </h1>
+      <hr>Represents MAGE Class DesignElement<br>An element of an array.  This is generally of type feature but can be specified as reporters or compositeSequence for arrays
+      that are abstracted from a physical array.<br>Includes MAGE Class CompositeSequence<br>Includes MAGE Class Feature<br>Includes MAGE Class Reporter<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>MAGEClass</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(100)</td>
+            <td>No</td>
+            <td>Discriminator column specifies type of object this row represents<br></td>
+         </tr>
+         <tr>
+            <td>Identifier</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Identifiable.identifier<br>An identifier is an unambiguous string that is unique within the scope (i.e. a document, a set of related documents, or a
+               repository) of its use.<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Identifiable.name<br>The potentially ambiguous common identifier.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementGroup.html">FeatureGroup_Features</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between FeatureGroup and Feature<br>The features that belong to this group.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">DesignElement_ControlType</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between DesignElement and OntologyEntry<br>If the design element represents a control, the type of control it is (normalization, deletion, negative, positive, etc.)<br></td>
+         </tr>
+         <tr>
+            <td><a href="Position_.html">Feature_Position</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between Feature and Position<br>The position of the feature on the array, relative to the top, left corner.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Zone.html">Zone</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between Feature and Zone<br>A reference to the zone this feature is in.<br></td>
+         </tr>
+         <tr>
+            <td><a href="FeatureLocation.html">Feature_FeatureLocation</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between Feature and FeatureLocation<br>Location of this feature relative to a grid.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementGroup.html">FeatureGroup</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between Feature and FeatureGroup<br>The features that belong to this group.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">Reporter_WarningType</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between Reporter and OntologyEntry<br>Similar to failType but indicates a warning rather than a failure.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="FeatureDefect.html">FeatureDefect</a></td>
+            <td>Feature</td>
+         </tr>
+         <tr>
+            <td><a href="ManufactureLIMS.html">ManufactureLIMS</a></td>
+            <td>Feature</td>
+         </tr>
+         <tr>
+            <td><a href="SequencePosition.html">SequencePosition</a></td>
+            <td>Composite</td>
+         </tr>
+         <tr>
+            <td><a href="SequencePosition.html">SequencePosition</a></td>
+            <td>Reporter</td>
+         </tr>
+         <tr>
+            <td><a href="FeatureInformation.html">FeatureInformation</a></td>
+            <td>Feature</td>
+         </tr>
+         <tr>
+            <td><a href="BioEvent.html">BioEvent</a></td>
+            <td>CompositeSequence</td>
+         </tr>
+         <tr>
+            <td><a href="BioEvent.html">BioEvent</a></td>
+            <td>Reporter</td>
+         </tr>
+         <tr>
+            <td><a href="BioEvent.html">BioEvent</a></td>
+            <td>CompositeSequence2</td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementTuple.html">DesignElementTuple</a></td>
+            <td>DesignElement</td>
+         </tr>
+         <tr>
+            <td><a href="ComposGrpWIDComposSequenceWID.html">ComposGrpWIDComposSequenceWID</a></td>
+            <td>CompositeSequenceWID</td>
+         </tr>
+         <tr>
+            <td><a href="ReporterGroupWIDReporterWID.html">ReporterGroupWIDReporterWID</a></td>
+            <td>ReporterWID</td>
+         </tr>
+         <tr>
+            <td><a href="CompositeSeqWIDBioSeqWID.html">CompositeSeqWIDBioSeqWID</a></td>
+            <td>CompositeSequenceWID</td>
+         </tr>
+         <tr>
+            <td><a href="ComposSeqWIDRepoComposMapWID.html">ComposSeqWIDRepoComposMapWID</a></td>
+            <td>CompositeSequenceWID</td>
+         </tr>
+         <tr>
+            <td><a href="ComposSeqWIDComposComposMapWID.html">ComposSeqWIDComposComposMapWID</a></td>
+            <td>CompositeSequenceWID</td>
+         </tr>
+         <tr>
+            <td><a href="FeatureWIDFeatureWID.html">FeatureWIDFeatureWID</a></td>
+            <td>FeatureWID1</td>
+         </tr>
+         <tr>
+            <td><a href="FeatureWIDFeatureWID.html">FeatureWIDFeatureWID</a></td>
+            <td>FeatureWID2</td>
+         </tr>
+         <tr>
+            <td><a href="FeatureWIDFeatureWID2.html">FeatureWIDFeatureWID2</a></td>
+            <td>FeatureWID1</td>
+         </tr>
+         <tr>
+            <td><a href="FeatureWIDFeatureWID2.html">FeatureWIDFeatureWID2</a></td>
+            <td>FeatureWID2</td>
+         </tr>
+         <tr>
+            <td><a href="ReporterWIDBioSequenceWID.html">ReporterWIDBioSequenceWID</a></td>
+            <td>ReporterWID</td>
+         </tr>
+         <tr>
+            <td><a href="ReporterWIDFeatureReporMapWID.html">ReporterWIDFeatureReporMapWID</a></td>
+            <td>ReporterWID</td>
+         </tr>
+         <tr>
+            <td><a href="ComposSeqDimensWIDComposSeqWID.html">ComposSeqDimensWIDComposSeqWID</a></td>
+            <td>CompositeSequenceWID</td>
+         </tr>
+         <tr>
+            <td><a href="FeatureDimensionWIDFeatureWID.html">FeatureDimensionWIDFeatureWID</a></td>
+            <td>FeatureWID</td>
+         </tr>
+         <tr>
+            <td><a href="ReporterDimensWIDReporterWID.html">ReporterDimensWIDReporterWID</a></td>
+            <td>ReporterWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>DesignElement1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>DesignElement2</td>
+            <td>MAGEClass</td>
+         </tr>
+         <tr>
+            <td>DesignElement3</td>
+            <td>Identifier</td>
+         </tr>
+         <tr>
+            <td>DesignElement4</td>
+            <td>Name</td>
+         </tr>
+         <tr>
+            <td>DesignElement5</td>
+            <td>FeatureGroup_Features</td>
+         </tr>
+         <tr>
+            <td>DesignElement6</td>
+            <td>DesignElement_ControlType</td>
+         </tr>
+         <tr>
+            <td>DesignElement7</td>
+            <td>Feature_Position</td>
+         </tr>
+         <tr>
+            <td>DesignElement8</td>
+            <td>Zone</td>
+         </tr>
+         <tr>
+            <td>DesignElement9</td>
+            <td>Feature_FeatureLocation</td>
+         </tr>
+         <tr>
+            <td>DesignElement10</td>
+            <td>FeatureGroup</td>
+         </tr>
+         <tr>
+            <td>DesignElement11</td>
+            <td>Reporter_WarningType</td>
+         </tr>
+      </table><br><br></body>
+</html>

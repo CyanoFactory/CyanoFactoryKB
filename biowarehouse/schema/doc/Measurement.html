@@ -1,0 +1,134 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Measurement
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Measurement"></a>Measurement
+      </h1>
+      <hr>Represents MAGE Class Measurement<br>A Measurement is a quantity with a unit.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>Type_</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(25)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Measurement.type<br>The type of measurement, for instance if the measurement is five feet, it can be either absolute (five feet tall) or change
+               (five feet further along).<br></td>
+         </tr>
+         <tr>
+            <td>Value</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Measurement.value<br>The value of the measurement.  kindCV (and otherKind) determine with Unit the datatype of value.<br></td>
+         </tr>
+         <tr>
+            <td>KindCV</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(25)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Measurement.kindCV<br>One of the enumeration values to determine the controlled vocabulary of the value.<br></td>
+         </tr>
+         <tr>
+            <td>OtherKind</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Measurement.otherKind<br>Name of the controlled vocabulary if it isn't one of the Unit subclasses.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Unit.html">Measurement_Unit</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between Measurement and Unit<br>The Unit associated with the Measurement.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="FlowCytometrySample.html">FlowCytometrySample</a></td>
+            <td>MeasurementWID</td>
+         </tr>
+         <tr>
+            <td><a href="FactorValue.html">FactorValue</a></td>
+            <td>FactorValue_Measurement</td>
+         </tr>
+         <tr>
+            <td><a href="BioEvent.html">BioEvent</a></td>
+            <td>Treatment_ActionMeasurement</td>
+         </tr>
+         <tr>
+            <td><a href="BioMaterialMeasurement.html">BioMaterialMeasurement</a></td>
+            <td>Measurement</td>
+         </tr>
+         <tr>
+            <td><a href="CompoundMeasurement.html">CompoundMeasurement</a></td>
+            <td>Measurement</td>
+         </tr>
+         <tr>
+            <td><a href="Parameter.html">Parameter</a></td>
+            <td>Parameter_DefaultValue</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>Measurement1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>Measurement2</td>
+            <td>Type_</td>
+         </tr>
+         <tr>
+            <td>Measurement3</td>
+            <td>Value</td>
+         </tr>
+         <tr>
+            <td>Measurement4</td>
+            <td>KindCV</td>
+         </tr>
+         <tr>
+            <td>Measurement5</td>
+            <td>OtherKind</td>
+         </tr>
+         <tr>
+            <td>Measurement6</td>
+            <td>Measurement_Unit</td>
+         </tr>
+      </table><br><br></body>
+</html>

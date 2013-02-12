@@ -1,0 +1,15 @@
+#! /bin/sh
+##
+## Usage:
+##     run-oracle $1 $2 $3 $4 $5 $6 $7 $8
+##
+## $1 = Oracle connect string USERID/PASSWORD or USERID/PASSWORD@SID
+## $2 = path to directory containing input files
+## $3 = name of the organism 
+## $4 = name of the source database
+## $5 = version of the source database
+## $6 = release date of the source database
+## $7,
+## $8 = optional args (eg. -l or -m to link/merge into existing BioCyc dataset)
+
+./oracle-biocyc-loader -u $1 -d $2 -o "$3" -n $4 -v $5 -r $6 $7 $8

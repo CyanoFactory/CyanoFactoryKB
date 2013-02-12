@@ -1,0 +1,130 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ChemicalAtom
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ChemicalAtom"></a>ChemicalAtom
+      </h1>
+      <hr>The tables ChemicalAtom and ChemicalBond define the chemical bond structure of a chemical,
+      the
+      <br>charge on the constituent atoms, and encodes a two or three dimensional representation of the<br>structure. It is implicit that ChemicalBonds are symmetric.<br>Atoms that are chiral centers are have a non-zero StereoParity field. Values for this field
+      are
+      <br>defined in the Enumeration table, and are taken from MDL Molfile format defined in<br>http://www.mdli.com/downloads/ctfile/ctfile_subs.html . That specification is confusing
+      because
+      <br>it appears to define two redundant ways (marking atoms and marking bonds) of defining stereo<br>configurations. Our theory is that the redundancy exists to allow different drawings of
+      stereo
+      <br>configurations, and that for simply capturing a configuration, setting the StereoParity field<br>of an atom is sufficient. Also, setting the BondStereo field of a bond could simplify drawing<br>of chemical structures, and can allow different drawings of the same stereo configurations,<br>which can be desirable. But these two fields can be interpreted independently of one another.<br>See the appendix of the MDL specification for details on interpreting stereo configurations.<br>E.g. H2O could be encoded as:<br>ChemicalAtom (wid, 1, 'H', 0)<br>ChemicalAtom (wid, 2, 'O', 0)<br>ChemicalAtom (wid, 3, 'H', 0)<br>ChemicalBond (wid, 1, 2, 1)<br>ChemicalBond (wid, 2, 3, 1)<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="Chemical.html">ChemicalWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of the chemical<br></td>
+         </tr>
+         <tr>
+            <td>AtomIndex</td>
+            <td>SMALLINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Order of the atoms within the structure,<br>starting from 1<br></td>
+         </tr>
+         <tr>
+            <td>Atom</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(2)</td>
+            <td>No</td>
+            <td>Element symbol of the atom<br></td>
+         </tr>
+         <tr>
+            <td>Charge</td>
+            <td>SMALLINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Charge on the atom<br></td>
+         </tr>
+         <tr>
+            <td>X</td>
+            <td>DECIMAL</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>X display coordinates for a drawing of the chemical structure<br></td>
+         </tr>
+         <tr>
+            <td>Y</td>
+            <td>DECIMAL</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Y display coordinates for a drawing of the chemical structure<br></td>
+         </tr>
+         <tr>
+            <td>Z</td>
+            <td>DECIMAL</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Z display coordinates for a drawing of the chemical structure<br></td>
+         </tr>
+         <tr>
+            <td>StereoParity</td>
+            <td>DECIMAL</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Defines parity of an atom that is a chiral center.<br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>0</b> -
+                  Not stereo.<br><b>1</b> -
+                  Odd parity.<br><b>2</b> -
+                  Even parity.<br><b>3</b> -
+                  Either or unmarked stereo center.<br></div>
+            </td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>CONSTRAINT UN_ChemicalAtom UNIQUE (ChemicalWID, AtomIndex)<br><h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>CA_WID</td>
+            <td>CHEMICALWID</td>
+         </tr>
+         <tr>
+            <td>CA_ATOMINDEX</td>
+            <td>ATOMINDEX</td>
+         </tr>
+         <tr>
+            <td>CA_ATOM</td>
+            <td>ATOM</td>
+         </tr>
+         <tr>
+            <td>CA_CHARGE</td>
+            <td>CHARGE</td>
+         </tr>
+         <tr>
+            <td>CA_X</td>
+            <td>X</td>
+         </tr>
+         <tr>
+            <td>CA_Y</td>
+            <td>Y</td>
+         </tr>
+         <tr>
+            <td>CA_Z</td>
+            <td>Z</td>
+         </tr>
+         <tr>
+            <td>CA_SPARITY</td>
+            <td>STEREOPARITY</td>
+         </tr>
+      </table><br><br></body>
+</html>

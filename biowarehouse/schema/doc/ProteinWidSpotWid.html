@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ProteinWIDSpotWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ProteinWIDSpotWID"></a>ProteinWIDSpotWID
+      </h1>
+      <hr>Associates a spot with a known protein.<br>Not all spots are associated with proteins since it is not necessarily<br>known what the protein is for a given spot.<br>This table supports the ability to have a spot linked to multiple protein,<br>or a protein linked to multiple spots.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="Protein.html">ProteinWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the protein that has been mapped to this spot.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Spot.html">SpotWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the Protein that is associated to this spot.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>PS_PROTEINWID_SPOTWID</td>
+            <td>ProteinWID, SpotWID</td>
+         </tr>
+         <tr>
+            <td>PS_SPOTWID_PROTEINWID</td>
+            <td>SpotWID, ProteinWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

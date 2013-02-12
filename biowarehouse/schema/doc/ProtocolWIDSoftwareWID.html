@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ProtocolWIDSoftwareWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ProtocolWIDSoftwareWID"></a>ProtocolWIDSoftwareWID
+      </h1>
+      <hr>Represents n..n association between Protocol and Software<br>Software used by this Protocol.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="Parameterizable.html">ProtocolWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to Protocol<br></td>
+         </tr>
+         <tr>
+            <td><a href="Parameterizable.html">SoftwareWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to Software<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ProtocolWIDSoftwareWID1</td>
+            <td>ProtocolWID</td>
+         </tr>
+         <tr>
+            <td>ProtocolWIDSoftwareWID2</td>
+            <td>SoftwareWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

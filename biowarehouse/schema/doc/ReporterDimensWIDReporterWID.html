@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ReporterDimensWIDReporterWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ReporterDimensWIDReporterWID"></a>ReporterDimensWIDReporterWID
+      </h1>
+      <hr>Represents n..n association between ReporterDimension and Reporter<br>The reporters for this dimension.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="DesignElementDimension.html">ReporterDimensionWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to ReporterDimension<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesignElement.html">ReporterWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to Reporter<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ReporterDimensWIDReporte1</td>
+            <td>ReporterDimensionWID</td>
+         </tr>
+         <tr>
+            <td>ReporterDimensWIDReporte2</td>
+            <td>ReporterWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

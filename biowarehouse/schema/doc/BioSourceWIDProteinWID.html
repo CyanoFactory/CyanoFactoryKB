@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         BioSourceWIDProteinWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="BioSourceWIDProteinWID"></a>BioSourceWIDProteinWID
+      </h1>
+      <hr>Associates a protein with those species, strains, tissues, etc, from which it was derived.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="BioSource.html">BioSourceWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the BioSource that has this protein.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Protein.html">ProteinWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the Protein that is present in the organism.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>BP_BIOSOURCEWID_PROWID</td>
+            <td>BioSourceWID,PROTEINWID</td>
+         </tr>
+         <tr>
+            <td>BP_PROWID_BIOSOURCEWID</td>
+            <td>PROTEINWID, BioSourceWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

@@ -1,0 +1,117 @@
+/* *******************************************************************
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
+ * the License for the specific language governing rights and
+ * limitations under the License.
+ *
+ * The Original Code is the BioWarehouse.
+ *
+ * The Initial Developer of the Original Code is SRI International.
+ * Portions created by SRI International are Copyright (C) 2004.
+ * All Rights Reserved.
+ ******************************************************************* */
+/*
+ * PGDB COMPOUND loader for the BioSpice Data Warehouse
+ * Thomas J Lee, SRI International, August 2002
+ */
+
+#include "main.h"
+#include "compound-parse.h"
+
+#ifdef ORACLE
+#include <sqlca.h>
+#endif
+
+#define DEBUG 0
+
+extern int dataset_wid;
+short ind;
+
+void
+compound_load_entry(struct compound_entry *entry) {
+
+  struct stringlist *sptr;
+  int compound_wid = wh_get_new_wid();
+  short error = 0;
+  
+  char *smiles = string_column(entry->smiles, 255, &entry->smiles_ind);
+  char *formula = string_column(entry->formula, 50, &entry->formula_ind);
+  char *systematic_name = string_column(entry->systematic_name, 255, &entry->systematic_name_ind); /* Bug was 50 */
+  char *cas_registry_numbers = string_column(entry->cas_registry_numbers, 50, &entry->cas_registry_numbers_ind);
+  double molecular_weight = number_column(entry->molecular_weight, &entry->molecular_weight_ind, &error);
+  double charge = number_column(entry->charge, &entry->charge_ind, &error);
+  double pka1 = number_column(entry->pka1, &entry->pka1_ind, &error);
+  double pka2 = number_column(entry->pka2, &entry->pka2_ind, &error);
+  double pka3 = number_column(entry->pka3, &entry->pka3_ind, &error);
+  
+  if (!entry)
+    advise_error("Null entry passed to compound_load_entry\n");
+  if (error)
+    compound_parse_error();
+
+  if (DEBUG) {
+    printf("Loading compound %s %s\n", entry->unique_id, entry->common_name);
+    printf(" systematic_name= %s %d\n", systematic_name, entry->systematic_name_ind);
+    printf(" cas_registry_numbers= %s %d\n", cas_registry_numbers, entry->cas_registry_numbers_ind);
+    printf(" entry->molecular_weight= %s %d\n", entry->molecular_weight, entry->molecular_weight_ind);
+    printf(" entry->charge= %s %d\n", entry->charge, entry->charge_ind);
+    printf(" entry->smiles= %s %d\n", entry->smiles, entry->smiles_ind);
+    printf(" entry->formula= %s %d\n", entry->formula, entry->formula_ind);
+  }
+
+  if (!entry->common_name) {
+    printf("*** Compound %s has no common name; ignoring\n", entry->unique_id);
+    compound_parse_error();	  
+    return;
+  }
+#ifdef IGNORE  
+#endif
+ 
+#ifdef ORACLE 
+  /* Try a WHENEVER to assist in debugging silent Oracle errors */
+  EXEC SQL WHENEVER SQLERROR DO wh_oracle_sql_error("Oracle error in compound-load");
+#endif
+  
+  /* Insert row into Chemical table */
+   db_insert_into_chemical(compound_wid, entry, systematic_name, cas_registry_numbers, smiles, formula);
+   if (systematic_name != entry->systematic_name) free(systematic_name);
+   if (cas_registry_numbers != entry->cas_registry_numbers) free(cas_registry_numbers);
+   if (smiles != entry->smiles) free(smiles);
+   if (formula != entry->formula) free(formula);
+ 
+  /* Add synonyms to SynonymTable  */
+  for (sptr=entry->synonyms; sptr; sptr=sptr->next)
+    wh_insert_synonymtable(compound_wid, sptr->string);
+
+  /* Add citations to CitationWIDOtherWID  */
+  for (sptr=entry->citations; sptr; sptr=sptr->next)
+    insert_citation(compound_wid, sptr->string);
+
+  /* Add comments to CommentTable  */
+  for (sptr=entry->comments; sptr; sptr=sptr->next)
+    wh_insert_comment(compound_wid, sptr->string);
+
+  /* Add DBID */
+  if (!entry->unique_id)
+    entry->load_error = 1;
+  else
+      wh_insert_dbid(compound_wid, entry->unique_id);
+  
+  /* Insert all DBLINKS as crossreferences */      
+  insert_dblinks(compound_wid, entry->dblinks_dbs, entry->dblinks_ids);
+      
+  /* Finally add Entry */
+  wh_insert_entry(compound_wid, entry->load_error, 0, NULL);
+}
+
+int
+find_chemical(char *name) {
+
+  if (DEBUG) printf("find_chemical %s %d\n", name, dataset_wid);
+  return (db_select_chemical_wid(name));
+}

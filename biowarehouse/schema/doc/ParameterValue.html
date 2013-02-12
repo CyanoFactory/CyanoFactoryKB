@@ -1,0 +1,91 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ParameterValue
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ParameterValue"></a>ParameterValue
+      </h1>
+      <hr>Represents MAGE Class ParameterValue<br>The value of a Parameter.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>Value</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute ParameterValue.value<br>The value of the parameter.  Will have the datatype of its associated Parameter.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Parameter.html">ParameterType</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between ParameterValue and Parameter<br>The parameter this value is for.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ParameterizableApplication.html">ParameterizableApplication</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between ParameterizableApplication and ParameterValue<br>The parameter values for this Parameterizable Application.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="ExperimentData.html">ExperimentData</a></td>
+            <td>MageData</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ParameterValue1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>ParameterValue2</td>
+            <td>Value</td>
+         </tr>
+         <tr>
+            <td>ParameterValue3</td>
+            <td>ParameterType</td>
+         </tr>
+         <tr>
+            <td>ParameterValue4</td>
+            <td>ParameterizableApplication</td>
+         </tr>
+      </table><br><br></body>
+</html>

@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ArrayDesignWIDContactWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ArrayDesignWIDContactWID"></a>ArrayDesignWIDContactWID
+      </h1>
+      <hr>Represents n..n association between ArrayDesign and Contact<br>The primary contact for information on the array design<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesign.html">ArrayDesignWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to ArrayDesign<br></td>
+         </tr>
+         <tr>
+            <td><a href="Contact.html">ContactWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to Contact<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ArrayDesignWIDContactWID1</td>
+            <td>ArrayDesignWID</td>
+         </tr>
+         <tr>
+            <td>ArrayDesignWIDContactWID2</td>
+            <td>ContactWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

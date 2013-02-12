@@ -1,0 +1,196 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Citation
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Citation"></a>Citation
+      </h1>
+      <hr>Defines a literature citation.<br>Typically a citation is associated with one or more Warehouse objects via the CitationWIDOtherWID
+      table.
+      <br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of this citation<br></td>
+         </tr>
+         <tr>
+            <td>Citation</td>
+            <td>TEXT</td>
+            <td>VARCHAR2(4000)</td>
+            <td>Yes</td>
+            <td>Line of text containing the citation<br></td>
+         </tr>
+         <tr>
+            <td>PMID</td>
+            <td>DECIMAL</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Pubmed ID of the citation, if known<br></td>
+         </tr>
+         <tr>
+            <td>Title</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Title of the article<br></td>
+         </tr>
+         <tr>
+            <td>Authors</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Author name(s)<br></td>
+         </tr>
+         <tr>
+            <td>Publication</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Publication title<br></td>
+         </tr>
+         <tr>
+            <td>Publisher</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Publisher's name<br></td>
+         </tr>
+         <tr>
+            <td>Editor</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Editor's name<br></td>
+         </tr>
+         <tr>
+            <td>Year</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Year of publication<br></td>
+         </tr>
+         <tr>
+            <td>Volume</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Volume of publication<br></td>
+         </tr>
+         <tr>
+            <td>Issue</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Issue number<br></td>
+         </tr>
+         <tr>
+            <td>Pages</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Page number(s)<br></td>
+         </tr>
+         <tr>
+            <td>URI</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Publication URI<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of the dataset the Citation is from<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>CitationWID</td>
+         </tr>
+         <tr>
+            <td><a href="Entry.html">Entry</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="Support.html">Support</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>CrossWID</td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>CITATION_PMID</td>
+            <td>PMID</td>
+         </tr>
+         <tr>
+            <td>CITATION_CITATION</td>
+            <td></td>
+         </tr>
+         <tr>
+            <td>CITATION_DATASETWID</td>
+            <td>DataSetWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

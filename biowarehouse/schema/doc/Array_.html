@@ -1,0 +1,171 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Array_
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Array_"></a>Array_
+      </h1>
+      <hr>Represents MAGE Class Array<br>The physical substrate along with its features and their annotation<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>Identifier</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Identifiable.identifier<br>An identifier is an unambiguous string that is unique within the scope (i.e. a document, a set of related documents, or a
+               repository) of its use.<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Identifiable.name<br>The potentially ambiguous common identifier.<br></td>
+         </tr>
+         <tr>
+            <td>ArrayIdentifier</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Array.arrayIdentifier<br>An identifying string, e.g. a barcode.<br></td>
+         </tr>
+         <tr>
+            <td>ArrayXOrigin</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute Array.arrayXOrigin<br>This can indicate the x position on a slide, chip, etc. of the first Feature and is usually specified relative to the fiducial.<br></td>
+         </tr>
+         <tr>
+            <td>ArrayYOrigin</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute Array.arrayYOrigin<br>This can indicate the y position on a slide, chip, etc. of the first Feature and is usually specified relative to the fiducial.<br></td>
+         </tr>
+         <tr>
+            <td>OriginRelativeTo</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Array.originRelativeTo<br>What the array origin is relative to, e.g. upper left corner, fiducial, etc.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesign.html">ArrayDesign</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between Array and ArrayDesign<br>The association of a physical array with its array design.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufacture.html">Information</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between Array and ArrayManufacture<br>Association between the manufactured array and the information on that manufacture.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayGroup.html">ArrayGroup</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between Array and ArrayGroup<br>Association between an ArrayGroup and its Arrays, typically the ArrayGroup will represent a slide and the Arrays will be the
+               manufactured so that they may be hybridized separately on that slide.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufactureDeviation.html">ArrayManufactureDeviation</a></td>
+            <td>Array_</td>
+         </tr>
+         <tr>
+            <td><a href="BioEvent.html">BioEvent</a></td>
+            <td>Array_</td>
+         </tr>
+         <tr>
+            <td><a href="ArrayGroupWIDArrayWID.html">ArrayGroupWIDArrayWID</a></td>
+            <td>ArrayWID</td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufactureWIDArrayWID.html">ArrayManufactureWIDArrayWID</a></td>
+            <td>ArrayWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>Array_1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>Array_2</td>
+            <td>Identifier</td>
+         </tr>
+         <tr>
+            <td>Array_3</td>
+            <td>Name</td>
+         </tr>
+         <tr>
+            <td>Array_4</td>
+            <td>ArrayIdentifier</td>
+         </tr>
+         <tr>
+            <td>Array_5</td>
+            <td>ArrayXOrigin</td>
+         </tr>
+         <tr>
+            <td>Array_6</td>
+            <td>ArrayYOrigin</td>
+         </tr>
+         <tr>
+            <td>Array_7</td>
+            <td>OriginRelativeTo</td>
+         </tr>
+         <tr>
+            <td>Array_8</td>
+            <td>ArrayDesign</td>
+         </tr>
+         <tr>
+            <td>Array_9</td>
+            <td>Information</td>
+         </tr>
+         <tr>
+            <td>Array_10</td>
+            <td>ArrayGroup</td>
+         </tr>
+      </table><br><br></body>
+</html>

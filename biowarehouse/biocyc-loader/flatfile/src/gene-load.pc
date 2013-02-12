@@ -1,0 +1,152 @@
+/* *******************************************************************
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
+ * the License for the specific language governing rights and
+ * limitations under the License.
+ *
+ * The Original Code is the BioWarehouse.
+ *
+ * The Initial Developer of the Original Code is SRI International.
+ * Portions created by SRI International are Copyright (C) 2004.
+ * All Rights Reserved.
+ ******************************************************************* */
+/*
+ * PGDB GENE loader for the BioSpice Data Warehouse
+ * Thomas J Lee, SRI International, August 2002
+ */
+
+#include "main.h"
+#include "gene-parse.h"
+#ifdef ORACLE
+#include <sqlca.h>
+#endif
+
+#define DEBUG 0
+
+extern int dataset_wid;
+extern int organism_wid;
+short ind;
+
+void
+gene_load_entry(struct gene_entry *entry) {
+
+  int gene_wid = wh_get_new_wid();
+  short error = 0;                   /* numeric conversion error */
+  struct stringlist *sptr;           /* to iterate over synonyms */
+  int protein_wid;
+  int term_wid;
+  char *startpos;
+  char *endpos;
+  char direction;     /* of transcription */
+  
+  /* Set indicator variables for optional columns, and check string lengths, numeric formats etc. */
+  short evidence_ind; 
+  char *evidence = string_column(entry->evidence, 10, &evidence_ind);
+  short left_end_position_ind = INDICATE_NULL; // Report conversion error
+  int left_end_position = (int) number_column(entry->left_end_position, &left_end_position_ind, &error);
+  short right_end_position_ind = INDICATE_NULL; // Report conversion error
+  int right_end_position = (int) number_column(entry->right_end_position, &right_end_position_ind, &error);
+  short transcription_direction_ind; 
+  char *transcription_direction = string_column(entry->transcription_direction, 1, &transcription_direction_ind);
+  short interrupted_ind; 
+  char interrupted = boolean_column(entry->interrupted, &interrupted_ind);
+
+  if (!entry)
+    advise_error("Null entry passed to gene_load_entry\n");
+  if (!entry->common_name) {
+    /* printf("Warning: missing COMMON-NAME attribute on Gene %s\n", entry->unique_id); */
+    entry->common_name = (char *) strdup("unknown");
+  }
+  if (error)
+    gene_parse_error();
+
+  /* Swap coding regions depending on transcription_direction */
+  if (entry->transcription_direction &&
+      entry->left_end_position &&
+      entry->right_end_position &&
+      (0 == strcasecmp( entry->transcription_direction, "-"))) {
+    startpos = entry->right_end_position;
+    endpos = entry->left_end_position;
+    direction = 'R';
+  }
+  else {
+    startpos = entry->left_end_position;
+    endpos = entry->right_end_position;
+    direction = 'F';
+  }
+
+  if (DEBUG) printf("Loading gene %s\n", entry->unique_id);
+  
+#ifdef ORACLE
+  /* Try a WHENEVER to assist in debugging silent Oracle errors */
+  EXEC SQL WHENEVER SQLERROR DO sql_error("Oracle error in gene-load");
+#endif
+  
+  /* Insert row into Gene table */
+  db_insert_into_gene(gene_wid, entry->common_name, entry->unique_id, direction,
+		      startpos, left_end_position_ind,
+		      endpos, right_end_position_ind,
+		      interrupted, interrupted_ind);
+    
+  /*!! Add evidence to Support table???  */
+    
+  /* Add to BioSourceWIDGeneWID table  */
+  wh_insert_linktable("BioSourceWID", organism_wid, "GeneWID", gene_wid);
+
+  /* Add all gene product <-> gene associations to GeneWIDProteinWID table */
+  for (sptr=entry->products; sptr; sptr=sptr->next) {
+    protein_wid = find_protein(sptr->string);
+    if (protein_wid)
+      wh_insert_linktable("GeneWID", gene_wid, "ProteinWID", protein_wid);
+    /*-- else printf("ProteinWID not found for %s\n", sptr->string); */
+  }
+ 
+  /* Add all gene  <-> transcription unit associations to TranscriptionUnitComponent table */
+  for (sptr=entry->component_of; sptr; sptr=sptr->next) {
+    int tu_wid = find_transunit(sptr->string);
+    if (tu_wid)
+      wh_insert_transcription_unit_component(tu_wid, gene_wid, "gene");
+  }
+ 
+  /* Add RelatedTerm for all Multifun types  */
+  for (sptr=entry->types; sptr; sptr=sptr->next) {
+    term_wid = wh_select_term(sptr->string, multifun_dataset_wid);
+    if (term_wid) {
+      wh_insert_relatedterm(term_wid, gene_wid, "superclass", INDICATE_NONNULL);
+    }
+  }
+ 
+  /* Add synonyms to SynonymTable  */
+  for (sptr=entry->synonyms; sptr; sptr=sptr->next)
+    wh_insert_synonymtable(gene_wid,sptr->string);
+
+  /* Add citations to CitationWIDOtherWID  */
+  for (sptr=entry->citations; sptr; sptr=sptr->next)
+    insert_citation(gene_wid, sptr->string);
+
+  /* Add comments to CommentTable  */
+  for (sptr=entry->comments; sptr; sptr=sptr->next)
+    wh_insert_comment(gene_wid, sptr->string);
+
+  /* Add DBID */
+  if (!entry->unique_id)
+    entry->load_error = 1;
+  else
+    wh_insert_dbid(gene_wid,entry->unique_id);
+  
+  /* Insert all DBLINKS as crossreferences */      
+  insert_dblinks(gene_wid, entry->dblinks_dbs, entry->dblinks_ids);
+      
+  /* Finally add Entry */
+  wh_insert_entry(gene_wid, entry->load_error,0,NULL);
+}
+
+int
+find_gene(char *name) {
+  return(db_select_gene(name));
+}

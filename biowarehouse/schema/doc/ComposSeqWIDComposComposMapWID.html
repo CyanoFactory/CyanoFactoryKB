@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ComposSeqWIDComposComposMapWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ComposSeqWIDComposComposMapWID"></a>ComposSeqWIDComposComposMapWID
+      </h1>
+      <hr>Represents n..n association between CompositeSequence and CompositeCompositeMap<br>A map to the compositeSequences that compose this CompositeSequence.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="DesignElement.html">CompositeSequenceWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to CompositeSequence<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioEvent.html">CompositeCompositeMapWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to CompositeCompositeMap<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ComposSeqWIDComposComposMa1</td>
+            <td>CompositeSequenceWID</td>
+         </tr>
+         <tr>
+            <td>ComposSeqWIDComposComposMa2</td>
+            <td>CompositeCompositeMapWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

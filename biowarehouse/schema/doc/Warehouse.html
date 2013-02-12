@@ -1,0 +1,59 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Warehouse
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Warehouse"></a>Warehouse
+      </h1>
+      <hr>Describes this version of the BioSPICE Warehouse.<br>This table contains exactly one row.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>Version</td>
+            <td>DECIMAL</td>
+            <td>NUMBER(6,3)</td>
+            <td>No</td>
+            <td>Numbered version of the warehouse schema that is loaded<br></td>
+         </tr>
+         <tr>
+            <td>LoadDate</td>
+            <td>DATETIME</td>
+            <td>DATE</td>
+            <td>No</td>
+            <td>Date that this schema was loaded<br></td>
+         </tr>
+         <tr>
+            <td>MaxSpecialWID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Maximum value allowed for SpecialWIDTable.PreviousWID / specialWID sequence<br></td>
+         </tr>
+         <tr>
+            <td>MaxReservedWID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Maximum value allowed for reserved WIDs (regulard WIDs start above this WID number)<br></td>
+         </tr>
+         <tr>
+            <td>Description</td>
+            <td>TEXT</td>
+            <td>VARCHAR2(4000)</td>
+            <td>Yes</td>
+            <td>Free-form text as desired by the warehouse maintainers<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>None.<br><br></body>
+</html>

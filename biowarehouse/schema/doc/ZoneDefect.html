@@ -1,0 +1,92 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ZoneDefect
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ZoneDefect"></a>ZoneDefect
+      </h1>
+      <hr>Represents MAGE Class ZoneDefect<br>Stores the defect information for a zone.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufactureDeviation.html">ArrayManufactureDeviation</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between ArrayManufactureDeviation and ZoneDefect<br>Descriptions of how a Zone has been printed differently than specified in the ArrayDesign.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">ZoneDefect_DefectType</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between ZoneDefect and OntologyEntry<br>Indicates the type of defect (e.g. a missing zone or a moved zone).<br></td>
+         </tr>
+         <tr>
+            <td><a href="PositionDelta.html">ZoneDefect_PositionDelta</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between ZoneDefect and PositionDelta<br>How the zone deviates in position from the ArrayDesign.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Zone.html">Zone</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between ZoneDefect and Zone<br>Reference to the Zone that was misprinted.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ZoneDefect1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>ZoneDefect2</td>
+            <td>ArrayManufactureDeviation</td>
+         </tr>
+         <tr>
+            <td>ZoneDefect3</td>
+            <td>ZoneDefect_DefectType</td>
+         </tr>
+         <tr>
+            <td>ZoneDefect4</td>
+            <td>ZoneDefect_PositionDelta</td>
+         </tr>
+         <tr>
+            <td>ZoneDefect5</td>
+            <td>Zone</td>
+         </tr>
+      </table><br><br></body>
+</html>

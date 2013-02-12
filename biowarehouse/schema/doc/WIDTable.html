@@ -1,0 +1,31 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         WIDTable
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="WIDTable"></a>WIDTable
+      </h1>
+      <hr>To allow for compatibility with RDBMS systems that do not support<br>sequences, this table may be used to store the last used WID.<br>MySQL dataset loaders use the following SQL for WID assignment:<br>DELETE FROM WIDTable;<br>INSERT INTO WIDTable VALUES ();<br>SELECT last_insert_id();<br>It may also be used in RDBMS systems that do not support auto-increment<br>of a counter; however additional protocol like table locking may be<br>needed to assure the integrity of WIDs during concurrent assignment.<br>This table contains exactly one row at any given time.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>PreviousWID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Last-used Warehouse identifier.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>None.<br><br></body>
+</html>

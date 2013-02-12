@@ -1,0 +1,115 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         NodeValue
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="NodeValue"></a>NodeValue
+      </h1>
+      <hr>Represents MAGE Class NodeValue<br>A value associated with the Node that can rank it in relation to the other nodes produced by the clustering algorithm.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td><a href="Node.html">Node_NodeValue</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between Node and NodeValue<br>Values or measurements for this node that may be produced by the clustering algorithm.  Typical are distance values for the
+               nodes.<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute NodeValue.name<br>The name for this value.<br></td>
+         </tr>
+         <tr>
+            <td>Value</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute NodeValue.value<br>The value for this NodeValue.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">NodeValue_Type</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between NodeValue and OntologyEntry<br>The type of value, distance, etc.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">NodeValue_Scale</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between NodeValue and OntologyEntry<br>The scale (linear, log10, ln, etc.) of the value.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">NodeValue_DataType</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between NodeValue and OntologyEntry<br>The data type of the any element.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>NodeValue1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>NodeValue2</td>
+            <td>Node_NodeValue</td>
+         </tr>
+         <tr>
+            <td>NodeValue3</td>
+            <td>Name</td>
+         </tr>
+         <tr>
+            <td>NodeValue4</td>
+            <td>Value</td>
+         </tr>
+         <tr>
+            <td>NodeValue5</td>
+            <td>NodeValue_Type</td>
+         </tr>
+         <tr>
+            <td>NodeValue6</td>
+            <td>NodeValue_Scale</td>
+         </tr>
+         <tr>
+            <td>NodeValue7</td>
+            <td>NodeValue_DataType</td>
+         </tr>
+      </table><br><br></body>
+</html>

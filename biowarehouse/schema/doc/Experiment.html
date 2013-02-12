@@ -1,0 +1,240 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Experiment
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Experiment"></a>Experiment
+      </h1>
+      <hr>Defines an experiment. Provides a context for associating experimental data with it.<br>Allows tree-structured experiments consisting of heterogeneous subexperiments,<br>subexperiments corresponding to time-series observations,<br>and repeated trials of identical experiments.<br>For a hierarchical experiment, data should be associated with the Experiment<br>at the appropriate level. For example, if data reflects results from averaging<br>numerous identically conducted trials, that data should be associated with the<br>Experiment representing the group of these trials.<br>A Comment table entry may be created to contain discussion of results, etc.<br>A DBID table entry may be created if the (sub)experiment has a unique name within its
+      DataSet.
+      <br>SynonymTable table entries may be created to associate names with the (sub)experiment.<br>If published, a reference may be created in Citation table.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td>Type</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>No</td>
+            <td>Mnemonic for the general type of experiment, e.g. 'microarray'<br></td>
+         </tr>
+         <tr>
+            <td><a href="Contact.html">ContactWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Contact.WID for submitter/investigator<br></td>
+         </tr>
+         <tr>
+            <td><a href="Archive.html">ArchiveWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Archive.WID of external rep'n of experiment and its data.<br></td>
+         </tr>
+         <tr>
+            <td>StartDate</td>
+            <td>DATETIME</td>
+            <td>DATE</td>
+            <td>Yes</td>
+            <td>Date+time experiment was started<br></td>
+         </tr>
+         <tr>
+            <td>EndDate</td>
+            <td>DATETIME</td>
+            <td>DATE</td>
+            <td>Yes</td>
+            <td>Date+time experiment was completed<br></td>
+         </tr>
+         <tr>
+            <td>Description</td>
+            <td>TEXT</td>
+            <td>CLOB</td>
+            <td>Yes</td>
+            <td>Description of this experiment<br></td>
+         </tr>
+         <tr>
+            <td><a href="Experiment.html">GroupWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Experiment.WID defining the parent group of this subexperiment<br></td>
+         </tr>
+         <tr>
+            <td>GroupType</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>Enumeration indicating type of any and all direct subexperiments<br>Exs: 'replicate' 'variant' 'step' 'time-series'<br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>replicate</b> -
+                  All subexperiments attempt to replicate identical experimental conditions and parameters<br><b>variant</b> -
+                  Subexperiments are variations upon an experimental procedure, technique, conditions, and/or parameters<br><b>time-series</b> -
+                  Subexperiments consist of observations according to a specific schedule<br><b>step</b> -
+                  Subexperiments comprise an experimental procedure and consist of an ordered sequence<br></div>
+            </td>
+         </tr>
+         <tr>
+            <td>GroupSize</td>
+            <td>INT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Number of child experiments loaded<br></td>
+         </tr>
+         <tr>
+            <td>GroupIndex</td>
+            <td>INT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Counter value identifying this experiment in a sequence or set<br>of subexperiments (eg. time-series). NULL if GroupWID is NULL.<br></td>
+         </tr>
+         <tr>
+            <td>TimePoint</td>
+            <td>INT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Time offset indicating when associated observations in a<br>time-series experiment were conducted<br></td>
+         </tr>
+         <tr>
+            <td>TimeUnit</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(20)</td>
+            <td>Yes</td>
+            <td>Enumeration for units of TimePoint<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>DataSet.WID this entity is associated with<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioSource.html">BioSourceWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>References the biological source of this experiment, if applicable.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="Experiment.html">Experiment</a></td>
+            <td>GroupWID</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentData.html">ExperimentData</a></td>
+            <td>ExperimentWID</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentRelationship.html">ExperimentRelationship</a></td>
+            <td>ExperimentWID</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentRelationship.html">ExperimentRelationship</a></td>
+            <td>RelatedExperimentWID</td>
+         </tr>
+         <tr>
+            <td><a href="GelLocation.html">GelLocation</a></td>
+            <td>ExperimentWID</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentDesign.html">ExperimentDesign</a></td>
+            <td>Experiment_ExperimentDesigns</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentWIDContactWID.html">ExperimentWIDContactWID</a></td>
+            <td>ExperimentWID</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimWIDBioAssayDataClustWID.html">ExperimWIDBioAssayDataClustWID</a></td>
+            <td>ExperimentWID</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentWIDBioAssayDataWID.html">ExperimentWIDBioAssayDataWID</a></td>
+            <td>ExperimentWID</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentWIDBioAssayWID.html">ExperimentWIDBioAssayWID</a></td>
+            <td>ExperimentWID</td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>CrossWID</td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>EXP_TYPE</td>
+            <td>TYPE</td>
+         </tr>
+         <tr>
+            <td>EXP_CON</td>
+            <td>CONTACTWID</td>
+         </tr>
+         <tr>
+            <td>EXP_GROUP</td>
+            <td>GROUPWID</td>
+         </tr>
+         <tr>
+            <td>EXP_DS</td>
+            <td>DATASETWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

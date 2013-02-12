@@ -1,0 +1,404 @@
+/* *******************************************************************
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
+ * the License for the specific language governing rights and
+ * limitations under the License.
+ *
+ * The Original Code is the BioWarehouse.
+ *
+ * The Initial Developer of the Original Code is SRI International.
+ * Portions created by SRI International are Copyright (C) 2004.
+ * All Rights Reserved.
+ ******************************************************************* */
+#include "wh_oracle_util.h"
+#include "stdio.h"
+#include <sqlca.h>
+#include "main.h"
+#include "string-util.h"
+
+#define MAX_NAME_LENGTH 101
+
+/* char *userid;        set by cmdline option */
+/* int  dataset_wid; */
+/* int commit_freq; */
+
+EXEC SQL WHENEVER SQLERROR DO wh_oracle_sql_error("Oracle error in file wh_oracle_util.pc");
+
+void
+wh_oracle_connect(void) {
+  printf("Connect string = %s\n", userid);
+  EXEC SQL CONNECT :userid;
+  printf("Connected to Oracle userid=%s\n", userid);
+}
+
+void
+wh_oracle_commit(void) {
+  EXEC SQL COMMIT WORK;
+}
+
+void
+wh_oracle_disconnect(void) {
+  EXEC SQL COMMIT WORK RELEASE;
+}
+
+int
+wh_oracle_get_new_wid(void) {
+
+  int new_wid;
+
+  EXEC SQL SELECT WID_sequence.nextval INTO :new_wid FROM DUAL;
+
+  /* Show progress */
+  if (new_wid % 1000 == 0) {
+    printf(".");
+    fflush(stdout);
+    fflush(stderr);
+  }
+  
+  /* Optionally commit at intervals */
+  if (commit_freq && (new_wid % commit_freq == 0)) {
+    wh_oracle_commit();
+  }
+  
+  return(new_wid);
+}
+
+int
+wh_oracle_get_new_special_wid(void) {
+  /* Allocates and returns the next available special WID if one is available.
+     If not, allocates and returns the next available regular WID.
+  */
+  int new_wid;
+  int max_special_wid;
+
+  /* Query for permissible max value */
+  EXEC SQL SELECT MaxSpecialWID INTO :max_special_wid FROM Warehouse;
+  /*- printf("Maximum special WID for Warehouse is %d\n", max_special_wid); */
+
+  /* Note: can't do SELECT SpecialWID_sequence.currval, since .nextval must firs
+t be used in session */
+  EXEC SQL SELECT SpecialWID_sequence.nextval INTO :new_wid FROM DUAL;
+  if (new_wid > max_special_wid)
+    return( wh_oracle_get_new_wid() );
+  return(new_wid);
+}
+
+void
+wh_oracle_sql_error (char *msg) {
+  char err_msg[128];
+  int buf_len, msg_len;
+
+  EXEC SQL WHENEVER SQLERROR CONTINUE;
+  printf("\n%s\n", msg);
+  buf_len = sizeof (err_msg);
+  sqlglm(err_msg, &buf_len, &msg_len);
+  printf("%.*s\n", msg_len, err_msg);
+  EXEC SQL ROLLBACK RELEASE;
+  exit(1);
+}
+
+void
+wh_oracle_finalize_dataset() {
+  // Set ChangeDate to a nonNULL value to indicate normal termination of the loader.
+   EXEC SQL UPDATE DataSet
+    SET ChangeDate = SYSDATE
+    WHERE WID = :dataset_wid;
+}
+
+EXEC SQL WHENEVER SQLERROR DO wh_sql_error("Error in insert");
+
+void
+wh_oracle_insert_entry(int object_wid, int load_error, int lineno, char* change_date) {
+  /* Add object_wid to Entry table
+     BUG: change_date is currently ignored
+  */
+  char load_error_char = 'F';
+  short change_date_ind = INDICATE_NULL;
+  if (load_error)
+    load_error_char = 'T';
+  if (change_date != NULL)
+    change_date_ind = INDICATE_NONNULL;
+  /*!!! need to convert date robustly. Ex format: Mar  1 1996  7:28:39:000AM */
+
+  //--printf("wh_oracle_insert_entry dataset_wid=%d", dataset_wid); //
+  EXEC SQL INSERT INTO Entry (OtherWID, InsertDate, LoadError, LineNumber, DatasetWID)
+    VALUES (:object_wid, SYSDATE, :load_error_char, :lineno,
+	    /*- :change_date:change_date_ind, */
+	    :dataset_wid);
+}
+
+void
+wh_oracle_insert_citation(int citation_wid, char * fulltext,
+			  char * pubmed_id, short pubmed_id_ind) {
+  short fulltext_ind = INDICATE_NONNULL;
+  if (!fulltext || (0 == strlen(fulltext)))
+    fulltext_ind = INDICATE_NULL;
+  EXEC SQL INSERT INTO Citation (WID, Citation, PMID, DatasetWID)
+    VALUES (:citation_wid,
+            :fulltext:fulltext_ind,
+	    :pubmed_id:pubmed_id_ind,
+	    :dataset_wid);
+}
+
+void
+wh_oracle_update_citation(int citation_wid, char * fulltext,
+			  char * pubmed_id, short pubmed_id_ind) {
+  EXEC SQL UPDATE Citation SET
+    Citation = :fulltext,
+    PMID = :pubmed_id:pubmed_id_ind
+    WHERE WID = :citation_wid;
+}
+
+void
+wh_oracle_insert_comment(int object_wid, char* comment) {
+  EXEC SQL INSERT INTO CommentTable (OtherWID, Comm)
+    VALUES (:object_wid, :comment);
+}
+
+void
+wh_oracle_insert_crossreference(int other_wid, char * xid, char * dataset_name) {
+  int truncated_xid = 0;
+  if (strlen(xid) > 50) {
+    truncated_xid = 1;
+    xid = string_truncate(xid, 50);
+  }
+  EXEC SQL INSERT INTO CrossReference (OtherWID, XID, DataBaseName)
+    VALUES (:other_wid, :xid, :dataset_name);
+    
+  if (truncated_xid) free(xid);
+}
+
+void
+wh_oracle_insert_description(int object_wid, char* table_name, char* description) {
+  int truncated = 0;
+  if (strlen(description) > 4000) {
+    truncated = 1;
+    description = string_truncate(description, 4000);
+  }
+  EXEC SQL INSERT INTO Description (OtherWID, TableName, Comm)
+    VALUES (:object_wid, :table_name, :description);
+    
+  if (truncated) free(description);
+}
+
+void
+wh_oracle_insert_dbid(int other_wid, char * xid) {
+  EXEC SQL INSERT INTO DBID (OtherWID, XID)
+    VALUES(:other_wid, :xid);
+}
+
+void
+wh_oracle_insert_synonymtable(int wid, char * syn_name) {
+  int truncated_syn_name = 0;
+  if (!syn_name || 0 == strlen(syn_name)) /* Don't store empty synonyms */
+    return;
+  if (strlen(syn_name) > 255) {
+    truncated_syn_name = 1;
+    syn_name = string_truncate(syn_name, 50);
+  }
+  EXEC SQL INSERT INTO SynonymTable (OtherWID, Syn)
+    VALUES (:wid, :syn_name);
+    
+  if (truncated_syn_name) free(syn_name);
+}
+
+void
+wh_oracle_insert_enzymaticreaction(int enzrxn_wid, int reaction_wid, int protein_wid,
+				   int complex_wid, short complex_ind,
+				   char * reaction_direction, short reaction_direction_ind) {
+  EXEC SQL INSERT INTO EnzymaticReaction (WID,
+                                          ReactionWID,
+                                          ProteinWID,
+                                          ComplexWID,
+                                          ReactionDirection,
+                                          DataSetWID)
+    VALUES (:enzrxn_wid,
+            :reaction_wid,
+            :protein_wid,
+            /* optional columns */
+            :complex_wid:complex_ind,
+            :reaction_direction:reaction_direction_ind,
+            :dataset_wid);
+}
+
+void
+wh_oracle_insert_enzrxn_cofactor(int enzrxn_wid, int chemical_wid,
+				 char prosthetic, short prosthetic_ind) {
+  EXEC SQL INSERT INTO EnzReactionCofactor (EnzymaticReactionWID, ChemicalWID, Prosthetic)
+    VALUES (:enzrxn_wid, :chemical_wid,
+	    :prosthetic:prosthetic_ind);  
+}
+
+void
+wh_oracle_insert_enzrxn_chemical(int enzrxn_wid, int chemical_wid,
+				 char mechanism, char inhibit_or_activate, char physiologically_relevant) {
+
+  EXEC SQL INSERT INTO EnzReactionInhibitorActivator (EnzymaticReactionWID, CompoundWID, Mechanism, InhibitOrActivate, PhysioRelevant)
+    VALUES (:enzrxn_wid, :chemical_wid, :mechanism, :inhibit_or_activate, :physiologically_relevant);  
+}
+
+void
+wh_oracle_insert_enzrxn_alternate(int enzrxn_wid, int primary_wid, int alternate_wid, char cofactor) {
+  EXEC SQL INSERT INTO EnzReactionAltCompound (EnzymaticReactionWID, PrimaryWID, AlternativeWID, Cofactor)
+    VALUES (:enzrxn_wid, :primary_wid, :alternate_wid, :cofactor);  
+}
+
+void
+wh_oracle_insert_support(int support_wid, int other_wid, char *type, short type_ind) {
+  EXEC SQL INSERT INTO Support (WID, OtherWID, Type, DataSetWID)
+    VALUES (:support_wid, :other_wid, :type:type_ind, :dataset_wid);
+}
+
+void
+wh_oracle_insert_transcription_unit_component(int tu_wid, int other_wid, char * type) {
+  EXEC SQL INSERT INTO TranscriptionUnitComponent (TranscriptionUnitWID, OtherWID, Type)
+    VALUES (:tu_wid, :other_wid, :type);
+}
+                                                                                
+void
+wh_oracle_insert_transcription_unit(int transcription_unit_wid, char * name) {
+  EXEC SQL INSERT INTO TranscriptionUnit (WID, Name, DataSetWID)
+    VALUES(:transcription_unit_wid, :name, :dataset_wid);
+}
+
+void
+wh_oracle_insert_relatedterm(int term_wid, int other_wid, char *relationship, short relationship_ind) {
+  EXEC SQL INSERT INTO RelatedTerm (TermWID, OtherWID, Relationship)
+    VALUES (:term_wid, :other_wid, :relationship:relationship_ind);
+}
+
+void
+wh_oracle_insert_location(int protein_wid, char *location) {
+  EXEC SQL INSERT INTO Location (ProteinWID, Location)
+    VALUES (:protein_wid, :location);
+}
+
+void
+wh_oracle_insert_chemical_simple(int chemical_wid, char * name) {
+  EXEC SQL INSERT INTO Chemical (WID, Name, DataSetWID)
+    VALUES (:chemical_wid, :name, :dataset_wid);
+}
+
+void
+wh_oracle_run_query (char * query, char * failure_msg) {
+  EXEC SQL WHENEVER SQLERROR DO wh_sql_error(failure_msg);
+  EXEC SQL EXECUTE IMMEDIATE :query;
+} 
+
+
+/* All SQL SELECTs go after this point */
+
+EXEC SQL WHENEVER SQLERROR DO wh_sql_error("Error in SELECT in wh_oracle_util.pc");
+
+int
+wh_oracle_select_geneticcode_wid(char * gencode_id) {
+  /* Given a genetic code ID (1-15), find the GeneticCode.WID
+     where its NCBIID matches gencode_id, and return it.
+     If none found, return 0.
+     If multiple NCBI datasets are found, returns the max WID available.
+  */
+  short ind;
+  int wid;
+  EXEC SQL SELECT max(GeneticCode.WID) INTO wid:ind
+    FROM GeneticCode,DataSet
+    WHERE GeneticCode.NCBIID=:gencode_id
+    AND DataSet.WID=GeneticCode.datasetwid
+    AND DataSet.Name='NCBI Taxonomy';
+  //-printf("wh_oracle_select_geneticcode_wid %s returns %d\n", gencode_id, (ind>=0) ? wid : 0);
+  if (ind >=0) return wid;
+  return 0;
+}
+
+int
+wh_oracle_select_dataset_wid(char * db_name) {
+  /* Returns the maximum (most recently loaded) DataSet.WID for the given dataset.
+     Return 0 if not loaded.
+  */
+  int wid;
+  short wid_ind;
+
+  EXEC SQL WHENEVER NOT FOUND DO break;
+  for (;;) {
+    EXEC SQL SELECT max(WID) INTO :wid:wid_ind FROM DataSet WHERE Name = :db_name;
+    if (wid_ind == INDICATE_NONNULL) return(wid);
+    else return 0;
+  }
+  return(0);
+}
+
+
+int
+wh_oracle_dataset_exists(int dswid) {
+  // Returns dswid if it is a DataSet.WID in this warehouse, else returns 0.
+  int wid;
+  short wid_ind;
+
+  EXEC SQL WHENEVER NOT FOUND DO break;
+  for (;;) {
+    EXEC SQL SELECT max(WID) INTO :wid:wid_ind FROM DataSet
+      WHERE WID = :dswid;
+    if (wid_ind == INDICATE_NONNULL) return(dswid);
+    else return 0;
+  }
+  return(0);
+}
+
+EXEC SQL WHENEVER NOT FOUND DO break;
+
+int
+wh_oracle_select_ecnumber_reaction(char * ecnumber, int enzyme_dataset_wid) {
+  int wid;
+  short wid_ind;
+
+  /*-printf("wh_oracle_select_ecnumber_reaction ecnumber=%s, enzyme_dataset_wid=%d\n", ecnumber, enzyme_dataset_wid); */
+  EXEC SQL WHENEVER NOT FOUND DO break;
+  for (;;) {
+    EXEC SQL SELECT max(WID) INTO :wid:wid_ind FROM Reaction
+      WHERE ECNumber = :ecnumber AND DataSetWID = :enzyme_dataset_wid;
+    if (wid_ind == INDICATE_NONNULL)
+      return(wid);
+    else return 0;
+  }
+  return(0);  
+}
+
+
+int
+wh_oracle_select_term(char * term_name, int query_dataset_wid) {
+  int wid;
+  short wid_ind;
+
+  EXEC SQL WHENEVER NOT FOUND DO break;
+  for (;;) {
+    EXEC SQL SELECT max(WID) INTO :wid:wid_ind FROM Term
+      WHERE Name = :term_name AND DataSetWID = :query_dataset_wid;
+    if (wid_ind == INDICATE_NONNULL)
+      return(wid);
+    else return 0;
+  }
+  return(0);  
+}
+
+
+int
+wh_oracle_select_dbid_otherwid(char * xid, int query_dataset_wid) {
+  int wid;
+  short wid_ind;
+
+  EXEC SQL WHENEVER NOT FOUND DO break;
+  for (;;) {
+    EXEC SQL SELECT max(DBID.OtherWID) INTO :wid:wid_ind FROM DBID,Entry
+      WHERE DBID.XID = :xid
+      AND DBID.OtherWID = Entry.OtherWID
+      AND Entry.DataSetWID = :query_dataset_wid;
+    if (wid_ind == INDICATE_NONNULL)
+      return(wid);
+    else return 0;
+  }
+  return(0);  
+}

@@ -1,0 +1,204 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         DesignElementGroup
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="DesignElementGroup"></a>DesignElementGroup
+      </h1>
+      <hr>Represents MAGE Class DesignElementGroup<br>The DesignElementGroup holds information on either features, reporters, or compositeSequences, particularly that information
+      that is common between all of the DesignElements contained.<br>Includes MAGE Class CompositeGroup<br>Includes MAGE Class FeatureGroup<br>Includes MAGE Class ReporterGroup<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>MAGEClass</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(100)</td>
+            <td>No</td>
+            <td>Discriminator column specifies type of object this row represents<br></td>
+         </tr>
+         <tr>
+            <td>Identifier</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Identifiable.identifier<br>An identifier is an unambiguous string that is unique within the scope (i.e. a document, a set of related documents, or a
+               repository) of its use.<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Identifiable.name<br>The potentially ambiguous common identifier.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesign.html">ArrayDesign_FeatureGroups</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between ArrayDesign and FeatureGroup<br>The grouping of like Features together.  Typically for a physical array design, this will be a single grouping of features
+               whose type might be PCR Product or Oligo.  If more than one technology type occurs on the array, such as the mixing of Cloned
+               BioMaterial and Oligos, then there would be multiple FeatureGroups to segregate the technology types.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">DesignElementGroup_Species</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between DesignElementGroup and OntologyEntry<br>The organism from which the biosequences of this group are from.<br></td>
+         </tr>
+         <tr>
+            <td>FeatureWidth</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute FeatureGroup.featureWidth<br>The width of the feature.<br></td>
+         </tr>
+         <tr>
+            <td>FeatureLength</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute FeatureGroup.featureLength<br>The length of the feature.<br></td>
+         </tr>
+         <tr>
+            <td>FeatureHeight</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute FeatureGroup.featureHeight<br>The height of the feature.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">FeatureGroup_TechnologyType</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between FeatureGroup and OntologyEntry<br>The technology type of this design.  By specifying a technology type, higher level analysis can use appropriate algorithms
+               to compare the results from multiple arrays.  The technology type may be spotted cDNA or in situ photolithography.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">FeatureGroup_FeatureShape</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between FeatureGroup and OntologyEntry<br>The expected shape of the feature on the array: circular, oval, square, etc.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Unit.html">FeatureGroup_DistanceUnit</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between FeatureGroup and DistanceUnit<br>The unit for the feature measures.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="DesignElement.html">DesignElement</a></td>
+            <td>FeatureGroup_Features</td>
+         </tr>
+         <tr>
+            <td><a href="DesignElement.html">DesignElement</a></td>
+            <td>FeatureGroup</td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesignWIDReporterGroupWID.html">ArrayDesignWIDReporterGroupWID</a></td>
+            <td>ReporterGroupWID</td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesignWIDCompositeGrpWID.html">ArrayDesignWIDCompositeGrpWID</a></td>
+            <td>CompositeGroupWID</td>
+         </tr>
+         <tr>
+            <td><a href="ComposGrpWIDComposSequenceWID.html">ComposGrpWIDComposSequenceWID</a></td>
+            <td>CompositeGroupWID</td>
+         </tr>
+         <tr>
+            <td><a href="ReporterGroupWIDReporterWID.html">ReporterGroupWIDReporterWID</a></td>
+            <td>ReporterGroupWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>DesignElementGroup1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>DesignElementGroup2</td>
+            <td>MAGEClass</td>
+         </tr>
+         <tr>
+            <td>DesignElementGroup3</td>
+            <td>Identifier</td>
+         </tr>
+         <tr>
+            <td>DesignElementGroup4</td>
+            <td>Name</td>
+         </tr>
+         <tr>
+            <td>DesignElementGroup5</td>
+            <td>ArrayDesign_FeatureGroups</td>
+         </tr>
+         <tr>
+            <td>DesignElementGroup6</td>
+            <td>DesignElementGroup_Species</td>
+         </tr>
+         <tr>
+            <td>DesignElementGroup7</td>
+            <td>FeatureWidth</td>
+         </tr>
+         <tr>
+            <td>DesignElementGroup8</td>
+            <td>FeatureLength</td>
+         </tr>
+         <tr>
+            <td>DesignElementGroup9</td>
+            <td>FeatureHeight</td>
+         </tr>
+         <tr>
+            <td>DesignElementGroup10</td>
+            <td>FeatureGroup_TechnologyType</td>
+         </tr>
+         <tr>
+            <td>DesignElementGroup11</td>
+            <td>FeatureGroup_FeatureShape</td>
+         </tr>
+         <tr>
+            <td>DesignElementGroup12</td>
+            <td>FeatureGroup_DistanceUnit</td>
+         </tr>
+      </table><br><br></body>
+</html>

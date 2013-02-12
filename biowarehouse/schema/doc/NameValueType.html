@@ -1,0 +1,113 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         NameValueType
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="NameValueType"></a>NameValueType
+      </h1>
+      <hr>Represents MAGE Class NameValueType<br>A tuple designed to store data, keyed by a name and type.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute NameValueType.name<br>The name of the key.<br></td>
+         </tr>
+         <tr>
+            <td>Value</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute NameValueType.value<br>The value of the name.<br></td>
+         </tr>
+         <tr>
+            <td>Type_</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute NameValueType.type<br>The type of the key.<br></td>
+         </tr>
+         <tr>
+            <td><a href="NameValueType.html">NameValueType_PropertySets</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between NameValueType and NameValueType<br>Allows nested specification of name/value pairs<br></td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>WID of the object this NameValueType describes<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="NameValueType.html">NameValueType</a></td>
+            <td>NameValueType_PropertySets</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>NameValueType1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>NameValueType2</td>
+            <td>Name</td>
+         </tr>
+         <tr>
+            <td>NameValueType3</td>
+            <td>Value</td>
+         </tr>
+         <tr>
+            <td>NameValueType4</td>
+            <td>Type_</td>
+         </tr>
+         <tr>
+            <td>NameValueType5</td>
+            <td>NameValueType_PropertySets</td>
+         </tr>
+         <tr>
+            <td>NameValueType6</td>
+            <td>OtherWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

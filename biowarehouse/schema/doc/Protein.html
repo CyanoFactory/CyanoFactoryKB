@@ -1,0 +1,262 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Protein
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Protein"></a>Protein
+      </h1>
+      <hr>Defines a specific protein, that is, a real-world protein which was either purified and
+      isolated,
+      <br>OR is reasonably inferred by genomic analysis or other means, such as enzymological
+      characterization.
+      <br>The protein could be a monomer or a multimer. In the latter case, a sequence would not be stored for
+      such a record.
+      <br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>The warehouse ID of this protein<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>TEXT</td>
+            <td>VARCHAR2(4000)</td>
+            <td>Yes</td>
+            <td>Common name of the protein, if it exists<br></td>
+         </tr>
+         <tr>
+            <td>AASequence</td>
+            <td>LONGTEXT</td>
+            <td>CLOB</td>
+            <td>Yes</td>
+            <td>Amino-acid sequence for this protein, if available<br></td>
+         </tr>
+         <tr>
+            <td>Length</td>
+            <td>INT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Length of the amino-acid sequence for this protein, if available<br>This value is not necessarily exact, as can be modified by LengthApproximate<br></td>
+         </tr>
+         <tr>
+            <td>LengthApproximate</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(10)</td>
+            <td>Yes</td>
+            <td>Indicates that the Length is an approximate. It could be 'gt' for<br>greater than, 'lt' for less than and 'ne' to indicate that it is not<br>equal. This is a controlled vocabulary.<br></td>
+         </tr>
+         <tr>
+            <td>Charge</td>
+            <td>SMALLINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Charge of the chemical<br></td>
+         </tr>
+         <tr>
+            <td>Fragment</td>
+            <td>CHAR(1)</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>'T' if protein is a fragment, else 'F'<br></td>
+         </tr>
+         <tr>
+            <td>MolecularWeightCalc</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Molecular weight calculated from sequence.<br>Units: kiloDaltons.<br></td>
+         </tr>
+         <tr>
+            <td>MolecularWeightExp</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Molecular Weight determined through experimentation.<br>Units: kiloDaltons.<br></td>
+         </tr>
+         <tr>
+            <td>PICalc</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>Isoelectric point (pI) calculated from its sequence.<br></td>
+         </tr>
+         <tr>
+            <td>PIExp</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>Isoelectric point (pI) determined through experimentation.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of the dataset the protein is from<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="EnzymaticReaction.html">EnzymaticReaction</a></td>
+            <td>ProteinWID</td>
+         </tr>
+         <tr>
+            <td><a href="EnzymaticReaction.html">EnzymaticReaction</a></td>
+            <td>ComplexWID</td>
+         </tr>
+         <tr>
+            <td><a href="Location.html">Location</a></td>
+            <td>ProteinWID</td>
+         </tr>
+         <tr>
+            <td><a href="Subunit.html">Subunit</a></td>
+            <td>ComplexWID</td>
+         </tr>
+         <tr>
+            <td><a href="Subunit.html">Subunit</a></td>
+            <td>SubunitWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioSourceWIDProteinWID.html">BioSourceWIDProteinWID</a></td>
+            <td>ProteinWID</td>
+         </tr>
+         <tr>
+            <td><a href="GeneWIDProteinWID.html">GeneWIDProteinWID</a></td>
+            <td>ProteinWID</td>
+         </tr>
+         <tr>
+            <td><a href="ProteinWIDFunctionWID.html">ProteinWIDFunctionWID</a></td>
+            <td>ProteinWID</td>
+         </tr>
+         <tr>
+            <td><a href="ProteinWIDSpotWID.html">ProteinWIDSpotWID</a></td>
+            <td>ProteinWID</td>
+         </tr>
+         <tr>
+            <td><a href="Entry.html">Entry</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="Feature.html">Feature</a></td>
+            <td>SequenceWID</td>
+         </tr>
+         <tr>
+            <td><a href="Support.html">Support</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="EnzReactionInhibitorActivator.html">EnzReactionInhibitorActivator</a></td>
+            <td>CompoundWID</td>
+         </tr>
+         <tr>
+            <td><a href="Product.html">Product</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="Reactant.html">Reactant</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="InteractionParticipant.html">InteractionParticipant</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SequenceMatch.html">SequenceMatch</a></td>
+            <td>QueryWID</td>
+         </tr>
+         <tr>
+            <td><a href="SequenceMatch.html">SequenceMatch</a></td>
+            <td>MatchWID</td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>CrossWID</td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>PROTEIN_DWID</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>PROTEIN_NAME</td>
+            <td></td>
+         </tr>
+         <tr>
+            <td>PROTEIN_CHARGE</td>
+            <td>CHARGE</td>
+         </tr>
+         <tr>
+            <td>PROTEIN_MOLEWEIGHTCALC</td>
+            <td>MOLECULARWEIGHTCALC</td>
+         </tr>
+         <tr>
+            <td>PROTEIN_MOLEWEIGHTEXP</td>
+            <td>MOLECULARWEIGHTEXP</td>
+         </tr>
+         <tr>
+            <td>PROTEIN_PICALC</td>
+            <td>PICALC</td>
+         </tr>
+         <tr>
+            <td>PROTEIN_PIEXP</td>
+            <td>PIEXP</td>
+         </tr>
+      </table><br><br></body>
+</html>

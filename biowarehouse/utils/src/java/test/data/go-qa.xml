@@ -1,0 +1,52 @@
+<test-set>
+    <dataset name="Gene Ontology" widToken="GO_WID"/>
+
+    <group description="Checking out the basics...">
+
+        <test description="Check use of enumerated values in Term.Obsolete">
+            <query sql="select distinct(Obsolete) from Term where DataSetWID=GO_WID"/>
+            <assert column="Obsolete" contains="T"/>
+            <assert column="Obsolete" contains="F"/>
+            <assert numRows="2"/>
+        </test>
+
+    </group>
+
+    <group description="Examining GO Term GO:0000010">
+        <test description="Examine Term entry">
+            <query sql="select * from Term t, DBID d where t.DataSetWID=GO_WID and t.WID=d.OtherWID and d.XID='GO:0000010'"/>
+            <assert column="Name" is="trans-hexaprenyltranstransferase activity"/>
+            <assert column="Definition" is="Catalysis of the reaction: all-trans-hexaprenyl diphosphate + isopentenyl diphosphate = diphosphate + all-trans-heptaprenyl diphosphate."/>
+            <assert column="Obsolete" is="F"/>
+        </test>
+
+        <test descripton="Checking CrossReferences">
+            <query sql
+        </test>
+    </group>
+
+
+    <term>
+        <id>GO:0000010</id>
+        <name>trans-hexaprenyltranstransferase activity</name>
+        <namespace>molecular_function</namespace>
+        <def>
+            <defstr>Catalysis of the reaction: all-trans-hexaprenyl diphosphate + isopentenyl diphosphate = diphosphate + all-trans-heptaprenyl diphosphate.</defstr>
+            <dbxref>
+                <acc>2.5.1.30</acc>
+                <dbname>EC</dbname>
+            </dbxref>
+        </def>
+        <subset>gosubset_prok</subset>
+        <xref_analog>
+            <acc>2.5.1.30</acc>
+            <dbname>EC</dbname>
+        </xref_analog>
+        <xref_analog>
+            <acc>TRANS-HEXAPRENYLTRANSTRANSFERASE-RXN</acc>
+            <dbname>MetaCyc</dbname>
+        </xref_analog>
+        <is_a>GO:0016765</is_a>
+    </term>
+
+</test-set>

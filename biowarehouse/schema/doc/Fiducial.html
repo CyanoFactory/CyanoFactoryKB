@@ -1,0 +1,94 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Fiducial
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Fiducial"></a>Fiducial
+      </h1>
+      <hr>Represents MAGE Class Fiducial<br>A marking on the surface of the array that can be used to identify the array's origin, the coordinates of which are the fiducial's
+      centroid.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayGroup.html">ArrayGroup_Fiducials</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between ArrayGroup and Fiducial<br>Association to the marks on the Array for alignment for the scanner.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">Fiducial_FiducialType</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between Fiducial and OntologyEntry<br>A descriptive string that indicates the type of a fiducial (e.g. the chrome border on an Affymetrix array, a laser ablation
+               mark).<br></td>
+         </tr>
+         <tr>
+            <td><a href="Unit.html">Fiducial_DistanceUnit</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between Fiducial and DistanceUnit<br>The units the fiducial is measured in.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Position_.html">Fiducial_Position</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between Fiducial and Position<br>The position, relative to the upper left corner, of the fiducial<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>Fiducial1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>Fiducial2</td>
+            <td>ArrayGroup_Fiducials</td>
+         </tr>
+         <tr>
+            <td>Fiducial3</td>
+            <td>Fiducial_FiducialType</td>
+         </tr>
+         <tr>
+            <td>Fiducial4</td>
+            <td>Fiducial_DistanceUnit</td>
+         </tr>
+         <tr>
+            <td>Fiducial5</td>
+            <td>Fiducial_Position</td>
+         </tr>
+      </table><br><br></body>
+</html>

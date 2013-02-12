@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ProteinWIDFunctionWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ProteinWIDFunctionWID"></a>ProteinWIDFunctionWID
+      </h1>
+      <hr>Associates a non-enzymatic function with a protein that has that function.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="Protein.html">ProteinWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the protein that has this function.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Function.html">FunctionWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the function for this protein.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>PF_FunctionWID_PROWID</td>
+            <td>FunctionWID,PROTEINWID</td>
+         </tr>
+         <tr>
+            <td>PF_PROWID_FunctionWID</td>
+            <td>PROTEINWID,FunctionWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

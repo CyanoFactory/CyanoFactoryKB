@@ -1,0 +1,137 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Archive
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Archive"></a>Archive
+      </h1>
+      <hr>Defines an association between a warehouse entity and an external representation or depiction<br>of that entity in a well-defined format.<br>Can be used to store the contents itself, or to indicate that an archive is present at a URL.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of entity archive is associated with<br></td>
+         </tr>
+         <tr>
+            <td>Format</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(10)</td>
+            <td>No</td>
+            <td>Storage/compression format used eg. 'zip' 'tar' 'tgz' 'jpeg'<br></td>
+         </tr>
+         <tr>
+            <td>Contents</td>
+            <td>LONGBLOB</td>
+            <td>BLOB</td>
+            <td>Yes</td>
+            <td>Archive contents<br></td>
+         </tr>
+         <tr>
+            <td>URL</td>
+            <td>TEXT</td>
+            <td>VARCHAR2(4000)</td>
+            <td>Yes</td>
+            <td>Web address the archive is found at, ideally a specific file<br></td>
+         </tr>
+         <tr>
+            <td>ToolName</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>The name of the tool or software kit the archive is used by<br>eg. 'MIAMExpress'<br></td>
+         </tr>
+         <tr>
+            <td>DataSetWID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>DataSet.WID this entity is associated with<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="Experiment.html">Experiment</a></td>
+            <td>ArchiveWID</td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>CrossWID</td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ARCHIVE_OTHERWID</td>
+            <td>OTHERWID</td>
+         </tr>
+         <tr>
+            <td>ARCHIVE_TOOL</td>
+            <td>TOOLNAME</td>
+         </tr>
+         <tr>
+            <td>ARCHIVE_DATASETWID</td>
+            <td>DataSetWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

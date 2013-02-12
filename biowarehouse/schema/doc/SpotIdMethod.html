@@ -1,0 +1,69 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         SpotIdMethod
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="SpotIdMethod"></a>SpotIdMethod
+      </h1>
+      <hr>Describes the method by which a spot was identified as<br>a particular (known) protein in the protein table.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td>MethodName</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(100)</td>
+            <td>No</td>
+            <td>The name of the method<br>ex: Co-migration<br></td>
+         </tr>
+         <tr>
+            <td>MethodDesc</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(500)</td>
+            <td>Yes</td>
+            <td>More detailed description of method.<br>Ex: Co-migration with purified protein<br></td>
+         </tr>
+         <tr>
+            <td>MethodAbbrev</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(10)</td>
+            <td>Yes</td>
+            <td>A short abbreviation for the method name.<br>ex: C<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DatasetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>The dataset the entity is from<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="SpotWIDSpotIdMethodWID.html">SpotWIDSpotIdMethodWID</a></td>
+            <td>SpotIdMethodWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>None.<br><br></body>
+</html>

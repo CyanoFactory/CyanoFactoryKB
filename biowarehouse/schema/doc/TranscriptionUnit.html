@@ -1,0 +1,76 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         TranscriptionUnit
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="TranscriptionUnit"></a>TranscriptionUnit
+      </h1>
+      <hr>Defines a transcription unit, similar to an operon.  There is a one-to-one
+      relationship between a promoter and a transcription unit.  The transcription
+      unit includes the promoter, nearby site that regulate its activity, and downstream
+      genes and the terminator.  Unlike operons, a transcription unit can contain a single
+      gene, and a transcription unit can contain only one promoter.  For operons containing
+      multiple promoters, a different transcription unit would be created for each operon.
+      See TranscriptionUnitComponent for the types of components represented.
+      <br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this TranscriptionUnit<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>No</td>
+            <td>Name of the transcription unit<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="TranscriptionUnitComponent.html">TranscriptionUnitComponent</a></td>
+            <td>TranscriptionUnitWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>TranscriptionUnit_DWID</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>TranscriptionUnit_Name</td>
+            <td>Name</td>
+         </tr>
+      </table><br><br></body>
+</html>

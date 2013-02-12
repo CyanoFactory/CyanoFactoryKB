@@ -1,0 +1,96 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         FlowCytometrySample
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="FlowCytometrySample"></a>FlowCytometrySample
+      </h1>
+      <hr>Defines an experimental sample prepared for use in a flow cytometry experiment.
+      	A typical experiment consists of multiple samples X multiple readings
+      	(forward/side scatter and using filters of various wavelengths),
+      	with a vector of observations (one per cell of the BioSource)
+      	for each sample/reading combination.<br> An ExperimentData row is defined for each observation; see that table for representation details.<br> An Experiment row is defined to associate each ExperimentData row with the experiment. <br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse idetification number for this flow cytometry sample<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioSource.html">BioSourceWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>References the biological source of this sample.<br></td>
+         </tr>
+         <tr>
+            <td><a href="FlowCytometryProbe.html">FlowCytometryProbeWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>References the probe used with this sample.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Measurement.html">MeasurementWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>References a specification of the amount of the probe used.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Contact.html">ManufacturerWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>References the Contact that describes the manufacturer of this sample.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>References the data set the entity came from<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>FlowCytometrySample_DWID</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>FlowCytometrySample_BioSource</td>
+            <td>BioSourceWID</td>
+         </tr>
+         <tr>
+            <td>FlowCytometrySample_Manufac</td>
+            <td>ManufacturerWID</td>
+         </tr>
+         <tr>
+            <td>FlowCytometrySample_Meas</td>
+            <td>MeasurementWID</td>
+         </tr>
+         <tr>
+            <td>FlowCytometrySample_Probe</td>
+            <td>FlowCytometryProbeWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

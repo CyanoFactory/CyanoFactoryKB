@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         DatabaseWIDContactWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="DatabaseWIDContactWID"></a>DatabaseWIDContactWID
+      </h1>
+      <hr>Represents n..n association between Database and Contact<br>Information on the contacts for the database<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="Database_.html">DatabaseWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to Database<br></td>
+         </tr>
+         <tr>
+            <td><a href="Contact.html">ContactWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to Contact<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>DatabaseWIDContactWID1</td>
+            <td>DatabaseWID</td>
+         </tr>
+         <tr>
+            <td>DatabaseWIDContactWID2</td>
+            <td>ContactWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

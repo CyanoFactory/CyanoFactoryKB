@@ -1,0 +1,81 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         QuantitationTypeTuple
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="QuantitationTypeTuple"></a>QuantitationTypeTuple
+      </h1>
+      <hr>Represents MAGE Class QuantitationTypeTuple<br>Transformed container to specify a Quantitation Type and the value for that Type.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementTuple.html">DesignElementTuple</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between DesignElementTuple and QuantitationTypeTuple<br>A QuantitationType and the value associated with it<br></td>
+         </tr>
+         <tr>
+            <td><a href="QuantitationType.html">QuantitationType</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between QuantitationTypeTuple and QuantitationType<br>The QuantitationType associated with the value of the BioAssayDatum.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Datum.html">QuantitationTypeTuple_Datum</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between QuantitationTypeTuple and Datum<br>The value to associate with the Quantitation Type.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>QuantitationTypeTuple1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>QuantitationTypeTuple2</td>
+            <td>DesignElementTuple</td>
+         </tr>
+         <tr>
+            <td>QuantitationTypeTuple3</td>
+            <td>QuantitationType</td>
+         </tr>
+         <tr>
+            <td>QuantitationTypeTuple4</td>
+            <td>QuantitationTypeTuple_Datum</td>
+         </tr>
+      </table><br><br></body>
+</html>
