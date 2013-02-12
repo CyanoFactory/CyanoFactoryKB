@@ -189,7 +189,7 @@ wh_insert_bare_object(char * object_table, int wid) {
   char query[MAX_QUERY_SIZE];
   
   if (snprintf(query, MAX_QUERY_SIZE,
-	       "INSERT INTO %s (WID, DataSetWID) VALUES (%d, %d)",
+	       "INSERT INTO \"%s\" (\"WID\", \"DataSetWID\") VALUES (%d, %d)",
 	       object_table, wid, dataset_wid)  >= MAX_QUERY_SIZE )
     fatal_error("wh_insert_bare_object: Query too long\n");
   
@@ -197,6 +197,8 @@ wh_insert_bare_object(char * object_table, int wid) {
   wh_oracle_run_query(query, "Failed to insert into link table");
 #elif DEF_MYSQL
   wh_mysql_run_query(query, "Failed to insert into link table");
+#elif DEF_POSTGRES
+  wh_postgres_run_query(query, "Failed to insert into link table");
 #endif
 }
 
@@ -214,14 +216,16 @@ wh_insert_linktable(char * column1, int wid1, char* column2, int wid2) {
     fatal_error("Table name too long\n");
   
   if (snprintf(query, MAX_QUERY_SIZE,
-	       "INSERT INTO %s (%s, %s) VALUES (%d, %d)",
+	       "INSERT INTO \"%s\" (\"%s\", \"%s\") VALUES (%d, %d)",
 	       table_name, column1, column2, wid1, wid2)  >= MAX_QUERY_SIZE )
     fatal_error("Query too long\n");
-  
+  //_asm int 3;
 #ifdef ORACLE
   wh_oracle_run_query(query, "Failed to insert into link table");
 #elif DEF_MYSQL
   wh_mysql_run_query(query, "Failed to insert into link table");
+#elif DEF_POSTGRES
+  wh_postgres_run_query(query, "Failed to insert into link table");
 #endif
 }
 
@@ -232,7 +236,7 @@ wh_insert_named_linktable(char * table_name, char * column1, int wid1, char* col
   char query[MAX_QUERY_SIZE];
 
   if (snprintf(query, MAX_QUERY_SIZE,
-	       "INSERT INTO %s (%s, %s) VALUES (%d, %d)",
+	       "INSERT INTO \"%s\" (\"%s\", \"%s\") VALUES (%d, %d)",
 	       table_name, column1, column2, wid1, wid2)  >= MAX_QUERY_SIZE )
     fatal_error("Query too long\n");
   
@@ -240,6 +244,8 @@ wh_insert_named_linktable(char * table_name, char * column1, int wid1, char* col
   wh_oracle_run_query(query, "Failed to insert into link table");
 #elif DEF_MYSQL
   wh_mysql_run_query(query, "Failed to insert into link table");
+#elif DEF_POSTGRES
+  wh_postgres_run_query(query, "Failed to insert into link table");
 #endif
 }
 
@@ -250,7 +256,7 @@ wh_insert_subunit(int complex_wid, int subunit_wid, int coefficient) {
   char query[MAX_QUERY_SIZE];
   
   if (snprintf(query, MAX_QUERY_SIZE,
-	       "INSERT INTO Subunit (ComplexWID, SubunitWID, Coefficient) VALUES (%d, %d, %d)",
+	       "INSERT INTO \"Subunit\" (\"ComplexWID\", \"SubunitWID\", \"Coefficient\") VALUES (%d, %d, %d)",
 	       complex_wid, subunit_wid, coefficient)  >= MAX_QUERY_SIZE )
     fatal_error("wh_insert_subunit: Query too long\n");
   
@@ -258,6 +264,8 @@ wh_insert_subunit(int complex_wid, int subunit_wid, int coefficient) {
   wh_oracle_run_query(query, "Failed to insert into Subunit");
 #elif DEF_MYSQL
   wh_mysql_run_query(query, "Failed to insert into Subunit");
+#elif DEF_POSTGRES
+  wh_postgres_run_query(query, "Failed to insert into Subunit");
 #endif
 }
 
@@ -267,6 +275,8 @@ wh_commit(void) {
   wh_oracle_commit();
 #elif DEF_MYSQL
   wh_mysql_commit();
+#elif DEF_POSTGRES
+  wh_postgres_commit();
 #endif
 }
 
@@ -276,6 +286,8 @@ wh_connect(void) {
   wh_oracle_connect();
 #elif DEF_MYSQL
   wh_mysql_connect();
+#elif DEF_POSTGRES
+  wh_postgres_connect();
 #endif
 }
 
@@ -285,6 +297,8 @@ wh_disconnect(void) {
   wh_oracle_disconnect();
 #elif DEF_MYSQL
   wh_mysql_disconnect();
+#elif DEF_POSTGRES
+  wh_postgres_disconnect();
 #endif
   if (dataset_wid > 1)
     printf("Load is committed, disconnected from database, DataSet.WID is %d\n", dataset_wid);
@@ -298,24 +312,30 @@ wh_finalize_dataset(void) {
   wh_oracle_finalize_dataset();
 #elif DEF_MYSQL
   wh_mysql_finalize_dataset();
+#elif DEF_POSTGRES
+  wh_postgres_finalize_dataset();
 #endif
 }
 
 int
 wh_get_new_wid(void) {
 #ifdef ORACLE
-  wh_oracle_get_new_wid(); 
+  return wh_oracle_get_new_wid(); 
 #elif DEF_MYSQL
-  wh_mysql_get_new_wid();
+  return wh_mysql_get_new_wid();
+#elif DEF_POSTGRES
+  return wh_postgres_get_new_wid();
 #endif
 }
 
 int
 wh_get_new_special_wid(void) {
 #ifdef ORACLE
-  wh_oracle_get_new_special_wid(); 
+  return wh_oracle_get_new_special_wid(); 
 #elif DEF_MYSQL
-  wh_mysql_get_new_special_wid();
+  return wh_mysql_get_new_special_wid();
+#elif DEF_POSTGRES
+  return wh_postgres_get_new_special_wid();
 #endif
 }
 
@@ -339,6 +359,8 @@ wh_dataset_exists(int dswid) {
   return wh_oracle_dataset_exists (dswid);
 #elif DEF_MYSQL
   return wh_mysql_dataset_exists (dswid);
+#elif DEF_POSTGRES
+  return wh_postgres_dataset_exists (dswid);
 #endif  
 }
 
@@ -353,6 +375,8 @@ wh_insert_citation(int citation_wid, char * fulltext,
 			     pubmed_id, pubmed_id_ind);
 #elif DEF_MYSQL
   wh_mysql_insert_citation (citation_wid, fulltext,
+#elif DEF_POSTGRES
+  wh_postgres_insert_citation (citation_wid, fulltext,
 			    pubmed_id, pubmed_id_ind);
 #endif
 }
@@ -365,6 +389,8 @@ wh_update_citation(int citation_wid, char * fulltext,
 			     pubmed_id, pubmed_id_ind);
 #elif DEF_MYSQL
   wh_mysql_update_citation (citation_wid, fulltext,
+#elif DEF_POSTGRES
+  wh_postgres_update_citation (citation_wid, fulltext,
 			    pubmed_id, pubmed_id_ind);
 #endif
 }
@@ -379,6 +405,8 @@ wh_insert_comment(int object_wid, char* comment) {
     wh_oracle_insert_comment(object_wid, comment);
 #elif DEF_MYSQL
     wh_mysql_insert_comment(object_wid, comment);
+#elif DEF_POSTGRES
+    wh_postgres_insert_comment(object_wid, comment);
 #endif
   }
 }
@@ -392,6 +420,8 @@ wh_insert_crossreference(int other_wid, char * xid, char * dataset_name) {
     wh_oracle_insert_crossreference(other_wid, xid, dataset_name);
 #elif DEF_MYSQL
     wh_mysql_insert_crossreference(other_wid, xid, dataset_name);
+#elif DEF_POSTGRES
+    wh_postgres_insert_crossreference(other_wid, xid, dataset_name);
 #endif
   }
 }
@@ -406,6 +436,8 @@ wh_insert_description(int object_wid, char* table_name, char* description) {
     wh_oracle_insert_description(object_wid, table_name, description);
 #elif DEF_MYSQL
     wh_mysql_insert_description(object_wid, table_name, description);
+#elif DEF_POSTGRES
+    wh_postgres_insert_description(object_wid, table_name, description);
 #endif
   }
 }
@@ -416,6 +448,8 @@ wh_insert_dbid(int object_wid, char* name) {
   wh_oracle_insert_dbid(object_wid, name);
 #elif DEF_MYSQL
   wh_mysql_insert_dbid(object_wid, name);
+#elif DEF_POSTGRES
+  wh_postgres_insert_dbid(object_wid, name);
 #endif
 }
 
@@ -426,6 +460,8 @@ wh_insert_entry(int object_wid, int load_error, int lineno, char* change_date) {
 #elif DEF_MYSQL
      /* !Currently ignores change_date */
   wh_mysql_insert_entry(object_wid, load_error, lineno);
+#elif DEF_POSTGRES
+  wh_postgres_insert_entry(object_wid, load_error, lineno);
 #endif
 }
 
@@ -437,6 +473,8 @@ wh_insert_synonymtable(int object_wid, char* name) {
     wh_oracle_insert_synonymtable(object_wid, name);
 #elif DEF_MYSQL
     wh_mysql_insert_synonymtable(object_wid, name);
+#elif DEF_POSTGRES
+    wh_postgres_insert_synonymtable(object_wid, name);
 #endif
   }
 }
@@ -451,6 +489,8 @@ wh_insert_enzymaticreaction(int enzrxn_wid, int reaction_wid, int protein_wid,
 				      reaction_direction, reaction_direction_ind);
 #elif DEF_MYSQL
   wh_mysql_insert_enzymaticreaction (enzrxn_wid, reaction_wid, protein_wid,
+#elif DEF_POSTGRES
+  wh_postgres_insert_enzymaticreaction (enzrxn_wid, reaction_wid, protein_wid,
 				     complex_wid, complex_ind,
 				     reaction_direction, reaction_direction_ind);
 #endif
@@ -463,6 +503,8 @@ wh_insert_enzrxn_cofactor(int enzrxn_wid, int chemical_wid,
   wh_oracle_insert_enzrxn_cofactor (enzrxn_wid, chemical_wid, prosthetic, prosthetic_ind);
 #elif DEF_MYSQL
   wh_mysql_insert_enzrxn_cofactor (enzrxn_wid, chemical_wid, prosthetic, prosthetic_ind);
+#elif DEF_POSTGRES
+  wh_postgres_insert_enzrxn_cofactor (enzrxn_wid, chemical_wid, prosthetic, prosthetic_ind);
 #endif
 }
 
@@ -473,6 +515,8 @@ wh_insert_enzrxn_chemical(int enzrxn_wid, int chemical_wid,
   wh_oracle_insert_enzrxn_chemical (enzrxn_wid, chemical_wid, mechanism, inhibit_or_activate, physiologically_relevant);
 #elif DEF_MYSQL
   wh_mysql_insert_enzrxn_chemical (enzrxn_wid, chemical_wid, mechanism, inhibit_or_activate, physiologically_relevant);
+#elif DEF_POSTGRES
+  wh_postgres_insert_enzrxn_chemical (enzrxn_wid, chemical_wid, mechanism, inhibit_or_activate, physiologically_relevant);
 #endif
 }
 
@@ -482,6 +526,8 @@ wh_insert_enzrxn_alternate(int enzrxn_wid, int primary_wid, int alternate_wid, c
   wh_oracle_insert_enzrxn_alternate (enzrxn_wid, primary_wid, alternate_wid, cofactor);
 #elif DEF_MYSQL
   wh_mysql_insert_enzrxn_alternate (enzrxn_wid, primary_wid, alternate_wid, cofactor);
+#elif DEF_POSTGRES
+  wh_postgres_insert_enzrxn_alternate (enzrxn_wid, primary_wid, alternate_wid, cofactor);
 #endif	      
 }
 
@@ -497,6 +543,8 @@ wh_insert_chemical_simple(int chemical_wid, char * name) {
   wh_oracle_insert_chemical_simple (chemical_wid, tname);
 #elif DEF_MYSQL
   wh_mysql_insert_chemical_simple (chemical_wid, tname);
+#elif DEF_POSTGRES
+  wh_postgres_insert_chemical_simple (chemical_wid, tname);
 #endif  
 }
 
@@ -506,6 +554,8 @@ wh_insert_support(int support_wid, int other_wid, char *type, short type_ind) {
   wh_oracle_insert_support(support_wid, other_wid, type, type_ind);
 #elif DEF_MYSQL
   wh_mysql_insert_support(support_wid, other_wid, type, type_ind);
+#elif DEF_POSTGRES
+  wh_postgres_insert_support(support_wid, other_wid, type, type_ind);
 #endif
 }
 
@@ -515,6 +565,8 @@ wh_insert_transcription_unit(int transcription_unit_wid, char* name) {
   wh_oracle_insert_transcription_unit(transcription_unit_wid, name);
 #elif DEF_MYSQL
   wh_mysql_insert_transcription_unit(transcription_unit_wid, name);
+#elif DEF_POSTGRES
+  wh_postgres_insert_transcription_unit(transcription_unit_wid, name);
 #endif
 }
 
@@ -524,6 +576,8 @@ wh_insert_relatedterm(int term_wid, int other_wid, char *relationship, short rel
   wh_oracle_insert_relatedterm (term_wid, other_wid, relationship, relationship_ind);
 #elif DEF_MYSQL
   wh_mysql_insert_relatedterm (term_wid, other_wid, relationship, relationship_ind);
+#elif DEF_POSTGRES
+  wh_postgres_insert_relatedterm (term_wid, other_wid, relationship, relationship_ind);
 #endif
 }
 
@@ -533,6 +587,8 @@ wh_insert_location(int protein_wid, char *location) {
   wh_oracle_insert_location(protein_wid, location);
 #elif DEF_MYSQL
   wh_mysql_insert_location(protein_wid, location);
+#elif DEF_POSTGRES
+  wh_postgres_insert_location(protein_wid, location);
 #endif
 }
 
@@ -542,6 +598,8 @@ wh_insert_transcription_unit_component(int tu_wid, int other_wid, char * type) {
   wh_oracle_insert_transcription_unit_component (tu_wid, other_wid, type);
 #elif DEF_MYSQL
   wh_mysql_insert_transcription_unit_component  (tu_wid, other_wid, type);
+#elif DEF_POSTGRES
+  wh_postgres_insert_transcription_unit_component  (tu_wid, other_wid, type);
 #endif                                                                                
 }
 
@@ -554,6 +612,8 @@ wh_select_dataset_wid(char * db_name) {
   return wh_oracle_select_dataset_wid (db_name);
 #elif DEF_MYSQL
   return wh_mysql_select_dataset_wid (db_name);
+#elif DEF_POSTGRES
+  return wh_postgres_select_dataset_wid (db_name);
 #endif  
 }
 
@@ -563,6 +623,8 @@ wh_select_ecnumber_reaction(char * ecnumber, int enzyme_dataset_wid) {
   return wh_oracle_select_ecnumber_reaction (ecnumber, enzyme_dataset_wid);
 #elif DEF_MYSQL
   return wh_mysql_select_ecnumber_reaction (ecnumber, enzyme_dataset_wid);
+#elif DEF_POSTGRES
+  return wh_postgres_select_ecnumber_reaction (ecnumber, enzyme_dataset_wid);
 #endif  
 }
 
@@ -572,6 +634,8 @@ wh_select_geneticcode_wid (char * gencode_id) {
   return wh_oracle_select_geneticcode_wid (gencode_id);
 #elif DEF_MYSQL
   return wh_mysql_select_geneticcode_wid (gencode_id);
+#elif DEF_POSTGRES
+  return wh_postgres_select_geneticcode_wid (gencode_id);
 #endif  					      
 }
 						     
@@ -581,6 +645,8 @@ wh_select_term(char * term_name, int query_dataset_wid) {
   return wh_oracle_select_term (term_name, query_dataset_wid);
 #elif DEF_MYSQL
   return wh_mysql_select_term (term_name, query_dataset_wid);
+#elif DEF_POSTGRES
+  return wh_postgres_select_term (term_name, query_dataset_wid);
 #endif  					      
 }
 
@@ -590,6 +656,8 @@ wh_select_dbid_otherwid(char * xid, int query_dataset_wid) {
   return wh_oracle_select_dbid_otherwid (xid, query_dataset_wid);
 #elif DEF_MYSQL
   return wh_mysql_select_dbid_otherwid (xid, query_dataset_wid);
+#elif DEF_POSTGRES
+  return wh_postgres_select_dbid_otherwid (xid, query_dataset_wid);
 #endif  					      
 }
 
@@ -601,13 +669,15 @@ wh_delete_object(char * table_name, int wid) {
   char query[MAX_QUERY_SIZE];
 
   if (snprintf(query, MAX_QUERY_SIZE,
-	       "DELETE FROM %s WHERE WID = %d", table_name, wid)  >= MAX_QUERY_SIZE )
+	       "DELETE FROM \"%s\" WHERE \"WID\" = %d", table_name, wid)  >= MAX_QUERY_SIZE )
     fatal_error("Query too long\n");
   
 #ifdef ORACLE
   wh_oracle_run_query(query, "Failed to delete object");
 #elif DEF_MYSQL
   wh_mysql_run_query(query, "Failed to delete object");
+#elif DEF_POSTGRES
+  wh_postgres_run_query(query, "Failed to delete object");
 #endif
 }
 

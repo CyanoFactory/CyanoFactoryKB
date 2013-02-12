@@ -1,10 +1,10 @@
 all: biocyc-loader
-db := none
+db := postgres
 utilsdir := ../../../utils/src/c
 VPATH = $(utilsdir)
 
 ## If we don't specify a $(db), make sure both mysql and oracle files are clean'ed
-OBJS = wh_oracle.o wh_oracle_util.o wh_mysql.o wh_mysql_util.o
+OBJS = wh_oracle.o wh_oracle_util.o wh_mysql.o wh_mysql_util.o wh_postgres.o wh_postgres_util.o
 
 ifeq ($(db),oracle)
 	##
@@ -24,6 +24,14 @@ ifeq ($(db), mysql)
         LIBS = -L/usr/lib -lmysqlclient -lz -lm -lcrypt -lpthread -ldl
         OUTPUT = mysql-biocyc-loader
         CFLAGS += -I/usr/include/mysql -I$(utilsdir)
+endif
+
+ifeq ($(db), postgres)
+        HDRS = wh_postgres.h
+        OBJS = wh_postgres.o wh_postgres_util.o
+        LIBS = -L/usr/lib -L/Library/PostgreSQL/9.2/lib -lpq -lcrypto -lz -lm -lpthread -ldl
+        OUTPUT = postgres-biocyc-loader
+        CFLAGS += -fasm-blocks -I/Library/PostgreSQL/9.2/include -I$(utilsdir)
 endif
 
 CC=gcc
@@ -47,7 +55,7 @@ OBJS +=main.o string-util.o widtable.o db.o wh.o\
 CFLAGS+= -g
 
 biocyc-loader: $(OBJS) $(HDRS)
-	$(CC) -O3 -g -o $(OUTPUT) $(OBJS) -ll $(LIBS) ## -lefence
+	$(CC) -g -o $(OUTPUT) $(OBJS) -ll $(LIBS) ## -lefence
 	rm -f biocyc-loader
 	ln -s $(OUTPUT) biocyc-loader
 
@@ -224,4 +232,10 @@ ifeq ($(db), mysql)
 	cp $*.pc $*.c
 %.o:%.c
 	$(CC) -DDEF_MYSQL $(CFLAGS) -c $<
+endif
+ifeq ($(db), postgres)
+%.c:%.pc
+	cp $*.pc $*.c
+%.o:%.c
+	$(CC) -DDEF_POSTGRES $(CFLAGS) -c $<
 endif
