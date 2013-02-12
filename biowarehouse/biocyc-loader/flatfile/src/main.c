@@ -31,7 +31,7 @@
 #include <limits.h>
 #include <string.h>
 #include <errno.h>
-#include <malloc.h>
+#include <stdlib.h>
 #include "wh.h"
 #include "main.h"
 #include "db.h"
@@ -182,6 +182,8 @@ print_usage() {
   printf("Required arguments:\n  -d datapath  -o \"OrganismName\" -u \"Userid/Password\" \n");
 #elif DEF_MYSQL
   printf("Required arguments:\n  -d datapath -o \"OrganismName\" -u userId -h host -p password -b database_name \n");
+#elif DEF_POSTGRES
+  printf("Required arguments:\n  -d datapath -o \"OrganismName\" -u userId -h host -p password -b database_name \n");
 #endif
   printf("Options:\n");
   printf("  -l datasetWID:\t Link dataset created by this loader to given dataset via the DataSetHierarchy table\n");
@@ -294,7 +296,7 @@ main(int argc, char **argv) {
       break;
     case 'p':
       password = optarg;
-      /* printf("Password is %s\n", password); */
+      printf("Password is %s\n", password);
       break;
     case 'r':
       release_date = optarg;
