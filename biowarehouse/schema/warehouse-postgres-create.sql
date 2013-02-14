@@ -24,9 +24,8 @@ CREATE TABLE "WIDTable"
   CONSTRAINT "PK_WIDTable" PRIMARY KEY ("PreviousWID")
 );
 
-
-
 INSERT INTO "WIDTable" ("PreviousWID") values (999999);
+SELECT setval('"WIDTable_PreviousWID_seq"'::regclass, (SELECT MAX("PreviousWID") FROM "WIDTable"));
 
 CREATE TABLE "SpecialWIDTable"
 (
@@ -35,9 +34,8 @@ CREATE TABLE "SpecialWIDTable"
   CONSTRAINT "PK_SpecialWIDTable" PRIMARY KEY ("PreviousWID")
 );
 
-
-
 INSERT INTO "SpecialWIDTable" ("PreviousWID") values (1);
+SELECT setval('"SpecialWIDTable_PreviousWID_seq"'::regclass, (SELECT MAX("PreviousWID") FROM "SpecialWIDTable"));
 
 CREATE TABLE "Enumeration"
 (

@@ -167,7 +167,7 @@ wh_postgres_get_new_wid(void) {
   char* val = PQgetvalue(res, 0, 0);
   new_wid = atoi(val);
   //printf("NEW WID %d ", new_wid);
-  if(-1 == snprintf(query, MAX_QUERY_SIZE,"INSERT INTO \"WIDTable\" Values (%d)", ++new_wid))
+  if(-1 == snprintf(query, MAX_QUERY_SIZE,"INSERT INTO \"WIDTable\" Values (%d)", new_wid))
      wh_postgres_fatal_error("In wh_postgres_get_new_wid: Query string too long\n");
   wh_postgres_run_query(query, "Failed to insert into WIDTable to get new wid"); 
   //new_wid = mysql_insert_id(&pg_handle);
@@ -225,17 +225,17 @@ wh_postgres_get_new_special_wid(void) {
   val = PQgetvalue(result, 0, 0);
   new_wid = atoi(val);
 
-  if(-1 == snprintf(query, MAX_QUERY_SIZE,"INSERT INTO \"SpecialWIDTable\" VALUES (%d)", ++new_wid)) {
+  if(-1 == snprintf(query, MAX_QUERY_SIZE,"INSERT INTO \"SpecialWIDTable\" VALUES (%d)", new_wid)) {
 	wh_postgres_fatal_error("In wh_postgres_get_new_special_wid: Query string too long\n");
   }
 
-  if(-1 == snprintf(query, MAX_QUERY_SIZE,"INSERT INTO \"WIDTable\" Values (%d)", new_wid))
-     wh_postgres_fatal_error("In wh_postgres_get_new_wid: Query string too long\n");
-  wh_postgres_run_query(query, "Failed to insert into WIDTable to get new wid"); 
+  /*if(-1 == snprintf(query, MAX_QUERY_SIZE,"INSERT INTO \"WIDTable\" Values (%d)", new_wid))
+     wh_postgres_fatal_error("In wh_postgres_get_new_wid: Query string too long\n");*/
+  wh_postgres_run_query(query, "Failed to insert into WIDTable to get new wid");
   
   //printf(" The new wid inserted in the special table is %d\n", new_wid);
 
-  if (new_wid <= 1) {
+  if (new_wid <= 1) { 
     // This is an error indicator, usually indicating the mysql server has gone down,
     //  and the WID counters in the WIDTable and SpecialWIDTable are no longer valid.
     // So reset these counters to a value very like to be higher than any previously
