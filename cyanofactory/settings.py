@@ -162,7 +162,7 @@ LOGGING = {
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.filebased.FileBasedCache',
-        'LOCATION': 'E:/Programmierung/warehouse/cache',
+        'LOCATION': ROOT_DIR + '/cache',
     }
 }
 
