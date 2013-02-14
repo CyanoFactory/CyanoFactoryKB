@@ -1,0 +1,153 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Pathway
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Pathway"></a>Pathway
+      </h1>
+      <hr>Pathways are graphs of reactions, grouped together according to a<br>higher biological function they perform. Some pathways may be<br>"template", "reference", "model" or "sum of organisms" pathways. Those<br>pathways do not contain an BioSourceWID reference, and have the type<br>field set to "R" (Reference/Model/Theoretical). For real organisms,<br>the type is "O".<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse ID for this pathway<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>No</td>
+            <td>Name of the pathway<br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>unknown</b> -
+                  Name assigned when it is unknown or missing<br></div>
+            </td>
+         </tr>
+         <tr>
+            <td>Type</td>
+            <td>CHAR(1)</td>
+            <td>CHAR(1)</td>
+            <td>No</td>
+            <td>Type of pathway (see comment above)<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioSource.html">BioSourceWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>BioSource this pathway occurs in<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of the dataset the pathway is from<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="PathwayLink.html">PathwayLink</a></td>
+            <td>Pathway1WID</td>
+         </tr>
+         <tr>
+            <td><a href="PathwayLink.html">PathwayLink</a></td>
+            <td>Pathway2WID</td>
+         </tr>
+         <tr>
+            <td><a href="PathwayReaction.html">PathwayReaction</a></td>
+            <td>PathwayWID</td>
+         </tr>
+         <tr>
+            <td><a href="SuperPathway.html">SuperPathway</a></td>
+            <td>SubPathwayWID</td>
+         </tr>
+         <tr>
+            <td><a href="SuperPathway.html">SuperPathway</a></td>
+            <td>SuperPathwayWID</td>
+         </tr>
+         <tr>
+            <td><a href="Entry.html">Entry</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="Support.html">Support</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>CrossWID</td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>PATHWAY_BSWID_WID_DWID</td>
+            <td>BioSourceWID, WID, DataSetWID</td>
+         </tr>
+         <tr>
+            <td>PATHWAY_TYPE_WID_DWID</td>
+            <td>TYPE, WID, DataSetWID</td>
+         </tr>
+         <tr>
+            <td>PATHWAY_DWID</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>PATHWAY_Name</td>
+            <td>Name</td>
+         </tr>
+      </table><br><br></body>
+</html>

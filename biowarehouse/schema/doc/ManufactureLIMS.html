@@ -1,0 +1,147 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ManufactureLIMS
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ManufactureLIMS"></a>ManufactureLIMS
+      </h1>
+      <hr>Represents MAGE Class ManufactureLIMS<br>Information on the physical production of arrays within the laboratory.<br>Includes MAGE Class ManufactureLIMSBiomaterial<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>MAGEClass</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(100)</td>
+            <td>No</td>
+            <td>Discriminator column specifies type of object this row represents<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufacture.html">ArrayManufacture_FeatureLIMSs</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between ArrayManufacture and ManufactureLIMS<br>Information on the manufacture of the features.<br></td>
+         </tr>
+         <tr>
+            <td>Quality</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute ManufactureLIMS.quality<br>A brief description of the quality of the array manufacture process.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesignElement.html">Feature</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between ManufactureLIMS and Feature<br>The feature whose LIMS information is being described.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioSource.html">BioMaterial</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between ManufactureLIMS and BioMaterial<br>The BioMaterial used for the feature.<br></td>
+         </tr>
+         <tr>
+            <td>ManufactureLIMS_IdentifierLIMS</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between ManufactureLIMS and DatabaseEntry<br>Association to a LIMS data source for further information on the manufacturing process.<br></td>
+         </tr>
+         <tr>
+            <td>BioMaterialPlateIdentifier</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute ManufactureLIMSBiomaterial.bioMaterialPlateIdentifier<br>The plate from which a biomaterial was obtained.<br></td>
+         </tr>
+         <tr>
+            <td>BioMaterialPlateRow</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute ManufactureLIMSBiomaterial.bioMaterialPlateRow<br>The plate row from which a biomaterial was obtained.  Specified by a letter.<br></td>
+         </tr>
+         <tr>
+            <td>BioMaterialPlateCol</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute ManufactureLIMSBiomaterial.bioMaterialPlateCol<br>The plate column from which a biomaterial was obtained.  Specified by a number.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ManufactureLIMS1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>ManufactureLIMS2</td>
+            <td>MAGEClass</td>
+         </tr>
+         <tr>
+            <td>ManufactureLIMS3</td>
+            <td>ArrayManufacture_FeatureLIMSs</td>
+         </tr>
+         <tr>
+            <td>ManufactureLIMS4</td>
+            <td>Quality</td>
+         </tr>
+         <tr>
+            <td>ManufactureLIMS5</td>
+            <td>Feature</td>
+         </tr>
+         <tr>
+            <td>ManufactureLIMS6</td>
+            <td>BioMaterial</td>
+         </tr>
+         <tr>
+            <td>ManufactureLIMS7</td>
+            <td>ManufactureLIMS_IdentifierLIMS</td>
+         </tr>
+         <tr>
+            <td>ManufactureLIMS8</td>
+            <td>BioMaterialPlateIdentifier</td>
+         </tr>
+         <tr>
+            <td>ManufactureLIMS9</td>
+            <td>BioMaterialPlateRow</td>
+         </tr>
+         <tr>
+            <td>ManufactureLIMS10</td>
+            <td>BioMaterialPlateCol</td>
+         </tr>
+      </table><br><br></body>
+</html>

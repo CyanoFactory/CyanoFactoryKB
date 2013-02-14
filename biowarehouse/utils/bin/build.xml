@@ -1,0 +1,251 @@
+<!-- =========================================================== -->
+<!--  Ant script to build BioWarehouse loaders                   -->
+<!--  Valerie Wagner, October 2004                               -->
+<!-- =========================================================== -->
+<project name="Warehouse Master Build" basedir="." default="help">
+
+    <!-- Load developer-specific properties -->
+    <!-- Copy "developer.properties.template" to "developer.properties" and edit it -->
+    <property file="developer.properties"/>
+
+    <!-- Definition of some directory locations -->
+    <property name="warehouse.home" location="${basedir}/../.."/>
+    <property name="schema.dir" location="${warehouse.home}/schema"/>
+
+    <!-- The loader directories (directory from which the loader is build) -->
+    <property name="biocyc.dir" location="${warehouse.home}/biocyc-loader/flatfile/src"/>
+    <property name="cmr.dir" location="${warehouse.home}/cmr-loader/src"/>
+    <property name="eco2dbase.dir" location="${warehouse.home}/eco2dbase-loader"/>
+    <property name="genbank.dir" location="${warehouse.home}/genbank-loader"/>
+    <property name="go.dir" location="${warehouse.home}/go-loader"/>
+    <property name="kegg.dir" location="${warehouse.home}/kegg-loader/src"/>
+    <property name="ncbi-taxonomy.dir" location="${warehouse.home}/ncbi-taxonomy-loader/src"/>
+    <property name="enzyme.dir" location="${warehouse.home}/enzyme-loader"/>
+    <property name="uniprot.dir" location="${warehouse.home}/uniprot-loader"/>
+    <property name="metacyc-ontology.dir" location="${warehouse.home}/metacyc-ontology-loader/src"/>
+    <property name="mage.dir" location="${warehouse.home}/mage-loader"/>
+
+    <!-- =========================================================== -->
+    <!--   ALL LOADERS                                               -->
+    <!-- =========================================================== -->
+    <target name="clean-all" description="Clean all Warehouse loaders"
+            depends="clean-all-java, clean-all-c">
+    </target>
+
+    <target name="build-all" description="Build all Warehouse loaders"
+            depends="clean-all, build-all-java, build-all-c">
+    </target>
+
+    <target name="clean-all-java" description="Clean all Java-based Warehouse loaders"
+            depends="clean-enzyme,
+                     clean-genbank,
+                     clean-go,
+                     clean-mage,
+                     clean-uniprot">
+    </target>
+
+    <target name="build-all-java" description="Build all Java-based Warehouse loaders"
+            depends="build-enzyme,
+                     build-genbank,
+                     build-go,
+                     build-mage,
+                     build-uniprot">
+    </target>
+
+    <target name="clean-all-c" description="Clean all C-based Warehouse loaders"
+            depends="clean-biocyc,
+                 clean-cmr,
+                 clean-kegg,
+                 clean-metacyc-ontology,
+                 clean-ncbi-taxonomy">
+    </target>
+
+    <target name="build-all-c" description="Build all C-based Warehouse loaders"
+            depends="build-biocyc,
+                 build-cmr,
+                 build-kegg,
+                 build-metacyc-ontology,
+                 build-ncbi-taxonomy">
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  BIOCYC LOADER                                              -->
+    <!-- =========================================================== -->
+    <target name="clean-biocyc" description="Clean the Biocyc loader">
+        <echo level="info" message="## ${ant.project.name}: Cleaning the Biocyc Loader ..."/>
+        <exec dir="${biocyc.dir}" executable="make">
+            <arg line="clean"/>
+        </exec>
+    </target>
+
+    <target name="build-biocyc" depends="clean-biocyc" description="Build the Biocyc loader">
+        <echo level="info" message="## ${ant.project.name}: Building the Biocyc Loader ..."/>
+        <exec dir="${biocyc.dir}" executable="make">
+            <arg line="db=${dbms}"/>
+        </exec>
+	<!-- make twice, as first time sometimes fails -->
+        <exec dir="${biocyc.dir}" executable="make">
+            <arg line="db=${dbms}"/>
+        </exec>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  CMR LOADER                                              -->
+    <!-- =========================================================== -->
+    <target name="clean-cmr" description="Clean the CMR loader">
+        <echo level="info" message="## ${ant.project.name}: Cleaning the CMR Loader ..."/>
+        <exec dir="${cmr.dir}" executable="make">
+            <arg line="clean"/>
+        </exec>
+    </target>
+
+    <target name="build-cmr" description="Build the CMR loader">
+        <echo level="info" message="## ${ant.project.name}: Building the CMR Loader ..."/>
+        <exec dir="${cmr.dir}" executable="make">
+            <arg line="clean db=${dbms}"/>
+        </exec>
+        <exec dir="${cmr.dir}" executable="make">
+            <arg line="db=${dbms}"/>
+        </exec>
+	<!-- make twice, as first time sometimes fails -->
+        <exec dir="${cmr.dir}" executable="make">
+            <arg line="db=${dbms}"/>
+        </exec>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  GENBANK LOADER                                        -->
+    <!-- =========================================================== -->
+    <target name="clean-genbank" description="Clean the GenBank loader">
+        <echo level="info" message="## ${ant.project.name}: Cleaning the GenBank Loader ..."/>
+        <ant dir="${genbank.dir}" target="clean"/>
+    </target>
+
+    <target name="build-genbank" description="Build the GenBank loader">
+        <echo level="info" message="## ${ant.project.name}: Building the GenBank Loader ..."/>
+        <ant dir="${genbank.dir}" target="build"/>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  GO LOADER                                        -->
+    <!-- =========================================================== -->
+    <target name="clean-go" description="Clean the GO loader">
+        <echo level="info" message="## ${ant.project.name}: Cleaning the GO Loader ..."/>
+        <ant dir="${go.dir}" target="clean"/>
+    </target>
+
+    <target name="build-go" description="Build the GO loader">
+        <echo level="info" message="## ${ant.project.name}: Building the GO Loader ..."/>
+        <ant dir="${go.dir}" target="build"/>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  KEGG LOADER                                                -->
+    <!-- =========================================================== -->
+    <target name="clean-kegg" description="Clean the KEGG loader">
+        <echo level="info" message="## ${ant.project.name}: Cleaning the KEGG Loader ..."/>
+        <exec dir="${kegg.dir}" executable="make">
+            <arg line="clean"/>
+        </exec>
+    </target>
+
+    <target name="build-kegg" description="Build the KEGG loader">
+        <echo level="info" message="## ${ant.project.name}: Building the KEGG Loader ..."/>
+        <exec dir="${kegg.dir}" executable="make">
+            <arg line="db=${dbms}"/>
+        </exec>
+	<!-- make twice, as first time sometimes fails -->
+        <exec dir="${kegg.dir}" executable="make">
+            <arg line="db=${dbms}"/>
+        </exec>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  MAGE LOADER                                                -->
+    <!-- =========================================================== -->
+    <target name="clean-mage" description="Clean the MAGE loader">
+        <echo level="info" message="## ${ant.project.name}: Cleaning the MAGE Loader ..."/>
+        <ant dir="${mage.dir}" target="clean"/>
+    </target>
+
+    <target name="build-mage" description="Build the MAGE loader">
+        <echo level="info" message="## ${ant.project.name}: Building the MAGE Loader ..."/>
+        <ant dir="${mage.dir}" target="build"/>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  METACYC-ONTOLOGY LOADER                                    -->
+    <!-- =========================================================== -->
+    <target name="clean-metacyc-ontology" description="Clean the Metacyc Ontology loader">
+        <echo level="info" message="## ${ant.project.name}: Cleaning the Metacyc Ontology Loader ..."/>
+        <exec dir="${metacyc-ontology.dir}" executable="make">
+            <arg line="clean"/>
+        </exec>
+	<!-- make twice, as first time sometimes fails -->
+        <exec dir="${metacyc-ontology.dir}" executable="make">
+            <arg line="clean"/>
+        </exec>
+    </target>
+
+    <target name="build-metacyc-ontology" description="Build the Metacyc Ontology loader">
+        <echo level="info" message="## ${ant.project.name}: Building the Metacyc Ontology Loader ..."/>
+        <exec dir="${metacyc-ontology.dir}" executable="make">
+            <arg line="db=${dbms}"/>
+        </exec>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  NCBI-TAXONOMY LOADER                                       -->
+    <!-- =========================================================== -->
+    <target name="clean-ncbi-taxonomy" description="Clean the NCBI Taxonomy loader">
+        <echo level="info" message="## ${ant.project.name}: Cleaning the NCBI Taxonomy Loader ..."/>
+        <exec dir="${ncbi-taxonomy.dir}" executable="make">
+            <arg line="clean"/>
+        </exec>
+    </target>
+
+    <target name="build-ncbi-taxonomy" description="Build the NCBI Taxonomy loader">
+        <echo level="info" message="## ${ant.project.name}: Building the NCBI Taxonomy Loader ..."/>
+        <exec dir="${ncbi-taxonomy.dir}" executable="make">
+            <arg line="db=${dbms}"/>
+        </exec>
+	<!-- make twice, as first time sometimes fails -->
+        <exec dir="${ncbi-taxonomy.dir}" executable="make">
+            <arg line="db=${dbms}"/>
+        </exec>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  ENZYME LOADER                                              -->
+    <!-- =========================================================== -->
+    <target name="clean-enzyme" description="Clean the Enzyme loader">
+        <echo level="info" message="## ${ant.project.name}: Cleaning the Enzyme Loader ..."/>
+        <ant dir="${enzyme.dir}" target="clean"/>
+    </target>
+
+    <target name="build-enzyme" description="Build the Enzyme loader">
+        <echo level="info" message="## ${ant.project.name}: Building the Enzyme Loader ..."/>
+        <ant dir="${enzyme.dir}" target="build"/>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  UNIPROT LOADER                                             -->
+    <!-- =========================================================== -->
+    <target name="clean-uniprot" description="Clean the Uniprot loader">
+        <echo level="info" message="## ${ant.project.name}: Cleaning the Uniprot Loader ..."/>
+        <ant dir="${uniprot.dir}" target="clean"/>
+    </target>
+
+    <target name="build-uniprot" description="Build the Uniprot loader">
+        <echo level="info" message="## ${ant.project.name}: Building the Uniprot Loader ..."/>
+        <ant dir="${uniprot.dir}" target="build"/>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  HELP                                                       -->
+    <!-- =========================================================== -->
+    <target name="help">
+        <echo level="info" message="Type 'ant -projecthelp' for help"/>
+    </target>
+
+</project>

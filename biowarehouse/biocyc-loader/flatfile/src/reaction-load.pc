@@ -1,0 +1,181 @@
+/* *******************************************************************
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
+ * the License for the specific language governing rights and
+ * limitations under the License.
+ *
+ * The Original Code is the BioWarehouse.
+ *
+ * The Initial Developer of the Original Code is SRI International.
+ * Portions created by SRI International are Copyright (C) 2004.
+ * All Rights Reserved.
+ ******************************************************************* */
+/*
+ * PGDB REACTION loader for the BioSpice Data Warehouse
+ * Thomas J Lee, SRI International, August 2002
+ */
+
+#include "main.h"
+#include "reaction-parse.h"
+#include "db.h"
+#ifdef ORACLE
+#include <sqlca.h>
+#endif
+
+#define DEBUG 0
+
+extern int dataset_wid;
+short ind;
+
+
+int
+find_reaction(char *name) {
+  return(db_select_reaction(name));
+}
+
+
+int
+find_substrate(char *name) {
+  // Query DB being loaded for Chemical or Protein, by name.
+  // Return its WID, or 0.
+  int result;
+  result = db_select_chemical_wid(name);
+  if (result)
+    return result;
+  return(db_select_protein(name));
+}
+
+
+void
+reaction_load_entry(struct reaction_entry *entry) {
+
+  int reaction_wid = wh_get_new_wid();
+  short error = 0;
+  short ind;
+  struct stringlist *sptr;
+  struct stringlist *coeffptr;
+  struct stringlist *chemptr;
+  double coefficient;
+  int substrate_wid;
+  
+  /* Set indicator variables for optional columns, and check string lengths, numeric formats etc. */
+  short delta_g0_ind; 
+  char *delta_g0 = string_column(entry->delta_g0, 50, &delta_g0_ind);
+  short ec_number_ind; 
+  char *ec_number = string_column(entry->ec_number, 50, &ec_number_ind);
+  short official_ec_flag_ind; 
+  char official_ec_flag = boolean_column(entry->official_ec_flag, &official_ec_flag_ind);
+  short spontaneous_ind; 
+  char spontaneous = boolean_column(entry->spontaneous, &spontaneous_ind);
+
+  /* Set indicators to contorl which of ECNumber and ECNumberProposed is NULL */
+  short ec_number_proposed_ind;
+  if (official_ec_flag == 'F') {
+    ec_number_ind = INDICATE_NULL;
+    ec_number_proposed_ind = INDICATE_NONNULL;
+  }
+  else {
+    ec_number_ind = INDICATE_NONNULL;
+    ec_number_proposed_ind = INDICATE_NULL;
+  }
+  
+  if (!entry)
+    advise_error("Null entry passed to reaction_load_entry\n");
+  if (error)
+    reaction_parse_error();
+
+  if (DEBUG) {
+    printf("Loading reaction %s\n", entry->unique_id);
+    printf(" ec_number= %s %d\n", ec_number, ec_number_ind);
+    printf(" entry->delta_g0= %s %d\n", entry->delta_g0, delta_g0_ind);
+  }
+#ifdef ORACLE  
+  /* Try a WHENEVER to assist in debugging silent Oracle errors */
+  EXEC SQL WHENEVER SQLERROR DO sql_error("Oracle error in reaction-load");
+#endif
+  
+  
+  /* Insert row into Reaction table */
+  db_insert_into_reaction(reaction_wid,
+			  delta_g0, delta_g0_ind,
+			  ec_number, ec_number_ind, ec_number_proposed_ind,
+			  spontaneous, spontaneous_ind);
+
+  // Process left side of reaction
+  coeffptr = entry->left_coeffs;
+  for (chemptr=entry->left; chemptr; chemptr=chemptr->next) {
+    if (DEBUG) printf("Adding reactant %s\n", chemptr->string);
+
+    if (substrate_wid = find_substrate(chemptr->string)) {
+      if (DEBUG>1) printf("Found %s\n", chemptr->string);
+    } else {
+      if (DEBUG) printf("Didn't find reactant %s in Chemical or Protein table\n", chemptr->string);
+      substrate_wid = wh_get_new_wid();
+      db_insert_class_into_chemical(substrate_wid, chemptr->string);
+    }
+    /* Add LEFT values to Reactant table  */
+    error = 0;
+    ind = INDICATE_NULL;  // Report conversion error
+    coefficient = number_column(coeffptr->string, &ind, &error);
+    if (error || ind == INDICATE_NULL) {
+      printf("Warning: Symbolic or invalid coefficient %s for %s, using 0\n", coeffptr->string, chemptr->string);
+      reaction_parse_error();
+      coefficient = 0.0;
+    }
+    db_insert_into_reactant(reaction_wid, substrate_wid, coefficient);
+    coeffptr = coeffptr->next;
+  }
+  // Process right side of reaction
+  coeffptr = entry->right_coeffs;
+  for (chemptr=entry->right; chemptr; chemptr=chemptr->next) {
+    if (DEBUG) printf("Adding product %s\n", chemptr->string);
+
+    if (substrate_wid = find_substrate(chemptr->string)) {
+      if (DEBUG>1) printf("Found %s\n", chemptr->string);
+    } else {
+      if (DEBUG) printf("Didn't find product %s in Chemical or Protein table\n", chemptr->string);
+      substrate_wid = wh_get_new_wid();
+      db_insert_class_into_chemical(substrate_wid, chemptr->string);
+    }
+    /* Add RIGHT values to Product table  */
+    error = 0;
+    ind = INDICATE_NULL;  // Report conversion error
+    coefficient = number_column(coeffptr->string, &ind, &error);
+    if (error || ind == INDICATE_NULL) {
+      printf("Warning: Symbolic or invalid coefficient %s for %s, using 0\n", coeffptr->string, chemptr->string);
+      reaction_parse_error();
+      coefficient = 0.0;
+    }
+    db_insert_into_product(reaction_wid, substrate_wid, coefficient);
+    coeffptr = coeffptr->next;
+  }
+    
+  /* Add synonyms to SynonymTable  */
+  for (sptr=entry->synonyms; sptr; sptr=sptr->next)
+    wh_insert_synonymtable(reaction_wid,sptr->string);
+
+  /* Add citations to CitationWIDOtherWID  */
+  for (sptr=entry->citations; sptr; sptr=sptr->next)
+    insert_citation(reaction_wid, sptr->string);
+
+  /* Add comments to CommentTable  */
+  for (sptr=entry->comments; sptr; sptr=sptr->next)
+    wh_insert_comment(reaction_wid, sptr->string);
+
+  /* Add DBID */
+  if (!entry->unique_id)
+    entry->load_error = 1;
+  else
+   wh_insert_dbid(reaction_wid,entry->unique_id); 
+  
+  /* Insert all DBLINKS as crossreferences */      
+  insert_dblinks(reaction_wid, entry->dblinks_dbs, entry->dblinks_ids);
+      
+  /* Finally add Entry */
+  wh_insert_entry(reaction_wid, entry->load_error,0, NULL);
+}

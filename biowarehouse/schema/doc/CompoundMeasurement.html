@@ -1,0 +1,92 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         CompoundMeasurement
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="CompoundMeasurement"></a>CompoundMeasurement
+      </h1>
+      <hr>Represents MAGE Class CompoundMeasurement<br>A CompoundMeasurement is a pairing of a source Compound and an amount (Measurement) of that Compound.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td><a href="Chemical.html">Compound_ComponentCompounds</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between Compound and CompoundMeasurement<br>The Compounds and their amounts used to create this Compound.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Chemical.html">Compound</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between CompoundMeasurement and Compound<br>A Compound to be used to create another Compound.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Measurement.html">Measurement</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between CompoundMeasurement and Measurement<br>The amount of the Compound.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioEvent.html">Treatment_CompoundMeasurements</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between Treatment and CompoundMeasurement<br>The compounds and their amounts used in the treatment.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>CompoundMeasurement1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>CompoundMeasurement2</td>
+            <td>Compound_ComponentCompounds</td>
+         </tr>
+         <tr>
+            <td>CompoundMeasurement3</td>
+            <td>Compound</td>
+         </tr>
+         <tr>
+            <td>CompoundMeasurement4</td>
+            <td>Measurement</td>
+         </tr>
+         <tr>
+            <td>CompoundMeasurement5</td>
+            <td>Treatment_CompoundMeasurements</td>
+         </tr>
+      </table><br><br></body>
+</html>

@@ -1,0 +1,59 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         EnzReactionCofactor
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="EnzReactionCofactor"></a>EnzReactionCofactor
+      </h1>
+      <hr>Cofactors are chemicals that are required for the enzyme to catalyze<br>the reaction, but are left unchanged by the reaction. If multiple<br>cofactors are listed for a reaction, this is interpreted as a disjunction.<br>This table also encodes prosthetic groups.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="EnzymaticReaction.html">EnzymaticReactionWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>EnzymaticReaction.WID of the Enzymatic Reaction<br></td>
+         </tr>
+         <tr>
+            <td><a href="Chemical.html">ChemicalWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Chemical.WID of the compound<br></td>
+         </tr>
+         <tr>
+            <td>Prosthetic</td>
+            <td>CHAR(1)</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>'T' if covalently/tightly bound to enzyme, else 'F'<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ERCOFACTOR_ERWID</td>
+            <td>ENZYMATICREACTIONWID</td>
+         </tr>
+         <tr>
+            <td>ERCOFACTOR_CHEMWID</td>
+            <td>CHEMICALWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

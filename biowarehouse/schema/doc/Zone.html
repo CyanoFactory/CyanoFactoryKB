@@ -1,0 +1,173 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Zone
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Zone"></a>Zone
+      </h1>
+      <hr>Represents MAGE Class Zone<br>Specifies the location of a zone on an array.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>Identifier</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Identifiable.identifier<br>An identifier is an unambiguous string that is unique within the scope (i.e. a document, a set of related documents, or a
+               repository) of its use.<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Identifiable.name<br>The potentially ambiguous common identifier.<br></td>
+         </tr>
+         <tr>
+            <td>Row_</td>
+            <td>SMALLINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute Zone.row<br>row position in the ZoneGroup<br></td>
+         </tr>
+         <tr>
+            <td>Column_</td>
+            <td>SMALLINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute Zone.column<br>column position in the ZoneGroup.<br></td>
+         </tr>
+         <tr>
+            <td>UpperLeftX</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute Zone.upperLeftX<br>Boundary vertical upper left position relative to (0,0).<br></td>
+         </tr>
+         <tr>
+            <td>UpperLeftY</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute Zone.upperLeftY<br>Boundary horizontal upper left position relative to (0,0).<br></td>
+         </tr>
+         <tr>
+            <td>LowerRightX</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute Zone.lowerRightX<br>Boundary vertical lower right position relative to (0,0).<br></td>
+         </tr>
+         <tr>
+            <td>LowerRightY</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute Zone.lowerRightY<br>Boundary horizontal lower right position relative to (0,0).<br></td>
+         </tr>
+         <tr>
+            <td><a href="Unit.html">Zone_DistanceUnit</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between Zone and DistanceUnit<br>Unit for the Zone attributes.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ZoneGroup.html">ZoneGroup_ZoneLocations</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between ZoneGroup and Zone<br>Describes the location of different zones within the array design.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="ZoneDefect.html">ZoneDefect</a></td>
+            <td>Zone</td>
+         </tr>
+         <tr>
+            <td><a href="DesignElement.html">DesignElement</a></td>
+            <td>Zone</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>Zone1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>Zone2</td>
+            <td>Identifier</td>
+         </tr>
+         <tr>
+            <td>Zone3</td>
+            <td>Name</td>
+         </tr>
+         <tr>
+            <td>Zone4</td>
+            <td>Row_</td>
+         </tr>
+         <tr>
+            <td>Zone5</td>
+            <td>Column_</td>
+         </tr>
+         <tr>
+            <td>Zone6</td>
+            <td>UpperLeftX</td>
+         </tr>
+         <tr>
+            <td>Zone7</td>
+            <td>UpperLeftY</td>
+         </tr>
+         <tr>
+            <td>Zone8</td>
+            <td>LowerRightX</td>
+         </tr>
+         <tr>
+            <td>Zone9</td>
+            <td>LowerRightY</td>
+         </tr>
+         <tr>
+            <td>Zone10</td>
+            <td>Zone_DistanceUnit</td>
+         </tr>
+         <tr>
+            <td>Zone11</td>
+            <td>ZoneGroup_ZoneLocations</td>
+         </tr>
+      </table><br><br></body>
+</html>

@@ -1,0 +1,128 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Division
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Division"></a>Division
+      </h1>
+      <hr>Stores the GenBank Division and the NCBI three letter code for records originating from GenBank.
+      NCBI uses Divisions to organize GenBank records according to two definitions: some divisions are based on
+      taxonomy (e.g., the "BCT" division), whereas other divisions exist purely for data organization reasons
+      (e.g., the "CON" division, whose records store instructions for the construction of large contigs).
+      Sequences from different GenBank divisions vary substantially in quality based upon the way they were
+      generated, e.g., single-pass genomic sequencing, ESTs (low quality, single-pass sequencing), cDNAs
+      (high coverage sequencing) and genomic sequencing (moderate coverage sequencing). All BioWarehouse
+      records associated with a GenBank dataset also have a record in the Division table.
+      <br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse ID for this Division.<br></td>
+         </tr>
+         <tr>
+            <td>Code</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(10)</td>
+            <td>Yes</td>
+            <td>Genbank Division code (3 characters) which is an abbreviation for the GenBank Name.<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(100)</td>
+            <td>Yes</td>
+            <td>Division name.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="Taxon.html">Taxon</a></td>
+            <td>DivisionWID</td>
+         </tr>
+         <tr>
+            <td><a href="Entry.html">Entry</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>CrossWID</td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>DIVISION_NAME</td>
+            <td>NAME</td>
+         </tr>
+         <tr>
+            <td>DIVISION_DIVCODE</td>
+            <td>CODE</td>
+         </tr>
+         <tr>
+            <td>DIVISION_DATASETWID</td>
+            <td>DATASETWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

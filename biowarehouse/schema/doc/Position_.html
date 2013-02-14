@@ -1,0 +1,95 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Position_
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Position_"></a>Position_
+      </h1>
+      <hr>Represents MAGE Class Position<br>Specifies a position on an array.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>X</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute Position.x<br>The horizontal distance from the upper left corner of the array.<br></td>
+         </tr>
+         <tr>
+            <td>Y</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute Position.y<br>The vertical distance from the upper left corner of the array.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Unit.html">Position_DistanceUnit</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between Position and DistanceUnit<br>The units of the x, y positions.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="Fiducial.html">Fiducial</a></td>
+            <td>Fiducial_Position</td>
+         </tr>
+         <tr>
+            <td><a href="DesignElement.html">DesignElement</a></td>
+            <td>Feature_Position</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>Position_1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>Position_2</td>
+            <td>X</td>
+         </tr>
+         <tr>
+            <td>Position_3</td>
+            <td>Y</td>
+         </tr>
+         <tr>
+            <td>Position_4</td>
+            <td>Position_DistanceUnit</td>
+         </tr>
+      </table><br><br></body>
+</html>

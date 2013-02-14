@@ -1,0 +1,283 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Feature
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Feature"></a>Feature
+      </h1>
+      <hr>Features define regions or points of interest on the protein sequence or<br>nucleic acid sequence specified by SequenceWID.<br>Features are not used to describe objects such as Genes, BioSources, etc,<br>because attributes of those objects are described in their own tables.<br>Exceptions:<br>1. Since pseudogenes are not entered in the Gene table, they are listed as sequence features in
+      Feature
+      <br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier of this feature.<br></td>
+         </tr>
+         <tr>
+            <td>Description</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(1300)</td>
+            <td>Yes</td>
+            <td>Textual description of this feature.<br></td>
+         </tr>
+         <tr>
+            <td>Type</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>Type of feature. These type values come from the source dataset and<br>are not necessarily enumerated. Example: "Promoter CYZ".<br></td>
+         </tr>
+         <tr>
+            <td>Class</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>Class of feature. Assigns our typology for types of features, or qualifiers<br>associated with features. These are our own enumerated type values, to allow us<br>to classify features without losing the original (author-provided) type values<br>stored in Type. Example: Class=promoter.<br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>binding site</b> -
+                  Identifies the presence of a DNA binding site<br><b>promoter</b> -
+                  Identifies the presence of a promoter<br><b>terminator</b> -
+                  Identifies the presence of a terminator<br><b>pseudogene</b> -
+                  Identifies a pseudogene, whether non-transcribed or processed<br><b>ORF</b> -
+                  Identifies a truly unknown open reading frame according to warehouse definition (no strong evidence that a product is produced)<br><b>partial</b> -
+                  Qualifier: States that feature is not complete<br><b>unknown product</b> -
+                  Identifies an unspecified product is produced from this genomic location, as stated in dataset<br><b>notable</b> -
+                  Qualifier: Characterizes the feature value as notable (same as 'Exceptional' in GB dataset)<br><b>by similarity</b> -
+                  Qualifier: states that feature was derived by similarity analysis<br><b>potential</b> -
+                  Qualifier: states that feature may be incorrect<br><b>probably</b> -
+                  Qualifier: states that feature is probably correct<br></div>
+            </td>
+         </tr>
+         <tr>
+            <td>SequenceType</td>
+            <td>CHAR(1)</td>
+            <td>CHAR(1)</td>
+            <td>No</td>
+            <td>Enumeration (see also SequenceWID) that indicates whether the sequence<br>is protein or nucleic and how the sequence (if available) is represented:<br>If 'P', feature resides on a protein.<br>If 'S' or 'N', feature resides on a nucleic acid.<br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>P</b> -
+                  Feature resides on a protein. Implies SequenceWID (if nonNULL) references a Protein<br><b>S</b> -
+                  Feature resides on a nucleic acid. Implies SequenceWID is nonNULL and references a Subsequence<br><b>N</b> -
+                  Feature resides on a nucleic acid. Implies SequenceWID (if nonNULL) references a NucleicAcid<br></div>
+            </td>
+         </tr>
+         <tr>
+            <td>SequenceWID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>References the Protein or Subsequence containing the sequence on which we<br>are defining a feature:<br>SequenceType of 'S' implies SequenceWID is nonNULL and references a Subsequence-<br>sequence = Subsequence.Sequence (i.e., it is stored explicitly),<br>SequenceType of 'N' implies SequenceWID (if nonNULL) references a NucleicAcid-<br>sequence is the substring Subsequence.Sequence[StartPosition : EndPosition]<br>where Subsequence is the full Subsequence of the nucleic acid.<br>SequenceType of 'P' implies SequenceWID (if nonNULL) references a Protein-<br>sequence is the substring Protein.AASequence[StartPosition : EndPosition].<br></td>
+         </tr>
+         <tr>
+            <td>Variant</td>
+            <td>LONGTEXT</td>
+            <td>CLOB</td>
+            <td>Yes</td>
+            <td>Amino-acid sequence for this protein, if available<br></td>
+         </tr>
+         <tr>
+            <td>RegionOrPoint</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(10)</td>
+            <td>Yes</td>
+            <td>Specifies whether this feature is specified with starting and ending coordinates<br>or with a single coordinate.<br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>region</b> -
+                  Feature is specified by a start point and an end point on the sequence<br><b>point</b> -
+                  Feature is specified by a single point on the sequence<br></div>
+            </td>
+         </tr>
+         <tr>
+            <td>PointType</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(10)</td>
+            <td>Yes</td>
+            <td>Only defined if RegionOrPoint='point'. Specifies where the feature is relative <br>to its location as encoded in StartPosition and EndPosition:<br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>center</b> -
+                  Feature is centered at location.<br><b>left</b> -
+                  Feature extends to the left (decreasing position) of location.<br><b>right</b> -
+                  Feature extends to the right (increasing position) of location.<br></div>
+            </td>
+         </tr>
+         <tr>
+            <td>StartPosition</td>
+            <td>INT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Start position of the feature within the NucleicAcid or Protein sequence.<br>If Feature.RegionOrPoint is 'point', StartPosition and EndPosition will<br>either be equal (location is exactly at a nucleotide or amino acid) or will differ by 1<br>(location is centered between two adjacent nucleotides or amino acids).<br> <br></td>
+         </tr>
+         <tr>
+            <td>EndPosition</td>
+            <td>INT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>End position of the feature within the NucleicAcid or Protein sequence.<br>If Feature.RegionOrPoint is 'point', StartPosition and EndPosition will<br>either be equal (location is exactly at a nucleotide or amino acid) or will differ by 1<br>(location is between two adjacent nucleotides or amino acids).<br></td>
+         </tr>
+         <tr>
+            <td>StartPositionApproximate</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(10)</td>
+            <td>Yes</td>
+            <td>Indicates that the Start position of the coding region is an approximate value<br>It could be 'gt' for greater than, 'lt' for less than and 'ne' to indicate that it is not<br>equal. This is a controlled vocabulary.<br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>gt</b> -
+                  The start position of the feature is greater than the actual position specified.<br><b>lt</b> -
+                  The start position of the feature is less than the actual position specified.<br><b>ne</b> -
+                  The start position of the feature is less than or greater than the actual position. All we know is that its not the exact
+                  position.<br></div>
+            </td>
+         </tr>
+         <tr>
+            <td>EndPositionApproximate</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(10)</td>
+            <td>Yes</td>
+            <td>Indicates that the End position of the coding region is an approximate value.<br>It could be 'gt' for greater than, 'lt' for less than and 'ne' to indicate that it is not<br>equal. This is a controlled vocabulary.<br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>gt</b> -
+                  The end position of the feature is greater than the actual position specified.<br><b>lt</b> -
+                  The end position of the feature is less than the actual position specified.<br><b>ne</b> -
+                  The end position of the feature is less than or greater than the actual position. All we know is that its not the exact position.<br></div>
+            </td>
+         </tr>
+         <tr>
+            <td>ExperimentalSupport</td>
+            <td>CHAR(1)</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>'T' if the feature is supported by experimental evidence, else 'F'<br></td>
+         </tr>
+         <tr>
+            <td>ComputationalSupport</td>
+            <td>CHAR(1)</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>'T' if the feature is supported by computational evidence, else 'F'<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+      </table>
+      <h2>Denormalized References</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>References</th>
+         </tr>
+         <tr>
+            <td>SequenceWID</td>
+            <td><a href="Subsequence.html">Subsequence</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>SequenceWID</td>
+            <td><a href="Protein.html">Protein</a>
+               :
+               WID
+            </td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="SeqFeatureLocation.html">SeqFeatureLocation</a></td>
+            <td>SeqFeature_Regions</td>
+         </tr>
+         <tr>
+            <td><a href="Entry.html">Entry</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="TranscriptionUnitComponent.html">TranscriptionUnitComponent</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="Support.html">Support</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>CrossWID</td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>FEATURE_Description</td>
+            <td></td>
+         </tr>
+         <tr>
+            <td>FEATURE_TYPE</td>
+            <td>Type</td>
+         </tr>
+         <tr>
+            <td>FEATURE_Class</td>
+            <td>Class</td>
+         </tr>
+         <tr>
+            <td>FEATURE_SequenceWID</td>
+            <td>SequenceWID</td>
+         </tr>
+         <tr>
+            <td>FEATURE_START_ENDPOS</td>
+            <td>STARTPOSITION,ENDPOSITION</td>
+         </tr>
+         <tr>
+            <td>FEATURE_ENDPOSITION</td>
+            <td>ENDPOSITION</td>
+         </tr>
+         <tr>
+            <td>FEATURE_DATASETWID</td>
+            <td>DATASETWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

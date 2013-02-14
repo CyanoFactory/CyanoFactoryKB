@@ -1,0 +1,225 @@
+<!DOCTYPE html PUBLIC "-//w3c//dtd html 4.0 transitional//en">
+<html>
+<head>
+<!-- $Id: index.html,v 1.18 2009/03/18 18:53:10 taltman Exp $ -->
+  <meta http-equiv="Content-Type"
+ content="text/html; charset=iso-8859-1">
+  <title>BioCyc Loader</title>
+</head>
+<body>
+<center>
+<h2>BioCyc Loader</h2>
+</center>
+<div style="text-align: center;"><code>(C) 2006 SRI International.
+All Rights Reserved.&nbsp; See <a href="../../../doc/index.html">BioWarehouse
+Overview</a> for license details.</code><br>
+</div>
+<p>This document describes how to build and run the BioCyc Loader.
+The BioCyc loader is located in the <a href=".."><code>biocyc-loader/flatfile/</code></a>
+subdirectory of the warehouse distribution.
+For more information regarding the BioCyc loader, see the
+<a href="biocyc-manual.html">BioCyc Manual</a>. Note that BioCyc
+contains a number of databases,
+each describing a particular organism. Multiple databases may be loaded
+into the Warehouse; each is
+contained in a separate Warehouse dataset.
+</p>
+<a name="top">
+</a>
+<h3><a href="#Build">Building the BioCyc Loader</a><br>
+<a href="#Run">Running the BioCyc Loader</a><br>
+<a href="#Test">Testing the BioCyc Loader</a><br>
+<a href="#Doc">Documentation</a><br>
+</h3>
+<h3><a href="#top"><img src="../../../doc/images/arrowup.gif"
+ alt="[top]"></a>&nbsp;
+<a name="Build">Building the BioCyc Loader</a></h3>
+<blockquote>
+  <p><a name="Build">Before building the loader, make sure the
+environment is configured
+according to the </a><a href="../../../doc/Environment.html">Environment
+Setup</a>.
+Also make sure the schema is loaded into the database as specified in
+the <a href="../../../doc/Schema.html">Schema</a> document. If you want
+ objects in BioCyc to be linked to GO terms in the Gene Ontology, the be sure to 
+run the Gene Ontology loader first. The Gene Ontology needs to be loaded into
+the BioWarehouse as one DataSet (i.e., do not use the '-c' option).  </p>
+  <p>To build the loader, bring up a shell and navigate to the <a
+ href="../src"><code>biocyc-loader/flatfile/src/</code></a>
+directory. Then: </p>
+  <p><strong>MySQL:</strong> <br>
+  <code>osprompt: make clean</code> <br>
+  <code>osprompt: make db=mysql</code> <br>
+Creates the file <code>mysql-biocyc-loader</code> </p>
+  <p><strong>Oracle:</strong> <br>
+  <code>osprompt: make clean</code> <br>
+  <code>osprompt: make db=oracle</code> <br>
+If file <code>wh_oracle_util.c</code> is reported missing, re-run the
+above make command: <br>
+  <code>osprompt: make db=oracle</code> <br>
+Creates the file <code>oracle-biocyc-loader</code> </p>
+  <p>Also, a symbolic link named <code>"biocyc-loader"</code> is
+created, which points to the newly created executable. This can be used
+as a synonym
+for the most recently created DBMS-specific loader if desired. </p>
+  <p>If the build fails and gives errors about header files which are
+not
+found,
+read the section on configuring the appropriate client in <a
+ href="../../../doc/Environment.html">
+Environment Setup</a>. Posible problems are: improper installation of
+ProC (Oracle) or library/header files installed in an incorrect place. </p>
+</blockquote>
+<h3><a href="#top"><img src="../../../doc/images/arrowup.gif"
+ alt="[top]"></a>&nbsp;
+<a name="Run">Running the BioCyc loader</a></h3>
+<blockquote>
+  <p><a name="Run">The BioCyc loader can be run from the same machine
+where the Warehouse database is installed,
+or it can be run remotely. To run the Oracle loader remotely, use the
+Net8 configuration
+assistance to add the remote database. Consult the Oracle documentation
+for
+instructions on how to do this. To run the MySQL loader remotely,
+simply provide the
+correct host parameter for the location of the MySQL server. </a></p>
+  <h4><a name="Run">Obtaining the BioCyc databases</a></h4>
+  <p> <a name="Run">The </a><a href="biocyc-manual.html">BioCyc Manual</a>
+contains information regarding
+the BioCyc data sets. The latest supported data version for the BioCyc
+loader is listed in the <a href="../../../doc/index.html#loaders">loader
+summary table</a>.<br>
+  </p>
+  <p>In this section are presented two examples which
+use
+the bsubcyc and hincyc data sets. The example data sets were created
+using
+version 8.5 of <i>B. subtilis</i> (bsubcyc) and version 8.5 of <i>Hm.
+influenzae</i> (hincyc). Log files from the MySQL load of these
+databases are at <a href="load-mysql-bsubcyc.log">load-mysql-bsubcyc.log</a>
+and <a href="load-mysql-hincyc.log">load-mysql-hincyc.log</a>. </p>
+  <p>See <a href="http://biocyc.org/">http://biocyc.org/</a> for
+information
+on how to
+obtain a license and download the data. Also see <a
+ href="http://bioinformatics.ai.sri.com/ptools/">Pathway/Genome
+Database (PGDB)</a>
+for a description of the database file format. </p>
+  <h4>Running the BioCyc loader</h4>
+  <p>The <a href="../src"><code>biocyc-loader/flatfile/src/</code></a>
+directory contains
+scripts to run the MySQL and Oracle loaders. </p>
+  <p> <strong>MySQL:</strong> <br>
+  </p>
+  <pre><code>    ./run-mysql <i>host database user password datadir organism sourcedb version releasedate [options]</i> <BR>
+<i>host</i> - The machine address where the MySQL server/database resides.<br>
+<i>database</i> - Name of the MySQL database to be loaded.<br>
+<i>user</i> - MySQL userid. <br>
+<i>password</i> - MySQL password for userid. <br>
+<i>datadir</i> - Directory which contains the <a href="http://bioinformatics.ai.sri.com/ptools/">PGDB</a> database files to be loaded.<br>
+<i>organism</i> - Name of the BioCyc organism to be loaded. Ex: "Hm. influenzae"<br>
+<i>sourcedb</i> - Name of the BioCyc database to be loaded. Ex: "HinCyc"<br>
+<i>version</i> - Version of the BioCyc database to be loaded. Ex: "8.5"<br>
+<i>releasedate</i> - Release date of the BioCyc database to be loaded. Ex: 2008-04-01<br>
+<i>options</i> - Any of the following may be specified:
+                 -l links the dataset created by the loader to a parent dataset named "BioCyc" by
+                    adding a row the DataSetHierarchy table.
+		 -m merges all data loaded into the dataset named "BioCyc".
+                    If "BioCyc" does not exist, it is created; if there are multiple "BioCyc"s the one with
+		    the largest dataset WID is used.
+		 -w <I>datasetwid</I> allows specification of the dataset into which all loaded date is merged;
+		    datasetwid must be the DataSet.WID of a previously loaded BioWarehouse dataset.
+		 -F causes warnings to be issued for any missing input files, rather than a fatal error.
+</code></pre>
+For example: <code></code>
+  <pre>    ./run-mysql 123.45.67.8 warehouse me mypwd /space/bio/databases/biocyc/bsubcyc/8.5 "B.subtilis" "BsubCyc" "8.5" 2008-04-01<br></pre>
+This command loads the organism <code>"B.subtilis"</code> into the
+MySQL database named <code>warehouse</code>. The data files for
+organism
+are located in the directory <code>/space/bio/databases/biocyc/bsubcyc/8.5</code>
+and
+the user name and password used to access MySQL are <code>me</code>
+and <code>mypwd</code>.
+  <p></p>
+  <p>Another example which loads hincyc: <code></code></p>
+  <pre>    ./run-mysql machine.myco.com Biospice her herpwd /space/bio/databases/biocyc/hincyc/8.5  "Hm.influenzae" "HinCyc" "8.5" 2008-04-01<br></pre>
+This command loads the organism <code>"Hm.influenzae"</code> into the
+MySQL database named <code>Biospice</code>. The data files for
+organism
+are located in the directory <code>/space/bio/databases/biocyc/hincyc/8.5</code>
+and
+the user name and password used to access MySQL are <code>her</code>
+and <code>herpwd</code>.
+  <p></p>
+  <p> <strong>Oracle:</strong> <br>
+  </p>
+  <pre><code>    ./run-oracle <i>"user/passwd" datadir organism sourcedb version releasedate [options]</i> <BR>
+<i>user/passwd </i>- User name and password. Ex: "dan/mypwd", "dan/mypwn@mydb"<br>
+<i>datadir</i> - Directory which contains the <a href="http://bioinformatics.ai.sri.com/ptools/">PGDB</a> database files.<br>
+<i>organism</i> - Organism Name. Ex: "Hm. influenzae"<br>
+<i>sourcedb</i> - Name of the BioCyc database to be loaded. Ex: "HinCyc"<br>
+<i>version</i> - Version of the BioCyc database to be loaded. Ex: "8.5"<br>
+<i>releasedate</i> - Release date of the BioCyc database to be loaded. Ex: 2008-04-01<br>
+<i>options</i> - Any of the following may be specified:
+                 -l links the dataset created by the loader to a parent dataset named "BioCyc" by
+                    adding a row the DataSetHierarchy table.
+		 -m merges all data loaded into the dataset named "BioCyc".
+                    If "BioCyc" does not exist, it is created; if there are multiple "BioCyc"s the one with
+		    the largest dataset WID is used.
+		 -w <I>datasetwid</I> allows specification of the dataset into which all loaded date is merged;
+		    datasetwid must be the DataSet.WID of a previously loaded BioWarehouse dataset.
+		 -F causes warnings to be issued for any missing input files, rather than a fatal error.
+</code></pre>
+For example: <code></code>
+  <pre>    ./run-oracle "me/mypwd@mydb" /space/bio/databases/biocyc/bsubcyc/8.5 "B.subtilis" "BsubCyc" "8.5"  2008-04-01<br></pre>
+This command loads the organism <code>"B.subtilis"</code>
+into the Oracle database <code>mydb</code>.
+The data files for organism
+are located in the directory <code>/space/bio/databases/biocyc/bsubcyc/8.5</code>
+and
+the user name and password used to access Oracle is <code>"me/mypwd"</code>.
+  <p></p>
+  <p>Another example which loads hincyc: <code></code></p>
+  <pre>    ./run-oracle "me/mypwd" /space/bio/databases/biocyc/hincyc/8.5 "Hm.influenzae" "HinCyc" "8.5"  2008-04-01<br></pre>
+This command loads the organism <code>"Hm.influenzae"</code>. The data
+files for organism
+are located in the directory <code>/space/bio/databases/biocyc/hincyc/8.5</code>
+and
+the user name and password used to access Oracle is <code>"me/mypwd"</code>.
+  <p></p>
+</blockquote>
+<h3><a href="#top"><img src="../../../doc/images/arrowup.gif"
+ alt="[top]"></a>&nbsp;
+<a name="Test">Testing the BioCyc Loader</a></h3>
+<blockquote> <a name="Test"> </a>
+  <p><a name="Test">The loader may report parse errors; this is
+expected. The expected output when loading bsubcyc can be found </a><a
+ href="load-mysql-bsubcyc.log">here</a>. The expected output
+when loading
+hincyc can be found <a href="load-mysql-hincyc.log">here</a>. </p>
+  <p>The database data sets should be queried to ensure the BioCyc data
+set
+is loaded. See the document on <a href="../../../doc/Utils.html">Running
+the Perl
+Utiltity scripts</a> to check this. After running the query, the BioCyc
+data
+set should have <code>10523</code> entries loaded for <code>bsubcyc</code>
+and <code>5049</code> entries loaded for <code>hincyc</code>. </p>
+</blockquote>
+<h3><a href="#top"><img src="../../../doc/images/arrowup.gif"
+ alt="[top]"></a>&nbsp;
+<a name="Doc">Developer Documentation</a></h3>
+<blockquote>
+  <p><a name="Doc">The following documents are located in the <code>doc</code>
+directory: </a></p>
+  <ul>
+    <a name="Doc"> <li><br>
+    </li>
+    </a><a href="biocyc-manual.html">biocyc-manual.html</a> <li><a
+ href="load-mysql-bsubcyc.log">load-mysql-bsubcyc.log</a></li>
+    <li><a href="load-mysql-hincyc.log">load-mysql-hincyc.log</a></li>
+  </ul>
+  <p></p>
+</blockquote>
+</body>
+</html>

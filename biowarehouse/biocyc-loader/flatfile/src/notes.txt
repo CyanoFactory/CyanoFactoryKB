@@ -1,0 +1,80 @@
+
+Steps in cloning a bsubcyc flatfile loader for a single file to another file:
+
+
+*. convert .l file
+*. convert .y file
+* create XX-parse.h and structs needed by frame
+* add clear_ routine, call it from grammar
+  Use strings or lists (ie. pointers) for each field.
+  NULL pointer = undefined = NULL value at load time
+* add loading semantics to XX-load.pc
+* add above files to Makefile
+
+To add a column to a table:
+
+1. Unless its value is to be ignored, add a field to the
+   XX_entry struct in XX_parse.h
+2. Add its keyword to XX.l; if it has special syntax,
+   add code for scanning it as well.
+3. Add the token for the keyword to XX.y; also
+   add the production(s) needed to recognize and save the attribute value.
+4. Add field to compound_clear_entry in XX.y
+5. Add the column to the SQL INSERT code in XX-load.pc;
+   add the code to set its indicator variable as well,
+   to handle case where attribute is missing.
+
+         
+TODO before release:
+
+
+=============================================================================
+Issues with flatfile data:
+general:
+* COMMON-NAME has XML-like fields embedded eg. <SUP>
+
+compounds.dat:
+* no SMILES
+
+reactions.dat:
+* missing DELTAG0, SPONTANEOUS 
+* is EC-NUMBER official or proposed if OFFICIAL-EC? slot is missing?
+* many LEFT and RIGHT compounds not in compounds.dat. Should they be added to warehouse?
+* ignored DBLINKS
+
+pathways.dat:
+* Are rxns ordered?
+
+proteins.dat:
+* Semantics of DBLINKS attribute? Ex:
+UNIQUE-ID - DIHYDROLIPOYL-GCVH
+TYPES - RED-DIHYDROLIPOAMIDE
+TYPES - Gcv-H
+COMMON-NAME - dihydrolipoyl-GcvH-protein
+DBLINKS - (ENTREZ P23884 NIL pkarp 3102853742)
+DBLINKS - (SWISSPROT P23884 NIL pkarp 3102853742)
+SYNONYMS - dihydrolipoylprotein
+//
+UNIQUE-ID - FERREDOXIN-MONOMER
+TYPES - Ferredoxin
+COMMON-NAME - reduced ferredoxin
+DBLINKS - (SWISSPROT P50727 NIL NIL NIL NIL NIL)
+GENE - BG11388
+MODIFIED-FORM - OX-FERREDOXIN
+SYNONYMS - Fer
+//
+
+
+
+
+Issues related to Pro C:
+
+Host variables that correspond to column type NUMBER (as opposed to NUMBER(5))
+may not be a floating-point C type. This is consistent with the Pro C documentation.
+However, it seems like char* C types work fine. Since all warehouse numerics are
+NUMBER, char* host variables are used for loading.
+
+
+Loader issues/todos:
+
+Entry table: include CreationDate, ModifiedDate

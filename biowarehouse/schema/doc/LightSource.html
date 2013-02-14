@@ -1,0 +1,90 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         LightSource
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="LightSource"></a>LightSource
+      </h1>
+      <hr>Defines a light source, e.g., as produced by a scientific instrument.
+      	         Used by flow cytometry in describing the cytometry instrument. 
+      <br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse idetification number for this light source<br></td>
+         </tr>
+         <tr>
+            <td>Wavelength</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Wavelength of the light emitted, in nanometers<br></td>
+         </tr>
+         <tr>
+            <td>Type</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(100)</td>
+            <td>Yes</td>
+            <td>Enumeration. Specifies the type of light source (arc lamp, a particular laser, etc.).
+               <br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>arc-lamp</b> -
+                  A type of light source<br><b>argon-laser</b> -
+                  An ion laser that uses argon gas to produce light<br><b>krypton-laser</b> -
+                  An ion laser that uses krypton gas to produce light<br><b>argon-krypton-laser</b> -
+                  An ion laser that uses a combination of krypton and argon gases to produce light<br><b>helium-neon-laser</b> -
+                  A laser that uses helium and neon gases to produce light<br></div>
+            </td>
+         </tr>
+         <tr>
+            <td>InstrumentWID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>WID of the object representing the instrument producing the light.
+               	    For a flow cytometry experiment, this is typically
+               	    a reference to a Parameterizable row defining the cytometry instrument used.
+               	    This instrument is instantiated as a ParameterizableApplication row, and has
+               	    an associated ExperimentData row that defines the compensation parameter.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>References the data set the entity came from<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>LightSource_DWID</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>LightSource_Instrument</td>
+            <td>InstrumentWID</td>
+         </tr>
+         <tr>
+            <td>LightSource_Wavelength</td>
+            <td>Wavelength</td>
+         </tr>
+      </table><br><br></body>
+</html>

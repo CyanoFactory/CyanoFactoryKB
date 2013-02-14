@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         FeatureDimensionWIDFeatureWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="FeatureDimensionWIDFeatureWID"></a>FeatureDimensionWIDFeatureWID
+      </h1>
+      <hr>Represents n..n association between FeatureDimension and Feature<br>The features for this dimension.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="DesignElementDimension.html">FeatureDimensionWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to FeatureDimension<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesignElement.html">FeatureWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to Feature<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>FeatureDimensionWIDFeatur1</td>
+            <td>FeatureDimensionWID</td>
+         </tr>
+         <tr>
+            <td>FeatureDimensionWIDFeatur2</td>
+            <td>FeatureWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

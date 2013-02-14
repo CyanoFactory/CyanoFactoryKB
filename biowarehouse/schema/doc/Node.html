@@ -1,0 +1,88 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Node
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Node"></a>Node
+      </h1>
+      <hr>Represents MAGE Class Node<br>An individual component of a clustering.  May contain other nodes.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayDataCluster.html">BioAssayDataCluster_Nodes</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between BioAssayDataCluster and Node<br>The nodes of the cluster.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Node.html">Node_Nodes</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between Node and Node<br>Nested nodes of the BioAssayDataCluster.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="Node.html">Node</a></td>
+            <td>Node_Nodes</td>
+         </tr>
+         <tr>
+            <td><a href="NodeContents.html">NodeContents</a></td>
+            <td>Node_NodeContents</td>
+         </tr>
+         <tr>
+            <td><a href="NodeValue.html">NodeValue</a></td>
+            <td>Node_NodeValue</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>Node1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>Node2</td>
+            <td>BioAssayDataCluster_Nodes</td>
+         </tr>
+         <tr>
+            <td>Node3</td>
+            <td>Node_Nodes</td>
+         </tr>
+      </table><br><br></body>
+</html>

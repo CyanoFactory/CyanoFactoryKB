@@ -1,0 +1,116 @@
+/* *******************************************************************
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
+ * the License for the specific language governing rights and
+ * limitations under the License.
+ *
+ * The Original Code is the BioWarehouse.
+ *
+ * The Initial Developer of the Original Code is SRI International.
+ * Portions created by SRI International are Copyright (C) 2004.
+ * All Rights Reserved.
+ ******************************************************************* */
+/*
+ * PGDB PUBS loader for the BioSpice Data Warehouse
+ * Thomas J Lee, SRI International, August 2002
+ */
+
+#include "main.h"
+#include "pubs-parse.h"
+#ifdef ORACLE
+#include <sqlca.h>
+#endif
+
+#define DEBUG 0
+
+extern int dataset_wid;
+extern int organism_wid;
+
+void
+pubs_load_entry(struct pubs_entry *entry) {
+
+  int citation_wid;
+  char *fulltext;                    /* Holds the citation proper, with all fields catenated */
+  short error = 0;                   /* numeric conversion error */
+  struct stringlist *sptr;           /* to iterate over synonyms */
+
+  /* Set indicator variables for optional columns, and check string lengths, numeric formats etc. */
+  short pubmed_id_ind;                /* is PUBMED-ID field present? */
+  char *pubmed_id = string_column(entry->pubmed_id, 20, &pubmed_id_ind);
+
+  if (DEBUG) printf("Loading pubs %s\n", entry->unique_id);
+  
+#ifdef ORACLE
+  /* Try a WHENEVER to assist in debugging silent Oracle errors */
+  EXEC SQL WHENEVER SQLERROR DO sql_error("Oracle error in pubs-load");
+#endif
+
+  /* Build the full text of the citation by concatenating the various fields together, separating with tabs */
+  fulltext = strdup("");
+  for (sptr=entry->authors; sptr; sptr=sptr->next) /* Add reversed list of Authors back to front */
+    fulltext = string_concatenate(strdup(sptr->string), fulltext, (strlen(fulltext) > 0 ? 2 : 0));
+  if (entry->title) fulltext = string_concatenate(fulltext, strdup(entry->title), 4); /* tab-separate */
+  if (entry->source) fulltext = string_concatenate(fulltext, strdup(entry->source), 4); /* tab-separate */
+  if (entry->year) fulltext = string_concatenate(fulltext, strdup(entry->year), 4); /* tab-separate */
+  if (entry->url) fulltext = string_concatenate(fulltext, strdup(entry->url), 4); /* tab-separate */
+  if (DEBUG) printf("fulltext=<%s>\n", fulltext);
+
+  /*
+    For a pub, we can see either the main entry, or a REFERENT-FRAME,
+    or both in either order. We assure these frame IDs point map to the same WID.
+    NOTE: Assumption is that citation attributes (fulltext) will not be split among
+    the main frame and the referent frame. If they are, only the last
+    rame's info will be loaded.
+  */
+  if (citation_wid = find_citation(entry->unique_id)) {
+    // We've seen this UNIQUE-ID in a prior referent entry
+    // UPDATE with any info specified in this entry
+    wh_update_citation(citation_wid, fulltext,
+		       pubmed_id, pubmed_id_ind);
+  }
+  else if (citation_wid = find_citation(entry->referent_frame)) {
+    // We've seen this REFERENT-FRAME in a prior main entry
+    // Remember ID & UPDATE with any additional info (typically this is a no-op)
+    widtable_insert(citation_wids, citation_wid, entry->unique_id);
+    //!! this if shouldn't be needed, but wh_update_citation seems to clobber-update
+    if ((strlen(fulltext) > 0) || (pubmed_id_ind == INDICATE_NONNULL))
+      wh_update_citation(citation_wid, fulltext,
+                         pubmed_id, pubmed_id_ind);
+  }
+  else {
+    // Haven't seen this pub before.
+    // Remember ID & INSERT a new (possibly empty) Citation row
+    citation_wid = wh_get_new_wid();
+    widtable_insert(citation_wids, citation_wid, entry->unique_id); 
+    wh_insert_citation(citation_wid, fulltext,
+                       pubmed_id, pubmed_id_ind);
+
+    /* Add DBID */
+    if (!entry->unique_id)
+      entry->load_error = 1;
+    else
+      wh_insert_dbid(citation_wid, entry->unique_id);
+  
+    /* Finally add Entry */
+    wh_insert_entry(citation_wid, entry->load_error, 0, NULL);
+  }
+  free(fulltext);
+  
+  /* If this pub has a REFERENT-FRAME, associate that frame name with the assigned WID */
+  if (entry->referent_frame)
+    widtable_insert(citation_wids, citation_wid, entry->referent_frame);  /* remember wid-unique_id association */
+
+  /* Add Medline crossreference if present */
+  if (entry->medline_uid)
+    wh_insert_crossreference(citation_wid, entry->medline_uid, "Medline");
+  
+  /* Add comments to CommentTable  */
+  for (sptr=entry->comments; sptr; sptr=sptr->next)
+    wh_insert_comment(citation_wid, sptr->string);
+}
+

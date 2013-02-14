@@ -1,0 +1,13 @@
+RESOLVED
+
+2003-08-01  Ignore DBLINKS in compounds.dat
+            Don't allow Oracle error for undefined enzymes/reactions
+	    in enzrxns.dat.
+	    Respect length limit on Chemical.Smiles column.
+
+PENDING
+
+Add CrossReference entry for each reference in DBLINKS
+Fix stderr log output by writing to stdout.
+Add entry to Citation and CitationWIDOtherWID for each CITATION
+  in any source file.

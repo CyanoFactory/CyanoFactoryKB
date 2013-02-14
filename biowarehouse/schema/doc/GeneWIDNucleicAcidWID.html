@@ -1,0 +1,54 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         GeneWIDNucleicAcidWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="GeneWIDNucleicAcidWID"></a>GeneWIDNucleicAcidWID
+      </h1>
+      <hr>Associates a gene with its nucleic acid product(s).<br>Note that the nucleic acid (ie. replicon) containing the gene is referenced by
+      Gene.NucleicAcidWID,
+      <br>not in this table.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="Gene.html">GeneWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the Gene that produces this nucleic acid.<br></td>
+         </tr>
+         <tr>
+            <td><a href="NucleicAcid.html">NucleicAcidWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the nucleic acid that has this gene.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>GN_GENEWID_NAWID</td>
+            <td>GENEWID,NUCLEICACIDWID</td>
+         </tr>
+         <tr>
+            <td>GN_NAWID_GENEWID</td>
+            <td>NUCLEICACIDWID,GENEWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

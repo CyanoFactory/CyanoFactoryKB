@@ -1,0 +1,471 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         DataSet
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="DataSet"></a>DataSet
+      </h1>
+      <hr>Table whose rows define each dataset currently loaded into the warehouse.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entry.<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>No</td>
+            <td>Name of the database.<br></td>
+         </tr>
+         <tr>
+            <td>Version</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>Version of the database described by this warehouse dataset; in practice, this can be
+               populated
+               <br>with whatever the user chooses to put in it from the command line arguments<br></td>
+         </tr>
+         <tr>
+            <td>ReleaseDate</td>
+            <td>DATETIME</td>
+            <td>DATE</td>
+            <td>Yes</td>
+            <td>Date that the original database was first released.<br></td>
+         </tr>
+         <tr>
+            <td>LoadDate</td>
+            <td>DATETIME</td>
+            <td>DATE</td>
+            <td>No</td>
+            <td>Date that the load of this data set into the warehouse began.<br></td>
+         </tr>
+         <tr>
+            <td>ChangeDate</td>
+            <td>DATETIME</td>
+            <td>DATE</td>
+            <td>Yes</td>
+            <td>Date of the last change to this dataset, or the date the load<br>completed if no changes have occurred. NULL means that the<br>is currently loading, or a fatal error occurred on the load.<br>NOTE: This feature is not supported by most loaders until version 4.0.<br></td>
+         </tr>
+         <tr>
+            <td>HomeURL</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Web address of the home page of the original database.<br></td>
+         </tr>
+         <tr>
+            <td>QueryURL</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>A URL at which we can retrieve objects in this database via the WWW<br>by substituting the unique ID of the object we wish to retrieve for the<br>string "%s" in the query URL. An example URL is:<br>http://database.university.edu/get-object/5050%s<br></td>
+         </tr>
+         <tr>
+            <td>LoadedBy</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>The name (or username) of the person who loaded this dataset.<br>NOTE: This feature is not supported by most loaders until<br>version 4.0. At that time, this column should be required.<br></td>
+         </tr>
+         <tr>
+            <td>Application</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>The name of the application that created this dataset.<br>NOTE: This feature is not supported by most loaders until<br>version 4.0. At that time, this column should be required.<br></td>
+         </tr>
+         <tr>
+            <td>ApplicationVersion</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>The version of the application that created this dataset.<br>NOTE: This feature is not supported by most loaders until<br>version 4.0. At that time, this column should be required.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="DataSetHierarchy.html">DataSetHierarchy</a></td>
+            <td>SuperWID</td>
+         </tr>
+         <tr>
+            <td><a href="DataSetHierarchy.html">DataSetHierarchy</a></td>
+            <td>SubWID</td>
+         </tr>
+         <tr>
+            <td><a href="Entry.html">Entry</a></td>
+            <td>DatasetWID</td>
+         </tr>
+         <tr>
+            <td><a href="LightSource.html">LightSource</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="FlowCytometrySample.html">FlowCytometrySample</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="FlowCytometryProbe.html">FlowCytometryProbe</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="TranscriptionUnit.html">TranscriptionUnit</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Chemical.html">Chemical</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Reaction.html">Reaction</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Interaction.html">Interaction</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Protein.html">Protein</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Feature.html">Feature</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Function.html">Function</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="EnzymaticReaction.html">EnzymaticReaction</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="GeneticCode.html">GeneticCode</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Division.html">Division</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Taxon.html">Taxon</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioSource.html">BioSource</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioSubtype.html">BioSubtype</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="NucleicAcid.html">NucleicAcid</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Subsequence.html">Subsequence</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Gene.html">Gene</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Pathway.html">Pathway</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Computation.html">Computation</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Citation.html">Citation</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Experiment.html">Experiment</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentData.html">ExperimentData</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="GelLocation.html">GelLocation</a></td>
+            <td>DatasetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Spot.html">Spot</a></td>
+            <td>DatasetWID</td>
+         </tr>
+         <tr>
+            <td><a href="SpotIdMethod.html">SpotIdMethod</a></td>
+            <td>DatasetWID</td>
+         </tr>
+         <tr>
+            <td><a href="NameValueType.html">NameValueType</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Contact.html">Contact</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesign.html">ArrayDesign</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementGroup.html">DesignElementGroup</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Zone.html">Zone</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ZoneGroup.html">ZoneGroup</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ZoneLayout.html">ZoneLayout</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentDesign.html">ExperimentDesign</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentalFactor.html">ExperimentalFactor</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="FactorValue.html">FactorValue</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="QuantitationType.html">QuantitationType</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Database_.html">Database_</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Array_.html">Array_</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ArrayGroup.html">ArrayGroup</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufacture.html">ArrayManufacture</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufactureDeviation.html">ArrayManufactureDeviation</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="FeatureDefect.html">FeatureDefect</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Fiducial.html">Fiducial</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ManufactureLIMS.html">ManufactureLIMS</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="PositionDelta.html">PositionDelta</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ZoneDefect.html">ZoneDefect</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="SeqFeatureLocation.html">SeqFeatureLocation</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="SequencePosition.html">SequencePosition</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="DesignElement.html">DesignElement</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="FeatureInformation.html">FeatureInformation</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="FeatureLocation.html">FeatureLocation</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="MismatchInformation.html">MismatchInformation</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Position_.html">Position_</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioEvent.html">BioEvent</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayData.html">BioAssayData</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayDimension.html">BioAssayDimension</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayMapping.html">BioAssayMapping</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayTuple.html">BioAssayTuple</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioDataValues.html">BioDataValues</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="DataExternal.html">DataExternal</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="DataInternal.html">DataInternal</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Datum.html">Datum</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementDimension.html">DesignElementDimension</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementMapping.html">DesignElementMapping</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementTuple.html">DesignElementTuple</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="QuantitationTypeDimension.html">QuantitationTypeDimension</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="QuantitationTypeMapping.html">QuantitationTypeMapping</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="QuantitationTypeTuple.html">QuantitationTypeTuple</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioMaterialMeasurement.html">BioMaterialMeasurement</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="CompoundMeasurement.html">CompoundMeasurement</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioAssay.html">BioAssay</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Channel.html">Channel</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Image.html">Image</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayDataCluster.html">BioAssayDataCluster</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Node.html">Node</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="NodeContents.html">NodeContents</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="NodeValue.html">NodeValue</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Measurement.html">Measurement</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Unit.html">Unit</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Parameter.html">Parameter</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ParameterValue.html">ParameterValue</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="Parameterizable.html">Parameterizable</a></td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td><a href="ParameterizableApplication.html">ParameterizableApplication</a></td>
+            <td>DataSetWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>DATASET_NAME_Version</td>
+            <td>Name,Version</td>
+         </tr>
+      </table><br><br></body>
+</html>

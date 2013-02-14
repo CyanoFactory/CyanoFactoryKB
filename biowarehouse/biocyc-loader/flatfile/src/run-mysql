@@ -1,0 +1,28 @@
+#! /bin/sh
+##
+## Usage:
+##     run-mysql $1 $2 $3 $4 $5 $6 $7 $8 $9 $10
+##
+## $1 = host machine for MySQL server
+## $2 = MySQL database name
+## $3 = MySQL userid
+## $4 = password for userid
+## $5 = path to directory containing input files
+## $6 = organism 
+## $7 = name of the source database
+## $8 = version of the source database
+## $9 = release date of the source database
+## $10 = optional; port to communicate with MySQL server
+## $11,
+## $12 = optional command-line arguments
+
+host=$1; export host; shift
+db=$1; export db; shift
+user=$1; export user; shift
+
+port=3306; export port
+if [ "$7" != "" ]
+  then port=$7
+fi
+
+./mysql-biocyc-loader -h $host -b $db -u $user -p $1 -d $2 -o "$3" -n $4 -v $5 -r $6 -t $port $8 $9

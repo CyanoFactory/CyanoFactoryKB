@@ -1,0 +1,113 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ZoneLayout
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ZoneLayout"></a>ZoneLayout
+      </h1>
+      <hr>Represents MAGE Class ZoneLayout<br>Specifies the layout of features in a rectangular grid.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>NumFeaturesPerRow</td>
+            <td>SMALLINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute ZoneLayout.numFeaturesPerRow<br>The number of features from left to right.<br></td>
+         </tr>
+         <tr>
+            <td>NumFeaturesPerCol</td>
+            <td>SMALLINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute ZoneLayout.numFeaturesPerCol<br>The number of features from top to bottom of the grid.<br></td>
+         </tr>
+         <tr>
+            <td>SpacingBetweenRows</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute ZoneLayout.spacingBetweenRows<br>Spacing between the rows.<br></td>
+         </tr>
+         <tr>
+            <td>SpacingBetweenCols</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>MAGE attribute ZoneLayout.spacingBetweenCols<br>Spacing between the columns.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Unit.html">ZoneLayout_DistanceUnit</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..1 association between ZoneLayout and DistanceUnit<br>Unit of the ZoneLayout attributes.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="ZoneGroup.html">ZoneGroup</a></td>
+            <td>ZoneGroup_ZoneLayout</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ZoneLayout1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>ZoneLayout2</td>
+            <td>NumFeaturesPerRow</td>
+         </tr>
+         <tr>
+            <td>ZoneLayout3</td>
+            <td>NumFeaturesPerCol</td>
+         </tr>
+         <tr>
+            <td>ZoneLayout4</td>
+            <td>SpacingBetweenRows</td>
+         </tr>
+         <tr>
+            <td>ZoneLayout5</td>
+            <td>SpacingBetweenCols</td>
+         </tr>
+         <tr>
+            <td>ZoneLayout6</td>
+            <td>ZoneLayout_DistanceUnit</td>
+         </tr>
+      </table><br><br></body>
+</html>

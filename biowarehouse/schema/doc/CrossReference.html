@@ -1,0 +1,445 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         CrossReference
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="CrossReference"></a>CrossReference
+      </h1>
+      <hr>This table is used to define (i) links between databases; (ii) links between objects within the same
+      dataset.
+      <br>For case (i):<br>A row in this table defines a link between an object in the warehouse<br>(OtherWID) and an entry in another dataset that may or may not be loaded<br>into the warehouse. If it is not loaded, DatabaseName<br>(and XID, Type, and Version if available) will be nonnull.<br>For case (ii):<br>A row in this table defines a link between an object in the warehouse<br>(OtherWID) and an object in the same dataset for which the dataset specifies<br>an association between them not otherwise represented within the warehouse.<br>Such associations are currently (5/10/04) made between a gene described in one sequence (the root
+      Bioseq) and
+      <br>another GenBank entry (the reference Bisoseq) which is being referenced and describes the gene
+      independently
+      <br>of the first Bioseq. In such a case, CrossReference.OtherWID=Gene.WID.<br>In either case: if CrossWID is nonnull, the object linked to is<br>loaded into the warehouse; if it is null, it may or may not be loaded.<br>Note that if a loader does not know whether a referenced entry will be loaded,<br>it is free to fill in CrossWID at a later time.<br>Restrictions: CrossReference only stores keys that point to uniquely identified objects in the
+      referenced database.
+      <br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse object we are linking FROM<br></td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Nonnull when the object we are linking TO resides in the warehouse<br></td>
+         </tr>
+         <tr>
+            <td>XID</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>Unique id used in referenced database of object we are linking TO.<br></td>
+         </tr>
+         <tr>
+            <td>Type</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(20)</td>
+            <td>Yes</td>
+            <td>Enumeration: Describes the types of identifiers stored in
+               XID, namely 'GUID' or 'Accession': GUIDs: ID's of type GUID
+               (Globally Unique ID) are associated with database objects with one
+               or more invariant aspects, such as a specific DNA sequence. If the
+               invariant aspect of the database object is to change, a new GUID is
+               assigned, and the old GUID is retired. Example: NCBI GI numbers.
+               Accession: Database objects associated with IDs of type 'Accession'
+               (for Accession Numbers) can change, but the Accession Number remains
+               the same. Accession Numbers are often associated with a Version
+               number to reflect such changes. Example: Swiss-Prot's Primary
+               Accession Number See Enumeration table for further
+               details.<br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>Accession</b> -
+                  Type of XID is an accession number (not guaranteed to be unique across datasets)<br><b>GUID</b> -
+                  Type of XID is a global unique identifier (guaranteed to be unique across datasets for a given database provider)<br></div>
+            </td>
+         </tr>
+         <tr>
+            <td>Version</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(10)</td>
+            <td>Yes</td>
+            <td>Further qualifies the values of identifiers stored in XID by
+               storing the version number of the identifier for datasets that
+               support multiple instances of the same object. For example,
+               NCBI Accession Numbers are associated with a version number,
+               which are REQUIRED for complete identification (w/o such,
+               different records can have the same accession number, albeit
+               with different version numbers)<br></td>
+         </tr>
+         <tr>
+            <td>Relationship</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>A short description of the relationship between the objects identified by OtherWID and CrossWID
+               <br></td>
+         </tr>
+         <tr>
+            <td>DatabaseName</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>The object we are linking TO resides in an external database of this name<br></td>
+         </tr>
+      </table>
+      <h2>Denormalized References</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>References</th>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Chemical.html">Chemical</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Reaction.html">Reaction</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Protein.html">Protein</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Feature.html">Feature</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Function.html">Function</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="EnzymaticReaction.html">EnzymaticReaction</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="GeneticCode.html">GeneticCode</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Division.html">Division</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Taxon.html">Taxon</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="BioSource.html">BioSource</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="BioSubtype.html">BioSubtype</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="NucleicAcid.html">NucleicAcid</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Subsequence.html">Subsequence</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Gene.html">Gene</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Pathway.html">Pathway</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Term.html">Term</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Computation.html">Computation</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Citation.html">Citation</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Contact.html">Contact</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Archive.html">Archive</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Experiment.html">Experiment</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="ExperimentData.html">ExperimentData</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Support.html">Support</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Chemical.html">Chemical</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Reaction.html">Reaction</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Protein.html">Protein</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Feature.html">Feature</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Function.html">Function</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="EnzymaticReaction.html">EnzymaticReaction</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="GeneticCode.html">GeneticCode</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Division.html">Division</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Taxon.html">Taxon</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="BioSource.html">BioSource</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="BioSubtype.html">BioSubtype</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="NucleicAcid.html">NucleicAcid</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Subsequence.html">Subsequence</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Gene.html">Gene</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Pathway.html">Pathway</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Term.html">Term</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Computation.html">Computation</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Citation.html">Citation</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Contact.html">Contact</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Archive.html">Archive</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Experiment.html">Experiment</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="ExperimentData.html">ExperimentData</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>CrossWID</td>
+            <td><a href="Support.html">Support</a>
+               :
+               WID
+            </td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>CROSS_OTHERWID</td>
+            <td>OTHERWID</td>
+         </tr>
+         <tr>
+            <td>CROSS_XID</td>
+            <td>XID</td>
+         </tr>
+      </table><br><br></body>
+</html>

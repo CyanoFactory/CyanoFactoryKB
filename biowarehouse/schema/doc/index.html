@@ -1,0 +1,964 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc: Table Index</title>
+   </head>
+   <body>
+      <h1>BioWarehouse Schema</h1><a href="#Index">
+         <h4>Table Index</h4></a>
+      The following diagram represents the relationships between the core tables of the BioWarehouse schema
+      (excluding the MAGE schema extension).
+      Click on a table name to view its documentation, or see the <a href="#Index">Table Index</a> below for the complete
+      list of BioWarehouse tables.  Object tables are colored yellow, and linking (associative) tables are colored blue.
+      <img src="core-schema-diagram.png" alt="schema diagram" usemap="#coreschema"><h1><a name="Index"></a>Table Index
+      </h1><br><table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Comment</th>
+         </tr>
+         <tr>
+            <td><a href="Archive.html">Archive</a></td>
+            <td>Defines an association between a warehouse entity and an external representation or depiction<br>of that entity in a well-defined format.<br>Can be used to store the contents itself, or to indicate that an archive is present at a URL.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Array_.html">Array_</a></td>
+            <td>Represents MAGE Class Array<br>The physical substrate along with its features and their annotation<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesign.html">ArrayDesign</a></td>
+            <td>Represents MAGE Class ArrayDesign<br>Describes the design of an gene expression layout.  In some cases this might be virtual and, for instance, represent the output
+               from analysis software at the composite level without reporters or features.<br>Includes MAGE Class PhysicalArrayDesign<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesignWIDCompositeGrpWID.html">ArrayDesignWIDCompositeGrpWID</a></td>
+            <td>Represents n..n association between ArrayDesign and CompositeGroup<br>The grouping of like CompositeSequence together.  If more than one technology type occurs on the array, such as the mixing
+               of Cloned BioMaterial and Oligos, then there would be multiple CompositeGroups to segregate the technology types.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesignWIDContactWID.html">ArrayDesignWIDContactWID</a></td>
+            <td>Represents n..n association between ArrayDesign and Contact<br>The primary contact for information on the array design<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesignWIDReporterGroupWID.html">ArrayDesignWIDReporterGroupWID</a></td>
+            <td>Represents n..n association between ArrayDesign and ReporterGroup<br>The grouping of like Reporter together.  If more than one technology type occurs on the array, such as the mixing of Cloned
+               BioMaterial and Oligos, then there would be multiple ReporterGroups to segregate the technology types.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayGroup.html">ArrayGroup</a></td>
+            <td>Represents MAGE Class ArrayGroup<br>An array package is a physical platform that contains one or more arrays that are separately addressable (e.g. several arrays
+               that can be hybridized on a single microscope slide) or a virtual grouping together of arrays. The array package that has
+               been manufactured has information about where certain artifacts about the array are located for scanning and feature extraction
+               purposes.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayGroupWIDArrayWID.html">ArrayGroupWIDArrayWID</a></td>
+            <td>Represents n..n association between ArrayGroup and Array<br>Association between an ArrayGroup and its Arrays, typically the ArrayGroup will represent a slide and the Arrays will be the
+               manufactured so that they may be hybridized separately on that slide.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufacture.html">ArrayManufacture</a></td>
+            <td>Represents MAGE Class ArrayManufacture<br>Describes the process by which arrays are produced.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufactureDeviation.html">ArrayManufactureDeviation</a></td>
+            <td>Represents MAGE Class ArrayManufactureDeviation<br>Stores information of the potential difference between an array design and arrays that have been manufactured using that design
+               (e.g. a tip failed to print several spots).<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufactureWIDArrayWID.html">ArrayManufactureWIDArrayWID</a></td>
+            <td>Represents n..n association between ArrayManufacture and Array<br>Association between the manufactured array and the information on that manufacture.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufactureWIDContactWID.html">ArrayManufactureWIDContactWID</a></td>
+            <td>Represents n..n association between ArrayManufacture and Contact<br>The person or organization to contact for information concerning the ArrayManufacture.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BAssayMappingWIDBAssayMapWID.html">BAssayMappingWIDBAssayMapWID</a></td>
+            <td>Represents n..n association between BioAssayMapping and BioAssayMap<br>The maps for the BioAssays.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssay.html">BioAssay</a></td>
+            <td>Represents MAGE Class BioAssay<br>An abstract class which represents both physical and computational groupings of arrays and biomaterials.<br>Includes MAGE Class DerivedBioAssay<br>Includes MAGE Class MeasuredBioAssay<br>Includes MAGE Class PhysicalBioAssay<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayData.html">BioAssayData</a></td>
+            <td>Represents MAGE Class BioAssayData<br>Represents the dataset created when the BioAssays are created.  BioAssayData is the entry point to the values.  Because the
+               actual values are represented by a different object, BioDataValues, which can be memory intensive, the annotation of the transformation
+               can be gotten separate from the data.<br>Includes MAGE Class DerivedBioAssayData<br>Includes MAGE Class MeasuredBioAssayData<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayDataCluster.html">BioAssayDataCluster</a></td>
+            <td>Represents MAGE Class BioAssayDataCluster<br>A mathematical method of higher level analysis whereby BioAssayData are grouped together into nodes.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayDimension.html">BioAssayDimension</a></td>
+            <td>Represents MAGE Class BioAssayDimension<br>An ordered list of bioAssays.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayDimensioWIDBioAssayWID.html">BioAssayDimensioWIDBioAssayWID</a></td>
+            <td>Represents n..n association between BioAssayDimension and BioAssay<br>The BioAssays for this Dimension<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayMapping.html">BioAssayMapping</a></td>
+            <td>Represents MAGE Class BioAssayMapping<br>Container of the mappings of the input BioAssay dimensions to the output BioAssay dimension.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayMapWIDBioAssayWID.html">BioAssayMapWIDBioAssayWID</a></td>
+            <td>Represents n..n association between BioAssayMap and BioAssay<br>The sources of the BioAssayMap that are used to produce a target DerivedBioAssay.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayTuple.html">BioAssayTuple</a></td>
+            <td>Represents MAGE Class BioAssayTuple<br>Transformed container to specify a BioAssay and the Design Elements and their data for that BioAssay.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayWIDChannelWID.html">BioAssayWIDChannelWID</a></td>
+            <td>Represents n..n association between BioAssay and Channel<br>Channels can be non-null for all subclasses.  For instance, collapsing across replicate features will create a DerivedBioAssay
+               that will potentially reference channels.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayWIDFactorValueWID.html">BioAssayWIDFactorValueWID</a></td>
+            <td>Represents n..n association between BioAssay and FactorValue<br>The values that this BioAssay is associated with for the experiment.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioDataValues.html">BioDataValues</a></td>
+            <td>Represents MAGE Class BioDataValues<br>The actual values for the BioAssayCube.<br>Includes MAGE Class BioDataCube<br>Includes MAGE Class BioDataTuples<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioEvent.html">BioEvent</a></td>
+            <td>Represents MAGE Class BioEvent<br>An abstract class to capture the concept of an event (either in the laboratory or a computational analysis).<br>Includes MAGE Class CompositeCompositeMap<br>Includes MAGE Class FeatureReporterMap<br>Includes MAGE Class ReporterCompositeMap<br>Includes MAGE Class Map<br>Includes MAGE Class BioAssayMap<br>Includes MAGE Class DesignElementMap<br>Includes MAGE Class QuantitationTypeMap<br>Includes MAGE Class Transformation<br>Includes MAGE Class Treatment<br>Includes MAGE Class BioAssayCreation<br>Includes MAGE Class BioAssayTreatment<br>Includes MAGE Class FeatureExtraction<br>Includes MAGE Class Hybridization<br>Includes MAGE Class ImageAcquisition<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioMaterialMeasurement.html">BioMaterialMeasurement</a></td>
+            <td>Represents MAGE Class BioMaterialMeasurement<br>A BioMaterialMeasurement is a pairing of a source BioMaterial and an amount (Measurement) of that BioMaterial.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioSource.html">BioSource</a></td>
+            <td>Defines the biological source of an entry in the Protein,
+               NucleicAcid or Gene tables ("the object"), as well as other tables
+               eventually storing experimental data related to e.g., microarray or
+               proteomic experiments. For example, BioSource might be used to specify
+               the organism, organ, and tissue in which gene expression experiments
+               were performed. DEPENDENCIES: 1. As BioSource references Taxon.WID to
+               specify the species, the NCBI taxonomy dataset must have ALREADY been
+               loaded prior to populating BioSource. 2. BioSource stores subtype
+               information in BioSubtype via the BioSourceWIDBioSubtypeWID linking
+               table
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="BioSourceWIDBioSubtypeWID.html">BioSourceWIDBioSubtypeWID</a></td>
+            <td>Linking table which links BioSource and BioSubtype<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioSourceWIDContactWID.html">BioSourceWIDContactWID</a></td>
+            <td>Represents n..n association between BioSource and Contact<br>The BioSource's source is the provider of the biological material (a cell line, strain, etc...).  This could be the ATTC (American
+               Tissue Type Collection).<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioSourceWIDGeneWID.html">BioSourceWIDGeneWID</a></td>
+            <td>Associates a gene with those species, strains, tissues, etc, from which it was derived.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioSourceWIDProteinWID.html">BioSourceWIDProteinWID</a></td>
+            <td>Associates a protein with those species, strains, tissues, etc, from which it was derived.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioSubtype.html">BioSubtype</a></td>
+            <td>Describes idiosyncratic sub-species descriptions such as "serotype", "variety", etc.<br>These can be many to one (1 BioSource - many BioSubtypes) linked via
+               BioSourceWIDBioSubtypeWID
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="Channel.html">Channel</a></td>
+            <td>Represents MAGE Class Channel<br>A channel represents an independent acquisition scheme for the ImageAcquisition event, typically a wavelength.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ChannelWIDCompoundWID.html">ChannelWIDCompoundWID</a></td>
+            <td>Represents n..n association between Channel and Compound<br>The compound used to label the extract.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Chemical.html">Chemical</a></td>
+            <td>Defines small molecular weight chemical compounds.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ChemicalAtom.html">ChemicalAtom</a></td>
+            <td>The tables ChemicalAtom and ChemicalBond define the chemical bond structure of a chemical,
+               the
+               <br>charge on the constituent atoms, and encodes a two or three dimensional representation of the<br>structure. It is implicit that ChemicalBonds are symmetric.<br>Atoms that are chiral centers are have a non-zero StereoParity field. Values for this field
+               are
+               <br>defined in the Enumeration table, and are taken from MDL Molfile format defined in<br>http://www.mdli.com/downloads/ctfile/ctfile_subs.html . That specification is confusing
+               because
+               <br>it appears to define two redundant ways (marking atoms and marking bonds) of defining stereo<br>configurations. Our theory is that the redundancy exists to allow different drawings of
+               stereo
+               <br>configurations, and that for simply capturing a configuration, setting the StereoParity field<br>of an atom is sufficient. Also, setting the BondStereo field of a bond could simplify drawing<br>of chemical structures, and can allow different drawings of the same stereo configurations,<br>which can be desirable. But these two fields can be interpreted independently of one another.<br>See the appendix of the MDL specification for details on interpreting stereo configurations.<br>E.g. H2O could be encoded as:<br>ChemicalAtom (wid, 1, 'H', 0)<br>ChemicalAtom (wid, 2, 'O', 0)<br>ChemicalAtom (wid, 3, 'H', 0)<br>ChemicalBond (wid, 1, 2, 1)<br>ChemicalBond (wid, 2, 3, 1)<br></td>
+         </tr>
+         <tr>
+            <td><a href="ChemicalBond.html">ChemicalBond</a></td>
+            <td>The tables ChemicalAtom and ChemicalBond define the chemical bond structure of a chemical, the charge
+               on
+               <br>the constituent atoms, and encodes a two or three dimensional representation of the
+               structure.
+               <br>It is implicit that ChemicalBonds are symmetric. BondTypes and BondStereo are defined in the<br>Enumeration table, and are taken from MDL Molfile format defined in<br>http://www.mdli.com/downloads/ctfile/ctfile_subs.html . That specification is confusing. See<br>documentation of ChemicalAtom table for more information.<br>E.g. H2O could be encoded as:<br>ChemicalAtom (wid, 1, 'H', 0)<br>ChemicalAtom (wid, 2, 'O', 0)<br>ChemicalAtom (wid, 3, 'H', 0)<br>ChemicalBond (wid, 1, 2, 1)<br>ChemicalBond (wid, 2, 3, 1)<br></td>
+         </tr>
+         <tr>
+            <td><a href="Citation.html">Citation</a></td>
+            <td>Defines a literature citation.<br>Typically a citation is associated with one or more Warehouse objects via the CitationWIDOtherWID
+               table.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>Link from citations to the entities described in that citation. Enables one citation to<br>provide support for multiple entries in the warehouse.<br></td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>This table allows for arbitrary association of (possibly lengthy) comments<br>with any object in the warehouse.<br>See the Description table for a more specific type of comment.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ComposGrpWIDComposSequenceWID.html">ComposGrpWIDComposSequenceWID</a></td>
+            <td>Represents n..n association between CompositeGroup and CompositeSequence<br>The compositeSequences that belong to this group.<br></td>
+         </tr>
+         <tr>
+            <td><a href="CompositeSeqWIDBioSeqWID.html">CompositeSeqWIDBioSeqWID</a></td>
+            <td>Represents n..n association between CompositeSequence and BioSequence<br>The annotation on the BioSequence this CompositeSequence represents.  Typically the sequences will be a Genes, Exons, or SpliceVariants.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ComposSeqDimensWIDComposSeqWID.html">ComposSeqDimensWIDComposSeqWID</a></td>
+            <td>Represents n..n association between CompositeSequenceDimension and CompositeSequence<br>The CompositeSequences for this Dimension.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ComposSeqWIDComposComposMapWID.html">ComposSeqWIDComposComposMapWID</a></td>
+            <td>Represents n..n association between CompositeSequence and CompositeCompositeMap<br>A map to the compositeSequences that compose this CompositeSequence.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ComposSeqWIDRepoComposMapWID.html">ComposSeqWIDRepoComposMapWID</a></td>
+            <td>Represents n..n association between CompositeSequence and ReporterCompositeMap<br>A map to the reporters that compose this CompositeSequence.<br></td>
+         </tr>
+         <tr>
+            <td><a href="CompoundMeasurement.html">CompoundMeasurement</a></td>
+            <td>Represents MAGE Class CompoundMeasurement<br>A CompoundMeasurement is a pairing of a source Compound and an amount (Measurement) of that Compound.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Computation.html">Computation</a></td>
+            <td>Defines a parameterized computation that has been performed on objects in the warehouse.<br>TODO: Parameters are specified in the Parameter table.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Contact.html">Contact</a></td>
+            <td>Represents MAGE Class Contact<br>A contact is either a person or an organization.<br>Includes MAGE Class Organization<br>Includes MAGE Class Person<br></td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>This table is used to define (i) links between databases; (ii) links between objects within the same
+               dataset.
+               <br>For case (i):<br>A row in this table defines a link between an object in the warehouse<br>(OtherWID) and an entry in another dataset that may or may not be loaded<br>into the warehouse. If it is not loaded, DatabaseName<br>(and XID, Type, and Version if available) will be nonnull.<br>For case (ii):<br>A row in this table defines a link between an object in the warehouse<br>(OtherWID) and an object in the same dataset for which the dataset specifies<br>an association between them not otherwise represented within the warehouse.<br>Such associations are currently (5/10/04) made between a gene described in one sequence (the root
+               Bioseq) and
+               <br>another GenBank entry (the reference Bisoseq) which is being referenced and describes the gene
+               independently
+               <br>of the first Bioseq. In such a case, CrossReference.OtherWID=Gene.WID.<br>In either case: if CrossWID is nonnull, the object linked to is<br>loaded into the warehouse; if it is null, it may or may not be loaded.<br>Note that if a loader does not know whether a referenced entry will be loaded,<br>it is free to fill in CrossWID at a later time.<br>Restrictions: CrossReference only stores keys that point to uniquely identified objects in the
+               referenced database.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="Database_.html">Database_</a></td>
+            <td>Represents MAGE Class Database<br>An address to a repository.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DatabaseWIDContactWID.html">DatabaseWIDContactWID</a></td>
+            <td>Represents n..n association between Database and Contact<br>Information on the contacts for the database<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataExternal.html">DataExternal</a></td>
+            <td>Represents MAGE Class DataExternal<br>Transformed class to associate external data to the BioAssayDataCube<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataInternal.html">DataInternal</a></td>
+            <td>Represents MAGE Class DataInternal<br>Transformed class to associate whitespaced delimited data to the BioAssayDataCube<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSet</a></td>
+            <td>Table whose rows define each dataset currently loaded into the warehouse.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSetHierarchy.html">DataSetHierarchy</a></td>
+            <td>Defines a dataset containment hierarchy.
+               	If a dataset contains another, either directly or indirectly,
+               	a row exists for that dataset pair in this table.
+               	A dataset always contains itself; therefore each dataset is included in at least one row in this table.
+               	A dataset may contain any number of datasets, and be contained in any number of datasets.
+               	To query for an object in a containing dataset whose datasetwid is NN,
+               	regardless of which contained dataset it is in, use a query like the following: <br>select wid from DataSetHierarchy h, Protein p
+               	    where h.superwid=NN and h.subwid=p.datasetwid
+               	    and p.name='some name'<br></td>
+         </tr>
+         <tr>
+            <td><a href="Datum.html">Datum</a></td>
+            <td>Represents MAGE Class Datum<br>Transformed container to hold a value.  QuantitationType will determine the type of this value.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>Associates a warehouse entity with the identifier(s) used for that entity in its<br>source dataset. For example, if a protein is loaded from SwissProt into the<br>warehouse, this table can be used to store the SwissProt accession numbers for<br>the protein.<br>Restrictions: DBID only stores keys that point to uniquely identified objects in the referenced
+               database.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="DerivBioAssayWIDBioAssayMapWID.html">DerivBioAssayWIDBioAssayMapWID</a></td>
+            <td>Represents n..n association between DerivedBioAssay and BioAssayMap<br>The DerivedBioAssay that is produced by the sources of the BioAssayMap.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DerivBioAWIDDerivBioADataWID.html">DerivBioAWIDDerivBioADataWID</a></td>
+            <td>Represents n..n association between DerivedBioAssay and DerivedBioAssayData<br>The data associated with the DerivedBioAssay.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>This table contains a textual description of a warehouse object.<br>An object will not have more than one description, and the description text<br>will typically define or otherwise characterize the object.<br>See the CommentTable table for a more general type of comment.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesignElement.html">DesignElement</a></td>
+            <td>Represents MAGE Class DesignElement<br>An element of an array.  This is generally of type feature but can be specified as reporters or compositeSequence for arrays
+               that are abstracted from a physical array.<br>Includes MAGE Class CompositeSequence<br>Includes MAGE Class Feature<br>Includes MAGE Class Reporter<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementDimension.html">DesignElementDimension</a></td>
+            <td>Represents MAGE Class DesignElementDimension<br>An ordered list of designElements. It will be realized as one of its three subclasses.<br>Includes MAGE Class CompositeSequenceDimension<br>Includes MAGE Class FeatureDimension<br>Includes MAGE Class ReporterDimension<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementGroup.html">DesignElementGroup</a></td>
+            <td>Represents MAGE Class DesignElementGroup<br>The DesignElementGroup holds information on either features, reporters, or compositeSequences, particularly that information
+               that is common between all of the DesignElements contained.<br>Includes MAGE Class CompositeGroup<br>Includes MAGE Class FeatureGroup<br>Includes MAGE Class ReporterGroup<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementMapping.html">DesignElementMapping</a></td>
+            <td>Represents MAGE Class DesignElementMapping<br>Container of the mappings of the input DesignElement dimensions to the output DesignElement dimension.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesignElementTuple.html">DesignElementTuple</a></td>
+            <td>Represents MAGE Class DesignElementTuple<br>Transformed container to specify a DesignElement and QuantitationTypes for that Element.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DesnElMappingWIDDesnElMapWID.html">DesnElMappingWIDDesnElMapWID</a></td>
+            <td>Represents n..n association between DesignElementMapping and DesignElementMap<br>The maps for the DesignElements.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Division.html">Division</a></td>
+            <td>Stores the GenBank Division and the NCBI three letter code for records originating from GenBank.
+               NCBI uses Divisions to organize GenBank records according to two definitions: some divisions are based on
+               taxonomy (e.g., the "BCT" division), whereas other divisions exist purely for data organization reasons
+               (e.g., the "CON" division, whose records store instructions for the construction of large contigs).
+               Sequences from different GenBank divisions vary substantially in quality based upon the way they were
+               generated, e.g., single-pass genomic sequencing, ESTs (low quality, single-pass sequencing), cDNAs
+               (high coverage sequencing) and genomic sequencing (moderate coverage sequencing). All BioWarehouse
+               records associated with a GenBank dataset also have a record in the Division table.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="Element.html">Element</a></td>
+            <td>The periodic table of elements<br></td>
+         </tr>
+         <tr>
+            <td><a href="Entry.html">Entry</a></td>
+            <td>Defines metadata describing a warehouse object.<br>Every warehouse object (that is, anything with a WID column) must have an associated Entry
+               row.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="Enumeration.html">Enumeration</a></td>
+            <td>This table defines enumerated types used within the warehouse. Essentially,<br>enumerated types correspond to small controlled vocabularies used within<br>one or more warehouse tables. For example, the warehouse table Feature has<br>a column called Type that defines the type of a feature within an amino-acid<br>sequence. Examples types might be PHOS-RESIDUE and GLY-RESIDUE, corresponding<br>to residues in a protein that are phosphorylated and glycosylated, respectively.<br>Those two enumerated types would be entered into two rows of this Enumeration<br>table. Note that in some cases the values actually stored in the warehouse<br>table are numbers, which are stored in the Value field of the Enumeration table<br>as the string form of that number.<br></td>
+         </tr>
+         <tr>
+            <td><a href="EnzReactionAltCompound.html">EnzReactionAltCompound</a></td>
+            <td>Identifies a compound that is either an alternate substrate or an alternate cofactor<br>to a primary compound present in an enzymatic reaction.<br></td>
+         </tr>
+         <tr>
+            <td><a href="EnzReactionCofactor.html">EnzReactionCofactor</a></td>
+            <td>Cofactors are chemicals that are required for the enzyme to catalyze<br>the reaction, but are left unchanged by the reaction. If multiple<br>cofactors are listed for a reaction, this is interpreted as a disjunction.<br>This table also encodes prosthetic groups.<br></td>
+         </tr>
+         <tr>
+            <td><a href="EnzReactionInhibitorActivator.html">EnzReactionInhibitorActivator</a></td>
+            <td>Associates an enzymatic reaction to the compounds that act as<br>inhibitors and activators for the reaction.<br>The mechanism of action is encoded in the Mechanism column.<br></td>
+         </tr>
+         <tr>
+            <td><a href="EnzymaticReaction.html">EnzymaticReaction</a></td>
+            <td>Defines an association between a reaction and an enzyme that catalyzes<br>that reaction (ProteinWID). In the case where we are defining an<br>association between a subunit of a larger enzyme complex, and a<br>reaction catalyzed by that subunit only when the subunit is part of<br>that larger complex, ComplexWID specifies that larger complex (assumes<br>that complex is in the warehouse).<br>This table requires a WID as it is referenced in multiple linking tables<br>to associate alternate compounds, cofactors, etc., to allow for multiple<br>valued attributes of the enzymatic reaction.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Experiment.html">Experiment</a></td>
+            <td>Defines an experiment. Provides a context for associating experimental data with it.<br>Allows tree-structured experiments consisting of heterogeneous subexperiments,<br>subexperiments corresponding to time-series observations,<br>and repeated trials of identical experiments.<br>For a hierarchical experiment, data should be associated with the Experiment<br>at the appropriate level. For example, if data reflects results from averaging<br>numerous identically conducted trials, that data should be associated with the<br>Experiment representing the group of these trials.<br>A Comment table entry may be created to contain discussion of results, etc.<br>A DBID table entry may be created if the (sub)experiment has a unique name within its
+               DataSet.
+               <br>SynonymTable table entries may be created to associate names with the (sub)experiment.<br>If published, a reference may be created in Citation table.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentalFactor.html">ExperimentalFactor</a></td>
+            <td>Represents MAGE Class ExperimentalFactor<br>ExperimentFactors are the dependent variables of an experiment (e.g. time, glucose concentration, ...).<br></td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentData.html">ExperimentData</a></td>
+            <td>Specifies a relationship between one data entity and an experiment in which it was
+               	recorded as an observation or used in some other fashion.<br><br> Used in flow cytometry to represent both observations and filter wavelengths.<br> For an observation: <br> ExperimentData.Data contains the vector of observations <br>   ExperimentData.MageData = NULL <br>   ExperimentData.OtherWID = the FlowCytometrySample.WID of the sample, <br>   ExperimentData.Role defines the reading ('forward scatter', 'side scatter', or 'filter'), <br>   ExperimentData.Type = 'flow cytometry', <br>   ExperimentData.Kind = 'O' (observation) <br> For a filter wavelength: <br>   ExperimentData.Data = NULL <br>   ExperimentData.MageData references a ParameterValue row for the wavelength <br>   ExperimentData.Role = 'filter wavelength' <br>   ExperimentData.Kind = 'P' (parameter) <br>   ExperimentData.OtherWID = the ExperimentData.WID of the observation, <br></td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentDesign.html">ExperimentDesign</a></td>
+            <td>Represents MAGE Class ExperimentDesign<br>The ExperimentDesign is the description and collection of ExperimentalFactors and the hierarchy of BioAssays to which they
+               pertain.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentDesignWIDBioAssayWID.html">ExperimentDesignWIDBioAssayWID</a></td>
+            <td>Represents n..n association between ExperimentDesign and BioAssay<br>The organization of the BioAssays as specified by the ExperimentDesign (TimeCourse, Dosage, etc.)<br></td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentRelationship.html">ExperimentRelationship</a></td>
+            <td>Relates one experiment to another.<br>This table supports a many to many relationship.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentWIDBioAssayDataWID.html">ExperimentWIDBioAssayDataWID</a></td>
+            <td>Represents n..n association between Experiment and BioAssayData<br>The collection of BioAssayDatas for this Experiment.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentWIDBioAssayWID.html">ExperimentWIDBioAssayWID</a></td>
+            <td>Represents n..n association between Experiment and BioAssay<br>The collection of BioAssays for this Experiment.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentWIDContactWID.html">ExperimentWIDContactWID</a></td>
+            <td>Represents n..n association between Experiment and Contact<br>The providers of the Experiment, its data and annotation.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ExperimWIDBioAssayDataClustWID.html">ExperimWIDBioAssayDataClustWID</a></td>
+            <td>Represents n..n association between Experiment and BioAssayDataCluster<br>The results of analyzing the data, typically with a clustering algorithm.<br></td>
+         </tr>
+         <tr>
+            <td><a href="FactorValue.html">FactorValue</a></td>
+            <td>Represents MAGE Class FactorValue<br>The value for a ExperimentalFactor<br></td>
+         </tr>
+         <tr>
+            <td><a href="Feature.html">Feature</a></td>
+            <td>Features define regions or points of interest on the protein sequence or<br>nucleic acid sequence specified by SequenceWID.<br>Features are not used to describe objects such as Genes, BioSources, etc,<br>because attributes of those objects are described in their own tables.<br>Exceptions:<br>1. Since pseudogenes are not entered in the Gene table, they are listed as sequence features in
+               Feature
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="FeatureDefect.html">FeatureDefect</a></td>
+            <td>Represents MAGE Class FeatureDefect<br>Stores the defect information for a feature.<br></td>
+         </tr>
+         <tr>
+            <td><a href="FeatureDimensionWIDFeatureWID.html">FeatureDimensionWIDFeatureWID</a></td>
+            <td>Represents n..n association between FeatureDimension and Feature<br>The features for this dimension.<br></td>
+         </tr>
+         <tr>
+            <td><a href="FeatureInformation.html">FeatureInformation</a></td>
+            <td>Represents MAGE Class FeatureInformation<br>As part of the map information, allows the association of one or more differences in the BioMaterial on a feature from the
+               BioMaterial of the Reporter.  Useful for control purposes such as in Affymetrix probe pairs.<br></td>
+         </tr>
+         <tr>
+            <td><a href="FeatureLocation.html">FeatureLocation</a></td>
+            <td>Represents MAGE Class FeatureLocation<br>Specifies where a feature is located relative to a grid.<br></td>
+         </tr>
+         <tr>
+            <td><a href="FeatureWIDFeatureWID.html">FeatureWIDFeatureWID</a></td>
+            <td>Represents n..n association between Feature and Feature<br>Associates features with their control features.<br></td>
+         </tr>
+         <tr>
+            <td><a href="FeatureWIDFeatureWID2.html">FeatureWIDFeatureWID2</a></td>
+            <td>Represents n..n association between Feature and Feature<br>Associates features with their control features.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Fiducial.html">Fiducial</a></td>
+            <td>Represents MAGE Class Fiducial<br>A marking on the surface of the array that can be used to identify the array's origin, the coordinates of which are the fiducial's
+               centroid.<br></td>
+         </tr>
+         <tr>
+            <td><a href="FlowCytometryProbe.html">FlowCytometryProbe</a></td>
+            <td>Defines a material used to measure characteristics of a cell using flow cytometry.
+               	         If probe is a protein, a CrossReference may be defined to specify the protein;
+               		 in that case CrossReference.OtherWID refers to this FlowCytometryProbe.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="FlowCytometrySample.html">FlowCytometrySample</a></td>
+            <td>Defines an experimental sample prepared for use in a flow cytometry experiment.
+               	A typical experiment consists of multiple samples X multiple readings
+               	(forward/side scatter and using filters of various wavelengths),
+               	with a vector of observations (one per cell of the BioSource)
+               	for each sample/reading combination.<br> An ExperimentData row is defined for each observation; see that table for representation details.<br> An Experiment row is defined to associate each ExperimentData row with the experiment. <br></td>
+         </tr>
+         <tr>
+            <td><a href="Function.html">Function</a></td>
+            <td>Describes the non-enzymatic function(s) of proteins. That is,<br>this table should not be used to describe the enzymatic function of a protein whose enzymatic<br>function is described using the EnzymaticReaction table. Function names are stored as<br>strings with no particular format or interpretation.<br></td>
+         </tr>
+         <tr>
+            <td><a href="GelLocation.html">GelLocation</a></td>
+            <td>Describes the location of a spot on a gel.<br>This tables maps spots to the one or more tables that they are found on.<br>Describes the X and Y coordinates on the Gel.<br>Information for the particular gel conditions that the spot was identified<br>on can be found in the Experiment table.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Gene.html">Gene</a></td>
+            <td>Defines a notion of gene that is limited to procaryotic aspects of<br>genes. Later versions of the warehouse will expand this definition to include<br>eukaryotic aspects of genes. Separate tables define associations between a gene and<br>(1) its biological source(s),<br>(2) its protein product(s), if any, and<br>(3) its RNA product(s), if any.<br></td>
+         </tr>
+         <tr>
+            <td><a href="GeneExpressionData.html">GeneExpressionData</a></td>
+            <td>MAGE gene expression data (BioDataCube)<br>This table definition may evolve as the requirements for gene expression data
+               are better understood.  The MAGE OM currently allows 'any' type for the Value component
+               of the BioDataCube.  We are investigating ways to make this table better accomodate
+               the variety of allowed datatypes.  Please send suggestions to support@biowarehouse.org<br></td>
+         </tr>
+         <tr>
+            <td><a href="GeneticCode.html">GeneticCode</a></td>
+            <td>Defines the genetic codes with a name, translation table and a start codon for each code.<br>See http://embryology.med.unsw.edu.au/DNA/Genetic_Codes.htm for more information.<br>Genbank ID is stored as DBID.XID, where DBID.OtherWID = GeneticCode.WID.<br></td>
+         </tr>
+         <tr>
+            <td><a href="GeneWIDNucleicAcidWID.html">GeneWIDNucleicAcidWID</a></td>
+            <td>Associates a gene with its nucleic acid product(s).<br>Note that the nucleic acid (ie. replicon) containing the gene is referenced by
+               Gene.NucleicAcidWID,
+               <br>not in this table.<br></td>
+         </tr>
+         <tr>
+            <td><a href="GeneWIDProteinWID.html">GeneWIDProteinWID</a></td>
+            <td>Associates a gene with its protein product(s).<br></td>
+         </tr>
+         <tr>
+            <td><a href="HardwareWIDContactWID.html">HardwareWIDContactWID</a></td>
+            <td>Represents n..n association between Hardware and Contact<br>Contact for information on the Hardware.<br></td>
+         </tr>
+         <tr>
+            <td><a href="HardwareWIDSoftwareWID.html">HardwareWIDSoftwareWID</a></td>
+            <td>Represents n..n association between Hardware and Software<br>Associates Hardware and Software together.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Image.html">Image</a></td>
+            <td>Represents MAGE Class Image<br>An image is created by an imageAcquisition event, typically by scanning the hybridized array (the PhysicalBioAssay).<br></td>
+         </tr>
+         <tr>
+            <td><a href="ImageAcquisitionWIDImageWID.html">ImageAcquisitionWIDImageWID</a></td>
+            <td>Represents n..n association between ImageAcquisition and Image<br>The images produced by the ImageAcquisition event.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ImageWIDChannelWID.html">ImageWIDChannelWID</a></td>
+            <td>Represents n..n association between Image and Channel<br>The channels captured in this image.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Interaction.html">Interaction</a></td>
+            <td>Defines a molecular interaction, such as two proteins observed to interact in a yeast-two-hybrid
+               experiement. The interaction could involve macromolecules, small molecules or both.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="InteractionParticipant.html">InteractionParticipant</a></td>
+            <td>Associates an interaction with the entity that participates in the interaction.<br></td>
+         </tr>
+         <tr>
+            <td><a href="LabeledExtractWIDCompoundWID.html">LabeledExtractWIDCompoundWID</a></td>
+            <td>Represents n..n association between LabeledExtract and Compound<br>Compound used to label the extract.<br></td>
+         </tr>
+         <tr>
+            <td><a href="LightSource.html">LightSource</a></td>
+            <td>Defines a light source, e.g., as produced by a scientific instrument.
+               	         Used by flow cytometry in describing the cytometry instrument. 
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="Location.html">Location</a></td>
+            <td>Defines one or more locations of a protein.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ManufactureLIMS.html">ManufactureLIMS</a></td>
+            <td>Represents MAGE Class ManufactureLIMS<br>Information on the physical production of arrays within the laboratory.<br>Includes MAGE Class ManufactureLIMSBiomaterial<br></td>
+         </tr>
+         <tr>
+            <td><a href="MeasBAssayWIDMeasBAssayDataWID.html">MeasBAssayWIDMeasBAssayDataWID</a></td>
+            <td>Represents n..n association between MeasuredBioAssay and MeasuredBioAssayData<br>The data associated with the MeasuredBioAssay.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Measurement.html">Measurement</a></td>
+            <td>Represents MAGE Class Measurement<br>A Measurement is a quantity with a unit.<br></td>
+         </tr>
+         <tr>
+            <td><a href="MismatchInformation.html">MismatchInformation</a></td>
+            <td>Represents MAGE Class MismatchInformation<br>Describes how a reporter varies from its ReporterCharacteristics sequence(s) or how a Feature varies from its Reporter sequence.<br></td>
+         </tr>
+         <tr>
+            <td><a href="NameValueType.html">NameValueType</a></td>
+            <td>Represents MAGE Class NameValueType<br>A tuple designed to store data, keyed by a name and type.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Node.html">Node</a></td>
+            <td>Represents MAGE Class Node<br>An individual component of a clustering.  May contain other nodes.<br></td>
+         </tr>
+         <tr>
+            <td><a href="NodeContents.html">NodeContents</a></td>
+            <td>Represents MAGE Class NodeContents<br>The contents of a node for any or all of the three Dimensions.  If a node only contained genes just the DesignElementDimension
+               would be defined.<br></td>
+         </tr>
+         <tr>
+            <td><a href="NodeValue.html">NodeValue</a></td>
+            <td>Represents MAGE Class NodeValue<br>A value associated with the Node that can rank it in relation to the other nodes produced by the clustering algorithm.<br></td>
+         </tr>
+         <tr>
+            <td><a href="NucleicAcid.html">NucleicAcid</a></td>
+            <td>Defines a specific nucleic acid molecule, such as DNA or of RNA.<br>Entries in this table correspond to a real-world DNA or RNA molecules<br>which at one point were purified and isolated ("something you can point at"). A row in this
+               table
+               <br>can define a complete molecule, a fragment of a molecule, or a molecule that has been
+               partially
+               <br>sequenced in different regions.<br>This table will be used in several ways: (1) to associate a sequence with an entire<br>replicon, or a region of a replicon, when the sequence of that replicon is known; (2) to
+               associate
+               <br>a DNA sequence with a single gene; (3) to define a DNA or RNA molecule that has not been<br>sequenced; (4) to define RNA molecules such as tRNAs.<br>Features on a NucleicAcid molecule (such as promoters or binding sites) can be defined using<br>the Feature table.<br>The Subsequence table contains zero or more full or partial sequences contents of this
+               molecule.
+               <br>If one represents the full sequence of this molecule, Subsequence.FullSequence = 'T' where<br>Subsequence.NucleicAcidWID references this molecule. In this case, NucleicAcid.FullySequenced = 'T' as
+               well.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="Parameter.html">Parameter</a></td>
+            <td>Represents MAGE Class Parameter<br>A Parameter is a replaceable value in a Parameterizable class.  Examples of Parameters include: scanning wavelength, laser
+               power, centrifuge speed, multiplicative errors, the number of input nodes to a SOM, and PCR temperatures.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Parameterizable.html">Parameterizable</a></td>
+            <td>Represents MAGE Class Parameterizable<br>The Parameterizable interface encapsulates the association of Parameters with ParameterValues.<br>Includes MAGE Class Hardware<br>Includes MAGE Class Protocol<br>Includes MAGE Class Software<br></td>
+         </tr>
+         <tr>
+            <td><a href="ParameterizableApplication.html">ParameterizableApplication</a></td>
+            <td>Represents MAGE Class ParameterizableApplication<br>The interface that is the use of a Parameterizable class.<br>Includes MAGE Class HardwareApplication<br>Includes MAGE Class ProtocolApplication<br>Includes MAGE Class SoftwareApplication<br></td>
+         </tr>
+         <tr>
+            <td><a href="ParameterValue.html">ParameterValue</a></td>
+            <td>Represents MAGE Class ParameterValue<br>The value of a Parameter.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Pathway.html">Pathway</a></td>
+            <td>Pathways are graphs of reactions, grouped together according to a<br>higher biological function they perform. Some pathways may be<br>"template", "reference", "model" or "sum of organisms" pathways. Those<br>pathways do not contain an BioSourceWID reference, and have the type<br>field set to "R" (Reference/Model/Theoretical). For real organisms,<br>the type is "O".<br></td>
+         </tr>
+         <tr>
+            <td><a href="PathwayLink.html">PathwayLink</a></td>
+            <td>This table allows us to state that two pathways are neighbors in<br>a biologically significant sense, because they share a substrate<br>in common. This link between two pathways is represented by the WIDs of the<br>interacting pathways, and of the chemical compound that they share.<br></td>
+         </tr>
+         <tr>
+            <td><a href="PathwayReaction.html">PathwayReaction</a></td>
+            <td>A pathway is defined as a set of reaction pairs or a collection of molecular interactions between
+               molecules.
+               This table stores not only the relationships between pathway and reactions, but also relationships between
+               molecular interaction network/pathway and interactions.
+               For each pair of reactions R1 and R2, R1 directly precedes R2 in the pathway.
+               Some reactions in a pathway may be considered hypothetical, probably because the presence of the enzyme
+               has not been demonstrated.
+               To specify an interaction is a part of a molecular interaction network/pathway, use R2 to represents
+               a molecular interaction, leave R1 blank.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="Position_.html">Position_</a></td>
+            <td>Represents MAGE Class Position<br>Specifies a position on an array.<br></td>
+         </tr>
+         <tr>
+            <td><a href="PositionDelta.html">PositionDelta</a></td>
+            <td>Represents MAGE Class PositionDelta<br>The delta the feature was actually printed on the array from the position specified for the feature in the array design.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Product.html">Product</a></td>
+            <td>Associates a reaction with a chemical product of that reaction.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Protein.html">Protein</a></td>
+            <td>Defines a specific protein, that is, a real-world protein which was either purified and
+               isolated,
+               <br>OR is reasonably inferred by genomic analysis or other means, such as enzymological
+               characterization.
+               <br>The protein could be a monomer or a multimer. In the latter case, a sequence would not be stored for
+               such a record.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="ProteinWIDFunctionWID.html">ProteinWIDFunctionWID</a></td>
+            <td>Associates a non-enzymatic function with a protein that has that function.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ProteinWIDSpotWID.html">ProteinWIDSpotWID</a></td>
+            <td>Associates a spot with a known protein.<br>Not all spots are associated with proteins since it is not necessarily<br>known what the protein is for a given spot.<br>This table supports the ability to have a spot linked to multiple protein,<br>or a protein linked to multiple spots.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ProtocolApplWIDPersonWID.html">ProtocolApplWIDPersonWID</a></td>
+            <td>Represents n..n association between ProtocolApplication and Person<br>The people who performed the protocol.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ProtocolWIDHardwareWID.html">ProtocolWIDHardwareWID</a></td>
+            <td>Represents n..n association between Protocol and Hardware<br>Hardware used by this protocol.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ProtocolWIDSoftwareWID.html">ProtocolWIDSoftwareWID</a></td>
+            <td>Represents n..n association between Protocol and Software<br>Software used by this Protocol.<br></td>
+         </tr>
+         <tr>
+            <td><a href="QuantitationType.html">QuantitationType</a></td>
+            <td>Represents MAGE Class QuantitationType<br>A method for calculating a single datum of the matrix (e.g. raw intensity, background, error).<br>Includes MAGE Class SpecializedQuantitationType<br>Includes MAGE Class StandardQuantitationType<br>Includes MAGE Class ConfidenceIndicator<br>Includes MAGE Class DerivedSignal<br>Includes MAGE Class Error<br>Includes MAGE Class ExpectedValue<br>Includes MAGE Class Failed<br>Includes MAGE Class MeasuredSignal<br>Includes MAGE Class PValue<br>Includes MAGE Class PresentAbsent<br>Includes MAGE Class Ratio<br></td>
+         </tr>
+         <tr>
+            <td><a href="QuantitationTypeDimension.html">QuantitationTypeDimension</a></td>
+            <td>Represents MAGE Class QuantitationTypeDimension<br>An ordered list of quantitationTypes.<br></td>
+         </tr>
+         <tr>
+            <td><a href="QuantitationTypeMapping.html">QuantitationTypeMapping</a></td>
+            <td>Represents MAGE Class QuantitationTypeMapping<br>Container of the mappings of the input QuantitationType dimensions to the output QuantitationType dimension.<br></td>
+         </tr>
+         <tr>
+            <td><a href="QuantitationTypeTuple.html">QuantitationTypeTuple</a></td>
+            <td>Represents MAGE Class QuantitationTypeTuple<br>Transformed container to specify a Quantitation Type and the value for that Type.<br></td>
+         </tr>
+         <tr>
+            <td><a href="QuantTyMapWIDQuantTyMapWI.html">QuantTyMapWIDQuantTyMapWI</a></td>
+            <td>Represents n..n association between QuantitationTypeMapping and QuantitationTypeMap<br>The maps for the QuantitationTypes.<br></td>
+         </tr>
+         <tr>
+            <td><a href="QuantTypeDimensWIDQuantTypeWID.html">QuantTypeDimensWIDQuantTypeWID</a></td>
+            <td>Represents n..n association between QuantitationTypeDimension and QuantitationType<br>The QuantitationTypes for this Dimension.<br></td>
+         </tr>
+         <tr>
+            <td><a href="QuantTypeMapWIDQuantTypeWID.html">QuantTypeMapWIDQuantTypeWID</a></td>
+            <td>Represents n..n association between QuantitationTypeMap and QuantitationType<br>The QuantitationType sources for values for the transformation.<br></td>
+         </tr>
+         <tr>
+            <td><a href="QuantTypeWIDConfidenceIndWID.html">QuantTypeWIDConfidenceIndWID</a></td>
+            <td>Represents n..n association between QuantitationType and ConfidenceIndicator<br>The association between a ConfidenceIndicator and the QuantitationType its is an indicator for.<br></td>
+         </tr>
+         <tr>
+            <td><a href="QuantTypeWIDQuantTypeMapWID.html">QuantTypeWIDQuantTypeMapWID</a></td>
+            <td>Represents n..n association between QuantitationType and QuantitationTypeMap<br>The QuantitationType whose value will be produced from the values of the source QuantitationType according to the Protocol.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Reactant.html">Reactant</a></td>
+            <td>Associates a reaction with a chemical that is consumed by the reaction.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Reaction.html">Reaction</a></td>
+            <td>Defines a chemical reaction. The reaction could be enzyme catalyzed<br>or occur spontaneously. The reaction could involve small molecules, macromolecules,<br>or a combination of the two. Every reaction will be stored in the warehouse in<br>a given direction, for example, every reaction that has an assigned EC number is<br>written in a direction assigned by the enzyme commission. In physiological settings,<br>the reaction could occur in the direction the reaction is stored, the reverse direction,<br>or both directions.<br>Restrictions: Reaction only stores fully qualified EC numbers, e.g., NOT of the form
+               "X.Y.Z.-"
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>Defines a relationship between a term and another object.
+               	         For relationships between terms, TermRelationship is generally used.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="ReporterDimensWIDReporterWID.html">ReporterDimensWIDReporterWID</a></td>
+            <td>Represents n..n association between ReporterDimension and Reporter<br>The reporters for this dimension.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ReporterGroupWIDReporterWID.html">ReporterGroupWIDReporterWID</a></td>
+            <td>Represents n..n association between ReporterGroup and Reporter<br>The reporters that belong to this group.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ReporterWIDBioSequenceWID.html">ReporterWIDBioSequenceWID</a></td>
+            <td>Represents n..n association between Reporter and BioSequence<br>The sequence annotation on the BioMaterial this reporter represents.  Typically the sequences will be an Oligo Sequence, Clone
+               or PCR Primer.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ReporterWIDFeatureReporMapWID.html">ReporterWIDFeatureReporMapWID</a></td>
+            <td>Represents n..n association between Reporter and FeatureReporterMap<br>Associates features with their reporter.<br></td>
+         </tr>
+         <tr>
+            <td><a href="SeqFeatureLocation.html">SeqFeatureLocation</a></td>
+            <td>Represents MAGE Class SeqFeatureLocation<br>The location of the SeqFeature annotation.<br></td>
+         </tr>
+         <tr>
+            <td><a href="SequenceMatch.html">SequenceMatch</a></td>
+            <td>Records a result of a computation of the degree of match between two sequences.<br>Sequences are either both Proteins or both Subsequences.<br></td>
+         </tr>
+         <tr>
+            <td><a href="SequencePosition.html">SequencePosition</a></td>
+            <td>Represents MAGE Class SequencePosition<br>Designates the position of the Feature in its BioSequence.<br>Includes MAGE Class CompositePosition<br>Includes MAGE Class ReporterPosition<br></td>
+         </tr>
+         <tr>
+            <td><a href="SoftwareWIDContactWID.html">SoftwareWIDContactWID</a></td>
+            <td>Represents n..n association between Software and Contact<br>Contact for information on the software.<br></td>
+         </tr>
+         <tr>
+            <td><a href="SoftwareWIDSoftwareWID.html">SoftwareWIDSoftwareWID</a></td>
+            <td>Represents n..n association between Software and Software<br>Software packages this software uses, i.e. operating system, 3rd party software packages, etc.<br></td>
+         </tr>
+         <tr>
+            <td><a href="SpecialWIDTable.html">SpecialWIDTable</a></td>
+            <td>Special WIDs are low-valued WIDs, assigned to globally and frequently used<br>WIDs within a dataset, such as its DataSetWID. They are both more<br>mnemonic, and potentially more efficient to store. Warehouse.MaxSpecialWID<br>delimits special and regular WIDs.<br>Analogous to WIDTable, this table is used to allocate special WIDs.<br>MySQL dataset loaders use the following protocol for WID assignment:<br>DELETE FROM SpecialWIDTable;<br>INSERT INTO SpecialWIDTable VALUES ();<br>SELECT last_insert_id();<br>This table contains exactly one row at any given time.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Spot.html">Spot</a></td>
+            <td>Describes a spot from a 2D Gel experiment.<br>A spot can be linked to one or more gels and the location on the gel. The<br>gel location information is stored in the ExperimentData table.<br>A spot can be identified to be a particluar protein in the protein table<br>and is associated to proteins via the ProteinWIDSpotWID table<br>The method used to identify the spot is contained in the SpotWIDSpotIDMethodWID<br>table and the SpotIDMethod table.<br>The growth conditions for the protein is found in the ExperimentData tableeh<br>The Spot Name/ID goes into the SpotId row, but additional names can be stored<br>as DBID table entry.<br></td>
+         </tr>
+         <tr>
+            <td><a href="SpotIdMethod.html">SpotIdMethod</a></td>
+            <td>Describes the method by which a spot was identified as<br>a particular (known) protein in the protein table.<br></td>
+         </tr>
+         <tr>
+            <td><a href="SpotWIDSpotIdMethodWID.html">SpotWIDSpotIdMethodWID</a></td>
+            <td>Associates a spot with a SpotIdMethod,<br>which is the method used to identify a spot with a particular protein.<br>A spot can be identified as a particular protein by multiple methods,<br>so this table supports this many-to-many relationship.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Subsequence.html">Subsequence</a></td>
+            <td>Contains a contiguous sequence of a nucleic acid molecule. Multiple Subsequences can make up a given
+               NucleicAcid entry.
+               <br>Contains either the full or partial nucleotide sequence of the nucleic acid molecule stored in
+               NucleicAcid.
+               <br>Todo: Currently the schema has no way of indicating an approximate position<br>of this Subsequence on the NucleicAcid as a whole.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Subunit.html">Subunit</a></td>
+            <td>Specifies that Subunit is a subunit of Complex. These subunit relationships could be<br>described in multiple levels. For example, this table can be used to describe multimeric
+               proteins,
+               <br>or ribosomes.<br></td>
+         </tr>
+         <tr>
+            <td><a href="SuperPathway.html">SuperPathway</a></td>
+            <td>Pathways may be arranged in a hierarchy, i.e. containment within one or<br>more superpathways, as an abstraction mechanism.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Support.html">Support</a></td>
+            <td>Describes the source and strength of evidence for individual facts in the warehouse.<br>This table is designed to allow different types of evidential support to be asserted for<br>different types of database assertions, such as using one set of evidence types for supporting<br>assertions about protein function, and another, possibly overlapping set of evidence types<br>for supporting assertions about protein existence.<br>Example use: Record that there are two sources of support for the function of a given<br>protein, one computational and one experimental. This table has a WID for use in the<br>CitationWIDOtherWID table.<br></td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>Defines one or more synonyms for a warehouse entity such as a protein, a<br>gene, a small molecule, or a pathway.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Taxon.html">Taxon</a></td>
+            <td>Defines a taxon, which could be a species, genus, family or some other rank.<br>These ranks are controlled vocabulary and are stored in the Enumeration table.<br>The taxon table associates a taxon with its parent, gives the name, division code and the<br>genetic code information for the taxon.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">Term</a></td>
+            <td>A term is a controlled vocabulary term used within a particular dataset.<br>E.g. the keyword attached to proteins in SwissProt. Terms can be arranged<br>in a hierarchy (see the TermRelationship table).<br></td>
+         </tr>
+         <tr>
+            <td><a href="TermRelationship.html">TermRelationship</a></td>
+            <td>Defines a relationship between two terms.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>This table captures meta-data that does not have an interpretation in<br>the warehouse semantics, but is `hints' to various tools that may<br>operate on, or build pictorial representations of, core elements of the<br>schema. For example, it may give hints to a particular pathway viewing<br>tool on how to layout a pathway.<br></td>
+         </tr>
+         <tr>
+            <td><a href="TranscriptionUnit.html">TranscriptionUnit</a></td>
+            <td>Defines a transcription unit, similar to an operon.  There is a one-to-one
+               relationship between a promoter and a transcription unit.  The transcription
+               unit includes the promoter, nearby site that regulate its activity, and downstream
+               genes and the terminator.  Unlike operons, a transcription unit can contain a single
+               gene, and a transcription unit can contain only one promoter.  For operons containing
+               multiple promoters, a different transcription unit would be created for each operon.
+               See TranscriptionUnitComponent for the types of components represented.
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="TranscriptionUnitComponent.html">TranscriptionUnitComponent</a></td>
+            <td>Associates a TranscriptionUnit with its components. Components consist of
+               genes and/or features. A feature component may be either a promoter, a terminator or a DNA binding site
+               (transcription-factor binding site).
+               <br></td>
+         </tr>
+         <tr>
+            <td><a href="TransformWIDBioAssayDataWID.html">TransformWIDBioAssayDataWID</a></td>
+            <td>Represents n..n association between Transformation and BioAssayData<br>The BioAssayData sources that the Transformation event uses to produce the target DerivedBioAssayData.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Unit.html">Unit</a></td>
+            <td>Represents MAGE Class Unit<br>The unit is a strict enumeration of types.<br>Includes MAGE Class ConcentrationUnit<br>Includes MAGE Class DistanceUnit<br>Includes MAGE Class MassUnit<br>Includes MAGE Class QuantityUnit<br>Includes MAGE Class TemperatureUnit<br>Includes MAGE Class TimeUnit<br>Includes MAGE Class VolumeUnit<br></td>
+         </tr>
+         <tr>
+            <td><a href="Valence.html">Valence</a></td>
+            <td>Defines one or more valences for each element.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Warehouse.html">Warehouse</a></td>
+            <td>Describes this version of the BioSPICE Warehouse.<br>This table contains exactly one row.<br></td>
+         </tr>
+         <tr>
+            <td><a href="WIDTable.html">WIDTable</a></td>
+            <td>To allow for compatibility with RDBMS systems that do not support<br>sequences, this table may be used to store the last used WID.<br>MySQL dataset loaders use the following SQL for WID assignment:<br>DELETE FROM WIDTable;<br>INSERT INTO WIDTable VALUES ();<br>SELECT last_insert_id();<br>It may also be used in RDBMS systems that do not support auto-increment<br>of a counter; however additional protocol like table locking may be<br>needed to assure the integrity of WIDs during concurrent assignment.<br>This table contains exactly one row at any given time.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Zone.html">Zone</a></td>
+            <td>Represents MAGE Class Zone<br>Specifies the location of a zone on an array.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ZoneDefect.html">ZoneDefect</a></td>
+            <td>Represents MAGE Class ZoneDefect<br>Stores the defect information for a zone.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ZoneGroup.html">ZoneGroup</a></td>
+            <td>Represents MAGE Class ZoneGroup<br>Specifies a repeating area on an array.  This is useful for printing when the same pattern is repeated in a regular fashion.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ZoneLayout.html">ZoneLayout</a></td>
+            <td>Represents MAGE Class ZoneLayout<br>Specifies the layout of features in a rectangular grid.<br></td>
+         </tr>
+      </table>
+      <h2>Summary:</h2>182 Total tables<br>88 Object tables<br>60 Linking (associative) tables<br>34 Other tables<br></body>
+</html><map id="coreschema" name="coreschema">
+<area shape="rect" href="LightSource.html" title="LightSource" alt="" coords="988,192,1073,240"/>
+<area shape="rect" href="FlowCytometrySample.html" title="FlowCytometrySample" alt="" coords="453,887,597,935"/>
+<area shape="rect" href="FlowCytometryProbe.html" title="FlowCytometryProbe" alt="" coords="67,1208,203,1256"/>
+<area shape="rect" href="BioSource.html" title="BioSource" alt="" coords="647,777,724,825"/>
+<area shape="rect" href="TranscriptionUnit.html" title="TranscriptionUnit" alt="" coords="1217,407,1335,455"/>
+<area shape="rect" href="Chemical.html" title="Chemical" alt="" coords="1089,699,1161,747"/>
+<area shape="rect" href="Reaction.html" title="Reaction" alt="" coords="1028,260,1100,308"/>
+<area shape="rect" href="Interaction.html" title="Interaction" alt="" coords="1173,345,1251,393"/>
+<area shape="rect" href="Protein.html" title="Protein" alt="" coords="733,400,805,448"/>
+<area shape="rect" href="Feature.html" title="Feature" alt="" coords="436,499,508,547"/>
+<area shape="rect" href="Function.html" title="Function" alt="" coords="539,13,611,61"/>
+<area shape="rect" href="EnzymaticReaction.html" title="EnzymaticReaction" alt="" coords="871,420,996,468"/>
+<area shape="rect" href="GeneticCode.html" title="GeneticCode" alt="" coords="71,743,161,791"/>
+<area shape="rect" href="Division.html" title="Division" alt="" coords="65,940,137,988"/>
+<area shape="rect" href="Taxon.html" title="Taxon" alt="" coords="316,813,388,861"/>
+<area shape="rect" href="BioSubtype.html" title="BioSubtype" alt="" coords="316,1004,399,1052"/>
+<area shape="rect" href="NucleicAcid.html" title="NucleicAcid" alt="" coords="311,641,399,689"/>
+<area shape="rect" href="Subsequence.html" title="Subsequence" alt="" coords="55,561,145,609"/>
+<area shape="rect" href="Gene.html" title="Gene" alt="" coords="288,472,360,520"/>
+<area shape="rect" href="Pathway.html" title="Pathway" alt="" coords="808,749,880,797"/>
+<area shape="rect" href="Term.html" title="Term" alt="" coords="1276,1004,1348,1052"/>
+<area shape="rect" href="Computation.html" title="Computation" alt="" coords="1299,192,1389,240"/>
+<area shape="rect" href="Citation.html" title="Citation" alt="" coords="1305,253,1377,301"/>
+<area shape="rect" href="Archive.html" title="Archive" alt="" coords="1032,993,1104,1041"/>
+<area shape="rect" href="Experiment.html" title="Experiment" alt="" coords="668,929,751,977"/>
+<area shape="rect" href="ExperimentData.html" title="ExperimentData" alt="" coords="665,1216,775,1264"/>
+<area shape="rect" href="Support.html" title="Support" alt="" coords="835,345,907,393"/>
+<area shape="rect" href="GelLocation.html" title="GelLocation" alt="" coords="640,631,728,679"/>
+<area shape="rect" href="Spot.html" title="Spot" alt="" coords="455,425,527,473"/>
+<area shape="rect" href="SpotIdMethod.html" title="SpotIdMethod" alt="" coords="60,39,159,87"/>
+<area shape="rect" href="TranscriptionUnitComponent.html" title="TranscriptionUnitComponent" alt="" coords="1019,407,1197,455"/>
+<area shape="rect" href="BioSourceWIDBioSubtypeWID.html" title="BioSourceWIDBioSubtypeWID" alt="" coords="432,732,624,780"/>
+<area shape="rect" href="BioSourceWIDGeneWID.html" title="BioSourceWIDGeneWID" alt="" coords="443,583,600,631"/>
+<area shape="rect" href="BioSourceWIDProteinWID.html" title="BioSourceWIDProteinWID" alt="" coords="557,468,725,516"/>
+<area shape="rect" href="GeneWIDNucleicAcidWID.html" title="GeneWIDNucleicAcidWID" alt="" coords="7,341,177,389"/>
+<area shape="rect" href="GeneWIDProteinWID.html" title="GeneWIDProteinWID" alt="" coords="424,253,565,301"/>
+<area shape="rect" href="ProteinWIDFunctionWID.html" title="ProteinWIDFunctionWID" alt="" coords="688,8,848,56"/>
+<area shape="rect" href="ProteinWIDSpotWID.html" title="ProteinWIDSpotWID" alt="" coords="593,261,729,309"/>
+<area shape="rect" href="SpotWIDSpotIdMethodWID.html" title="SpotWIDSpotIdMethodWID" alt="" coords="228,271,404,319"/>
+<area shape="rect" href="Warehouse.html" title="Warehouse" alt="" coords="773,897,853,945"/>
+<area shape="rect" href="WIDTable.html" title="WIDTable" alt="" coords="743,683,820,731"/>
+<area shape="rect" href="SpecialWIDTable.html" title="SpecialWIDTable" alt="" coords="865,683,983,731"/>
+<area shape="rect" href="Enumeration.html" title="Enumeration" alt="" coords="1141,591,1232,639"/>
+<area shape="rect" href="DataSet.html" title="DataSet" alt="" coords="1080,775,1152,823"/>
+<area shape="rect" href="DataSetHierarchy.html" title="DataSetHierarchy" alt="" coords="896,744,1013,792"/>
+<area shape="rect" href="Entry.html" title="Entry" alt="" coords="559,959,631,1007"/>
+<area shape="rect" href="GeneExpressionData.html" title="GeneExpressionData" alt="" coords="829,1051,963,1099"/>
+<area shape="rect" href="Element.html" title="Element" alt="" coords="1107,863,1179,911"/>
+<area shape="rect" href="Valence.html" title="Valence" alt="" coords="1019,897,1091,945"/>
+<area shape="rect" href="ChemicalAtom.html" title="ChemicalAtom" alt="" coords="1263,877,1364,925"/>
+<area shape="rect" href="ChemicalBond.html" title="ChemicalBond" alt="" coords="1281,604,1383,652"/>
+<area shape="rect" href="EnzReactionCofactor.html" title="EnzReactionCofactor" alt="" coords="900,611,1036,659"/>
+<area shape="rect" href="EnzReactionAltCompound.html" title="EnzReactionAltCompound" alt="" coords="1027,479,1192,527"/>
+<area shape="rect" href="EnzReactionInhibitorActivator.html" title="EnzReactionInhibitorActivator" alt="" coords="901,7,1088,55"/>
+<area shape="rect" href="Location.html" title="Location" alt="" coords="333,9,405,57"/>
+<area shape="rect" href="PathwayLink.html" title="PathwayLink" alt="" coords="960,819,1051,867"/>
+<area shape="rect" href="PathwayReaction.html" title="PathwayReaction" alt="" coords="759,561,873,609"/>
+<area shape="rect" href="Product.html" title="Product" alt="" coords="1283,336,1355,384"/>
+<area shape="rect" href="Reactant.html" title="Reactant" alt="" coords="1253,33,1325,81"/>
+<area shape="rect" href="InteractionParticipant.html" title="InteractionParticipant" alt="" coords="1019,345,1155,393"/>
+<area shape="rect" href="SequenceMatch.html" title="SequenceMatch" alt="" coords="1172,192,1279,240"/>
+<area shape="rect" href="Subunit.html" title="Subunit" alt="" coords="817,237,889,285"/>
+<area shape="rect" href="SuperPathway.html" title="SuperPathway" alt="" coords="1236,1192,1335,1240"/>
+<area shape="rect" href="TermRelationship.html" title="TermRelationship" alt="" coords="1141,1007,1259,1055"/>
+<area shape="rect" href="RelatedTerm.html" title="RelatedTerm" alt="" coords="1360,1020,1451,1068"/>
+<area shape="rect" href="CitationWIDOtherWID.html" title="CitationWIDOtherWID" alt="" coords="1141,253,1288,301"/>
+<area shape="rect" href="CommentTable.html" title="CommentTable" alt="" coords="743,836,847,884"/>
+<area shape="rect" href="CrossReference.html" title="CrossReference" alt="" coords="743,499,847,547"/>
+<area shape="rect" href="Description.html" title="Description" alt="" coords="620,192,703,240"/>
+<area shape="rect" href="DBID.html" title="DBID" alt="" coords="405,192,477,240"/>
+<area shape="rect" href="SynonymTable.html" title="SynonymTable" alt="" coords="559,407,660,455"/>
+<area shape="rect" href="ToolAdvice.html" title="ToolAdvice" alt="" coords="835,161,920,209"/>
+<area shape="rect" href="ExperimentRelationship.html" title="ExperimentRelationship" alt="" coords="785,967,935,1015"/>
+</map>

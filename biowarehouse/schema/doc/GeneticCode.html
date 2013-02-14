@@ -1,0 +1,142 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         GeneticCode
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="GeneticCode"></a>GeneticCode
+      </h1>
+      <hr>Defines the genetic codes with a name, translation table and a start codon for each code.<br>See http://embryology.med.unsw.edu.au/DNA/Genetic_Codes.htm for more information.<br>Genbank ID is stored as DBID.XID, where DBID.OtherWID = GeneticCode.WID.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse ID for this GeneticCode.<br></td>
+         </tr>
+         <tr>
+            <td>NCBIID</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(2)</td>
+            <td>Yes</td>
+            <td>1- or 2-digit ID assigned to this code. See URL above.<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(100)</td>
+            <td>Yes</td>
+            <td>Genetic code name.<br></td>
+         </tr>
+         <tr>
+            <td>TranslationTable</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(64)</td>
+            <td>Yes</td>
+            <td>Translation table for this genetic code. See URL above for format.<br></td>
+         </tr>
+         <tr>
+            <td>StartCodon</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(64)</td>
+            <td>Yes</td>
+            <td>Start Codon for this genetic code. See URL above for format<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="Taxon.html">Taxon</a></td>
+            <td>GencodeWID</td>
+         </tr>
+         <tr>
+            <td><a href="NucleicAcid.html">NucleicAcid</a></td>
+            <td>GeneticCodeWID</td>
+         </tr>
+         <tr>
+            <td><a href="Entry.html">Entry</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>CrossWID</td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>GENCODE_NAME</td>
+            <td>NAME</td>
+         </tr>
+         <tr>
+            <td>GENCODE_TRANSTABLE</td>
+            <td>TRANSLATIONTABLE</td>
+         </tr>
+         <tr>
+            <td>GENCODE_STARTCODON</td>
+            <td>STARTCODON</td>
+         </tr>
+         <tr>
+            <td>GENCODE_DATASETWID</td>
+            <td>DATASETWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

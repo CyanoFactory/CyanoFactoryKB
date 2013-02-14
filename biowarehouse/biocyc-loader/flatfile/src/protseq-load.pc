@@ -1,0 +1,75 @@
+/* *******************************************************************
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
+ * the License for the specific language governing rights and
+ * limitations under the License.
+ *
+ * The Original Code is the BioWarehouse.
+ *
+ * The Initial Developer of the Original Code is SRI International.
+ * Portions created by SRI International are Copyright (C) 2004.
+ * All Rights Reserved.
+ ******************************************************************* */
+/*
+ * PGDB PROTSEQ loader for the BioSpice Data Warehouse
+ * Thomas J Lee, SRI International, August 2002
+ */
+
+#include "main.h"
+#include "protseq-parse.h"
+#ifdef ORACLE
+#include <sqlca.h>
+#endif
+
+#define DEBUG 0
+
+extern int dataset_wid;
+
+void
+protseq_load_entry(struct protseq_entry *entry) {
+
+  int protein_wid;
+  short error = 0;
+  
+  if (!entry)
+    advise_error("Null entry passed to protseq_load_entry\n");
+  if (!entry->protein) {
+    printf("Missing protein name\n");
+  }
+  if (entry->aa_sequence && strlen(entry->aa_sequence) > 32000) {
+    entry->aa_sequence = string_truncate(entry->aa_sequence, 32000);
+    printf("Truncating sequence of %s\n", entry->protein);
+    error = 1;
+  }
+  if (error)
+    entry->load_error = 1;
+
+  if (DEBUG)
+    printf("Loading protseq %s\n", entry->protein);
+  
+  protein_wid = find_protein(entry->protein);
+  if (DEBUG) printf("Protein WID=%d\n", protein_wid);
+#ifdef ORACLE  
+  /* Try a WHENEVER to assist in debugging silent Oracle errors */
+  EXEC SQL WHENEVER SQLERROR DO sql_error("Oracle error in protseq-load");
+#endif
+  
+  if (protein_wid && entry->aa_sequence) {
+    db_update_protein_aasequence(protein_wid, entry->aa_sequence);
+  }
+  else printf("Protein %s not found, sequence is ignored\n", entry->protein);
+}
+
+
+
+
+
+
+
+
+

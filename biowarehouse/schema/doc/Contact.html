@@ -1,0 +1,293 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Contact
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Contact"></a>Contact
+      </h1>
+      <hr>Represents MAGE Class Contact<br>A contact is either a person or an organization.<br>Includes MAGE Class Organization<br>Includes MAGE Class Person<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>MAGEClass</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(100)</td>
+            <td>No</td>
+            <td>Discriminator column specifies type of object this row represents<br></td>
+         </tr>
+         <tr>
+            <td>Identifier</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Identifiable.identifier<br>An identifier is an unambiguous string that is unique within the scope (i.e. a document, a set of related documents, or a
+               repository) of its use.<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Identifiable.name<br>The potentially ambiguous common identifier.<br></td>
+         </tr>
+         <tr>
+            <td>URI</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Contact.URI<br></td>
+         </tr>
+         <tr>
+            <td>Address</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Contact.address<br></td>
+         </tr>
+         <tr>
+            <td>Phone</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Contact.phone<br></td>
+         </tr>
+         <tr>
+            <td>TollFreePhone</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Contact.tollFreePhone<br></td>
+         </tr>
+         <tr>
+            <td>Email</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Contact.email<br></td>
+         </tr>
+         <tr>
+            <td>Fax</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Contact.fax<br></td>
+         </tr>
+         <tr>
+            <td><a href="Contact.html">Parent</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between Organization and Organization<br>The containing organization (the university or business which a lab belongs to, etc.)<br></td>
+         </tr>
+         <tr>
+            <td>LastName</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Person.lastName<br></td>
+         </tr>
+         <tr>
+            <td>FirstName</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Person.firstName<br></td>
+         </tr>
+         <tr>
+            <td>MidInitials</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute Person.midInitials<br></td>
+         </tr>
+         <tr>
+            <td><a href="Contact.html">Affiliation</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between Person and Organization<br>The organization a person belongs to.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="FlowCytometrySample.html">FlowCytometrySample</a></td>
+            <td>ManufacturerWID</td>
+         </tr>
+         <tr>
+            <td><a href="Experiment.html">Experiment</a></td>
+            <td>ContactWID</td>
+         </tr>
+         <tr>
+            <td><a href="Contact.html">Contact</a></td>
+            <td>Parent</td>
+         </tr>
+         <tr>
+            <td><a href="Contact.html">Contact</a></td>
+            <td>Affiliation</td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesignWIDContactWID.html">ArrayDesignWIDContactWID</a></td>
+            <td>ContactWID</td>
+         </tr>
+         <tr>
+            <td><a href="ExperimentWIDContactWID.html">ExperimentWIDContactWID</a></td>
+            <td>ContactWID</td>
+         </tr>
+         <tr>
+            <td><a href="DatabaseWIDContactWID.html">DatabaseWIDContactWID</a></td>
+            <td>ContactWID</td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufactureWIDContactWID.html">ArrayManufactureWIDContactWID</a></td>
+            <td>ContactWID</td>
+         </tr>
+         <tr>
+            <td><a href="BioSourceWIDContactWID.html">BioSourceWIDContactWID</a></td>
+            <td>ContactWID</td>
+         </tr>
+         <tr>
+            <td><a href="HardwareWIDContactWID.html">HardwareWIDContactWID</a></td>
+            <td>ContactWID</td>
+         </tr>
+         <tr>
+            <td><a href="ProtocolApplWIDPersonWID.html">ProtocolApplWIDPersonWID</a></td>
+            <td>PersonWID</td>
+         </tr>
+         <tr>
+            <td><a href="SoftwareWIDContactWID.html">SoftwareWIDContactWID</a></td>
+            <td>ContactWID</td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>CrossWID</td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>Contact1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>Contact2</td>
+            <td>MAGEClass</td>
+         </tr>
+         <tr>
+            <td>Contact3</td>
+            <td>Identifier</td>
+         </tr>
+         <tr>
+            <td>Contact4</td>
+            <td>Name</td>
+         </tr>
+         <tr>
+            <td>Contact5</td>
+            <td>URI</td>
+         </tr>
+         <tr>
+            <td>Contact6</td>
+            <td>Address</td>
+         </tr>
+         <tr>
+            <td>Contact7</td>
+            <td>Phone</td>
+         </tr>
+         <tr>
+            <td>Contact8</td>
+            <td>TollFreePhone</td>
+         </tr>
+         <tr>
+            <td>Contact9</td>
+            <td>Email</td>
+         </tr>
+         <tr>
+            <td>Contact10</td>
+            <td>Fax</td>
+         </tr>
+         <tr>
+            <td>Contact11</td>
+            <td>Parent</td>
+         </tr>
+         <tr>
+            <td>Contact12</td>
+            <td>LastName</td>
+         </tr>
+         <tr>
+            <td>Contact13</td>
+            <td>FirstName</td>
+         </tr>
+         <tr>
+            <td>Contact14</td>
+            <td>MidInitials</td>
+         </tr>
+         <tr>
+            <td>Contact15</td>
+            <td>Affiliation</td>
+         </tr>
+      </table><br><br></body>
+</html>

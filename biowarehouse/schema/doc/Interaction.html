@@ -1,0 +1,76 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Interaction
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Interaction"></a>Interaction
+      </h1>
+      <hr>Defines a molecular interaction, such as two proteins observed to interact in a yeast-two-hybrid
+      experiement. The interaction could involve macromolecules, small molecules or both.
+      <br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse ID for this interaction<br></td>
+         </tr>
+         <tr>
+            <td>Type</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(100)</td>
+            <td>Yes</td>
+            <td>Interaction type. It is recommended to use external controled vacabulary terms, such as PSI-MI
+               Interaction Type CV.
+               <br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(120)</td>
+            <td>Yes</td>
+            <td>Name of the interaction.<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of the dataset the interaction is from.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="InteractionParticipant.html">InteractionParticipant</a></td>
+            <td>InteractionWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>INTERACTION_DWID</td>
+            <td>DataSetWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

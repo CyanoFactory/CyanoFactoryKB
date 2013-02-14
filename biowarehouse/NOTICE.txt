@@ -1,0 +1,131 @@
+SAXDOMIX
+--------
+This product includes software developed by Devsphere
+(www.devsphere.com).  Specifically, the 'SaxDomix.jar'
+library, to which the following notice and license applies:
+
+/*
+ * Copyright (c) 2000-2002 Devsphere.com. All rights reserved.
+ *
+ * The source code and documentation are provided for reference
+ * purposes and to modify and recompile the code if necessary.
+ * You may not redistribute the source code or documentation
+ * without prior written permission of Devsphere. For written
+ * permission, please contact info@devsphere.com
+ *
+ * Redistribution and use of the xmltaglib.jar, saxdomix.jar,
+ * dslogging.jar, OutputXML.tld and ProcessXML.tld files, with
+ * or without modification, are permitted provided that the
+ * following conditions are met:
+ *
+ * 1. The redistribution must reproduce the above copyright notice, this
+ * list of conditions and the following disclaimer in the documentation
+ * and/or other materials provided with the distribution.
+ *
+ * 2. The end-user documentation included with the redistribution,
+ * if any, must include the following acknowledgment:
+ * "This product includes software developed by Devsphere
+ * (www.devsphere.com)"
+ * Alternately, this acknowledgment may appear in the software itself,
+ * if and wherever such third-party acknowledgments normally appear.
+ *
+ * 3. The names "SAXDOMIX", "XJTL" and "Devsphere" must not be used to
+ * endorse or promote products derived from this software without prior
+ * written permission of Devsphere.
+ *
+ * 4. Products derived from this software may not be called "Devsphere",
+ * nor may "Devsphere" appear in their name, without prior written
+ * permission of Devsphere.
+ *
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED.  IN NO EVENT SHALL DEVSPHERE OR ITS DEVELOPERS
+ * BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+ * OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+ * OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+ * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+XMLBeans
+--------
+This product includes software developed by the Apache Software
+Foundation (http://www.apache.org/).  The included software, licensed
+under the Apache License, version 2.0, comprises portions of
+"XMLBeans", available from http://xmlbeans.apache.org/.
+
+==================================================================================
+
+Java
+----
+Some of the loaders are written in the java programming language.
+web: http://java.sun.com/
+
+Commons CLI
+-----------
+Apache Commons Command Line Interface (Commons CLI)
+This is a command line parser tool that the java loaders use.
+location: warehouse/common/lib/commons-cli-1.0.jar
+web: http://jakarta.apache.org/commons/cli/.
+
+Ant
+---
+Apache Ant
+This is the build tool we use for all java programs.
+Not included in the BioWarehouse distribution.
+web: http://ant.apache.org/
+
+Junit
+-----
+Unit testing tool.
+location: warehouse/common/lib/junit.jar and optional.jar
+web: http://www.junit.org
+
+MySQL JDBC Connector/J
+----------------------
+Driver used to connect to MySQL databases from the java programs.
+location: warehouse/common/lib/mysql-connector-java-3.0.9-stable-bin.jar
+web: http://www.mysql.com/products/connector/j/
+
+Oracle JDBC Driver
+------------------
+This is the driver we use to connect to Oracle databases from the java programs.
+location: warehouse/common/lib/ojdbc14.jar and oracle-license.txt
+web: http://www.oracle.com/technology/software/tech/java/sqlj_jdbc/index.html
+
+Xerces XML Parser
+-----------------
+This is a Java XML parser.
+location: warehouse/common/lib/xercesImpl.jar and xml-apis.jar
+web: http://xml.apache.org/
+
+Hibernate O/R Persistence
+-------------------------
+Java O/R Persistence engine.
+location: warehouse/mage-loader/lib/hibernate3.jar
+web: http://hibernate.org/
+
+Saxon XSLT Parser
+-----------------
+Java XSLT Parser
+location: warehouse/mage-loader/lib/saxon8.jar
+web: http://saxon.sourceforge.net/
+
+MAGE STK
+--------
+MGED MAGE-ML Parser
+location: warehouse/mage-loader/lib/MAGEstk-2004-11-29-v1.0-compatible.jar
+location: warehouse/mage-loader/lib/MAGEstk-2004-11-29-v1.1-compatible.jar
+web: http://www.mged.org/Workgroups/MAGE/mage.html
+
+
+
+
+
+
+
+
+

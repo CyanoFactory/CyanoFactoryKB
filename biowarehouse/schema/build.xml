@@ -1,0 +1,179 @@
+<project name="BioWarehouse Schema" default="help">
+
+    <property name="bw.root" location=".."/>
+    <property name="common.dir" location="${bw.root}/utils/src/java"/>
+    <property name="common.lib.dir" location="${common.dir}/lib"/>
+    <property name="warehouse.properties" location="warehouse.properties"/>
+    <property file="${warehouse.properties}"/>
+
+    <!-- Determine version number -->
+    <property file="${common.dir}/src/version.prop"/>
+
+    <property name="host" value="please set value in warehouse.properties"/>
+    <property name="port" value="please set value in warehouse.properties"/>
+    <property name="dbms" value="please set value in warehouse.properties"/>
+    <property name="name" value="please set value in warehouse.properties"/>
+    <property name="username" value="please set value in warehouse.properties"/>
+    <property name="password" value="please set value in warehouse.properties"/>
+
+    <property name="core.schema.file" location="core-schema.xml"/>
+    <property name="schema.definition.file" value="all-schema.xml"/>
+    <property name="schema.definition.dir" location="${basedir}"/>
+    <property name="schema.definition.path" location="${schema.definition.dir}/${schema.definition.file}"/>
+    <property name="schema.file" location="warehouse-${dbms}-create.sql"/>
+    <property name="index.file" location="warehouse-${dbms}-index.sql"/>
+    <property name="nonhuge.index.file" location="warehouse-${dbms}-nonhuge-index.sql"/>
+    <property name="sequencematch.index.file" location="warehouse-${dbms}-sequencematch-index.sql"/>
+    <property name="destroy.file" location="warehouse-${dbms}-destroy.sql"/>
+    <property name="schema.doc.dir" location="doc"/>
+
+    <!-- Determine DBMS type -->
+    <condition property="is.oracle.dbms" value="true">
+        <contains string="${dbms}" substring="oracle"/>
+    </condition>
+
+    <condition property="is.mysql.dbms" value="true">
+        <contains string="${dbms}" substring="mysql"/>
+    </condition>
+
+    <path id="classpath.schemadoc" description="The classpath used by the XSLT processor for generating schema doc">
+        <pathelement path="${common.lib.dir}/saxon8.jar"/>
+    </path>
+
+    <target name="help">
+        <echo level="info">Please type 'ant -p' for a list of targets.</echo>
+    </target>
+
+    <target name="init" depends="init-mysql, init-oracle">
+        <echo level="info" message="## ${ant.project.name}"/>
+        <echo level="info" message="DBMS type is: ${dbms}"/>
+        <echo level="info" message="Host is:      ${host}"/>
+        <echo level="info" message="Port is:      ${port}"/>
+        <echo level="info" message="DB name is:   ${name}"/>
+        <echo level="info" message="DB username:  ${username}"/>
+    </target>
+
+    <!-- Initialize properties for Oracle -->
+    <target name="init-oracle" if="is.oracle.dbms">
+        <property name="jdbc.driver.name" value="oracle.jdbc.driver.OracleDriver"/>
+        <property name="jdbc.driver.jar" location="${common.lib.dir}/ojdbc14.jar"/>
+        <property name="jdbc.url"
+                  value="jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(HOST=${host})(PROTOCOL=tcp)(PORT=${port}))(CONNECT_DATA=(SID=${name})))"/>
+        <property name="load.schema.file" location="mage-oracle.sql"/>
+    </target>
+
+    <!-- Initialize properties for MySQL -->
+    <target name="init-mysql" if="is.mysql.dbms">
+        <property name="jdbc.driver.name" value="com.mysql.jdbc.Driver"/>
+        <property name="jdbc.driver.jar" location="${common.lib.dir}/mysql-connector-java-3.0.9-stable-bin.jar"/>
+        <property name="jdbc.url" value="jdbc:mysql://${host}:${port}/${name}"/>
+        <property name="load.schema.file" location="mage-mysql.sql"/>
+    </target>
+
+    <target name="drop-all" depends="init" description="Drop *all* tables in the database">
+        <echo level="info" message="## ${ant.project.name}: Dropping all tables"/>
+        <ant dir="${common.dir}" target="run-force-drop-tables" inheritall="false">
+            <property name="developer.properties" location="${warehouse.properties}"/>
+        </ant>
+    </target>
+
+    <target name="drop-schema" depends="init"
+            description="Drop tables in the BioWarehouse schema">
+        <echo level="info" message="## ${ant.project.name}: Dropping BioWarehouse tables"/>
+        <execute-sql-file file="${destroy.file}"/>
+    </target>
+
+    <target name="load-schema" depends="init" description="Loads BioWarehouse schema">
+        <echo level="info" message="## ${ant.project.name}: Loading BioWarehouse schema..."/>
+        <execute-sql-file file="${schema.file}"/>
+    </target>
+
+    <target name="load-indexes" depends="init" description="Loads BioWarehouse indexes">
+        <echo level="info" message="## ${ant.project.name}: Loading BioWarehouse indexes from ${index.file}..."/>
+        <execute-sql-file file="${index.file}"/>
+    </target>
+
+    <target name="load-indexes-nonhuge" depends="init" description="Loads BioWarehouse indexes for all nonhuge tables">
+        <echo level="info" message="## ${ant.project.name}: Loading BioWarehouse indexes from ${nonhuge.index.file}..."/>
+
+	<!-- First build a file with the specific indexes to load, by grepping the file with all indexes -->
+        <exec  executable="grep" dir="." output="${nonhuge.index.file}">
+            <arg  line="-v SequenceMatch ${index.file}"/>
+        </exec>	
+
+        <execute-sql-file file="${nonhuge.index.file}"/>
+    </target>
+
+    <target name="load-indexes-sequencematch" depends="init" description="Loads BioWarehouse indexes for the huge SequenceMatch table">
+        <echo level="info" message="## ${ant.project.name}: Loading BioWarehouse indexes from ${sequencematch.index.file}..."/>
+
+	<!-- First build a file with the specific indexes to load, by grepping the file with all indexes -->
+        <exec  executable="grep" dir="." output="${sequencematch.index.file}">
+            <arg  line="SequenceMatch ${index.file}"/>
+        </exec>	
+        <exec  executable="grep" dir="." output="${sequencematch.index.file}" append="true">
+            <arg  line="commit ${index.file}"/>
+        </exec>	
+
+	<execute-sql-file file="${sequencematch.index.file}"/>
+    </target>
+
+    <macrodef name="execute-sql-file">
+        <attribute name="file" description="SQL file to execute"/>
+        <sequential>
+            <sql driver="${jdbc.driver.name}"
+                 url="${jdbc.url}"
+                 userid="${username}" password="${password}"
+                 onerror="abort"
+                 src="@{file}">
+                <classpath location="${jdbc.driver.jar}"/>
+            </sql>
+        </sequential>
+    </macrodef>
+
+    <target name="create-ddl-scripts" description="Create BioWarehouse DDL scripts">
+        <ant dir="${common.dir}" target="create-ddl-scripts">
+            <property name="arg.line" value="${schema.definition.path} ${basedir}"/>
+        </ant>
+    </target>
+
+    <target name="schema-doc" description="Generate DB Schema documentation">
+        <mkdir dir="${schema.doc.dir}"/>
+        <xslt basedir="${schema.definition.dir}" destdir="${schema.doc.dir}" style="schemadoc/schema-doc.xsl"
+              classpathref="classpath.schemadoc" force="true">
+            <include name="${schema.definition.file}"/>
+        </xslt>
+        <concat append="true" destfile="doc/index.html" >
+            <path  location="doc/core-schema-diagram.map"/>
+        </concat>
+        <delete file="${schema.doc.dir}/mage-schema.html"/>
+    </target>
+
+    <target name="generate-diagram">
+        <!-- This target requires the Graphviz neato program available at http://www.graphviz.org/-->
+        <!-- Set the path.to.neato property to the location of your neato.exe executable -->
+        <available file="${path.to.neato}" property="neato.available"/>
+        <fail unless="neato.available" message="The neato executable is not available at this path: ${path.to.neato}"/>
+        <xslt in="${core.schema.file}" out="core-schema.dot" destdir="." style="schemadoc/schema-to-dot.xslt"
+              classpathref="classpath.schemadoc" force="true"/>
+        <exec  executable="${path.to.neato}" dir=".">
+            <arg  line="-T cmapx -o doc/core-schema-diagram.map -T png -o doc/core-schema-diagram.png core-schema.dot"/>
+        </exec>
+    </target>
+
+    <target name="merge-schemas" description="Merges the core schema with the mage extension schema">
+        <xslt in="${core.schema.file}" destdir="." style="schema-merge.xsl"
+              classpathref="classpath.schemadoc" force="true" out="${schema.definition.file}">
+        </xslt>
+        <ant dir="${common.dir}" target="run-validation" inheritall="false">
+            <property name="arg.line" location="${schema.definition.path}"/>
+        </ant>
+    </target>
+
+    <target name="revise" description="Compute all generated schema files (eg. after editing core-schema.xml)">
+        <antcall target="merge-schemas"/>
+        <antcall target="create-ddl-scripts"/>
+        <antcall target="schema-doc"/>
+    </target>
+
+</project>

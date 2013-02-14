@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ExperimWIDBioAssayDataClustWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ExperimWIDBioAssayDataClustWID"></a>ExperimWIDBioAssayDataClustWID
+      </h1>
+      <hr>Represents n..n association between Experiment and BioAssayDataCluster<br>The results of analyzing the data, typically with a clustering algorithm.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="Experiment.html">ExperimentWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to Experiment<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioAssayDataCluster.html">BioAssayDataClusterWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to BioAssayDataCluster<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ExperimWIDBioAssayDataClus1</td>
+            <td>ExperimentWID</td>
+         </tr>
+         <tr>
+            <td>ExperimWIDBioAssayDataClus2</td>
+            <td>BioAssayDataClusterWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

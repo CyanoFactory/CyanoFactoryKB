@@ -1,0 +1,315 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Chemical
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Chemical"></a>Chemical
+      </h1>
+      <hr>Defines small molecular weight chemical compounds.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse idetification number for this chemical<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>No</td>
+            <td>Common name of the chemical<br></td>
+         </tr>
+         <tr>
+            <td>Class</td>
+            <td>CHAR(1)</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>'T' this is a class or family of related chemicals, else 'F'<br></td>
+         </tr>
+         <tr>
+            <td>BeilsteinName</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>The Beilstein name of this chemical<br></td>
+         </tr>
+         <tr>
+            <td>SystematicName</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>The systematic name for this chemical<br></td>
+         </tr>
+         <tr>
+            <td>CAS</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>The Chemical Abstract Service number<br></td>
+         </tr>
+         <tr>
+            <td>Charge</td>
+            <td>SMALLINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Charge of the chemical<br></td>
+         </tr>
+         <tr>
+            <td>EmpiricalFormula</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>The empirical formula of this chemical<br>Format: { ElementSymbol Integer }+<br>E.g. 'H2O1', 'C2H6O1', 'Na1Cl1'.<br></td>
+         </tr>
+         <tr>
+            <td>MolecularWeightCalc</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Molecular weight calculated from chemical formula.<br>Units: Daltons.<br></td>
+         </tr>
+         <tr>
+            <td>MolecularWeightExp</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Molecular Weight determined through experimentation. Units: Daltons.<br></td>
+         </tr>
+         <tr>
+            <td>OctH2OPartitionCoeff</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(50)</td>
+            <td>Yes</td>
+            <td>Octanol-water-partition coefficient<br></td>
+         </tr>
+         <tr>
+            <td>PKA1</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>First ionization potential<br></td>
+         </tr>
+         <tr>
+            <td>PKA2</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Second ionization potential<br></td>
+         </tr>
+         <tr>
+            <td>PKA3</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Third ionization potential<br></td>
+         </tr>
+         <tr>
+            <td>WaterSolubility</td>
+            <td>CHAR(1)</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>'T' if soluble in water, else 'F'<br></td>
+         </tr>
+         <tr>
+            <td>Smiles</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>Ascii representation of the chemical structure<br>Simplified Molecular Input Line Entry System<br>http://www.epa.gov/medatwrk/databases/smiles.html<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="ChemicalAtom.html">ChemicalAtom</a></td>
+            <td>ChemicalWID</td>
+         </tr>
+         <tr>
+            <td><a href="ChemicalBond.html">ChemicalBond</a></td>
+            <td>ChemicalWID</td>
+         </tr>
+         <tr>
+            <td><a href="EnzReactionCofactor.html">EnzReactionCofactor</a></td>
+            <td>ChemicalWID</td>
+         </tr>
+         <tr>
+            <td><a href="EnzReactionAltCompound.html">EnzReactionAltCompound</a></td>
+            <td>PrimaryWID</td>
+         </tr>
+         <tr>
+            <td><a href="EnzReactionAltCompound.html">EnzReactionAltCompound</a></td>
+            <td>AlternativeWID</td>
+         </tr>
+         <tr>
+            <td><a href="PathwayLink.html">PathwayLink</a></td>
+            <td>ChemicalWID</td>
+         </tr>
+         <tr>
+            <td><a href="CompoundMeasurement.html">CompoundMeasurement</a></td>
+            <td>Compound_ComponentCompounds</td>
+         </tr>
+         <tr>
+            <td><a href="CompoundMeasurement.html">CompoundMeasurement</a></td>
+            <td>Compound</td>
+         </tr>
+         <tr>
+            <td><a href="LabeledExtractWIDCompoundWID.html">LabeledExtractWIDCompoundWID</a></td>
+            <td>CompoundWID</td>
+         </tr>
+         <tr>
+            <td><a href="ChannelWIDCompoundWID.html">ChannelWIDCompoundWID</a></td>
+            <td>CompoundWID</td>
+         </tr>
+         <tr>
+            <td><a href="Entry.html">Entry</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="Support.html">Support</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="EnzReactionInhibitorActivator.html">EnzReactionInhibitorActivator</a></td>
+            <td>CompoundWID</td>
+         </tr>
+         <tr>
+            <td><a href="Product.html">Product</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="Reactant.html">Reactant</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="InteractionParticipant.html">InteractionParticipant</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>CrossWID</td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>CHEMICAL_DWID_NAME</td>
+            <td>DataSetWID, Name</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_NAME</td>
+            <td>Name</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_BEILSTEINNAME</td>
+            <td>BEILSTEINNAME</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_SYSTEMATICNAME</td>
+            <td>SYSTEMATICNAME</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_CAS</td>
+            <td>CAS</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_CHARGE</td>
+            <td>CHARGE</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_EMPIRICALFORMULA</td>
+            <td>EMPIRICALFORMULA</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_MOLEWEIGHTCALC</td>
+            <td>MOLECULARWEIGHTCALC</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_MOLEWEIGHTEXP</td>
+            <td>MOLECULARWEIGHTEXP</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_OCTH2OCOEFF</td>
+            <td>OCTH2OPARTITIONCOEFF</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_PKA1</td>
+            <td>PKA1</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_PKA2</td>
+            <td>PKA2</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_PKA3</td>
+            <td>PKA3</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_SMILES</td>
+            <td>SMILES</td>
+         </tr>
+         <tr>
+            <td>CHEMICAL_DATASETWID</td>
+            <td>DATASETWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

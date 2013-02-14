@@ -1,0 +1,162 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         EnzymaticReaction
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="EnzymaticReaction"></a>EnzymaticReaction
+      </h1>
+      <hr>Defines an association between a reaction and an enzyme that catalyzes<br>that reaction (ProteinWID). In the case where we are defining an<br>association between a subunit of a larger enzyme complex, and a<br>reaction catalyzed by that subunit only when the subunit is part of<br>that larger complex, ComplexWID specifies that larger complex (assumes<br>that complex is in the warehouse).<br>This table requires a WID as it is referenced in multiple linking tables<br>to associate alternate compounds, cofactors, etc., to allow for multiple<br>valued attributes of the enzymatic reaction.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of this enzymatic reaction<br></td>
+         </tr>
+         <tr>
+            <td><a href="Reaction.html">ReactionWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of the catalyzed reaction<br></td>
+         </tr>
+         <tr>
+            <td><a href="Protein.html">ProteinWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of the enzyme<br></td>
+         </tr>
+         <tr>
+            <td><a href="Protein.html">ComplexWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>WID of protein of which ProteinWID<br>must be a subunit of for this reaction<br></td>
+         </tr>
+         <tr>
+            <td>ReactionDirection</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(30)</td>
+            <td>Yes</td>
+            <td>Reaction Direction Enumeration<br><br><div style="margin-left: 40px;"><b><i>Enumerated Values:</i></b><br><b>reversible</b> -
+                  Reaction occurs in both directions in physiological settings.<br><b>physiol-left-to-right</b> -
+                  Reaction occurs in the left-to-right direction in physiological settings.<br><b>physiol-right-to-left</b> -
+                  Reaction occurs in the right-to-left direction in physiological settings.<br><b>irreversible-left-to-right</b> -
+                  For all practical purposes, the reaction occurs only in the left-to-right direction in physiological settings, because of
+                  chemical properties of the reaction.<br><b>irreversible-right-to-left</b> -
+                  For all practical purposes, the reaction occurs only in the right-to-left direction in physiological settings, because of
+                  chemical properties of the reaction.<br></div>
+            </td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of the dataset the reaction is from<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="EnzReactionCofactor.html">EnzReactionCofactor</a></td>
+            <td>EnzymaticReactionWID</td>
+         </tr>
+         <tr>
+            <td><a href="EnzReactionAltCompound.html">EnzReactionAltCompound</a></td>
+            <td>EnzymaticReactionWID</td>
+         </tr>
+         <tr>
+            <td><a href="EnzReactionInhibitorActivator.html">EnzReactionInhibitorActivator</a></td>
+            <td>EnzymaticReactionWID</td>
+         </tr>
+         <tr>
+            <td><a href="Entry.html">Entry</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="Support.html">Support</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="RelatedTerm.html">RelatedTerm</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CitationWIDOtherWID.html">CitationWIDOtherWID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CommentTable.html">CommentTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="CrossReference.html">CrossReference</a></td>
+            <td>CrossWID</td>
+         </tr>
+         <tr>
+            <td><a href="Description.html">Description</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="DBID.html">DBID</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="SynonymTable.html">SynonymTable</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="ToolAdvice.html">ToolAdvice</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ER_DATASETWID</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>ER_REAWID</td>
+            <td>REACTIONWID</td>
+         </tr>
+         <tr>
+            <td>ER_PROWID</td>
+            <td>PROTEINWID</td>
+         </tr>
+         <tr>
+            <td>ER_COMWID</td>
+            <td>COMPLEXWID</td>
+         </tr>
+         <tr>
+            <td>ER_DIRWID</td>
+            <td>REACTIONDIRECTION</td>
+         </tr>
+      </table><br><br></body>
+</html>

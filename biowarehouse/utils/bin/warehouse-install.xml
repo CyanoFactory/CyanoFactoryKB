@@ -1,0 +1,511 @@
+<!-- =========================================================== -->
+<!--  Ant install script for the BioWarehouse.                   -->
+<!--  Valerie Wagner, November 2004                              -->
+<!-- =========================================================== -->
+<project name="Warehouse Install Script" default="help">
+
+    <!-- Set variables and load properties from developer's property file -->
+    <property name="developer.bin.dir" location="${basedir}"/>
+    <property name="properties.file" location="${developer.bin.dir}/developer.properties"/>
+    <property file="${properties.file}"/>
+    <property name="master.build.file" location="${developer.bin.dir}/build.xml"/>
+
+    <!-- Determine DBMS type -->
+    <condition property="is.oracle.dbms" value="true">
+        <contains string="${dbms}" substring="oracle"/>
+    </condition>
+
+    <condition property="is.mysql.dbms" value="true">
+        <contains string="${dbms}" substring="mysql"/>
+    </condition>
+
+    <!-- Import all targets from the master build script -->
+    <import file="${master.build.file}"/>
+
+    <!-- Other properties -->
+    <property name="common.dir" location="${warehouse.home}/utils/src/java"/>
+    <property name="schema.dir" location="${warehouse.home}/schema"/>
+    <property name="jdbc.driver.dir" location="${common.dir}/lib/"/>
+
+    <!-- =========================================================== -->
+    <!--  INITIALIZATION                                             -->
+    <!-- =========================================================== -->
+    <target name="init" depends="init-oracle, init-mysql">
+        <fail unless="warehouse.home" message="Error: warehouse.home is not defined"/>
+        <echo level="info" message="Warehouse home is: ${warehouse.home}"/>
+        <echo level="info" message="DBMS type is: ${dbms}"/>
+    </target>
+
+    <!-- Initialize properties for Oracle -->
+    <target name="init-oracle" depends="init-oracle-env" if="is.oracle.dbms">
+        <property name="jdbc.driver.name" value="oracle.jdbc.driver.OracleDriver"/>
+        <property name="jdbc.driver.jar" location="${jdbc.driver.dir}/ojdbc14.jar"/>
+        <property name="jdbc.url"
+                  value="jdbc:oracle:thin:@(DESCRIPTION=(ADDRESS=(HOST=${database.server})(PROTOCOL=tcp)(PORT=${database.port}))(CONNECT_DATA=(SID=${database.name})))"/>
+    </target>
+
+    <target name="init-oracle-env" depends="init-oracle-env-10.1, init-oracle-env-10.2, init-oracle-env-11.1">
+    </target>
+
+    <target name="init-oracle-env-10.1" if="is.oracle.10.1">
+        <exec failonerror="true"  executable="env-oracle-10.1.csh" newenvironment="true"/>
+        <exec failonerror="true"  executable="printenv.csh"/>
+    </target>
+
+    <target name="init-oracle-env-10.2" if="is.oracle.10.2">
+        <exec failonerror="true"  executable="env-oracle-10.2.csh"/>
+        <exec failonerror="true"  executable="printenv.csh"/>
+    </target>
+
+    <target name="init-oracle-env-11.1" if="is.oracle.11.1">
+        <exec failonerror="true"  executable="env-oracle-11.1.csh" newenvironment="true"/>
+        <exec failonerror="true"  executable="printenv.csh"/>
+    </target>
+
+    <!-- Initialize properties for MySQL -->
+    <target name="init-mysql" if="is.mysql.dbms">
+        <property name="jdbc.driver.name" value="com.mysql.jdbc.Driver"/>
+        <property name="jdbc.driver.jar" location="${jdbc.driver.dir}/mysql-connector-java-3.0.9-stable-bin.jar"/>
+        <property name="jdbc.url" value="jdbc:mysql://${database.server}:${database.port}/${database.name}"/>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  RESET WAREHOUSE                                            -->
+    <!-- =========================================================== -->
+    <target name="reset-warehouse" depends="init, reset-schema, load-ncbi-taxonomy"
+            description="Resets the warehouse.  Reloads schema, then runs NCBI Taxonomy."/>
+
+    <target name="reset-schema" depends="init, destroy-schema, load-schema"
+            description="Resets the schema."/>
+
+    <target name="destroy-schema" depends="init" description="Run the schema destruction script">
+        <ant dir="${schema.dir}" target="drop-schema" inheritall="true" inheritrefs="true">
+            <property name="host" value="${database.server}"/>
+            <property name="port" value="${database.port}"/>
+            <property name="dbms" value="${dbms}"/>
+            <property name="name" value="${database.name}"/>
+            <property name="username" value="${database.username}"/>
+            <property name="password" value="${database.password}"/>
+        </ant>
+    </target>
+
+    <target name="load-schema" depends="init" description="Load the schema DDL files">
+        <ant dir="${schema.dir}" target="load-schema" inheritall="true" inheritrefs="true">
+            <property name="host" value="${database.server}"/>
+            <property name="port" value="${database.port}"/>
+            <property name="dbms" value="${dbms}"/>
+            <property name="name" value="${database.name}"/>
+            <property name="username" value="${database.username}"/>
+            <property name="password" value="${database.password}"/>
+        </ant>
+    </target>
+
+    <target name="index" depends="init" description="Compute all indexes except SequenceMatch indexes">
+        <echo level="info" message="Loading BioWarehouse indexes for ${dbms} server ${database.server} ${database.name}..."/>
+        <ant dir="${schema.dir}" target="load-indexes-nonhuge" inheritall="true" inheritrefs="true">
+            <property name="host" value="${database.server}"/>
+            <property name="port" value="${database.port}"/>
+            <property name="dbms" value="${dbms}"/>
+            <property name="name" value="${database.name}"/>
+            <property name="username" value="${database.username}"/>
+            <property name="password" value="${database.password}"/>
+        </ant>
+    </target>
+
+    <target name="index-sequencematch" depends="init" description="Compute indexes for the large SequenceMatch table">
+        <echo level="info" message="Loading SequenceMatch indexes for ${dbms} server ${database.server} ${database.name}..."/>
+        <ant dir="${schema.dir}" target="load-indexes-sequencematch" inheritall="true" inheritrefs="true">
+            <property name="host" value="${database.server}"/>
+            <property name="port" value="${database.port}"/>
+            <property name="dbms" value="${dbms}"/>
+            <property name="name" value="${database.name}"/>
+            <property name="username" value="${database.username}"/>
+            <property name="password" value="${database.password}"/>
+        </ant>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD ALL LOADERS                                           -->
+    <!-- =========================================================== -->
+    <target name="load-all" description="Resets schema and loads all loaders."
+            depends="init, reset-schema,
+           load-biocyc,
+           load-cmr,
+           load-enzyme,
+           load-kegg,
+           load-genbank,
+           load-go,
+           load-mage,
+           load-metacyc-ontology,
+           load-ncbi-taxonomy,
+           load-uniprot"/>
+
+    <!-- =========================================================== -->
+    <!--  LOAD BIOCYC                                                -->
+    <!-- =========================================================== -->
+    <target name="load-biocyc" depends="init, build-biocyc, load-biocyc-oracle, load-biocyc-mysql"
+            description="Runs the Biocyc loader.">
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="BioCyc"/>
+        </ant>
+    </target>
+
+    <target name="load-biocyc-oracle" if="is.oracle.dbms">
+        <exec failonerror="true"  executable="${biocyc.dir}/oracle-biocyc-loader"
+              dir="${biocyc.dir}">
+            <arg line="-u ${database.username}/${database.password}@${database.name}
+                       -d ${biocyc.input.dir} -o &quot;${biocyc.organism.name}&quot;
+                       -r ${biocyc.release}
+                       -n ${biocyc.source.db} -v ${biocyc.version}"/>
+        </exec>
+    </target>
+
+    <target name="load-biocyc-mysql" depends="build-biocyc" if="is.mysql.dbms">
+        <exec failonerror="true"  executable="${biocyc.dir}/mysql-biocyc-loader"
+              dir="${biocyc.dir}">
+            <arg line="-h ${database.server}   -b ${database.name}
+                       -u ${database.username} -p ${database.password}
+                       -d ${biocyc.input.dir}  -o &quot;${biocyc.organism.name}&quot;
+                       -r ${biocyc.release}
+                       -n ${biocyc.source.db}  -v ${biocyc.version}"/>
+        </exec>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD CMR                                                   -->
+    <!-- =========================================================== -->
+    <target name="load-cmr" depends="init, build-cmr, load-cmr-oracle, load-cmr-mysql"
+            description="Runs the CMR loader.">
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="CMR"/>
+        </ant>
+    </target>
+
+    <target name="load-cmr-oracle" if="is.oracle.dbms">
+        <exec failonerror="true"  executable="${cmr.dir}/oracle-cmr-loader"
+              dir="${cmr.dir}">
+            <arg line="-u ${database.username}/${database.password}@${database.name}
+                       -d ${cmr.input.dir} -v ${cmr.version}
+                       -r ${cmr.release}
+                       -o ${cmr.variant}"/>
+        </exec>
+    </target>
+
+    <target name="load-cmr-mysql" depends="build-cmr" if="is.mysql.dbms">
+        <exec failonerror="true"  executable="${cmr.dir}/mysql-cmr-loader"
+              dir="${cmr.dir}">
+            <arg line="-h ${database.server}   -b ${database.name}
+                       -u ${database.username} -p ${database.password}
+                       -d ${cmr.input.dir}     -v ${cmr.version}
+                       -r ${cmr.release}
+                       -o ${cmr.variant}"/>
+        </exec>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD eco2dbase                                             -->
+    <!-- =========================================================== -->
+    <target name="load-eco2dbase" depends="init, load-eco2dbase-oracle, load-eco2dbase-mysql"
+            description="Runs the eco2dbase loader.">
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="eco2dbase"/>
+        </ant>
+    </target>
+
+    <target name="load-eco2dbase-oracle" if="is.oracle.dbms">
+        <exec failonerror="true"  executable="sh"
+              dir="${eco2dbase.dir}/bin">
+            <arg line="${eco2dbase.dir}/bin/oracle-load-eco2dbase.sh
+                        ${database.username} ${database.password} ${database.name}
+                        ../data/eco2dbase_mysql.dmp"/>
+        </exec>
+    </target>
+
+    <target name="load-eco2dbase-mysql" if="is.mysql.dbms">
+        <exec failonerror="true"  executable="sh"
+              dir="${eco2dbase.dir}/bin">
+            <arg line="${eco2dbase.dir}/bin/mysql-load-eco2dbase.sh
+                       ${database.username} ${database.password} ${database.name}
+                       ${database.server} ${database.port}
+                       ../data/eco2dbase_mysql.dmp"/>
+        </exec>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD ENZYME                                                -->
+    <!-- =========================================================== -->
+    <target name="load-enzyme" depends="init, build-enzyme"
+            description="Runs the Enzyme loader.  Dependencies: NCBI Taxonomy">
+        <exec failonerror="true"  executable="sh"
+              dir="${enzyme.dir}/dist">
+            <arg line="${enzyme.dir}/dist/runEnzymeLoader.sh
+                       -d -t enzyme -f ${enzyme.input.file} -a ${database.server}
+                       -c ${database.port} -b ${dbms} -u ${database.username}
+                       -p ${database.password} -n ${database.name}
+                       -v ${enzyme.version} -r ${enzyme.release}"/>
+        </exec>
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="Enzyme"/>
+        </ant>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD GENBANK                                               -->
+    <!-- =========================================================== -->
+    <target name="load-genbank" depends="init, build-genbank"
+            description="Runs the GenBank loader.  Dependencies: NCBI Taxonomy">
+        <exec failonerror="true"  executable="sh"
+              dir="${genbank.dir}/dist">
+            <arg line="${genbank.dir}/dist/runGenbankLoader.sh
+                       -d ${dbms} -v ${genbank.version}
+                       -n ${database.name} -s ${database.server} -t ${database.port}
+                       -u ${database.username} -w ${database.password}
+                       -f ${genbank.input.files}"/>
+        </exec>
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="Genbank"/>
+        </ant>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD GENE ONTOLOGY                                         -->
+    <!-- =========================================================== -->
+    <target name="load-go" depends="init, build-go"
+            description="Runs the GO loader.">
+        <exec failonerror="true"  executable="sh"
+              dir="${go.dir}/dist">
+            <arg line="${go.dir}/dist/runGOLoader.sh
+                       -d ${dbms} -v ${go.version} -r ${go.release}
+                       -n ${database.name} -s ${database.server} -t ${database.port}
+                       -u ${database.username} -w ${database.password}
+                       -f ${go.input.file}"/>
+        </exec>
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="Gene Ontology"/>
+        </ant>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD KEGG                                                  -->
+    <!-- =========================================================== -->
+    <target name="load-kegg" depends="init, build-kegg, load-kegg-oracle, load-kegg-mysql"
+            description="Runs the KEGG loader.">
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="KEGG"/>
+        </ant>
+    </target>
+
+    <target name="load-kegg-oracle" if="is.oracle.dbms">
+        <exec failonerror="true"  executable="${kegg.dir}/oracle-kegg-loader"
+              dir="${kegg.dir}">
+            <arg line="-u ${database.username}/${database.password}@${database.name}
+                       -v ${kegg.version}
+                       -r ${kegg.release}
+		       -o ${kegg.input.dir}/genome
+                       -g ${kegg.input.dir}/genes
+		       -c ${kegg.input.dir}/ligand/compound
+		       -x ${kegg.input.dir}/ligand/reaction
+                       -e ${kegg.input.dir}/ligand/enzyme"/>
+        </exec>
+    </target>
+
+    <target name="load-kegg-mysql" depends="build-kegg" if="is.mysql.dbms">
+        <exec failonerror="true"  executable="${kegg.dir}/mysql-kegg-loader"
+              dir="${kegg.dir}">
+            <arg line="-h ${database.server}      -b ${database.name}
+                       -u ${database.username}    -p ${database.password}
+                       -v ${kegg.version}
+                       -r ${kegg.release}
+		       -o ${kegg.input.dir}/genome
+                       -g ${kegg.input.dir}/genes
+		       -c ${kegg.input.dir}/ligand/compound
+		       -x ${kegg.input.dir}/ligand/reaction
+                       -e ${kegg.input.dir}/ligand/enzyme"/>
+        </exec>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD MAGE                                                  -->
+    <!-- =========================================================== -->
+    <target name="load-mage" depends="init, build-mage"
+            description="Runs the MAGE loader.">
+        <exec failonerror="true"  executable="sh"
+              dir="${mage.dir}/dist">
+            <arg line="${mage.dir}/dist/runMAGE-1.1-Loader.sh
+                       -d ${dbms} -v ${mage.version}
+                       -n ${database.name} -s ${database.server} -t ${database.port}
+                       -u ${database.username} -w ${database.password}
+                       -f ${mage.input.file}"/>
+        </exec>
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="MAGE"/>
+        </ant>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD METACYC ONTOLOGY                                      -->
+    <!-- =========================================================== -->
+    <target name="load-metacyc-ontology"
+            depends="init, clean-metacyc-ontology, build-metacyc-ontology, load-metacyc-ontology-oracle, load-metacyc-ontology-mysql"
+            description="Runs the METACYC loader.">
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="Metacyc Ontology"/>
+        </ant>
+    </target>
+
+    <target name="load-metacyc-ontology-oracle" if="is.oracle.dbms">
+        <exec failonerror="true"  executable="${metacyc-ontology.dir}/oracle-metacyc-ontology-loader"
+              dir="${metacyc-ontology.dir}">
+            <arg line="-u ${database.username}/${database.password}@${database.name}
+                       -d ${metacyc-ontology.input.dir}
+                       -r ${metacyc-ontology.release}
+                       -v ${metacyc-ontology.version} ${metacyc-ontology.merge.flag}"/>
+        </exec>
+    </target>
+
+    <target name="load-metacyc-ontology-mysql" if="is.mysql.dbms">
+        <exec failonerror="true"  executable="${metacyc-ontology.dir}/mysql-metacyc-ontology-loader"
+              dir="${metacyc-ontology.dir}">
+            <arg line="-h ${database.server}      -b ${database.name}
+                       -u ${database.username}    -p ${database.password}
+                       -v ${metacyc-ontology.version}      -t ${database.port}
+                       -r ${metacyc-ontology.release}
+                       -d ${metacyc-ontology.input.dir}
+                       ${metacyc-ontology.merge.flag}"/>
+        </exec>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD NCBI TAXONOMY                                         -->
+    <!-- =========================================================== -->
+    <target name="load-ncbi-taxonomy"
+            depends="init, clean-ncbi-taxonomy, build-ncbi-taxonomy, load-ncbi-taxonomy-oracle, load-ncbi-taxonomy-mysql"
+            description="Runs the NCBI Taxonomy loader.">
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="NCBI Taxonomy"/>
+        </ant>
+    </target>
+
+    <target name="load-ncbi-taxonomy-oracle" if="is.oracle.dbms">
+        <exec failonerror="true"  executable="${ncbi-taxonomy.dir}/oracle-ncbi-taxonomy-loader"
+              dir="${ncbi-taxonomy.dir}">
+            <arg line="-u ${database.username}/${database.password}@${database.name}
+                       -r ${ncbi-taxonomy.release}
+                       -d ${ncbi-taxonomy.input.dir} -v ${ncbi-taxonomy.version}"/>
+        </exec>
+    </target>
+
+    <target name="load-ncbi-taxonomy-mysql" depends="build-ncbi-taxonomy" if="is.mysql.dbms">
+        <exec failonerror="true"  executable="${ncbi-taxonomy.dir}/mysql-ncbi-taxonomy-loader"
+              dir="${ncbi-taxonomy.dir}">
+            <arg line="-h ${database.server}         -b ${database.name}
+                       -u ${database.username}       -p ${database.password}
+                       -r ${ncbi-taxonomy.release}
+                       -d ${ncbi-taxonomy.input.dir} -v ${ncbi-taxonomy.version}"/>
+        </exec>
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD UNIPROT                                               -->
+    <!-- =========================================================== -->
+    <target name="load-uniprot" depends="init, build-uniprot"
+            description="Runs the Uniprot loader.  Dependencies: NCBI Taxonomy, Enzyme">
+        <exec failonerror="true"  executable="sh"
+              dir="${uniprot.dir}/dist">
+            <arg line="${uniprot.dir}/dist/runUniprotLoader.sh
+                       -d ${dbms} -v ${uniprot.version}
+                       -r ${uniprot.release}
+                       -n ${database.name} -s ${database.server} -t ${database.port}
+                       -u ${database.username} -w ${database.password}
+                       -f ${uniprot.input.file}"/>
+        </exec>
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="UniProt"/>
+        </ant>
+    </target>
+
+    <target name="load-swissprot" depends="init, build-uniprot"
+            description="Loads SwissProt by running the Uniprot loader.  Dependencies: NCBI Taxonomy, Enzyme">
+        <exec failonerror="true"  executable="sh"
+              dir="${uniprot.dir}/dist">
+            <arg line="${uniprot.dir}/dist/runUniprotLoader.sh
+                       -d ${dbms} -v ${uniprot.version}
+                       -r ${uniprot.release}
+                       -n ${database.name} -s ${database.server} -t ${database.port}
+                       -u ${database.username} -w ${database.password}
+                       -f ${uniprot.swissprot.file}"/>
+        </exec>
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="UniProt"/>
+        </ant>
+    </target>
+
+    <target name="load-trembl" depends="init, build-uniprot"
+            description="Loads TrEMBL by running the Uniprot loader.  Dependencies: NCBI Taxonomy, Enzyme">
+        <exec failonerror="true"  executable="sh"
+              dir="${uniprot.dir}/dist">
+            <arg line="${uniprot.dir}/dist/runUniprotLoader.sh
+                       -d ${dbms} -v ${uniprot.version}
+                       -r ${uniprot.release}
+                       -n ${database.name} -s ${database.server} -t ${database.port}
+                       -u ${database.username} -w ${database.password}
+                       -f ${uniprot.trembl.file}"/>
+        </exec>
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="UniProt"/>
+        </ant>
+    </target>
+
+    <target name="load-uniprot-all" depends="init, build-uniprot"
+            description="Loads SwissProt and TrEMBL into one Uniprot dataset.  Dependencies: NCBI Taxonomy, Enzyme">
+        <exec failonerror="true"  executable="sh"
+              dir="${uniprot.dir}/dist">
+            <arg line="${uniprot.dir}/dist/runUniprotLoader.sh
+                       -d ${dbms} -v ${uniprot.version}
+                       -r ${uniprot.release}
+                       -n ${database.name} -s ${database.server} -t ${database.port}
+                       -u ${database.username} -w ${database.password}
+                       -f ${uniprot.swissprot.file} ${uniprot.trembl.file}"/>
+        </exec>
+        <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir=".">
+            <property name="loader.name" value="UniProt"/>
+        </ant>
+    </target>
+
+    <target name="notify-user">
+
+        <echo level="info" message="The load of ${loader.name} has completed."/>
+<!--         <mail from="${mailfrom}" tolist="${mailto}" subject="Load completed" -->
+<!--               mailhost="${mailhost}"> -->
+<!--             <message>The load of ${loader.name} has completed. Exit value was ${exit.value}</message> -->
+<!--         </mail> -->
+
+    </target>
+
+    <!-- =========================================================== -->
+    <!--  LOAD CHIP-CHIP                                             -->
+    <!-- =========================================================== -->
+
+    <target name="load-chip-chip" depends="init"
+            description="Loads chIP-chip experimental data using existing loaders, some new loader software, and code from ArrayExpress.">
+
+	    <exec executable="sh"
+	          dir="${chip-chip.input.dir}">
+		  <arg line="${chip-chip.input.dir}/gff2magetab.sh"/>
+		  </exec>
+		  		             
+        <!-- <exec executable="sh" -->
+<!--               dir="${uniprot.dir}/dist"> -->
+<!--             <arg line="${uniprot.dir}/dist/runUniprotLoader.sh -->
+<!--                        -d ${dbms} -v ${uniprot.version} -->
+<!--                        -r ${uniprot.release} -->
+<!--                        -n ${database.name} -s ${database.server} -t ${database.port} -->
+<!--                        -u ${database.username} -w ${database.password} -->
+<!--                        -f ${uniprot.swissprot.file}"/> -->
+<!--         </exec> -->
+<!--         <ant target="notify-user" antfile="warehouse-install.xml" inheritall="false" dir="."> -->
+<!--             <property name="loader.name" value="UniProt"/> -->
+<!--         </ant> -->
+    </target>  
+
+</project>

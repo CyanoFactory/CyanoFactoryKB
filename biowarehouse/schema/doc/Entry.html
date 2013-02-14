@@ -1,0 +1,230 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Entry
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Entry"></a>Entry
+      </h1>
+      <hr>Defines metadata describing a warehouse object.<br>Every warehouse object (that is, anything with a WID column) must have an associated Entry
+      row.
+      <br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse ID of the entity<br></td>
+         </tr>
+         <tr>
+            <td>InsertDate</td>
+            <td>DATETIME</td>
+            <td>DATE</td>
+            <td>No</td>
+            <td>Date entity was stored in the warehouse<br></td>
+         </tr>
+         <tr>
+            <td>CreationDate</td>
+            <td>DATETIME</td>
+            <td>DATE</td>
+            <td>Yes</td>
+            <td>Date entity was created in its source dataset<br></td>
+         </tr>
+         <tr>
+            <td>ModifiedDate</td>
+            <td>DATETIME</td>
+            <td>DATE</td>
+            <td>Yes</td>
+            <td>Date that the entry was last modified, either<br>in the warehouse or in the source dataset<br></td>
+         </tr>
+         <tr>
+            <td>LoadError</td>
+            <td>CHAR(1)</td>
+            <td>CHAR(1)</td>
+            <td>No</td>
+            <td>'T' if an error (eg. parse error on some field of the entry)<br>occured during loading of this entry into the warehouse, else 'F'.<br></td>
+         </tr>
+         <tr>
+            <td>LineNumber</td>
+            <td>INT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Either line number or entry number from dataset source file<br></td>
+         </tr>
+         <tr>
+            <td>ErrorMessage</td>
+            <td>TEXT</td>
+            <td>VARCHAR2(4000)</td>
+            <td>Yes</td>
+            <td>Message describing error, if any<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DatasetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>The dataset the entity is from<br></td>
+         </tr>
+      </table>
+      <h2>Denormalized References</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>References</th>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Chemical.html">Chemical</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Element.html">Element</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Reaction.html">Reaction</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Protein.html">Protein</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Feature.html">Feature</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Function.html">Function</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="EnzymaticReaction.html">EnzymaticReaction</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Gene.html">Gene</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="BioSource.html">BioSource</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Pathway.html">Pathway</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="NucleicAcid.html">NucleicAcid</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Term.html">Term</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Support.html">Support</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Citation.html">Citation</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Division.html">Division</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="GeneticCode.html">GeneticCode</a>
+               :
+               WID
+            </td>
+         </tr>
+         <tr>
+            <td>OtherWID</td>
+            <td><a href="Taxon.html">Taxon</a>
+               :
+               WID
+            </td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ENTRY_INSERTDATE</td>
+            <td>InsertDate</td>
+         </tr>
+         <tr>
+            <td>ENTRY_CREATEDATE</td>
+            <td>CreationDate</td>
+         </tr>
+         <tr>
+            <td>ENTRY_MODDATE</td>
+            <td>ModifiedDate</td>
+         </tr>
+         <tr>
+            <td>ENTRY_DATASETWID</td>
+            <td>DatasetWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

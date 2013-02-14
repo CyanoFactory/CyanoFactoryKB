@@ -1,0 +1,8 @@
+<xb:config xmlns:xb="http://xml.apache.org/xmlbeans/2004/02/xbean/config"
+           xmlns:ep="http://hibernate.sourceforge.net">
+
+  <xb:namespace uri="##any">
+    <xb:package>com.sri.bw.element</xb:package>
+  </xb:namespace>
+
+</xb:config>

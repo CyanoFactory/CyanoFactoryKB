@@ -1,0 +1,99 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         Element
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="Element"></a>Element
+      </h1>
+      <hr>The periodic table of elements<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>WID of this element<br></td>
+         </tr>
+         <tr>
+            <td>Name</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(15)</td>
+            <td>No</td>
+            <td>Long name (e.g. 'Oxygen')<br></td>
+         </tr>
+         <tr>
+            <td>ElementSymbol</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(2)</td>
+            <td>No</td>
+            <td>Symbol (e.g. 'O')<br></td>
+         </tr>
+         <tr>
+            <td>AtomicWeight</td>
+            <td>FLOAT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Weighted average weight (e.g. 16.x)<br></td>
+         </tr>
+         <tr>
+            <td>AtomicNumber</td>
+            <td>SMALLINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Number of protons<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="Valence.html">Valence</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="Entry.html">Entry</a></td>
+            <td>OtherWID</td>
+         </tr>
+         <tr>
+            <td><a href="Support.html">Support</a></td>
+            <td>OtherWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ELEMENT_NAME</td>
+            <td>Name</td>
+         </tr>
+         <tr>
+            <td>ELEMENT_ELEMENTSYMBOL</td>
+            <td>ElementSymbol</td>
+         </tr>
+         <tr>
+            <td>ELEMENT_ATOMICWEIGHT</td>
+            <td>AtomicWeight</td>
+         </tr>
+         <tr>
+            <td>ELEMENT_ATOMICNUMBER</td>
+            <td>AtomicNumber</td>
+         </tr>
+      </table><br><br></body>
+</html>

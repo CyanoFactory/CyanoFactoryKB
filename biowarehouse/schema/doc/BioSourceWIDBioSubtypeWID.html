@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         BioSourceWIDBioSubtypeWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="BioSourceWIDBioSubtypeWID"></a>BioSourceWIDBioSubtypeWID
+      </h1>
+      <hr>Linking table which links BioSource and BioSubtype<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="BioSource.html">BioSourceWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Links to the BioSource associated with this object.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioSubtype.html">BioSubtypeWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Links to the BioSubtype associated with this object.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>BB_BSWID_BSTWID</td>
+            <td>BioSourceWID, BioSubtypeWID</td>
+         </tr>
+         <tr>
+            <td>BB_BSTWID_BSWID</td>
+            <td>BioSubtypeWID, BioSourceWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

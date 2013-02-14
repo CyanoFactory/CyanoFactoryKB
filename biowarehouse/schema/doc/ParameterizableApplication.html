@@ -1,0 +1,213 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ParameterizableApplication
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ParameterizableApplication"></a>ParameterizableApplication
+      </h1>
+      <hr>Represents MAGE Class ParameterizableApplication<br>The interface that is the use of a Parameterizable class.<br>Includes MAGE Class HardwareApplication<br>Includes MAGE Class ProtocolApplication<br>Includes MAGE Class SoftwareApplication<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td>WID</td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Warehouse identifier for this entity<br></td>
+         </tr>
+         <tr>
+            <td><a href="DataSet.html">DataSetWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to the data set from which the entity came from<br></td>
+         </tr>
+         <tr>
+            <td>MAGEClass</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(100)</td>
+            <td>No</td>
+            <td>Discriminator column specifies type of object this row represents<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayDesign.html">ArrayDesign</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between ArrayDesign and ProtocolApplication<br>Describes the application of any protocols, such as the methodology used to pick oligos, in the design of the array.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ArrayManufacture.html">ArrayManufacture</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between ArrayManufacture and ProtocolApplication<br>The protocols followed in the manufacturing of the arrays.<br></td>
+         </tr>
+         <tr>
+            <td><a href="BioEvent.html">BioEvent_ProtocolApplications</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between BioEvent and ProtocolApplication<br>The applied protocols to the BioEvent.<br></td>
+         </tr>
+         <tr>
+            <td>SerialNumber</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute HardwareApplication.serialNumber<br>Manufacturer's identifier for the Hardware.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Parameterizable.html">Hardware</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between HardwareApplication and Hardware<br>The underlying hardware.<br></td>
+         </tr>
+         <tr>
+            <td>ActivityDate</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute ProtocolApplication.activityDate<br>When the protocol was applied.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ParameterizableApplication.html">ProtocolApplication</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between ProtocolApplication and HardwareApplication<br>The use of hardware for the application of the protocol.<br></td>
+         </tr>
+         <tr>
+            <td><a href="ParameterizableApplication.html">ProtocolApplication2</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents 1..n association between ProtocolApplication and SoftwareApplication<br>The use of software for the application of the protocol.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Parameterizable.html">Protocol</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between ProtocolApplication and Protocol<br>The protocol that is being used.<br></td>
+         </tr>
+         <tr>
+            <td>Version</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(255)</td>
+            <td>Yes</td>
+            <td>MAGE attribute SoftwareApplication.version<br>The version of the software.<br></td>
+         </tr>
+         <tr>
+            <td>ReleaseDate</td>
+            <td>DATETIME</td>
+            <td>DATE</td>
+            <td>Yes</td>
+            <td>MAGE attribute SoftwareApplication.releaseDate<br>When the software was released.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Parameterizable.html">Software</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>Yes</td>
+            <td>Represents n..1 association between SoftwareApplication and Software<br>The underlying software.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>
+      <table border="1">
+         <tr>
+            <th>Table</th>
+            <th>Column</th>
+         </tr>
+         <tr>
+            <td><a href="ParameterValue.html">ParameterValue</a></td>
+            <td>ParameterizableApplication</td>
+         </tr>
+         <tr>
+            <td><a href="ParameterizableApplication.html">ParameterizableApplication</a></td>
+            <td>ProtocolApplication</td>
+         </tr>
+         <tr>
+            <td><a href="ParameterizableApplication.html">ParameterizableApplication</a></td>
+            <td>ProtocolApplication2</td>
+         </tr>
+         <tr>
+            <td><a href="ProtocolApplWIDPersonWID.html">ProtocolApplWIDPersonWID</a></td>
+            <td>ProtocolApplicationWID</td>
+         </tr>
+      </table>
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication1</td>
+            <td>DataSetWID</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication2</td>
+            <td>MAGEClass</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication3</td>
+            <td>ArrayDesign</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication4</td>
+            <td>ArrayManufacture</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication5</td>
+            <td>BioEvent_ProtocolApplications</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication6</td>
+            <td>SerialNumber</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication7</td>
+            <td>Hardware</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication8</td>
+            <td>ActivityDate</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication9</td>
+            <td>ProtocolApplication</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication10</td>
+            <td>ProtocolApplication2</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication11</td>
+            <td>Protocol</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication12</td>
+            <td>Version</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication13</td>
+            <td>ReleaseDate</td>
+         </tr>
+         <tr>
+            <td>ParameterizableApplication14</td>
+            <td>Software</td>
+         </tr>
+      </table><br><br></body>
+</html>

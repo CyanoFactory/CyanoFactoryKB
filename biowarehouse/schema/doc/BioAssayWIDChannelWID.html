@@ -1,0 +1,53 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         BioAssayWIDChannelWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="BioAssayWIDChannelWID"></a>BioAssayWIDChannelWID
+      </h1>
+      <hr>Represents n..n association between BioAssay and Channel<br>Channels can be non-null for all subclasses.  For instance, collapsing across replicate features will create a DerivedBioAssay
+      that will potentially reference channels.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="BioAssay.html">BioAssayWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to BioAssay<br></td>
+         </tr>
+         <tr>
+            <td><a href="Channel.html">ChannelWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to Channel<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>BioAssayWIDChannelWID1</td>
+            <td>BioAssayWID</td>
+         </tr>
+         <tr>
+            <td>BioAssayWIDChannelWID2</td>
+            <td>ChannelWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

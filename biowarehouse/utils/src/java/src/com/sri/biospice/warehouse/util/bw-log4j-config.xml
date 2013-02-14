@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE log4j:configuration SYSTEM "log4j.dtd">
+
+<!--
+    Log4j properties file for the loader. Log4j is a standard logging API.
+    See http://jakarta.apache.org/log4j/docs/index.html for more information.
+-->
+<log4j:configuration xmlns:log4j="http://jakarta.apache.org/log4j/">
+
+    <appender name="stdout" class="org.apache.log4j.ConsoleAppender">
+        <param name="Threshold" value="ERROR"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern"
+                value=": %-5p - %m%n"/>
+        </layout>
+    </appender>
+
+    <appender name="LogFile" class="org.apache.log4j.RollingFileAppender">
+        <param name="Threshold" value="INFO"/>
+        <param name="file" value="loader.log"/>
+        <param name="append" value="false"/>
+        <param name="MaxBackupIndex" value="9"/>
+        <param name="MaxFileSize" value="10MB"/>
+        <layout class="org.apache.log4j.PatternLayout">
+            <param name="ConversionPattern"
+                value="%-6r %d %-16C{1}: %-5p - %m%n"/>
+        </layout>
+    </appender>
+
+    <root>
+        <priority value="DEBUG"/>
+        <appender-ref ref="stdout"/>
+        <appender-ref ref="LogFile"/>
+    </root>
+
+</log4j:configuration>

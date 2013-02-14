@@ -1,0 +1,52 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         ImageAcquisitionWIDImageWID
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="ImageAcquisitionWIDImageWID"></a>ImageAcquisitionWIDImageWID
+      </h1>
+      <hr>Represents n..n association between ImageAcquisition and Image<br>The images produced by the ImageAcquisition event.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="BioEvent.html">ImageAcquisitionWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to ImageAcquisition<br></td>
+         </tr>
+         <tr>
+            <td><a href="Image.html">ImageWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to Image<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ImageAcquisitionWIDImag1</td>
+            <td>ImageAcquisitionWID</td>
+         </tr>
+         <tr>
+            <td>ImageAcquisitionWIDImag2</td>
+            <td>ImageWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

@@ -1,0 +1,70 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         EnzReactionAltCompound
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="EnzReactionAltCompound"></a>EnzReactionAltCompound
+      </h1>
+      <hr>Identifies a compound that is either an alternate substrate or an alternate cofactor<br>to a primary compound present in an enzymatic reaction.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="EnzymaticReaction.html">EnzymaticReactionWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>EnzymaticReaction.WID of the Enzymatic Reaction<br></td>
+         </tr>
+         <tr>
+            <td><a href="Chemical.html">PrimaryWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Chemical.WID of primary compound<br></td>
+         </tr>
+         <tr>
+            <td><a href="Chemical.html">AlternativeWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Chemical.WID of alternate compound<br></td>
+         </tr>
+         <tr>
+            <td>Cofactor</td>
+            <td>CHAR(1)</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>'T' if this alternative is a cofactor, 'F' if it is a substrate<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>ERALT_ERWID</td>
+            <td>ENZYMATICREACTIONWID</td>
+         </tr>
+         <tr>
+            <td>ERALT_PRIMWID</td>
+            <td>PRIMARYWID</td>
+         </tr>
+         <tr>
+            <td>ERALT_ALTWID</td>
+            <td>ALTERNATIVEWID</td>
+         </tr>
+      </table><br><br></body>
+</html>

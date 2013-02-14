@@ -1,0 +1,153 @@
+/* *******************************************************************
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS IS"
+ * basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See
+ * the License for the specific language governing rights and
+ * limitations under the License.
+ *
+ * The Original Code is the BioWarehouse.
+ *
+ * The Initial Developer of the Original Code is SRI International.
+ * Portions created by SRI International are Copyright (C) 2004.
+ * All Rights Reserved.
+ ******************************************************************* */
+/*
+ * PGDB REGULATION loader for the BioSpice Data Warehouse
+ * Thomas J Lee, SRI International, August 2002
+ */
+
+#include "main.h"
+#include "regulation-parse.h"
+#ifdef ORACLE
+#include <sqlca.h>
+#elif DEF_MYSQL
+#endif
+
+#define DEBUG 0
+
+extern int dataset_wid;
+extern int organism_wid;
+
+char
+regulation_mechanism_char(char *mechanism) {
+  // Convert BioCyc keyword to BioWarehouse char that represents it.
+  if (!mechanism) return '?';
+  if (0 == strcasecmp(mechanism, ":ALLOSTERIC")) return('A');
+  if (0 == strcasecmp(mechanism, ":COMPETITIVE")) return('C');
+  if (0 == strcasecmp(mechanism, ":IRREVERSIBLE")) return('I');
+  if (0 == strcasecmp(mechanism, ":NONCOMPETITIVE")) return('N');
+  if (0 == strcasecmp(mechanism, ":OTHER")) return('O');
+  if (0 == strcasecmp(mechanism, ":UNCOMPETITIVE")) return('N');
+  if (0 == strcasecmp(mechanism, ":UNKMECH")) return('U');
+  printf("Illegal MECHANISM %s\n", mechanism);
+  return('?');
+}
+
+char
+regulation_mode_char(char *mode) {
+  // Convert BioCyc keyword to BioWarehouse char that represents it.
+  if (!mode) return '?';
+  if (0 == strcasecmp(mode, "+")) return('A');  // activator
+  if (0 == strcasecmp(mode, "-")) return('I');  // inhibitor
+  if (0 == strcasecmp(mode, "NIL")) return('?');
+  if (0 == strcasecmp(mode, "NULL")) return('?');
+  printf("Illegal MODE %s\n", mode);
+  return('?');
+}
+
+char
+regulation_physiologically_relevant_char(char *physiologically_relevant) {
+  // Convert BioCyc keyword to BioWarehouse char that represents it.
+  if (!physiologically_relevant) return 'F';
+  if (0 == strcasecmp(physiologically_relevant, "T")) return('T');
+  return('F');
+}
+
+/*
+  Translate all flavors of regulation. There are two:
+  transcriptional - regulated entity is a promoter Feature; regulator is a Protein transcription factor.
+  enzymatic - regulated entity is an EnzymaticReaction; regulator is a Chemical or Protein.
+
+  Transcriptional adds no new rows; it adds comments, citations, etc. for the regulator.
+  Enzymatic adds a row to EnzReactionInhibitorActivator.
+ */
+void
+regulation_load_entry(struct regulation_entry *entry) {
+
+  int regulator_wid;
+  int regulated_wid;                 // of REGULATED_ENTITY
+  short error = 0;
+  struct stringlist *sptr;           // to iterate over synonyms
+  
+  
+  if (DEBUG)
+    printf("Loading regulation %s\n", entry->unique_id);
+    
+  if (!entry)
+    advise_error("Null entry passed to regulation_load_entry\n");
+
+  if (error)
+    regulation_parse_error();
+
+#ifdef ORACLE  
+  /* Try a WHENEVER to assist in debugging silent Oracle errors */
+  EXEC SQL WHENEVER SQLERROR DO sql_error("Oracle error in regulation-load");
+#endif
+
+  // REGULATED_ENTITY is a UNIQUE_ID of a previously loaded object; look up object's WID
+  // This should be an EnzymaticReaction for enzymatic, or Feature (promoter) for transcriptional.
+  regulated_wid = wh_select_dbid_otherwid(entry->regulated_entity, dataset_wid);
+  if (!regulated_wid) {
+    error = 1;
+    printf("Undefined REGULATED-ENTITY %s for %s\n", entry->regulated_entity, entry->unique_id);
+  }
+  
+  // Translate attributes that depend on type of regulation
+  if (!entry->type || 0 == strcasecmp("Regulation-of-Enzyme-Activity", entry->type)) {
+    regulator_wid = obtain_enzrxn_compound(entry->regulator, 1);
+    if (regulator_wid && regulated_wid) {
+      wh_insert_enzrxn_chemical(regulated_wid,
+                                regulator_wid,
+                                regulation_mechanism_char(entry->mechanism),
+                                regulation_mode_char(entry->mode),
+                                regulation_physiologically_relevant_char(entry->physiologically_relevant) );
+    }
+  }
+  else if (!entry->type || 0 == strcasecmp("Regulation-of-Transcription-Initiation", entry->type)) {
+    regulator_wid = widtable_lookup(protein_wids, entry->regulator);
+  }
+  else {
+    printf("Unexpected TYPES attribute %s, ignoring %s\n", (entry->type ? entry->type : "NULL"), entry->unique_id);
+    regulation_parse_error();
+    return;
+  }
+    
+  
+  /* Add synonyms to SynonymTable  */
+  for (sptr=entry->synonyms; sptr; sptr=sptr->next)
+    wh_insert_synonymtable(regulator_wid, sptr->string);
+
+  /* Add citations to CitationWIDOtherWID  */
+  for (sptr=entry->citations; sptr; sptr=sptr->next)
+    insert_citation(regulator_wid, sptr->string);
+
+  /* Add comments to CommentTable  */
+  for (sptr=entry->comments; sptr; sptr=sptr->next)
+    wh_insert_comment(regulator_wid, sptr->string);
+
+  /* Add DBID */
+  if (!entry->unique_id)
+    entry->load_error = 1;
+  else
+    wh_insert_dbid(regulator_wid, entry->unique_id);
+  
+  /* Insert all DBLINKS as crossreferences */      
+  insert_dblinks(regulator_wid, entry->dblinks_dbs, entry->dblinks_ids);
+      
+  /* No Entry is added; someday may add a TranscriptionFactor entry for transcriptional regulators */
+  //----wh_insert_entry(regulator_wid, entry->load_error, 0, NULL);
+}

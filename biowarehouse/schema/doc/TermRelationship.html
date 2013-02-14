@@ -1,0 +1,59 @@
+<html>
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+      <link href="style.css" rel="stylesheet" type="text/css">
+      <title>SchemaDoc:
+         TermRelationship
+      </title>
+   </head>
+   <body><a href="index.html">Table Index</a><h1><a name="TermRelationship"></a>TermRelationship
+      </h1>
+      <hr>Defines a relationship between two terms.<br><h2>Columns</h2>
+      <table border="1">
+         <tr>
+            <th>Column</th>
+            <th>MySQL Type</th>
+            <th>Oracle Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+         </tr>
+         <tr>
+            <td><a href="Term.html">TermWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>Reference to a term.<br></td>
+         </tr>
+         <tr>
+            <td><a href="Term.html">RelatedTermWID</a></td>
+            <td>BIGINT</td>
+            <td>NUMBER</td>
+            <td>No</td>
+            <td>The WID of the term the current term is related to.<br></td>
+         </tr>
+         <tr>
+            <td>Relationship</td>
+            <td>VARCHAR</td>
+            <td>VARCHAR2(10)</td>
+            <td>No</td>
+            <td>Enumeration.<br></td>
+         </tr>
+      </table>
+      <h2>Referenced By</h2>None.
+      <h2>Other Constraints</h2>None.
+      <h2>Indexes</h2>
+      <table border="1">
+         <tr>
+            <th>Name</th>
+            <th>Columns</th>
+         </tr>
+         <tr>
+            <td>TR_TermRelationship</td>
+            <td>TermWID,RelatedTermWID</td>
+         </tr>
+         <tr>
+            <td>RT_TermRelationship</td>
+            <td>RelatedTermWID,TermWID</td>
+         </tr>
+      </table><br><br></body>
+</html>
