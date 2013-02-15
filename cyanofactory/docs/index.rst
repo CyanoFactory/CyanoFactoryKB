@@ -10,8 +10,9 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-
-
+   
+   biosql
+   db_xref
 
 Indices and tables
 ==================

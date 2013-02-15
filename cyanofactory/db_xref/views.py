@@ -8,10 +8,28 @@ from django.core.urlresolvers import reverse
 database_name = "cyano"
 
 def get_database_url_from_organism(organism):
+    """Takes an db_xref identifier and converts it into an URL.
+    A db_xref identifier consists of two strings delimited by a **:**.
+
+    :param organism: db_xref identifier (**Must** contain a **:**)
+    :type organism: str
+
+    :returns: str -- Target URL for the given db_xref identifier.
+    """
     stri = organism.split(':', 1)
     return reverse("db_xref.views.dbxref", args=[stri[0], stri[1]])
 
 def get_database_url(database, organism):
+    """Takes an db_xref identifier (already split in database and organism part)
+    and converts it into an URL.
+
+    :param database: Part on left side of **:**
+    :type database: str
+    :param organism: Part on right side of **:**
+    :type organism: str
+
+    :returns: str -- Target URL for the given db_xref identifier.
+    """  
     database = database.lower()
     
     return {
@@ -27,6 +45,10 @@ def get_database_url(database, organism):
             }.get(database, lambda : "")
 
 def index(request):
+    """Displayed when no arguments are passed. Renders the intro page.
+
+    :returns: Website -- ``db_xref/index.html``
+    """
     data = {"db" : "ECOCYC",
             "value": "G7954",
             "item" : "ECOCYC:G7954",
@@ -36,6 +58,28 @@ def index(request):
     return render_to_response("db_xref/index.html", data)
 
 def dbxref(request, database, organism):
+    """Converts the db_xref identifier to a database url.
+    
+    URL:
+        ``(?P<database>[a-zA-Z0-9_-]+)\s*:\s*(?P<organism>[a-zA-Z0-9_-]+)``
+
+    Example:
+        ``ECOCYC:G7954``
+    
+    GET:
+        ``format:``
+            * ``redirect``: Default value. Redirects to the database.
+            * ``txt``: Returns a text file containing the url.
+            * ``json``: Returns a json file.
+            * ``xml``: Returns a XML file.
+            * ``html``: Returns a html file.
+    
+    Errors:
+        ``HttpResponseBadRequest:`` Unsupported database or format.
+                
+    Returns:
+       Website ``db_xref/output.format``
+    """
     _format = request.GET.get('format', 'redirect')
     
     data = {
