@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
    
    biosql
+   cyano
    db_xref
 
 Indices and tables

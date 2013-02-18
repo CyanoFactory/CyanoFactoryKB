@@ -3,11 +3,12 @@ BioSQL Database Scheme
 
 .. automodule:: biosql
 
-Methods
+Database Model
 =============================
-
 .. automodule:: biosql.models
    :members:
 
+Helper Classes
+=============================
 .. automodule:: biosql.helpers
    :members:

@@ -1,9 +1,9 @@
-Database Crossreference (db_xref) Webservice
+Database Crossreference Webservice
 *************************************************
 
 .. automodule:: db_xref
 
-Methods
+Views
 =============================
 
 .. automodule:: db_xref.views

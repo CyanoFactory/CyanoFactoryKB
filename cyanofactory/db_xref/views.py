@@ -60,13 +60,13 @@ def index(request):
 def dbxref(request, database, organism):
     """Converts the db_xref identifier to a database url.
     
-    URL:
+    :URL:
         ``(?P<database>[a-zA-Z0-9_-]+)\s*:\s*(?P<organism>[a-zA-Z0-9_-]+)``
 
-    Example:
+    :Example:
         ``ECOCYC:G7954``
     
-    GET:
+    :GET:
         ``format:``
             * ``redirect``: Default value. Redirects to the database.
             * ``txt``: Returns a text file containing the url.
@@ -74,11 +74,11 @@ def dbxref(request, database, organism):
             * ``xml``: Returns a XML file.
             * ``html``: Returns a html file.
     
-    Errors:
-        ``HttpResponseBadRequest:`` Unsupported database or format.
+    :Errors:
+        ``HttpResponseBadRequest:`` -- Unsupported database or format.
                 
-    Returns:
-       Website ``db_xref/output.format``
+    :Returns:
+       Website -- ``db_xref/output.format``
     """
     _format = request.GET.get('format', 'redirect')
     
