@@ -23,7 +23,8 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'cyano',
+		#'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'cyano_new',
         'USER': 'cyano',
         'PASSWORD': 'cyano',
         'HOST': 'localhost',
@@ -131,6 +132,7 @@ INSTALLED_APPS = (
     'biosql',
     'cyano',
     'db_xref',
+    'django_dumpdb',
 	
 	#helpers
 	'haystack',
