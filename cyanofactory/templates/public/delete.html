@@ -22,8 +22,8 @@ h1, #content{
 
 {% block action_icons %}
 {% if not request.user.is_anonymous and queryset|length > 0 %}
-<a href="{% url public.views.detail species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" /></a>
-<a href="{% url public.views.edit species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+<a href="{% url "public.views.detail" species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" /></a>
+<a href="{% url "public.views.edit" species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
 {% endif %}
 {{ block.super }}
 {% endblock %}

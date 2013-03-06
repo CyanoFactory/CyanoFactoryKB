@@ -65,11 +65,11 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 <body>
 	<!-- header -->
 	<div id="header" class="ui-widget-header">
-		<div class="title"><a href="{% if species %}{% comment %}{% url public.views.index species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.index %}{% endcomment %}{% endif %}">{{ species.name }}</a></div>
-		<div class="banner"><a href="{% if species %}{% comment %}{% url public.views.index species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.index %}{% endcomment %}{% endif %}"><img src="{% get_static_prefix %}cyano/img/banner.png" /></a></div>
+		<div class="title"><a href="{% if species %}{% comment %}{% url "public.views.index" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.index" %}{% endcomment %}{% endif %}">{{ species.name }}</a></div>
+		<div class="banner"><a href="{% if species %}{% comment %}{% url "public.views.index" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.index" %}{% endcomment %}{% endif %}"><img src="{% get_static_prefix %}cyano/img/banner.png" /></a></div>
 		<div class="search">
 			{% if species %}
-			<form name="search" action="{% comment %}{% url public.views.search species_wid=species.wid %}{% endcomment %}" method="get">
+			<form name="search" action="{% comment %}{% url "public.views.search" species_wid=species.wid %}{% endcomment %}" method="get">
 				<table cellpadding="0" cellspacing="0">
 				<tr>
 					<td><input name="q" type="text" 
@@ -92,7 +92,7 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 		</div>
 		
 		<ul class="menu">
-			<li><a href="{% url cyano.views.index %}">Home</a>
+			<li><a href="{% url "cyano.views.index" %}">Home</a>
 				<ul>
 				{% for organism in organism_list %}
 				<li><a href="{{ organism.get_absolute_url }}"><i>{{ organism.get_scientific_name }}</i></a></li>
@@ -106,7 +106,7 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 				{% for key1 in modelnames %}
 					{% for key2, modelmetadata in modelmetadatas.iteritems %}
 						{% if key1 == key2 %}
-					<li><a href="{% comment %}{% url public.views.list species_wid=species.wid model_type=key2 %}{% endcomment %}">{{ modelmetadata.verbose_name_plural }}</a></li>
+					<li><a href="{% comment %}{% url "public.views.list" species_wid=species.wid model_type=key2 %}{% endcomment %}">{{ modelmetadata.verbose_name_plural }}</a></li>
 						{% endif %}
 					{% endfor %}
 				{% endfor %}
@@ -117,41 +117,41 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 			<li class="spacer"/>
 			<li><a href="#">Download</a>
 				<ul>
-				<li><a href="{% if species %}{% comment %}{% url public.views.exportData species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.exportData %}{% endcomment %}{% endif %}">Data</a></li>
+				<li><a href="{% if species %}{% comment %}{% url "public.views.exportData" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.exportData" %}{% endcomment %}{% endif %}">Data</a></li>
 				<li><a href="https://simtk.org/project/xml/downloads.xml?group_id=714#package_id1290">Source code</a></li>
 				</ul>
 			</li>
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
-			<li><a href="{% if species %}{% comment %}{% url public.views.importData species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.importData %}{% endcomment %}{% endif %}">Import</a></li>
+			<li><a href="{% if species %}{% comment %}{% url "public.views.importData" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.importData" %}{% endcomment %}{% endif %}">Import</a></li>
 				{% if species %}
 			<li class="spacer"/>
-			<li><a href="{% comment %}{% url public.views.validate species_wid=species.wid %}{% endcomment %}">Validate</a></li>
+			<li><a href="{% comment %}{% url "public.views.validate" species_wid=species.wid %}{% endcomment %}">Validate</a></li>
 				{% endif %}
 			<li class="spacer"/>
-			<li><a href="{% if species %}{% comment %}{% url public.views.contributors species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.contributors %}{% endcomment %}{% endif %}">Contributors</a></li>
+			<li><a href="{% if species %}{% comment %}{% url "public.views.contributors" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.contributors" %}{% endcomment %}{% endif %}">Contributors</a></li>
 			{% endif %}
 			<li class="spacer"/>
 			<li><a href="#">Help</a>
 				<ul>
-				<li><a href="{% if species %}{% comment %}{% url public.views.tutorial species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.tutorial %}{% endcomment %}{% endif %}">Getting started</a></li>				
-				<li><a href="{% if species %}{% comment %}{% url public.views.about species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.about %}{% endcomment %}{% endif %}#downloading_content">Downloading data</a></li>
-				<li><a href="{% if species %}{% comment %}{% url public.views.about species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.about %}{% endcomment %}{% endif %}#api">RESTful API</a></li>				
-				<li><a href="{% if species %}{% comment %}{% url public.views.about species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.about %}{% endcomment %}{% endif %}#editing">Editing KB content</a></li>
-				<li><a href="{% if species %}{% comment %}{% url public.views.about species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.about %}{% endcomment %}{% endif %}#data_model">Data model</a></li>
-				<li><a href="{% if species %}{% comment %}{% url public.views.about species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.about %}{% endcomment %}{% endif %}#developing">Creating and customizing<div style="padding-left:10px;">new model organism<br/>databases</div></a></li>
-				<li><a href="{% if species %}{% comment %}{% url public.views.about species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.about %}{% endcomment %}{% endif %}#modeling">Developing whole-cell<div style="padding-left:10px;">models</div></a></li>
+				<li><a href="{% if species %}{% comment %}{% url "public.views.tutorial" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.tutorial" %}{% endcomment %}{% endif %}">Getting started</a></li>				
+				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#downloading_content">Downloading data</a></li>
+				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#api">RESTful API</a></li>				
+				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#editing">Editing KB content</a></li>
+				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#data_model">Data model</a></li>
+				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#developing">Creating and customizing<div style="padding-left:10px;">new model organism<br/>databases</div></a></li>
+				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#modeling">Developing whole-cell<div style="padding-left:10px;">models</div></a></li>
 				<li><a href="{% get_static_prefix %}public/doc/">Source code docs</a></li>
-				<li><a href="{% if species %}{% comment %}{% url public.views.about species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.about %}{% endcomment %}{% endif %}">About</a></li>
-				<li><a href="{% if species %}{% comment %}{% url public.views.about species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.about %}{% endcomment %}{% endif %}#contact">Contact</a></li>
+				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}">About</a></li>
+				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#contact">Contact</a></li>
 				</ul>
 			</li>
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
-			<li><a href="{% if species %}{% comment %}{% url public.views.logout species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.logout %}{% endcomment %}{% endif %}">Logout</a></li>
+			<li><a href="{% if species %}{% comment %}{% url "public.views.logout" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.logout" %}{% endcomment %}{% endif %}">Logout</a></li>
 			{% else %}
 			<li class="spacer"/>
-			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% comment %}{% url public.views.login species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url public.views.login %}{% endcomment %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
+			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% comment %}{% url "public.views.login" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.login" %}{% endcomment %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
 			{% endif %}
 -->
 		</ul>

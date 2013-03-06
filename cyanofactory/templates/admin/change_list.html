@@ -10,7 +10,7 @@
     <link rel="stylesheet" type="text/css" href="{% static "admin/css/forms.css" %}" />
   {% endif %}
   {% if cl.formset or action_form %}
-    {% url 'admin:jsi18n' as jsi18nurl %}
+    {% url "'admin:jsi18n'" as jsi18nurl %}
     <script type="text/javascript" src="{{ jsi18nurl|default:'../../jsi18n/' }}"></script>
   {% endif %}
   {{ media.css }}
@@ -40,8 +40,8 @@
 {% if not is_popup %}
 {% block breadcrumbs %}
 <div class="breadcrumbs">
-<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-&rsaquo; <a href="{% url 'admin:app_list' app_label=cl.opts.app_label %}">{{ app_label|capfirst|escape }}</a>
+<a href="{% url "'admin:index'" %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url "'admin:app_list'" app_label=cl.opts.app_label %}">{{ app_label|capfirst|escape }}</a>
 &rsaquo; {{ cl.opts.verbose_name_plural|capfirst }}
 </div>
 {% endblock %}
@@ -56,7 +56,7 @@
         <ul class="object-tools">
           {% block object-tools-items %}
             <li>
-              <a href="{% url cl.opts|admin_urlname:'add' %}{% if is_popup %}?_popup=1{% endif %}" class="addlink">
+              <a href="{% url "cl.opts|admin_urlname:'add'" %}{% if is_popup %}?_popup=1{% endif %}" class="addlink">
                 {% blocktrans with cl.opts.verbose_name as name %}Add {{ name }}{% endblocktrans %}
               </a>
             </li>
