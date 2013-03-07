@@ -357,16 +357,31 @@ class GroupProfile(Model):
 ''' BEGIN: helper models '''
 
 class RevisionDetail(Model):
-    user = OneToOneField(UserProfile, verbose_name = "Created by", related_name = '+', editable = False)
-    date = DateTimeField(verbose_name = "Create date")
+    user = OneToOneField(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
+    date = DateTimeField(verbose_name = "Modificiation date")
     reason = CharField(max_length=255, blank=True, default='', verbose_name='Reason for edit')
+
+class TableMeta(Model):
+    name = CharField(max_length=255, verbose_name = "Name of the table", editable = False)
+
+class ColumnMeta(Model):
+    table = ForeignKey(TableMeta)
+    name = CharField(max_length=255, verbose_name = "Name of the column in the table", editable = False)
+
+class RevisionOperation(Model):
+    name = CharField(max_length=255)
+
+class Revision(Model):
+    current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = '+', editable = False)
+    detail = ForeignKey(RevisionDetail, verbose_name = 'Edit operation', related_name = '+', editable = False)
+    action = ForeignKey(RevisionOperation, verbose_name = '', related_name = '+')
+    table = ForeignKey(TableMeta, verbose_name = '', related_name = '+')
+    column = ForeignKey(ColumnMeta, verbose_name = '', related_name = '+')
+    new_value = TextField()
 
 class References(Model):
     publications = ManyToManyField("PublicationReference", related_name = "references_publications")
     cross_references = ManyToManyField("CrossReference", related_name = "references_cross_references")
-
-class TableMeta(Model):
-    name = CharField(max_length=255, verbose_name = "Name of the table", editable = False)
 
 class Evidence(Model):
     value = TextField(blank=True, default='', verbose_name='Value')    
@@ -377,9 +392,9 @@ class Evidence(Model):
     pH = FloatField(blank=True, null=True, verbose_name='pH')
     temperature = FloatField(blank=True, null=True, verbose_name='Temperature (C)')
     comments = TextField(blank=True, default='', verbose_name='Comments')
-    references = ManyToManyField(References, blank=True, null=True, related_name='evidence', verbose_name='References')
+    references = ForeignKey(References, blank=True, null=True, related_name='evidence', verbose_name='References')
         
-    species_component = ManyToManyField('SpeciesComponent', blank=True, verbose_name='Species omponent', related_name='+')
+    species_component = ManyToManyField('SpeciesComponent', blank=True, verbose_name='Species component', related_name='+')
     
     def __unicode__(self):
         arr = []
