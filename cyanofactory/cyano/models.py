@@ -25,6 +25,7 @@ import re
 import settings
 import subprocess
 from django.db.models.fields.related import ManyToManyField
+from datetime import datetime
 
 ''' BEGIN: choices '''
 
@@ -357,16 +358,16 @@ class GroupProfile(Model):
 ''' BEGIN: helper models '''
 
 class RevisionDetail(Model):
-    user = OneToOneField(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
-    date = DateTimeField(verbose_name = "Modificiation date")
+    user = ForeignKey(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
+    date = DateTimeField(default=datetime.now, verbose_name = "Modificiation date")
     reason = CharField(max_length=255, blank=True, default='', verbose_name='Reason for edit')
 
 class TableMeta(Model):
     name = CharField(max_length=255, verbose_name = "Name of the table", editable = False)
 
-class ColumnMeta(Model):
-    table = ForeignKey(TableMeta)
-    name = CharField(max_length=255, verbose_name = "Name of the column in the table", editable = False)
+#class ColumnMeta(Model):
+#    table = ForeignKey(TableMeta)
+#    name = CharField(max_length=255, verbose_name = "Name of the column in the table", editable = False)
 
 class RevisionOperation(Model):
     name = CharField(max_length=255)
@@ -376,7 +377,7 @@ class Revision(Model):
     detail = ForeignKey(RevisionDetail, verbose_name = 'Edit operation', related_name = '+', editable = False)
     action = ForeignKey(RevisionOperation, verbose_name = '', related_name = '+')
     table = ForeignKey(TableMeta, verbose_name = '', related_name = '+')
-    column = ForeignKey(ColumnMeta, verbose_name = '', related_name = '+')
+    column = IntegerField(verbose_name = '')
     new_value = TextField()
 
 class References(Model):
@@ -714,11 +715,11 @@ class Entry(Model):
     wid = SlugField(max_length=150, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
-    references = ForeignKey(References, verbose_name = 'Publication and Crossreferences', editable = False)
+    references = ForeignKey(References, blank=True, null=True, verbose_name = 'Publication and Crossreferences', editable = False)
     comments = TextField(blank=True, default='', verbose_name='Comments')
     permissions = OneToOneField(Permission, blank=True, null=True, verbose_name = "Permissions for this entry")
     # FK to the last edit for convenience
-    detail = OneToOneField(RevisionDetail, verbose_name = 'Last edit', related_name = '+', editable = False)
+    detail = OneToOneField(RevisionDetail, null = True, verbose_name = 'Last edit', related_name = '+', editable = False)
     
     def __unicode__(self):
         return self.wid
@@ -727,7 +728,21 @@ class Entry(Model):
         return self.wid
     
     def save(self, *args, **kwargs):
-        setattr(self, 'model_type', self.__class__.__name__)
+        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
+        # TODO
+        # detect modified fields
+        # create entries in the history table
+        revision = Revision()
+        revision.current = self
+        self.detail.save()
+        revision.detail = self.detail
+        #if Entry.objects.get(self) == None:
+        revision.action = RevisionOperation.objects.get(name = "Create")
+        revision.table = TableMeta.objects.get(name = "Entry")
+        revision.column = 2
+        revision.new_value = str(self.wid)
+        revision.save()
+        print self.detail.reason
         super(Entry, self).save(*args, **kwargs)
     
     #html formatting
@@ -780,6 +795,187 @@ class PublicationReference(Entry):
     volume = CharField(max_length=255, blank=True, default='', verbose_name='Volume')
     issue = CharField(max_length=255, blank=True, default='', verbose_name='Issue')
     pages = CharField(max_length=255, blank=True, default='', verbose_name='Page(s)')
+    
+    #getters
+    def get_citation(self, cross_references = False):
+        if self.type.all()[0].wid == 'article':
+            txt = '%s. %s. <i>%s</i> <b>%s</b>, %s (%s).' % (self.authors, self.title, self.publication, self.volume, self.pages, self.year, )
+        elif self.type.all()[0].wid == 'book':
+            authors = ''
+            editors = ''
+            if self.authors != '':
+                authors = '%s.' % self.authors 
+            if self.editors != '':
+                editors = 'Eds %s.' % self.editors
+            txt = '%s %s <i>%s</i>. %s %s (%s).' % (authors, editors, self.title, self.publisher, self.pages, self.year)
+        elif self.type.all()[0].wid == 'thesis':
+            txt = '%s. <i>%s</i>. %s (%s).' % (self.authors, self.title, self.publisher, self.year)
+        else:
+            txt = '%s. <i>%s</i>. (%s).' % (self.authors, self.title, self.year)
+            
+        cr = self.get_as_html_cross_references(True)
+        cr_spacer = ''
+        if cr != '':
+            cr_spacer = ', '        
+        return '%s WholeCell: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(), self.wid, cr_spacer, cr, )
+            
+    def get_all_referenced_entries(self):
+        entries = []
+        for entry in self.referenced_entries.all():
+            entries.append(entry)
+        for ev in Evidence.objects.filter(references__id=self.id):
+            entries.append(ev.species_component)
+        return entries
+    
+    #html formatting    
+    def get_as_html_citation(self, is_user_anonymous):
+        return self.get_citation()
+        
+    def get_as_html_referenced_entries(self, is_user_anonymous):
+        results = []
+        for o in self.get_all_referenced_entries():
+            results.append('<a href="%s">%s</a>' % (o.get_absolute_url(), o.wid))
+        return format_list_html(results)
+        
+    def get_as_bibtex(self):
+        type = None
+        props = []        
+        if self.type.all()[0].wid == 'article':
+            type = 'ARTICLE'            
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            if self.title != '':
+                props.append(('TITLE', self.title))
+            if self.publication != '':
+                props.append(('JOURNAL', self.publication))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            if self.volume != '':
+                props.append(('VOLUME', self.volume))
+            if self.issue != '':
+                props.append(('NUMBER', self.issue))
+            if self.pages != '':
+                props.append(('PAGES', self.pages))
+            for cr in self.cross_references.all():
+                if cr.source == 'PubMed':
+                    props.append(('eprint', cr.xid))
+                    props.append(('eprinttype', 'pubmed'))
+                    break
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+        elif self.type.all()[0].wid == 'book':
+            type = 'BOOK'
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            elif self.editors != '':
+                props.append(('EDITOR', self.format_authors_bibtex(self.editors)))
+            if self.title != '':
+                props.append(('TITLE', self.title))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            if self.volume != '':
+                props.append(('VOLUME', self.volume))
+            if self.publisher != '':
+                props.append(('PUBLISHER', self.publisher))
+            for cr in self.cross_references.all():
+                if cr.source == 'ISBN':
+                    props.append(('ISBN', cr.xid))
+                    break
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+        elif self.type.all()[0].wid == 'thesis':
+            type = 'THESIS'
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            if self.editors != '':
+                props.append(('TITLE', self.editors))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            if self.publisher is not None:
+                props.append(('SCHOOL', self.publisher))
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+        else:
+            type = 'MISC'
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            if self.editors != '':
+                props.append(('TITLE', self.editors))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+            
+        props.append(('created', set_time_zone(self.created_date).isoformat()))
+        props.append(('lastUpdated', set_time_zone(self.last_updated_date).isoformat()))
+        
+        tmp = []
+        for prop in props:
+            if prop[0] == 'TITLE':
+                tmp.append('\n\t%s = "{%s}",' % prop)
+            else:
+                tmp.append('\n\t%s = {%s},' % prop)
+        return '@%s{%s%s\n}' % (type, self.wid, ''.join(tmp))
+        
+    def format_authors_bibtex(self, authors):
+        authors = authors.split(", ")
+        for idx in range(len(authors)):
+            author = authors[idx]
+            
+            names = author.split(" ")
+            for fNameIdx in range(len(names)):
+                if names[fNameIdx].upper() == names[fNameIdx]:
+                    break    
+            
+            tmpFirstName = names[fNameIdx]
+            firstName = ""
+            for i in range(len(tmpFirstName)):
+                firstName += tmpFirstName[i] + ". "        
+            firstName = firstName.strip()
+            
+            lastName = " ".join(names[0:fNameIdx])
+
+            suffix = " ".join(names[fNameIdx + 1:len(names)])
+            
+            authors[idx] = lastName        
+            if firstName != '':
+                authors[idx] += ", " + firstName
+                if suffix != '':
+                    authors[idx] += " " + suffix
+            
+        return " and ".join(authors)
+    
+    #meta information
+    class Meta:        
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
+            ('Classification', {'fields': ['type']}),            
+            ('Citation', {'fields': [{'verbose_name': 'Citation', 'name': 'citation'}]}), 
+            ('Cited by', {'fields': [{'verbose_name': 'Cited by', 'name': 'referenced_entries'}]}),
+            ('Comments', {'fields': ['comments', 'references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]            
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references',
+            'type',             
+            'authors', 'editors', 'year', 'title', 'publication', 'publisher', 'volume', 'issue', 'pages', 
+            'comments',
+            'references', 
+            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            ]
+        facet_fields = ['type', 'year', 'publication']
+        verbose_name='Reference'
+        verbose_name_plural = 'References'
 
 class CrossReferenceMeta(Model):
     name = CharField(max_length=255, verbose_name = "Identifier for crossreference (DB name or URL)", editable = False)
@@ -3134,202 +3330,6 @@ class Reaction(Entry):
                 
                 if mod['position'] is not None and mod['position'] > molecule_len:
                     raise ValidationError({'modification': 'Position must be less than molecule length'})
-
-class Reference(Entry):
-    #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_reference', parent_link=True, verbose_name='Species component')
-    
-    #additional fields
-    authors = TextField(blank=True, default='', verbose_name='Author(s)')
-    editors = TextField(blank=True, default='', verbose_name='Editor(s)')
-    year = PositiveIntegerField(blank=True, null=True, verbose_name='Year')
-    title = TextField(blank=True, default='', verbose_name='Title')
-    publication = CharField(max_length=255, blank=True, default='', verbose_name='Publication')
-    publisher = CharField(max_length=255, blank=True, default='', verbose_name='Publisher')
-    volume = CharField(max_length=255, blank=True, default='', verbose_name='Volume')
-    issue = CharField(max_length=255, blank=True, default='', verbose_name='Issue')
-    pages = CharField(max_length=255, blank=True, default='', verbose_name='Page(s)')
-    
-    #getters
-    def get_citation(self, cross_references = False):
-        if self.type.all()[0].wid == 'article':
-            txt = '%s. %s. <i>%s</i> <b>%s</b>, %s (%s).' % (self.authors, self.title, self.publication, self.volume, self.pages, self.year, )
-        elif self.type.all()[0].wid == 'book':
-            authors = ''
-            editors = ''
-            if self.authors != '':
-                authors = '%s.' % self.authors 
-            if self.editors != '':
-                editors = 'Eds %s.' % self.editors
-            txt = '%s %s <i>%s</i>. %s %s (%s).' % (authors, editors, self.title, self.publisher, self.pages, self.year)
-        elif self.type.all()[0].wid == 'thesis':
-            txt = '%s. <i>%s</i>. %s (%s).' % (self.authors, self.title, self.publisher, self.year)
-        else:
-            txt = '%s. <i>%s</i>. (%s).' % (self.authors, self.title, self.year)
-            
-        cr = self.get_as_html_cross_references(True)
-        cr_spacer = ''
-        if cr != '':
-            cr_spacer = ', '        
-        return '%s WholeCell: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(), self.wid, cr_spacer, cr, )
-            
-    def get_all_referenced_entries(self):
-        entries = []
-        for entry in self.referenced_entries.all():
-            entries.append(entry)
-        for ev in Evidence.objects.filter(references__id=self.id):
-            entries.append(ev.species_component)
-        return entries
-    
-    #html formatting    
-    def get_as_html_citation(self, is_user_anonymous):
-        return self.get_citation()
-        
-    def get_as_html_referenced_entries(self, is_user_anonymous):
-        results = []
-        for o in self.get_all_referenced_entries():
-            results.append('<a href="%s">%s</a>' % (o.get_absolute_url(), o.wid))
-        return format_list_html(results)
-        
-    def get_as_bibtex(self):
-        type = None
-        props = []        
-        if self.type.all()[0].wid == 'article':
-            type = 'ARTICLE'            
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            if self.title != '':
-                props.append(('TITLE', self.title))
-            if self.publication != '':
-                props.append(('JOURNAL', self.publication))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            if self.volume != '':
-                props.append(('VOLUME', self.volume))
-            if self.issue != '':
-                props.append(('NUMBER', self.issue))
-            if self.pages != '':
-                props.append(('PAGES', self.pages))
-            for cr in self.cross_references.all():
-                if cr.source == 'PubMed':
-                    props.append(('eprint', cr.xid))
-                    props.append(('eprinttype', 'pubmed'))
-                    break
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-        elif self.type.all()[0].wid == 'book':
-            type = 'BOOK'
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            elif self.editors != '':
-                props.append(('EDITOR', self.format_authors_bibtex(self.editors)))
-            if self.title != '':
-                props.append(('TITLE', self.title))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            if self.volume != '':
-                props.append(('VOLUME', self.volume))
-            if self.publisher != '':
-                props.append(('PUBLISHER', self.publisher))
-            for cr in self.cross_references.all():
-                if cr.source == 'ISBN':
-                    props.append(('ISBN', cr.xid))
-                    break
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-        elif self.type.all()[0].wid == 'thesis':
-            type = 'THESIS'
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            if self.editors != '':
-                props.append(('TITLE', self.editors))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            if self.publisher is not None:
-                props.append(('SCHOOL', self.publisher))
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-        else:
-            type = 'MISC'
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            if self.editors != '':
-                props.append(('TITLE', self.editors))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-            
-        props.append(('created', set_time_zone(self.created_date).isoformat()))
-        props.append(('lastUpdated', set_time_zone(self.last_updated_date).isoformat()))
-        
-        tmp = []
-        for prop in props:
-            if prop[0] == 'TITLE':
-                tmp.append('\n\t%s = "{%s}",' % prop)
-            else:
-                tmp.append('\n\t%s = {%s},' % prop)
-        return '@%s{%s%s\n}' % (type, self.wid, ''.join(tmp))
-        
-    def format_authors_bibtex(self, authors):
-        authors = authors.split(", ")
-        for idx in range(len(authors)):
-            author = authors[idx]
-            
-            names = author.split(" ")
-            for fNameIdx in range(len(names)):
-                if names[fNameIdx].upper() == names[fNameIdx]:
-                    break    
-            
-            tmpFirstName = names[fNameIdx]
-            firstName = ""
-            for i in range(len(tmpFirstName)):
-                firstName += tmpFirstName[i] + ". "        
-            firstName = firstName.strip()
-            
-            lastName = " ".join(names[0:fNameIdx])
-
-            suffix = " ".join(names[fNameIdx + 1:len(names)])
-            
-            authors[idx] = lastName        
-            if firstName != '':
-                authors[idx] += ", " + firstName
-                if suffix != '':
-                    authors[idx] += " " + suffix
-            
-        return " and ".join(authors)
-    
-    #meta information
-    class Meta:        
-        concrete_entry_model = True
-        fieldsets = [
-            ('Type', {'fields': ['model_type']}),
-            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
-            ('Classification', {'fields': ['type']}),            
-            ('Citation', {'fields': [{'verbose_name': 'Citation', 'name': 'citation'}]}), 
-            ('Cited by', {'fields': [{'verbose_name': 'Cited by', 'name': 'referenced_entries'}]}),
-            ('Comments', {'fields': ['comments', 'references']}),
-            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
-            ]            
-        field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references',
-            'type',             
-            'authors', 'editors', 'year', 'title', 'publication', 'publisher', 'volume', 'issue', 'pages', 
-            'comments',
-            'references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
-            ]
-        facet_fields = ['type', 'year', 'publication']
-        verbose_name='Reference'
-        verbose_name_plural = 'References'
 
 class Species(Entry):
     #parent pointer
