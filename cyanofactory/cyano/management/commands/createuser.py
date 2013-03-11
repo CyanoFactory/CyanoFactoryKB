@@ -9,7 +9,6 @@ class Command(BaseCommand):
             print "Creating user " + name
             mail = raw_input("E-Mail: ")
             password = raw_input("Password: ")
-            print dir(user)
             user.affiliation = raw_input(user._meta.get_field_by_name('affiliation')[0].verbose_name + ": ")
             user.website = raw_input(user._meta.get_field_by_name('website')[0].verbose_name + ": ")
             user.phone = raw_input(user._meta.get_field_by_name('phone')[0].verbose_name + ": ")

@@ -4,6 +4,7 @@ from cyano.models import Entry
 from cyano.models import Species
 from cyano.models import RevisionDetail
 from cyano.models import UserProfile
+from django.core.exceptions import ObjectDoesNotExist
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
@@ -15,8 +16,13 @@ class Command(BaseCommand):
                 revdetail = RevisionDetail()
                 revdetail.user = UserProfile.objects.get(user__username__exact = "gabriel")
                 revdetail.reason = "Initial Load"
-                species = Species()
+                try:
+                    species = Species.objects.get(wid = record.name)
+                except ObjectDoesNotExist:
+                    species = Species()
+
                 species.wid = record.name
                 species.name = record.annotations["source"]
-                species.detail = revdetail
-                species.save()
+                species.comments = None
+                species.genetic_code = '1'
+                species.save(revision_detail = revdetail)

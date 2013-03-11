@@ -26,6 +26,8 @@ import settings
 import subprocess
 from django.db.models.fields.related import ManyToManyField
 from datetime import datetime
+from cyano.helpers import get_column_index
+from cyano.exceptions import WidAlreadyExist
 
 ''' BEGIN: choices '''
 
@@ -373,12 +375,12 @@ class RevisionOperation(Model):
     name = CharField(max_length=255)
 
 class Revision(Model):
-    current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = '+', editable = False)
+    #current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = '+', editable = False)
     detail = ForeignKey(RevisionDetail, verbose_name = 'Edit operation', related_name = '+', editable = False)
     action = ForeignKey(RevisionOperation, verbose_name = '', related_name = '+')
     table = ForeignKey(TableMeta, verbose_name = '', related_name = '+')
     column = IntegerField(verbose_name = '')
-    new_value = TextField()
+    new_value = TextField(blank = True, null = True)
 
 class References(Model):
     publications = ManyToManyField("PublicationReference", related_name = "references_publications")
@@ -712,14 +714,13 @@ class Permission(Model):
 ''' BEGIN: Base classes for all knowledge base objects '''
 class Entry(Model):
     model_type = ForeignKey(TableMeta)
-    wid = SlugField(max_length=150, verbose_name='WID', validators=[validators.validate_slug])
+    wid = SlugField(max_length=150, unique = True, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     references = ForeignKey(References, blank=True, null=True, verbose_name = 'Publication and Crossreferences', editable = False)
-    comments = TextField(blank=True, default='', verbose_name='Comments')
+    comments = TextField(blank=True, null = True, default='', verbose_name='Comments')
     permissions = OneToOneField(Permission, blank=True, null=True, verbose_name = "Permissions for this entry")
-    # FK to the last edit for convenience
-    detail = OneToOneField(RevisionDetail, null = True, verbose_name = 'Last edit', related_name = '+', editable = False)
+    revisions = ManyToManyField(Revision, verbose_name = 'Edits', related_name='entry', editable = False)
     
     def __unicode__(self):
         return self.wid
@@ -727,22 +728,97 @@ class Entry(Model):
     def natural_key(self):
         return self.wid
     
-    def save(self, *args, **kwargs):
-        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
-        # TODO
-        # detect modified fields
-        # create entries in the history table
-        revision = Revision()
-        revision.current = self
-        self.detail.save()
-        revision.detail = self.detail
-        #if Entry.objects.get(self) == None:
-        revision.action = RevisionOperation.objects.get(name = "Create")
-        revision.table = TableMeta.objects.get(name = "Entry")
-        revision.column = 2
-        revision.new_value = str(self.wid)
-        revision.save()
-        print self.detail.reason
+    def create_revision(self, table, field, old_value, new_value, detail):
+        revision = None
+
+        if new_value != old_value:
+            revision = Revision()
+            revision.detail = detail
+            
+            if hasattr(new_value, "id"):
+                # resolve value of foreign keys
+                real_new_value = str(new_value.id)
+            else:
+                real_new_value = str(new_value)
+            
+            if old_value == None:
+                print "Creating " + real_new_value
+                revision.action = RevisionOperation.objects.get(name = "Create")
+            elif new_value == None:
+                print "Deleting " + old_value
+                revision.action = RevisionOperation.objects.get(name = "Delete")
+            else:
+                print "Updating " + old_value + " with " + real_new_value
+                revision.action = RevisionOperation.objects.get(name = "Edit")
+            
+            revision.table = TableMeta.objects.get(name = table._meta.object_name)
+            revision.column = get_column_index(table, field)
+            
+            revision.new_value = real_new_value
+
+        return revision
+    
+    def save(self, *args, **kwargs):        
+        # Check if item already exists (based on WID)
+        try:
+            old_object = self._meta.concrete_model.objects.get(wid = self.wid)
+        except ObjectDoesNotExist:
+            old_object = None
+
+        if old_object != None and old_object != self:
+            raise WidAlreadyExist("Wid already exists, if you want to update retrieve that item and save it")
+        
+        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)    
+    
+        rev_detail = kwargs["revision_detail"]
+        rev_detail.save()
+        del kwargs["revision_detail"]
+        
+        fields = self._meta.fields
+        entry_fields = Entry._meta.fields
+        other_fields = set(fields) - set(Entry._meta.fields)
+        
+        revisions = []
+        
+        old_item = None
+        if self.pk != None:
+            old_item = self._meta.concrete_model.objects.get(pk = self.pk)
+
+        for field in entry_fields:
+            if field == Entry._meta.pk:
+                continue
+
+            new_value = getattr(self, field.name)
+            if old_item == None:
+                old_value = None
+            else:
+                old_value = getattr(old_item, field.name)
+
+            revision = self.create_revision(Entry, field, old_value, new_value, rev_detail)
+            if revision != None:
+                revision.save()
+                revisions.append(revision)
+        
+        super(Entry, self).save(*args, **kwargs)
+
+        for field in other_fields:
+            if field == self._meta.pk:
+                continue
+            
+            new_value = getattr(self, field.name)
+            if old_item == None:
+                old_value = None
+            else:
+                old_value = getattr(old_item, field.name)
+
+            revision = self.create_revision(self._meta.concrete_model, field, old_value, new_value, rev_detail)
+            if revision != None:
+                revision.save()
+                revisions.append(revision)
+
+        for rev in revisions:
+            self.revisions.add(rev)
+
         super(Entry, self).save(*args, **kwargs)
     
     #html formatting
