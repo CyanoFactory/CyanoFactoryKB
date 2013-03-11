@@ -29,7 +29,7 @@ h1{
 {% if form.errors %}
 <p class="errors">Your username and password didn't match. Please try again.</p>
 {% endif %}
-<form id="login" method="post" action="{% if species %}{% url public.views.login species_wid=species.wid %}{% else %}{% url public.views.login %}{% endif %}">
+<form id="login" method="post" action="{% if species %}{% url "public.views.login" species_wid=species.wid %}{% else %}{% url "public.views.login" %}{% endif %}">
 {% csrf_token %}
 	<table>
 	<tr>

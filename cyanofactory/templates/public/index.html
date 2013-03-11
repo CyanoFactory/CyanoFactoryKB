@@ -18,10 +18,10 @@ Last updated: 2012-07-17
 	{% endif %}
 {% else %}
 	{% if species %}
-<a href="{% url public.views.edit species_wid=species.wid wid=species.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
-<a href="{% url public.views.delete species_wid=species.wid wid=species.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
+<a href="{% url "public.views.edit" species_wid=species.wid wid=species.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+<a href="{% url "public.views.delete" species_wid=species.wid wid=species.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
 	{% endif %}
-<a href="{% if species %}{% url public.views.add species_wid=species.wid model_type='Species' %}{% else %}{% url public.views.add model_type='Species' %}{% endif %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
+<a href="{% if species %}{% url "public.views.add" species_wid=species.wid model_type='Species' %}{% else %}{% url "public.views.add" model_type='Species' %}{% endif %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
 {% endif %}
 {{ block.super }}
 {% endblock %}
@@ -461,7 +461,7 @@ WholeCellKB is a collection of free, open-source model organism databases design
 </div>
 
 <div><h1>Getting started</h1>
-<p>The best ways to get started are to browse or search this database using the menu or the search box at the top of this page. See the <a href="{% if species %}{% url public.views.tutorial species_wid=species.wid %}{% else %}{% url public.views.tutorial %}{% endif %}">tutorial</a> for additional help getting started.</p>
+<p>The best ways to get started are to browse or search this database using the menu or the search box at the top of this page. See the <a href="{% if species %}{% url "public.views.tutorial" species_wid=species.wid %}{% else %}{% url "public.views.tutorial" %}{% endif %}">tutorial</a> for additional help getting started.</p>
 </div>
 
 <div><h1>More information</h1>	
@@ -471,6 +471,6 @@ WholeCellKB is a collection of free, open-source model organism databases design
 </div>
 
 <div><h1>Need help?</h1>
-<p>Please view the <a href="{% if species %}{% url public.views.tutorial species_wid=species.wid %}{% else %}{% url public.views.tutorial %}{% endif %}">tutorial</a>, <a href="{% if species %}{% url public.views.about species_wid=species.wid %}{% else %}{% url public.views.about %}{% endif %}">about page</a>, or contact us at <a href="mailto:wholecell[at]lists.stanford.edu">wholecell@lists.stanford.edu</a>.</p>
+<p>Please view the <a href="{% if species %}{% url "public.views.tutorial" species_wid=species.wid %}{% else %}{% url "public.views.tutorial" %}{% endif %}">tutorial</a>, <a href="{% if species %}{% url "public.views.about" species_wid=species.wid %}{% else %}{% url "public.views.about" %}{% endif %}">about page</a>, or contact us at <a href="mailto:wholecell[at]lists.stanford.edu">wholecell@lists.stanford.edu</a>.</p>
 </div>
 {% endblock %}

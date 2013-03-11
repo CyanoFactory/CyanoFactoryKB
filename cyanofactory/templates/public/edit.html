@@ -16,8 +16,8 @@ Last updated: 2012-07-17
 
 {% block action_icons %}
 {% if not request.user.is_anonymous and queryset|length > 0 %}
-<a href="{% url public.views.detail species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" /></a>
-<a href="{% url public.views.delete species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
+<a href="{% url "public.views.detail" species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" /></a>
+<a href="{% url "public.views.delete" species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
 {% endif %}
 {{ block.super }}
 {% endblock %}

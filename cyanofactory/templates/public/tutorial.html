@@ -166,7 +166,7 @@ Use the <img src="{% get_static_prefix %}public/img/pencil.png" alt="pencil" cla
 </li>
 
 <li onmouseover="javascript: highlight('help');" onmouseout="javascript: unhighlight('help');"><h2>Need more help?</h2>
-Please read the <a href="{% if species %}{% url public.views.about species_wid=species.wid %}{% else %}{% url public.views.about %}{% endif %}">about section</a> or contact us at <a href="mailto:wholecell[at]lists.stanford.edu">wholecell@lists.stanford.edu</a>.</li>
+Please read the <a href="{% if species %}{% url "public.views.about" species_wid=species.wid %}{% else %}{% url "public.views.about" %}{% endif %}">about section</a> or contact us at <a href="mailto:wholecell[at]lists.stanford.edu">wholecell@lists.stanford.edu</a>.</li>
 </li>
 </ul>
 </div>

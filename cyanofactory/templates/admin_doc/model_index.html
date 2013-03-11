@@ -6,8 +6,8 @@
 
 {% block breadcrumbs %}
 <div class="breadcrumbs">
-<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-&rsaquo; <a href="{% url 'django-admindocs-docroot' %}">{% trans 'Documentation' %}</a>
+<a href="{% url "'admin:index'" %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url "'django-admindocs-docroot'" %}">{% trans 'Documentation' %}</a>
 &rsaquo; {% trans 'Models' %}
 </div>
 {% endblock %}
@@ -28,7 +28,7 @@
 <table class="xfull">
 {% for model in group.list %}
 <tr>
-<th><a href="{% url 'django-admindocs-models-detail' app_label=model.app_label model_type=model.object_name.lower %}">{{ model.object_name }}</a></th>
+<th><a href="{% url "'django-admindocs-models-detail'" app_label=model.app_label model_type=model.object_name.lower %}">{{ model.object_name }}</a></th>
 </tr>
 {% endfor %}
 </table>

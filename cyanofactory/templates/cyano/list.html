@@ -24,7 +24,7 @@ Last updated: 2012-07-17
 {% if request.user.is_anonymous %}
 <a href="mailto:wholecell[at]lists.stanford.edu?subject=WholeCellKB Species={{ species.wid }} {{ model_verbose_name_plural }}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Suggest an edit" alt="Suggest an edit" /></a>
 {% else %}
-<a href="{% comment %}{% url public.views.add species_wid=species.wid model_type=model_type %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
+<a href="{% comment %}{% url "public.views.add" species_wid=species.wid model_type=model_type %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
 {% endif %}
 {% comment %}
 <a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
@@ -89,7 +89,7 @@ Last updated: 2012-07-17
 	<div class="block">
 	<h2>{% autoescape off %}{{ field_verbose_name }}{% endautoescape %}</h2>
 	<ul>
-		<li{% if not queryargs|getattribute:field_name %} class="selected"{% endif %}><a href="{% comment %}{% url public.views.list species_wid=species.wid model_type=model_type %}{% endcomment %}?{% makeurl queryargs field_name '' %}">All</a></li>
+		<li{% if not queryargs|getattribute:field_name %} class="selected"{% endif %}><a href="{% comment %}{% url "public.views.list" species_wid=species.wid model_type=model_type %}{% endcomment %}?{% makeurl queryargs field_name '' %}">All</a></li>
 		{% for facet in field.facets %}
 		<li
 				{% if queryargs|getattribute:field_name %}
@@ -97,7 +97,7 @@ Last updated: 2012-07-17
 			class="selected"
 					{% endif %}
 				{% endif %}>
-			<a href="{% comment %}{% url public.views.list species_wid=species.wid model_type=model_type %}{% endcomment %}?{% makeurl queryargs field_name facet.id %}">{% autoescape off %}{{ facet.name }}{% endautoescape %} ({{ facet.count }})</a></li>
+			<a href="{% comment %}{% url "public.views.list" species_wid=species.wid model_type=model_type %}{% endcomment %}?{% makeurl queryargs field_name facet.id %}">{% autoescape off %}{{ facet.name }}{% endautoescape %} ({{ facet.count }})</a></li>
 		{% endfor %}
 	</ul>
 	</div>

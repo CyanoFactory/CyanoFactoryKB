@@ -4,9 +4,9 @@
 
 {% block breadcrumbs %}
 <div class="breadcrumbs">
-<a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
-&rsaquo; <a href="{% url 'django-admindocs-docroot' %}">{% trans 'Documentation' %}</a>
-&rsaquo; <a href="{% url 'django-admindocs-views-index' %}">{% trans 'Views' %}</a>
+<a href="{% url "'admin:index'" %}">{% trans 'Home' %}</a>
+&rsaquo; <a href="{% url "'django-admindocs-docroot'" %}">{% trans 'Documentation' %}</a>
+&rsaquo; <a href="{% url "'django-admindocs-views-index'" %}">{% trans 'Views' %}</a>
 &rsaquo; {{ name }}
 </div>
 {% endblock %}
@@ -30,5 +30,5 @@
 <p>{{ meta.Templates }}</p>
 {% endif %}
 
-<p class="small"><a href="{% url 'django-admindocs-views-index' %}">&lsaquo; Back to Views Documentation</a></p>
+<p class="small"><a href="{% url "'django-admindocs-views-index'" %}">&lsaquo; Back to Views Documentation</a></p>
 {% endblock %}

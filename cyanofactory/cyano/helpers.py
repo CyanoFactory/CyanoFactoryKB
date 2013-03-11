@@ -164,3 +164,10 @@ def format_sequence_as_html(sequence, lineLen=50):
         htmlR += '%s<br/>' % (min(len(sequence), (i + 1) * lineLen), )
     
     return '<div class="sequence"><div>%s</div><div>%s</div><div>%s</div></div>' % (htmlL, htmlC, htmlR)
+
+def get_column_index(table, column):
+    from django.db import connection
+    cursor = connection.cursor()
+    cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [table._meta.db_table, column.column])
+    row = cursor.fetchone()
+    return row[0]
