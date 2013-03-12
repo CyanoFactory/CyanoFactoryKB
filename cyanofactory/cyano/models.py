@@ -378,13 +378,14 @@ class Revision(Model):
     Always only the new value of a single cell is stored to save memory.
     
     :Columns:
+        * ``current``: Reference to the latest entry
         * ``detail``: Contains additional information about the edit
         * ``action``: Type of the operation (Create, Edit, Delete)
         * ``table``: Table where the modification occured
         * ``column``: Column in the table that was modified
         * ``new_value``: New value in the cell of the column
     """
-    #current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = '+', editable = False)
+    current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False)
     detail = ForeignKey(RevisionDetail, verbose_name = 'Edit operation', related_name = '+', editable = False)
     action = ForeignKey(RevisionOperation, verbose_name = '', related_name = '+')
     table = ForeignKey(TableMeta, verbose_name = '', related_name = '+')
@@ -732,16 +733,14 @@ class Entry(Model):
         * ``references``: Publications and Databases referencing that entry
         * ``comments``: Detailed notes about this entry
         * ``permissions``: Reference to the permissions for this entry
-        * ``revisions``: Old revisions of that entry
     """
     model_type = ForeignKey(TableMeta)
     wid = SlugField(max_length=150, unique = True, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     references = ForeignKey(References, blank=True, null=True, verbose_name = 'Publication and Crossreferences', editable = False)
-    comments = TextField(blank=True, null = True, default='', verbose_name='Comments')
+    comments = TextField(blank=True, default='', verbose_name='Comments')
     permissions = OneToOneField(Permission, blank=True, null=True, verbose_name = "Permissions for this entry")
-    revisions = ManyToManyField(Revision, verbose_name = 'Edits', related_name='entry', editable = False)
     
     def __unicode__(self):
         return self.wid
@@ -799,17 +798,18 @@ class Entry(Model):
         entry_fields = Entry._meta.fields
         other_fields = set(fields) - set(Entry._meta.fields)
         
-        revisions = []
-        
         old_item = None
         if self.pk != None:
             old_item = self._meta.concrete_model.objects.get(pk = self.pk)
+
+        super(Entry, self).save(*args, **kwargs)
 
         for field in entry_fields:
             if field == Entry._meta.pk:
                 continue
 
             new_value = getattr(self, field.name)
+
             if old_item == None:
                 old_value = None
             else:
@@ -817,10 +817,8 @@ class Entry(Model):
 
             revision = self.create_revision(Entry, field, old_value, new_value, rev_detail)
             if revision != None:
+                revision.current = self
                 revision.save()
-                revisions.append(revision)
-        
-        super(Entry, self).save(*args, **kwargs)
 
         for field in other_fields:
             if field == self._meta.pk:
@@ -834,13 +832,8 @@ class Entry(Model):
 
             revision = self.create_revision(self._meta.concrete_model, field, old_value, new_value, rev_detail)
             if revision != None:
+                revision.current = self
                 revision.save()
-                revisions.append(revision)
-
-        for rev in revisions:
-            self.revisions.add(rev)
-
-        super(Entry, self).save(*args, **kwargs)
     
     #html formatting
     def get_as_html_synonyms(self, is_user_anonymous):
