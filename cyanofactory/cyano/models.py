@@ -1,9 +1,7 @@
 '''
-Whole-cell data model
+Cyanofactory data model. Contains the database layout.
 
-Author: Jonathan Karr, jkarr@stanford.edu
-Affiliation: Covert Lab, Department of Bioengineering, Stanford University
-Last updated: 2012-07-17
+Based on Wholecell KB.
 '''
 
 from __future__ import unicode_literals
@@ -375,6 +373,17 @@ class RevisionOperation(Model):
     name = CharField(max_length=255)
 
 class Revision(Model):
+    """To allow reverting of edits all edit operations are stored in this table.
+    
+    Always only the new value of a single cell is stored to save memory.
+    
+    :Columns:
+        * ``detail``: Contains additional information about the edit
+        * ``action``: Type of the operation (Create, Edit, Delete)
+        * ``table``: Table where the modification occured
+        * ``column``: Column in the table that was modified
+        * ``new_value``: New value in the cell of the column
+    """
     #current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = '+', editable = False)
     detail = ForeignKey(RevisionDetail, verbose_name = 'Edit operation', related_name = '+', editable = False)
     action = ForeignKey(RevisionOperation, verbose_name = '', related_name = '+')
@@ -713,6 +722,18 @@ class Permission(Model):
 
 ''' BEGIN: Base classes for all knowledge base objects '''
 class Entry(Model):
+    """Base class for all knowledge base objects.
+    
+    :Columns:
+        * ``model_type``: Specifies the child type of the item (used to find the child table for inheritance)
+        * ``wid``: Warehouse Identifier. Unique identifier in the warehouse, used in the URLs e.g.
+        * ``name``: Short, human readable name of that entry
+        * ``synonyms``: Other names for that entry
+        * ``references``: Publications and Databases referencing that entry
+        * ``comments``: Detailed notes about this entry
+        * ``permissions``: Reference to the permissions for this entry
+        * ``revisions``: Old revisions of that entry
+    """
     model_type = ForeignKey(TableMeta)
     wid = SlugField(max_length=150, unique = True, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
