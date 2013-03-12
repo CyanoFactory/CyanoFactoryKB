@@ -165,7 +165,19 @@ def format_sequence_as_html(sequence, lineLen=50):
     
     return '<div class="sequence"><div>%s</div><div>%s</div><div>%s</div></div>' % (htmlL, htmlC, htmlR)
 
+
 def get_column_index(table, column):
+    """Returns the columns index of a table by name.
+    A db_xref identifier consists of two strings delimited by a **:**.
+
+    :param table: Table to retrieve the column from.
+    :type table: Django Model
+    
+    :param column: Column in the table
+    :type column: Django Model Field
+
+    :returns: int -- Column index
+    """
     from django.db import connection
     cursor = connection.cursor()
     cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [table._meta.db_table, column.column])
