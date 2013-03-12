@@ -1,0 +1,32 @@
+@import url("default.css");
+
+th.field-name {
+	background-color: rgb(255, 255, 255) !important;
+}
+
+td.field-body {
+	padding-top: 20px !important;
+}
+
+tt {
+	background-color: rgb(255,255,255) !important;
+}
+
+ul.first.simple {
+	list-style-type: none;
+	padding: 0;
+	margin: 0;
+}
+
+ul.first.simple li {
+	list-style-type: none;
+}
+
+ul.first.simple li strong {
+	font-weight: normal !important;
+	font-family: monospace; !important;
+}
+
+span.pre {
+	font-family: monospace; !important;
+}
