@@ -3,8 +3,8 @@ Database Crossreference Webservice
 
 .. automodule:: db_xref
 
-Views
-=============================
+.. toctree::
+   :maxdepth: 2
 
-.. automodule:: db_xref.views
-   :members:
+   views
+   helpers

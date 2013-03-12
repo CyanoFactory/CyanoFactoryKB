@@ -10,10 +10,9 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
-   
-   biosql
-   cyano
-   db_xref
+
+   db_xref/index
+   cyano/index
 
 Indices and tables
 ==================
