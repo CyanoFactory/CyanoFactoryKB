@@ -22,9 +22,7 @@ import math
 import re
 import settings
 import subprocess
-from django.db.models.fields.related import ManyToManyField
 from datetime import datetime
-from cyano.helpers import get_column_index
 from cyano.exceptions import WidAlreadyExist
 
 ''' BEGIN: choices '''
@@ -738,7 +736,6 @@ class Entry(Model):
     wid = SlugField(max_length=150, unique = True, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
-    references = ForeignKey(References, blank=True, null=True, verbose_name = 'Publication and Crossreferences', editable = False)
     comments = TextField(blank=True, default='', verbose_name='Comments')
     permissions = OneToOneField(Permission, blank=True, null=True, verbose_name = "Permissions for this entry")
     
@@ -749,6 +746,7 @@ class Entry(Model):
         return self.wid
     
     def create_revision(self, table, field, old_value, new_value, detail):
+        from cyano.helpers import get_column_index
         revision = None
 
         if new_value != old_value:
@@ -762,13 +760,13 @@ class Entry(Model):
                 real_new_value = str(new_value)
             
             if old_value == None:
-                print "Creating " + real_new_value
+                print "Creating " + real_new_value[:10]
                 revision.action = RevisionOperation.objects.get(name = "Create")
             elif new_value == None:
-                print "Deleting " + old_value
+                print "Deleting " + old_value[:10]
                 revision.action = RevisionOperation.objects.get(name = "Delete")
             else:
-                print "Updating " + old_value + " with " + real_new_value
+                print "Updating " + old_value[:10] + " with " + real_new_value[:10]
                 revision.action = RevisionOperation.objects.get(name = "Edit")
             
             revision.table = TableMeta.objects.get(name = table._meta.object_name)
@@ -1070,7 +1068,69 @@ class PublicationReference(Entry):
 class CrossReferenceMeta(Model):
     name = CharField(max_length=255, verbose_name = "Identifier for crossreference (DB name or URL)", editable = False)
 
-class Molecule(Entry):
+class SpeciesComponent(Entry):
+    '''
+    Contains all components that belong to an organism.
+    Improves the lookup speed and allows inheritance.
+    '''
+    species = ManyToManyField("Species", verbose_name = "Organism containing that entry", related_name = "species")
+    #type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
+    references = OneToOneField(References, blank=True, null=True, verbose_name = 'Publication and Crossreferences', editable = False)
+
+    #getters
+    @permalink
+    def get_absolute_url(self):
+        return ('public.views.detail', (), {'species_wid':self.species.wid, 'wid': self.wid})
+        
+    def get_all_references(self):
+        return self.references.all() | Reference.objects.filter(evidence__species_component__id = self.id)
+        
+    #html formatting
+    def get_as_html_parameters(self, is_user_anonymous):
+        results = []
+        for p in self.parameters.all():
+            results.append('<a href="%s">%s</a>: <i>%s</i> = %s %s' % (p.get_absolute_url(), p.wid, p.name, p.value.value, p.value.units))
+        return format_list_html(results)
+        
+    def get_as_html_comments(self, is_user_anonymous):
+        txt = self.comments
+        
+        #provide links to references
+        return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]', 
+            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('public.views.detail', kwargs={'species_wid':self.species.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
+            txt)
+            
+    def get_as_html_references(self, is_user_anonymous):
+        results = {}
+        for r in self.get_all_references():
+            key = r.authors + ' ' + r.editors
+            results[key] = r.get_citation(True)
+            
+        keys = results.keys()
+        keys.sort()
+        ordered_results = []
+        for key in keys:
+            ordered_results.append(results[key])
+        return format_list_html(ordered_results, numbered=True, force_list=True)
+    
+    #meta information
+    class Meta:
+        concrete_entry_model = False
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
+            ('Classification', {'fields': ['type']}), 
+            ('Comments', {'fields': ['comments', 'references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            ]
+        facet_fields = ['type']
+        verbose_name = 'Species component'
+        verbose_name_plural = 'Species components'
+
+class Molecule(SpeciesComponent):
     #parent pointer
     #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_molecule', parent_link=True, verbose_name='Species component')
     
@@ -1795,7 +1855,7 @@ class Chromosome(Molecule):
             if obj_data['sequence'] is not None and obj_data['sequence'] != '' and len(obj_data['sequence']) != obj_data['length']:
                 raise ValidationError({'length': 'Length of sequence property must match length property'})
 
-class ChromosomeFeature(Entry):
+class ChromosomeFeature(SpeciesComponent):
     #parent pointer
     #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_chromosome_feature', parent_link=True, verbose_name='Species component')
     
@@ -1909,7 +1969,7 @@ class ChromosomeFeature(Entry):
             if obj_data['length'] > chr_len:
                 raise ValidationError({'length': 'Length must be less then chromosome length.'})
                 
-class Compartment(Entry):
+class Compartment(SpeciesComponent):
     #parent pointer
     #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_compartment', parent_link=True, verbose_name='Species component')
     
@@ -1975,9 +2035,9 @@ class Gene(Molecule):
     coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
     length = PositiveIntegerField(verbose_name='Length (nt)')
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
-    is_essential = ForeignKey(EntryBooleanData, verbose_name='Is essential', related_name='+')
-    expression = ForeignKey(EntryPositiveFloatData, verbose_name='Relative expression', related_name='+')
-    half_life = ForeignKey(EntryPositiveFloatData, verbose_name='Half life', related_name='+')
+    is_essential = ForeignKey(EntryBooleanData, blank=True, null=True, verbose_name='Is essential', related_name='+')
+    expression = ForeignKey(EntryPositiveFloatData, blank=True, null=True, verbose_name='Relative expression', related_name='+')
+    half_life = ForeignKey(EntryPositiveFloatData, blank=True, null=True, verbose_name='Half life', related_name='+')
     codons = ManyToManyField(Codon, blank=True, null=True, related_name='genes', verbose_name='Codons')
     amino_acid = ForeignKey('Metabolite', blank=True, null=True, on_delete=SET_NULL, related_name='genes', verbose_name='Amino acid')
     homologs = ManyToManyField(Homolog, blank=True, null=True, related_name='genes', verbose_name='Homologs')    
@@ -2245,7 +2305,7 @@ class Metabolite(Molecule):
         verbose_name='Metabolite'
         verbose_name_plural = 'Metabolites'
         
-class Note(Entry):
+class Note(SpeciesComponent):
     #parent pointer
     #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_note', parent_link=True, verbose_name='Species component')
     
@@ -2274,7 +2334,7 @@ class Note(Entry):
         verbose_name='Note'
         verbose_name_plural = 'Notes'
     
-class Parameter(Entry):
+class Parameter(SpeciesComponent):
     #parent pointer
     #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_parameter', parent_link=True, verbose_name='Species component')
     
@@ -2314,7 +2374,7 @@ class Parameter(Entry):
         verbose_name='Misc. parameter'
         verbose_name_plural = 'Misc. parameters'
         
-class Pathway(Entry):
+class Pathway(SpeciesComponent):
     #parent pointer
     #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_pathway', parent_link=True, verbose_name='Species component')
     
@@ -2543,7 +2603,7 @@ class Pathway(Entry):
         verbose_name='Pathway'
         verbose_name_plural = 'Pathways'
         
-class Process(Entry):
+class Process(SpeciesComponent):
     #parent pointer
     #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_process', parent_link=True, verbose_name='Species component')
     
@@ -3164,7 +3224,7 @@ class ProteinMonomer(Protein):
                 if obj_data['signal_sequence']['length'] > mon_len:
                     raise ValidationError({'signal_sequence': 'Length must be less than protein length'})
 
-class Reaction(Entry):
+class Reaction(SpeciesComponent):
     #parent pointer
     #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_reaction', parent_link=True, verbose_name='Species component')
     
@@ -3440,7 +3500,7 @@ class Species(Entry):
         
         #provide links to references
         return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]', 
-            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('public.views.detail', kwargs={'species_wid':this.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
+            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('public.views.detail', kwargs={'species_wid':self.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
             
     def get_as_html_genetic_code(self, is_user_anonymous):
@@ -3465,33 +3525,7 @@ class Species(Entry):
         verbose_name='Species'
         verbose_name_plural = 'Species'
 
-class SpeciesComponent(Model):
-    '''
-    Contains all components that belong to an organism.
-    Improves the lookup speed and allows inheritance.
-    
-    TODO: Revision needed?
-    '''
-    entry = OneToOneField(Entry, related_name = "+")
-    species = ManyToManyField(Species, verbose_name = "Organism containing that entry")
-
-    class Meta:
-        concrete_entry_model = False
-        fieldsets = [
-            ('Type', {'fields': ['model_type']}),
-            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
-            ('Classification', {'fields': ['type']}), 
-            ('Comments', {'fields': ['comments', 'references']}),
-            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
-            ]
-        field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
-            ]
-        facet_fields = ['type']
-        verbose_name = 'Species component'
-        verbose_name_plural = 'Species components'
-     
-class State(Entry):
+class State(SpeciesComponent):
     #parent pointer
     #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_state', parent_link=True, verbose_name='Species component')
     
@@ -3690,7 +3724,7 @@ class TranscriptionUnit(Molecule):
             if len(set(chr_wids)) > 1:
                 raise ValidationError({'genes': 'Genes must all belong to the same chromosome'})
         
-class TranscriptionalRegulation(Entry):
+class TranscriptionalRegulation(SpeciesComponent):
     #parent pointer
     #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_transcriptional_regulation', parent_link=True, verbose_name='Species component')
     
@@ -3810,7 +3844,7 @@ class TranscriptionalRegulation(Entry):
                 if obj_data['binding_site']['length'] > chr_len:
                     raise ValidationError({'binding_site': 'Length must be less then chromosome length.'})
         
-class Type(Entry):
+class Type(SpeciesComponent):
     #parent pointer
     #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_type', parent_link=True, verbose_name='Species component')
     
@@ -4019,7 +4053,7 @@ def sub_rate_law(species_wid):
         if match.group(0)[0:2] == 'Km':
             return '<i>K</i><sub>m%s</sub>' % match.group(0)[2:]
         try:
-            obj = Entry.objects.get(species__wid=species_wid, wid=match.group(0))
+            obj = SpeciesComponent.objects.get(species__wid=species_wid, wid=match.group(0))
             return '[<a href="%s">%s</a>]' % (obj.get_absolute_url(), obj.wid)
         except:
             return match.group(0)
