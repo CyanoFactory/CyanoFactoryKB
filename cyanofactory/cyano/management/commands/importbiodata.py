@@ -33,7 +33,7 @@ class Command(BaseCommand):
                 chromosome.sequence = record.seq
                 chromosome.length = len(record.seq)
                 chromosome.save(revision_detail = revdetail)
-                chromosome.species.append(species)
+                chromosome.species.add(species)
                 chromosome.save(revision_detail = revdetail)
                 
                 features = record.features
@@ -43,36 +43,37 @@ class Command(BaseCommand):
                 
                 gene_map = {}
                 for g in gene_features:
-                    loci = g.qualifiers["locus_tag"]
+                    loci = g.qualifiers["locus_tag"][0]
                     if loci in gene_map:
                         raise ArgumentError("locus_tag " + loci + " appeared twice")
                     gene_map[loci] = g
                 
                 cds_map = {}
                 for c in cds_features:
-                    loci = c.qualifiers["locus_tag"]
+                    loci = c.qualifiers["locus_tag"][0]
                     if loci in cds_map:
                         raise ArgumentError("locus_tag " + loci + " appeared twice")
                     if loci in gene_map:
                         cds_map[loci] = c
                 
                 for v in cds_map.values():
+                    qualifiers = v.qualifiers
                     try:
-                        g = Gene.objects.get(wid = g.qualifiers["locus_tag"][0])
+                        g = Gene.objects.get(wid = qualifiers["locus_tag"][0])
                     except ObjectDoesNotExist:
                         g = Gene()
+                        g.wid = qualifiers["locus_tag"][0]
 
-                    g.wid = g.qualifers["locus_tag"][0]
                     g.chromosome = chromosome
-                    qualifiers = v.qualifiers
+
                     if "gene" in qualifiers:
                         g.symbol = qualifiers["gene"][0]
-                    g.direction = 'f' if g.location.strand == 1 else 'r'
-                    g.coordinate = g.location.start if g.direction == 'f' else g.location.end # FIXME Not for joins
+                    g.direction = 'f' if v.location.strand == 1 else 'r'
+                    g.coordinate = v.location.start if g.direction == 'f' else v.location.end # FIXME Not for joins
+                    g.length = abs(v.location.start - v.location.end) # FIXME Not for joins
                     g.save(revision_detail = revdetail)
-                    g.species.append(g)
+                    g.species.add(species)
                     g.save(revision_detail = revdetail)
-                    pass
                     
                 # r.annotations
                 # r.id = NC_000911.1
