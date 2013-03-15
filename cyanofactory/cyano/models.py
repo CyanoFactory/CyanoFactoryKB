@@ -745,7 +745,21 @@ class Entry(Model):
     def natural_key(self):
         return self.wid
     
-    def create_revision(self, table, field, old_value, new_value, detail):
+    def create_revision(self, field, old_value, new_value, detail):
+        """Creates a new revision object if the value changed.
+    
+        :param field: field to retrieve value from
+        :type field: Django Model Field
+        
+        :param old_value: old_value of the field
+        
+        :param new_value: new_value of the field
+        
+        :param detail: RevisionDetail object that will be assigned to the revision
+        :type detail: RevisionDetail
+    
+        :returns: Revision -- if changed, None otherwise
+        """
         from cyano.helpers import get_column_index
         revision = None
 
@@ -769,14 +783,21 @@ class Entry(Model):
                 print "Updating " + old_value[:10] + " with " + real_new_value[:10]
                 revision.action = RevisionOperation.objects.get(name = "Edit")
             
-            revision.table = TableMeta.objects.get(name = table._meta.object_name)
-            revision.column = get_column_index(table, field)
+            revision.table = TableMeta.objects.get(name = field.model._meta.object_name)
+            revision.column = get_column_index(field)
             
             revision.new_value = real_new_value
 
         return revision
     
-    def save(self, *args, **kwargs):        
+    def save(self, *args, **kwargs):
+        from itertools import ifilter
+        #TODO:
+        #Der erste Load ohne Edit braucht eigentlich keinen kompletten Revision History Eintrag.
+        ##Einer muss aber dennoch erstellt werden, damit man den Editgrund und Zeit speichern kann...
+        #
+        #Kompletter History-Eintrag msus erst bei Änderung geschrieben werden
+        
         # Check if item already exists (based on WID)
         try:
             old_object = self._meta.concrete_model.objects.get(wid = self.wid)
@@ -790,22 +811,20 @@ class Entry(Model):
     
         rev_detail = kwargs["revision_detail"]
         rev_detail.save()
+        # Prevent error on save later
         del kwargs["revision_detail"]
-        
+
         fields = self._meta.fields
-        entry_fields = Entry._meta.fields
-        other_fields = set(fields) - set(Entry._meta.fields)
-        
+        # Remove primary keys
+        fields = ifilter(lambda x: lambda x: not x.primary_key, fields)
+
         old_item = None
         if self.pk != None:
             old_item = self._meta.concrete_model.objects.get(pk = self.pk)
 
         super(Entry, self).save(*args, **kwargs)
 
-        for field in entry_fields:
-            if field == Entry._meta.pk:
-                continue
-
+        for field in fields:
             new_value = getattr(self, field.name)
 
             if old_item == None:
@@ -813,22 +832,8 @@ class Entry(Model):
             else:
                 old_value = getattr(old_item, field.name)
 
-            revision = self.create_revision(Entry, field, old_value, new_value, rev_detail)
-            if revision != None:
-                revision.current = self
-                revision.save()
-
-        for field in other_fields:
-            if field == self._meta.pk:
-                continue
-            
-            new_value = getattr(self, field.name)
-            if old_item == None:
-                old_value = None
-            else:
-                old_value = getattr(old_item, field.name)
-
-            revision = self.create_revision(self._meta.concrete_model, field, old_value, new_value, rev_detail)
+            revision = self.create_revision(field, old_value, new_value, rev_detail)
+        
             if revision != None:
                 revision.current = self
                 revision.save()

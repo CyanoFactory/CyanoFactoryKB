@@ -16,10 +16,7 @@ from django.http import HttpResponseBadRequest
 from django.core.exceptions import MultipleObjectsReturned
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
-
-from biosql.models import Bioentry
-
-from biosql.helpers import database_name
+from cyano.models import Species
 
 #__database_name = "cyano"
 
@@ -31,11 +28,11 @@ def get_queryset_object_or_404(queryset):
     except ObjectDoesNotExist:
         raise Http404
 
-def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, organism=None):
+def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species=None):
     
     _format = request.GET.get('format', 'html')
     
-    data['organism'] = organism
+    data['species'] = species
     data['queryset'] = queryset
     data['request'] = request
     data['queryargs'] = {}
@@ -46,12 +43,13 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
     if _format == 'html':
         data['is_pdf'] = False
         data['pdfstyles'] = ''
-        data['organism_list'] = Bioentry.objects.filter(biodatabase__name = database_name)
+        data['species_list'] = Species.objects.all()
         #data['modelmetadatas'] = getModelsMetadata(SpeciesComponent)
         #data['modelnames'] = getObjectTypes(SpeciesComponent)
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
         
         return render_to_response(template, data, context_instance = RequestContext(request))
+
 #===============================================================================
 #    elif _format == 'bib':
 #        response = HttpResponse(
@@ -166,12 +164,9 @@ def format_sequence_as_html(sequence, lineLen=50):
     return '<div class="sequence"><div>%s</div><div>%s</div><div>%s</div></div>' % (htmlL, htmlC, htmlR)
 
 
-def get_column_index(table, column):
-    """Returns the columns index of a table by name.
+def get_column_index(column):
+    """Returns the columns index by name (table name is auto detected via the field)
     A db_xref identifier consists of two strings delimited by a **:**.
-
-    :param table: Table to retrieve the column from.
-    :type table: Django Model
     
     :param column: Column in the table
     :type column: Django Model Field
@@ -180,6 +175,6 @@ def get_column_index(table, column):
     """
     from django.db import connection
     cursor = connection.cursor()
-    cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [table._meta.db_table, column.column])
+    cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [column.model._meta.db_table, column.column])
     row = cursor.fetchone()
     return row[0]
