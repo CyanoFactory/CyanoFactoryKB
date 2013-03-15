@@ -796,7 +796,7 @@ class Entry(Model):
         #Der erste Load ohne Edit braucht eigentlich keinen kompletten Revision History Eintrag.
         ##Einer muss aber dennoch erstellt werden, damit man den Editgrund und Zeit speichern kann...
         #
-        #Kompletter History-Eintrag msus erst bei Änderung geschrieben werden
+        #Kompletter History-Eintrag msus erst bei Aenderung geschrieben werden
         
         # Check if item already exists (based on WID)
         try:
