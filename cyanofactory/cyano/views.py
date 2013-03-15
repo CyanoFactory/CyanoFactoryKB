@@ -8,19 +8,12 @@ from django.core.urlresolvers import reverse
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
 
-from biosql.models import Bioentry
-
-from biosql.helpers import get_database_item
-
 from cyano.helpers import render_queryset_to_response
 from cyano.helpers import get_queryset_object_or_404
 
-from cyano.models import Genes
-from cyano.models import Gene
+from cyano.models import Species, Gene
 
 import itertools
-
-from biosql.helpers import database_name
 
 def index(request):
     return render_queryset_to_response(
@@ -28,21 +21,22 @@ def index(request):
         template = "cyano/index.html",
         )
 
-def organism(request, organism):
-    organism = get_queryset_object_or_404(Bioentry.objects.filter(biodatabase__name = database_name).filter(name = organism))
-    record = get_database_item(organism)
+def species(request, species_wid):
+    species = get_queryset_object_or_404(Species.objects.filter(wid = species_wid))
+    
     #gene_count = len(Seqfeature.filter_by_organism(organism).filter(type_term__name = "gene"))
 
     contentCol1 = []
     contentCol2 = []
     contentCol3 = []
 #===============================================================================
+
     contentCol1.append([
-        [0, 'Genes', len(filter(lambda x : x.type == "gene", record.features)), 'nt', organism.get_genes_url()],
+        [0, 'Genes', Gene.objects.filter(species__id = species.id).count, 'nt', reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
     ])
     
     contentCol2.append([
-        [0, 'Chromosomes', 42, None, organism.get_genes_url()],
+        #[0, 'Chromosomes', 42, None, organism.get_genes_url()],
         [1, 'Length', 100, 'nt'],
         [1, 'GC-content', ('%0.1f' % (0.1 * 100)), '%'],
     ])
@@ -52,12 +46,18 @@ def organism(request, organism):
 
     return render_queryset_to_response(
                 request,
-                organism = organism,
-                template = "cyano/organism.html",
+                species = species,
+                template = "cyano/species.html",
                 data = {
                         "content" : [contentCol1, contentCol2, contentCol3],
                         "contentRows": range(max(len(contentCol1), len(contentCol2), len(contentCol3)))
                        })
+
+def listing(request, specied_wid, model_type):
+    pass
+
+def detail(request, species_wid, model_type, wid):
+    pass
 
 def genes(request, organism):
     organism = get_queryset_object_or_404(Bioentry.objects.filter(biodatabase__name = database_name).filter(name = organism))
@@ -82,11 +82,11 @@ def genes(request, organism):
         if item in cds:
             val = cds[item].qualifiers
             i = 0
-            for x in Genes.Meta.field_list:
-                content[i].append(val.get(x[0], [""])[0])
-                i += 1
-                if (x[0] == Genes.Meta.field_url):
-                    urls.append(organism.get_gene_url(val.get(x[0], [""])[0]))
+            #for x in Genes.Meta.field_list:
+            #    content[i].append(val.get(x[0], [""])[0])
+            #    i += 1
+            #    if (x[0] == Genes.Meta.field_url):
+            #        urls.append(organism.get_gene_url(val.get(x[0], [""])[0]))
     
     #for item in itertools.ifilter(lambda x : x.type == "gene", record):
     #    if "gene" in item.qualifiers:
@@ -100,7 +100,7 @@ def genes(request, organism):
     return render_queryset_to_response(
                 request,
                 organism = organism,
-                template = Genes.Meta.template,
+                #template = Genes.Meta.template,
                 data = {"contentHeaders" : contentHeaders,
                         "content" : content,
                         "contentRows" : range(len(content[0])),
@@ -119,7 +119,7 @@ def gene(request, organism, gene):
     return render_queryset_to_response(
                 request,
                 organism = organism,
-                template = Gene.Meta.template,
+                #template = Gene.Meta.template,
                 data = {"name": gene_name,
                         "type": "Gene",
                         "fieldsets": gene.fieldsets}

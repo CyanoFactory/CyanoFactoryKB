@@ -17,11 +17,11 @@ Last updated: 2012-07-17
 <a href="mailto:wholecell[at]lists.stanford.edu?subject=WholeCellKB Species={{ species.wid }}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Suggest an edit" alt="Suggest an edit" /></a>
 	{% endif %}
 {% else %}
-	{% if organism %}
+	{% if species %}
 <a href="{% comment %}{% url "public.views.edit" species_wid=species.wid wid=species.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
 <a href="{% comment %}{% url "public.views.delete" species_wid=species.wid wid=species.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
 	{% endif %}
-<a href="{% if organism %}{% comment %}{% url "public.views.add" species_wid=species.wid model_type='Species' %}{% endcomment %}{% else %}{% comment %}{% url "public.views.add" model_type='Species' %}{% endcomment %}{% endif %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
+<a href="{% if species %}{% comment %}{% url "public.views.add" species_wid=species.wid model_type='Species' %}{% endcomment %}{% else %}{% comment %}{% url "public.views.add" model_type='Species' %}{% endcomment %}{% endif %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
 {% endif %}
 {{ block.super }}
 {% endblock %}
@@ -77,8 +77,8 @@ Last updated: 2012-07-17
 {% endblock %}
 
 {% block content %}
-{% if organism %}
-<div><h1>Welcome to the <i>{{ organism.get_scientific_name }}</i> database!</h1>
+{% if species %}
+<div><h1>Welcome to the <i>{{ species.get_scientific_name }}</i> database!</h1>
 
 <p>{% autoescape off %}{{ species.comments }}{% endautoescape %}</p>
 
@@ -444,33 +444,4 @@ $(document).ready(function (){
 </div>
 {% endif %}
 
-<div><h1>About WholeCellKB</h1>
-<p>
-WholeCellKB is a collection of free, open-source model organism databases designed specifically to enable comprehensive, dynamic simulations of entire cells and organisms. WholeCellKB provides comprehensive, quantitative descriptions of individual species including:
-<ul>
-<li>Cellular chemical composition,</li>
-<li>Growth medium composition,</li>
-<li>Gene locations, lengths, and directions,</li>
-<li>Transcription unit organization and transcriptional regulation,</li>
-<li>Macromolecule composition,</li>
-<li>Reaction stoichiometry, kinetics, and catalysis, and</li>
-<li>Extensive links and cross-links to all references used to construct each database.</li>
-</ul></p>
-
-<p>WholeCellKB currently contains a single database of <i>Mycoplasma genitalium</i>, an extremely small gram-positive bacterium and common human pathogen. This database is the most comprehensive description of any single organism to date, and was used to develop the first whole-cell computational model. The <i>M. genitalium</i> database was curated from over 900 primary research articles, reviews, books, and databases over four years by a team of three researchers at Stanford University.</p>
-</div>
-
-<div><h1>Getting started</h1>
-<p>The best ways to get started are to browse or search this database using the menu or the search box at the top of this page. See the <a href="{% if species %}{% comment %}{% url "public.views.tutorial" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.tutorial" %}{% endcomment %}{% endif %}">tutorial</a> for additional help getting started.</p>
-</div>
-
-<div><h1>More information</h1>	
-<p>Please see the following for more information or to cite WholeCellKB:</p>
-<p>Karr JR, Sanghvi JC, Macklin DN, Arora A, Covert MW. WholeCellKB: Model Organism Databases for Comprehensive Whole-Cell Models. <i>Nucleic Acids Research</i> <b>41</b>, D787-D792 (2013). <a href="http://nar.oxfordjournals.org/content/early/2012/11/21/nar.gks1108.long">Nucleic Acids Research</a> | <a href="http://www.ncbi.nlm.nih.gov/pubmed/23175606">PubMed</a></p>
-<p>Karr JR, Sanghvi JC, Macklin DN, Gutschow MV, Jacobs JM, Bolival B, Assad-Garcia N, Glass JI, Covert MW. A Whole-Cell Computational Model Predicts Phenotype from Genotype. <i>Cell</i> <b>150</b>, 389-401 (2012). <a href="http://www.cell.com/abstract/S0092-8674(12)00776-3">Cell</a> | <a href="http://www.ncbi.nlm.nih.gov/pubmed/22817898">PubMed</a></p>
-</div>
-
-<div><h1>Need help?</h1>
-<p>Please view the <a href="{% if species %}{% comment %}{% url "public.views.tutorial" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.tutorial" %}{% endcomment %}{% endif %}">tutorial</a>, <a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}">about page</a>, or contact us at <a href="mailto:wholecell[at]lists.stanford.edu">wholecell@lists.stanford.edu</a>.</p>
-</div>
 {% endblock %}

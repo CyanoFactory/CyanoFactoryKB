@@ -82,7 +82,7 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 					<td><a href="javascript:document.search.submit()"><img src="{% get_static_prefix %}public/img/magnifier.png" /></a></td>
 				</tr>
 					<td class="engine">
-						<input type="radio" name="engine" value="haystack" {% if not engine or engine == 'haystack' %} checked="true" {% endif %}/><span>WholeCellKB</span>
+						<input type="radio" name="engine" value="haystack" {% if not engine or engine == 'haystack' %} checked="true" {% endif %}/><span>CyanoFactory KB</span>
 						<input type="radio" name="engine" value="google" {% if engine == 'google' %} checked="true" {% endif %}/><span>Google</span>
 					</td>
 					<td></td>
@@ -94,12 +94,12 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 		<ul class="menu">
 			<li><a href="{% url "cyano.views.index" %}">Home</a>
 				<ul>
-				{% for organism in organism_list %}
-				<li><a href="{{ organism.get_absolute_url }}"><i>{{ organism.get_scientific_name }}</i></a></li>
+				{% for species in species_list %}
+				<li><a href="{{ species.get_absolute_url }}"><i>{{ species.name }}</i></a></li>
 				{% endfor %}
 				</ul>
 			</li>
-			{% if organism %}
+			{% if species %}
 			<li class="spacer"/>
 			<li><a href="#">Browse</a>
 				<ul>
