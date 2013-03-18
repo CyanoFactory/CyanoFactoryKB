@@ -164,7 +164,7 @@ CHOICES_SIGNAL_SEQUENCE_TYPE = (
 ''' END: CHOICES '''
 
 # add model options
-options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('concrete_entry_model', 'fieldsets', 'field_list', 'facet_fields', 'clean', 'validate_unique')
+options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('listing', 'concrete_entry_model', 'fieldsets', 'field_list', 'facet_fields', 'clean', 'validate_unique')
 
 ''' BEGIN: validators '''
 def validate_dna_sequence(seq):
@@ -872,6 +872,7 @@ class Entry(Model):
         field_list = [
             'id', 'wid', 'name', 'synonyms', 'cross_references', 'comments', 'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
+        listing = ['wid', 'name']
         facet_fields = []
         ordering = ['wid']
         get_latest_by = 'createdDate'
@@ -2159,6 +2160,7 @@ class Gene(Molecule):
         field_list = [
             'id', 'wid', 'name', 'symbol', 'synonyms', 'cross_references', 'homologs', 'type', 'chromosome', 'coordinate', 'length', 'direction',  'is_essential', 'expression', 'half_life', 'codons', 'amino_acid', 'comments', 'references', 'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
+        listing = ['wid', 'symbol']
         facet_fields = ['type', 'chromosome', 'direction', 'is_essential', 'amino_acid']
         verbose_name='Gene'
         verbose_name_plural = 'Genes'

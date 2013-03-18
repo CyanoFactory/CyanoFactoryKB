@@ -28,7 +28,7 @@ def get_queryset_object_or_404(queryset):
     except ObjectDoesNotExist:
         raise Http404
 
-def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species=None):
+def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), model = None, template = '', data = {}, species=None):
     
     _format = request.GET.get('format', 'html')
     
@@ -37,6 +37,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
     data['request'] = request
     data['queryargs'] = {}
     data['email'] = "roebbe.wuenschiers@hs-mittweida.de"
+    data['model'] = model
     for key, val in request.GET.iterlists():
         data['queryargs'][key] = val
 
@@ -178,3 +179,6 @@ def get_column_index(column):
     cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [column.model._meta.db_table, column.column])
     row = cursor.fetchone()
     return row[0]
+
+def get_verbose_name_for_field_by_name(model, field_name):
+    return model._meta.get_field_by_name(field_name)[0].verbose_name

@@ -7,8 +7,10 @@ from django.http import HttpResponse, Http404, HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
+from django.db.models.loading import get_model
 
-from cyano.helpers import render_queryset_to_response
+from cyano.helpers import render_queryset_to_response,\
+    get_verbose_name_for_field_by_name
 from cyano.helpers import get_queryset_object_or_404
 
 from cyano.models import Species, Gene
@@ -53,7 +55,30 @@ def species(request, species_wid):
                         "contentRows": range(max(len(contentCol1), len(contentCol2), len(contentCol3)))
                        })
 
-def listing(request, specied_wid, model_type):
+def listing(request, species_wid, model_type):
+    species = get_queryset_object_or_404(Species.objects.filter(wid = species_wid))
+    model = get_model("cyano", model_type)
+    if model == None:
+        raise Http404
+    
+    objects = model.objects.filter(species__id = species.id)
+    
+    header = map(lambda x: get_verbose_name_for_field_by_name(model, x), model._meta.listing)
+ 
+    return render_queryset_to_response(
+                request,
+                species = species,
+                template = "cyano/list.html",
+                queryset = objects,
+                model = model,
+                data = {#"contentHeaders" : headers,
+                        #"contentRows" : rows,
+                        #"content" : content,
+                        #"contentRows" : range(len(content[0])),
+                        "model_type" : model_type,
+                        "header" : header,
+                        "field_list" : model._meta.listing,
+                })
     pass
 
 def detail(request, species_wid, model_type, wid):

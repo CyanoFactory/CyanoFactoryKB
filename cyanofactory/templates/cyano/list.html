@@ -54,22 +54,22 @@ Last updated: 2012-07-17
 <table id="list">
 <thead>
 	<tr>
-	{% for val in contentHeaders %}
+	{% for val in header %}
 		<th>{{ val }}</th>
 	{% endfor %}
 	</tr>
 </thead>
 <tbody>
-{% for tmp in contentRows %}
+{% for value in queryset %}
 	{% with val=forloop.counter0 %}
 	<tr>
-		{% for tmp2 in content %}
+		{% for field in field_list %}
 			{% if forloop.counter0 == 0 %}
 			<th>
 			{% else %}
 			<td>
 			{% endif %}
-			<a href="{{ urls|index:val }}">{{ tmp2|index:val }}</a>
+			<a href="{% url 'cyano.views.detail' species.wid model_type value.wid %}">{{ value|getattr:field }}</a>
 			{% if forloop.counter0 == 0 %}
 			</th>
 			{% else %}
