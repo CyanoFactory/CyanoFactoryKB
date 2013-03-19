@@ -18,25 +18,25 @@ urlpatterns = patterns('db_xref.views',
     url(r'dbxref/', include("db_xref.urls")),
 )
 
-# cyanofactory project
-urlpatterns += patterns('cyano.views',
-    url(r'^', include("cyano.urls")),
-)
-
 # admin interface
 #urlpatterns = patterns('',
 #	url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 #	url(r'^admin/', include(admin.site.urls)),
 #)
 
+# cyanofactory project
+urlpatterns += patterns('cyano.views',
+    url(r'^', include("cyano.urls")),
+)
+
 # authentication
-#urlpatterns += patterns('public.views',
-#	url(r'^login/*$', 'login'),
-#	url(r'^login/(?P<species_wid>[a-zA-Z0-9_\-]+)/*$', 'login'),
+urlpatterns += patterns('public.views',
+	url(r'^login/*$', 'login'),
+	url(r'^login/(?P<species_wid>[a-zA-Z0-9_\-]+)/*$', 'login'),
 	
-#	url(r'^logout/*$', 'logout'),
-#	url(r'^logout/(?P<species_wid>[a-zA-Z0-9_\-]+)/*$', 'logout'),
-#)
+	url(r'^logout/*$', 'logout'),
+	url(r'^logout/(?P<species_wid>[a-zA-Z0-9_\-]+)/*$', 'logout'),
+)
 
 # public interface
 urlpatterns += patterns('public.views',	
@@ -76,3 +76,4 @@ urlpatterns += patterns('public.views',
 	url(r'^$', 'index'),
 	url(r'^(?P<species_wid>[a-zA-Z0-9_\-]+)/*$', 'index'),
 )
+

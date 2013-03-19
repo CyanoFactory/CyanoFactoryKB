@@ -12,7 +12,6 @@ import math
 from django.db.models.query import EmptyQuerySet
 from django.shortcuts import render_to_response
 from django.template import Context, RequestContext, loader
-from django.http import HttpResponseBadRequest
 from django.core.exceptions import MultipleObjectsReturned
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404
@@ -141,16 +140,49 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), model 
 #        response['Content-Disposition'] = "attachment; filename=data.xml"
 #===============================================================================
     else:
+        import django.http as http
         t = loader.get_template('cyano/error.html')
         data['type'] = 500
         data['message'] = '"%s" is not a supported export format.' % format
         c = Context(data)
-        response =  HttpResponseBadRequest(
+        response = http.HttpResponseBadRequest(
             t.render(c),
             mimetype = 'text/html; charset=UTF-8',
             content_type = 'text/html; charset=UTF-8')
 
     return response
+
+def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), model = None, data = {}, species=None, error = 403, msg = ""):
+    import django.http as http
+    
+    _format = request.GET.get('format', 'html')
+    
+    data['species'] = species
+    data['queryset'] = queryset
+    data['request'] = request
+    data['email'] = "roebbe.wuenschiers@hs-mittweida.de"
+    data['model'] = model
+    data['queryargs'] = {}
+
+    data['is_pdf'] = False
+    data['pdfstyles'] = ''
+    data['species_list'] = Species.objects.all()
+    data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/cyano/error.html'))
+    
+    if error == 404:
+        data['type'] = "Not Found"
+        response = http.HttpResponseNotFound
+    else:
+        data['type'] = "Forbidden"
+        response = http.HttpResponseBadRequest
+    
+    t = loader.get_template('cyano/error.html')
+    data['message'] = msg
+    c = Context(data)
+    return response(
+        t.render(c),
+        mimetype = 'text/html; charset=UTF-8',
+        content_type = 'text/html; charset=UTF-8')
 
 def format_sequence_as_html(sequence, lineLen=50):
     htmlL = ''

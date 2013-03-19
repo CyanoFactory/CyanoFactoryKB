@@ -25,6 +25,19 @@ import subprocess
 from datetime import datetime
 from cyano.exceptions import WidAlreadyExist
 
+def enum(**enums):
+    return type(str('Enum'), (), enums)
+
+PermissionEnum = enum(
+    READ_NORMAL = 1,
+    READ_DELETE = 2,
+    READ_PERMISSION = 4,
+    READ_HISTORY = 8,
+    WRITE_NORMAL = 16,
+    WRITE_DELETE = 32,
+    WRITE_PERMISSION = 64
+)
+
 ''' BEGIN: choices '''
 
 CHOICES_DIRECTION = (
@@ -331,9 +344,71 @@ def parse_regulatory_rule(equation, all_obj_data, species_wid):
     
 ''' END: validators '''
 
-#User profile
-class UserProfile(Model):
-    user = OneToOneField(User, related_name = "user")
+class UserPermission(Model):
+    entry = ForeignKey("Entry", related_name = "user_permissions")
+    user = ForeignKey("UserProfile", related_name = 'permissions')
+    #permission = ForeignKey(Permission, verbose_name = 'Permissions', related_name = 'users')
+    allow = IntegerField()
+    deny = IntegerField()
+
+class GroupPermission(Model):
+    entry = ForeignKey("Entry", related_name = "group_permissions")
+    group = ForeignKey("GroupProfile", related_name = 'permissions')
+    #permission = ForeignKey(Permission, verbose_name = 'Permissions', related_name = 'groups')
+    allow = IntegerField()
+    deny = IntegerField()
+
+class ProfileBase(Model):
+    def can_read(self, species, entry):
+        return self.has_permission(entry, PermissionEnum.READ_NORMAL)
+    
+    def can_read_delete(self, entry):
+        return self.has_permission(entry, PermissionEnum.READ_DELETE)
+
+    def can_read_permission(self, entry):
+        return self.has_permission(entry, PermissionEnum.READ_PERMISSION)
+    
+    def can_read_history(self, entry):
+        return self.has_permission(entry, PermissionEnum.READ_HISTORY)
+
+    def can_write(self, entry):
+        return self.has_permission(entry, PermissionEnum.WRITE_NORMAL)
+    
+    def can_delete(self, entry):
+        return self.has_permission(entry, PermissionEnum.WRITE_DELETE)
+
+    def can_write_permission(self, entry):
+        return self.has_permission(entry, PermissionEnum.WRITE_PERMISSION)
+
+    class Meta:
+        abstract = True
+
+class GroupProfile(ProfileBase):
+    group = OneToOneField(Group, related_name = "profile")
+    description = CharField(max_length=255, blank=True, default='', verbose_name = "Group description")
+    
+    def is_denied(self, entry, bitmask):
+        try:
+            group_perm = entry.group_permissions.get(group = self)
+            if group_perm.deny & bitmask == bitmask:
+                return True
+        except ObjectDoesNotExist:
+            pass
+        return False
+
+    def has_permission(self, entry, bitmask):
+        try:
+            group_perm = entry.group_permissions.get(group = self)
+            if group_perm.deny & bitmask == bitmask:
+                return False
+            if group_perm.allow & bitmask == bitmask:
+                return True
+            return False
+        except ObjectDoesNotExist:
+            return False
+
+class UserProfile(ProfileBase):
+    user = OneToOneField(User, related_name = "profile")
     affiliation = CharField(max_length=255, blank=True, default='', verbose_name='Affiliation')
     website = URLField(max_length=255, blank=True, default='', verbose_name='Website')
     phone = CharField(max_length=255, blank=True, default='', verbose_name='Phone')
@@ -343,16 +418,51 @@ class UserProfile(Model):
     zip = CharField(max_length=255, blank=True, default='', verbose_name='Zip')
     country = CharField(max_length=255, blank=True, default='', verbose_name='Country')
     
+    def is_denied(self, entry, bitmask):
+        try:
+            user_perm = entry.user_permissions.get(user = self)
+            if user_perm.deny & bitmask == bitmask:
+                return True
+        except ObjectDoesNotExist:
+            pass
+        return False
+    
+    def get_groups(self):
+        groups = self.user.groups.all()
+        return map(lambda g: GroupProfile.objects.get(group = g), groups)
+    
+    def has_permission(self, entry, bitmask):
+        # Has no permission if there is any deny for the bitmask
+        groups = self.get_groups()
+        groups.append(GroupProfile.objects.get(group__name = "Registred"))
+        groups.append(GroupProfile.objects.get(group__name = "Everybody"))
+
+        for g in groups:
+            if g.is_denied(entry, bitmask):
+                return False
+        
+        if self.is_denied(entry, bitmask):
+            return False
+        
+        for g in groups:
+            if g.has_permission(entry, bitmask):
+                return True    
+
+        try:
+            user_perm = entry.user_permissions.get(user = self)
+            if user_perm.allow & bitmask == bitmask:
+                return True
+        except ObjectDoesNotExist:
+            pass
+        
+        return False
+
     class Meta:
         verbose_name='User profile'
         verbose_name_plural = 'User profiles'
         ordering = ['user__last_name', 'user__first_name']
         get_latest_by = 'user__date_joined'
 
-class GroupProfile(Model):
-    group = OneToOneField(Group, related_name = "group")
-    description = CharField(max_length=255, blank=True, default='', verbose_name = "Group description")
-        
 ''' BEGIN: helper models '''
 
 class RevisionDetail(Model):
@@ -705,20 +815,6 @@ class Synonym(EntryData):
 
 ''' END: helper models '''
 
-class UserPermission(Model):
-    user = OneToOneField(UserProfile, related_name = '+')
-    allow = IntegerField()
-    deny = IntegerField()
-
-class GroupPermission(Model):
-    group = OneToOneField(GroupProfile, related_name = '+')
-    allow = IntegerField()
-    deny = IntegerField()
-
-class Permission(Model):
-    users = ForeignKey(UserPermission, verbose_name = 'User permissions', related_name = '+', blank=True, null=True)
-    group = ForeignKey(GroupPermission, verbose_name = 'Group permissions', related_name = '+', blank=True, null=True)
-
 ''' BEGIN: Base classes for all knowledge base objects '''
 class Entry(Model):
     """Base class for all knowledge base objects.
@@ -737,7 +833,7 @@ class Entry(Model):
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
-    permissions = OneToOneField(Permission, blank=True, null=True, verbose_name = "Permissions for this entry")
+    #permissions = OneToOneField(Permission, blank=True, null=True, verbose_name = "Permissions for this entry")
     
     def __unicode__(self):
         return self.wid
@@ -797,6 +893,11 @@ class Entry(Model):
         ##Einer muss aber dennoch erstellt werden, damit man den Editgrund und Zeit speichern kann...
         #
         #Kompletter History-Eintrag msus erst bei Aenderung geschrieben werden
+        
+        if "no_revision" in kwargs:
+            del kwargs["no_revision"]
+            super(Entry, self).save(*args, **kwargs)
+            return
         
         # Check if item already exists (based on WID)
         try:

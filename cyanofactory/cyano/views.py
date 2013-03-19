@@ -3,17 +3,25 @@ from copy import deepcopy
 # Create your views here.
 from django.template import Context, loader
 #from polls.models import Choice, Poll
-from django.http import HttpResponse, Http404, HttpResponseRedirect
+from django.http import HttpResponse, Http404, HttpResponseRedirect, HttpResponseForbidden
 from django.core.urlresolvers import reverse
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import RequestContext
+from django.contrib.auth.forms import AuthenticationForm
 from django.db.models.loading import get_model
+from django.contrib.auth import login as auth_login, logout as auth_logout
+
+from django.views.decorators.debug import sensitive_post_parameters
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_protect
 
 from cyano.helpers import render_queryset_to_response,\
-    get_verbose_name_for_field_by_name
+    get_verbose_name_for_field_by_name, render_queryset_to_response_error
 from cyano.helpers import get_queryset_object_or_404
 
-from cyano.models import Species, Gene
+from cyano.decorators import read_permission_required
+
+import cyano.models as model
 
 import itertools
 
@@ -23,8 +31,9 @@ def index(request):
         template = "cyano/index.html",
         )
 
+@read_permission_required
 def species(request, species_wid):
-    species = get_queryset_object_or_404(Species.objects.filter(wid = species_wid))
+    species = get_queryset_object_or_404(model.Species.objects.filter(wid = species_wid))
     
     #gene_count = len(Seqfeature.filter_by_organism(organism).filter(type_term__name = "gene"))
 
@@ -34,7 +43,7 @@ def species(request, species_wid):
 #===============================================================================
 
     contentCol1.append([
-        [0, 'Genes', Gene.objects.filter(species__id = species.id).count, 'nt', reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
+        [0, 'Genes', model.Gene.objects.filter(species__id = species.id).count, 'nt', reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
     ])
     
     contentCol2.append([
@@ -56,7 +65,7 @@ def species(request, species_wid):
                        })
 
 def listing(request, species_wid, model_type):
-    species = get_queryset_object_or_404(Species.objects.filter(wid = species_wid))
+    species = get_queryset_object_or_404(model.Species.objects.filter(wid = species_wid))
     model = get_model("cyano", model_type)
     if model == None:
         raise Http404
@@ -83,6 +92,92 @@ def listing(request, species_wid, model_type):
 
 def detail(request, species_wid, model_type, wid):
     pass
+
+def permission(request, species_wid = None, model_type = None, wid = None):
+    if species_wid != None:
+        species = get_queryset_object_or_404(model.Species.objects.filter(wid = species_wid))
+
+    if request.user.is_authenticated():
+        # Do something for logged-in users.
+        main_group = model.GroupProfile.objects.get(group__name = "Registred")
+    else:
+        # Do something for anonymous users.
+        main_group = model.GroupProfile.objects.get(group__name = "Guest")
+    
+    
+    
+    #= request.user.profile
+        
+        
+        return render_queryset_to_response_error(
+                request,
+                species = species,
+                error = 403,
+                msg = "You don't have permission to access the permission list for this item")
+    
+    if model_type != None:
+        model = get_model("cyano", model_type)
+        if model == None:
+            raise Http404
+    
+    # TODO: Wid
+    #entry = get_queryset_object_or_404(species__id = species.id)
+
+    return render_queryset_to_response(
+                request,
+                species = species,
+                #template = Genes.Meta.template,
+                data = {"contentHeaders" : contentHeaders,
+                        "content" : content,
+                        "contentRows" : range(len(content[0])),
+                        "urls" : urls,
+                })
+
+
+@sensitive_post_parameters()
+@csrf_protect
+@never_cache
+def login(request, species_wid=None):
+    species = None
+    if species_wid != None:
+        species = get_queryset_object_or_404(model.Species.objects.filter(wid = species_wid))
+    
+    next_ = request.REQUEST.get('next', '')
+    
+    if request.method == "POST":
+        form = AuthenticationForm(data=request.POST)
+        if form.is_valid():
+            auth_login(request, form.get_user())
+            
+            if request.session.test_cookie_worked():
+                request.session.delete_test_cookie()
+
+            return HttpResponseRedirect(next_)
+    else:
+        form = AuthenticationForm(request)
+
+    request.session.set_test_cookie()
+
+    return render_queryset_to_response(
+        species = species,
+        request = request, 
+        template = 'cyano/login.html', 
+        data = {
+            'form': form,
+            'next': next_,
+        })
+        
+def logout(request, species_wid=None):
+    species = None
+    if species_wid != None:
+        species = get_queryset_object_or_404(model.Species.objects.filter(wid = species_wid))
+
+    auth_logout(request)    
+    return render_queryset_to_response(
+        species = species,
+        request = request, 
+        template = 'cyano/logout.html', 
+        )
 
 def genes(request, organism):
     organism = get_queryset_object_or_404(Bioentry.objects.filter(biodatabase__name = database_name).filter(name = organism))

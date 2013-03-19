@@ -146,14 +146,15 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#contact">Contact</a></li>
 				</ul>
 			</li>
+-->
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
-			<li><a href="{% if species %}{% comment %}{% url "public.views.logout" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.logout" %}{% endcomment %}{% endif %}">Logout</a></li>
+			<li><a href="{% if species %}{% url "cyano.views.logout" species_wid=species.wid %}{% else %}{% url "cyano.views.logout" %}{% endif %}">Logout</a></li>
 			{% else %}
 			<li class="spacer"/>
-			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% comment %}{% url "public.views.login" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.login" %}{% endcomment %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
+			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% url "cyano.views.login" species_wid=species.wid %}{% else %}{% url "cyano.views.login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
 			{% endif %}
--->
+
 		</ul>
 	</div>
 		
