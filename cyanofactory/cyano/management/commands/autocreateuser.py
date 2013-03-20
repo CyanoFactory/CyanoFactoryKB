@@ -9,5 +9,10 @@ class Command(BaseCommand):
             print "Creating user " + name
             mail = name + "@example.com"
             password = "aaa"
-            user.user = User.objects.create_user(username=name, email=mail,  password=password)
-            user.save()
+            
+            if User.objects.filter(username=name).count():
+                print "User already exists. Aborting."
+            else:
+                new_user = User.objects.create_user(username=name, email=mail, password=password)
+                user.user = new_user
+                user.save()

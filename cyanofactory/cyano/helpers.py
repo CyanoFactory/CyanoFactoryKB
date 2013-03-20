@@ -152,7 +152,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), model 
 
     return response
 
-def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), model = None, data = {}, species=None, error = 403, msg = ""):
+def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), model = None, data = {}, species=None, error = 403, msg = "", msg_debug = ""):
     import django.http as http
     
     _format = request.GET.get('format', 'html')
@@ -178,6 +178,8 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     
     t = loader.get_template('cyano/error.html')
     data['message'] = msg
+    data['message_extra'] = msg_debug
+
     c = Context(data)
     return response(
         t.render(c),

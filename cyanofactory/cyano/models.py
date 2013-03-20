@@ -384,30 +384,54 @@ class ProfileBase(Model):
         abstract = True
 
 class GroupProfile(ProfileBase):
+    """
+    Additional information for groups
+    """
     group = OneToOneField(Group, related_name = "profile")
     description = CharField(max_length=255, blank=True, default='', verbose_name = "Group description")
     
-    def is_denied(self, entry, bitmask):
+    def get_permission_mask(self, entry):
+        """
+        Returns the allow/deny mask for an entry
+        
+        :param entry: Entry to get permissions from
+        :type entry: Entry
+        
+        :returns: Tuple (allow, deny). (None, None) if no permission object
+         was found.
+        """
         try:
             group_perm = entry.group_permissions.get(group = self)
-            if group_perm.deny & bitmask == bitmask:
-                return True
+            return group_perm.allow, group_perm.deny
         except ObjectDoesNotExist:
-            pass
-        return False
+            return None, None
 
     def has_permission(self, entry, bitmask):
-        try:
-            group_perm = entry.group_permissions.get(group = self)
-            if group_perm.deny & bitmask == bitmask:
-                return False
-            if group_perm.allow & bitmask == bitmask:
-                return True
-            return False
-        except ObjectDoesNotExist:
-            return False
+        """
+        Checks if the group has allow or deny permissions set for a bitmask
+        specified.
+        
+        :param entry: Entry to check permissions against
+        :type entry: Entry
+        
+        :param bitmask: Bitmask containing the permissions to check
+        :type bitmask: PermissionEnum
+        
+        :return: Tuple (allow, deny). allow is True if the user has allow
+         permission for the bitmask specified (same for deny). (None, None)
+         if no permission object was found
+        """
+        allow_mask, deny_mask = self.get_permission_mask(entry)
+        if allow_mask == None:
+            return None, None
+        allow = allow_mask & bitmask == bitmask
+        deny = deny_mask & bitmask == bitmask
+        return allow, deny
 
 class UserProfile(ProfileBase):
+    """
+    Additional information for users
+    """
     user = OneToOneField(User, related_name = "profile")
     affiliation = CharField(max_length=255, blank=True, default='', verbose_name='Affiliation')
     website = URLField(max_length=255, blank=True, default='', verbose_name='Website')
@@ -418,44 +442,83 @@ class UserProfile(ProfileBase):
     zip = CharField(max_length=255, blank=True, default='', verbose_name='Zip')
     country = CharField(max_length=255, blank=True, default='', verbose_name='Country')
     
-    def is_denied(self, entry, bitmask):
+    def get_groups(self):
+        """
+        Returns all groups where the user is in, including "Everybody" and
+        (if the user isn't a guest) "Registred"
+        
+        :returns: GroupProfile List
+        """
+        groups = self.user.groups.all()
+        profiles = map(lambda g: GroupProfile.objects.get(group = g), groups)
+        if self.user.username != "guest":
+            profiles += [GroupProfile.objects.get(group__name = "Registred")]
+        
+        profiles += [GroupProfile.objects.get(group__name = "Everybody")]
+        return profiles
+    
+    def get_permission_mask(self, entry):
+        """
+        Calculates the complete allow and deny bitmasks for an entry.
+        This includes the permissions for groups the user is in including
+        group "Everybody" and (except user guest) "Registred"
+        
+        :param entry: Entry to get permissions from
+        :type entry: Entry
+        
+        :returns: Tuple (allow, deny). (None, None) if no permission object
+         was found.
+        """
+        # Use None here so it's possible to distinguish between 0 permission
+        # and no permission at all
+        allow_mask = None
+        deny_mask = None
         try:
             user_perm = entry.user_permissions.get(user = self)
-            if user_perm.deny & bitmask == bitmask:
-                return True
+            allow_mask = 0
+            deny_mask = 0
+            allow_mask |= user_perm.allow
+            deny_mask |= user_perm.deny
         except ObjectDoesNotExist:
             pass
-        return False
-    
-    def get_groups(self):
-        groups = self.user.groups.all()
-        return map(lambda g: GroupProfile.objects.get(group = g), groups)
+        
+        groups = self.get_groups()
+        for g in groups:
+            try:
+                group_perm = entry.group_permissions.get(group = g)
+                if allow_mask == None:
+                    allow_mask = 0
+                    deny_mask = 0
+                allow_mask |= group_perm.allow
+                deny_mask |= group_perm.deny
+            except ObjectDoesNotExist:
+                pass
+        
+        return allow_mask, deny_mask
     
     def has_permission(self, entry, bitmask):
-        # Has no permission if there is any deny for the bitmask
-        groups = self.get_groups()
-        groups.append(GroupProfile.objects.get(group__name = "Registred"))
-        groups.append(GroupProfile.objects.get(group__name = "Everybody"))
+        """
+        Checks if the user has allow or deny permissions set for a bitmask
+        specified. This includes the permissions for groups the user is in
+        including group "Everybody" and (except user guest) "Registred".
+        Deny usually has a higher priority then Allow. If Deny is set 
+        permission should be denied by the implementation.
+        
+        :param entry: Entry to check permissions against
+        :type entry: Entry
+        
+        :param bitmask: Bitmask containing the permissions to check
+        :type bitmask: PermissionEnum
+        
+        :return: Tuple (allow, deny). allow is True if the user has allow
+         permission for the bitmask specified (same for deny). (None, None)
+         if no permission object was found.
+        """
+        allow_mask, deny_mask = self.get_permission_mask(entry)
+        if allow_mask == None:
+            return None, None
 
-        for g in groups:
-            if g.is_denied(entry, bitmask):
-                return False
-        
-        if self.is_denied(entry, bitmask):
-            return False
-        
-        for g in groups:
-            if g.has_permission(entry, bitmask):
-                return True    
-
-        try:
-            user_perm = entry.user_permissions.get(user = self)
-            if user_perm.allow & bitmask == bitmask:
-                return True
-        except ObjectDoesNotExist:
-            pass
-        
-        return False
+        return allow_mask & bitmask == bitmask, deny_mask & bitmask == bitmask
 
     class Meta:
         verbose_name='User profile'
