@@ -19,9 +19,11 @@ from cyano.helpers import render_queryset_to_response,\
     get_verbose_name_for_field_by_name, render_queryset_to_response_error
 from cyano.helpers import get_queryset_object_or_404
 
-from cyano.decorators import read_permission_required
+from cyano.decorators import resolve_to_objects
+from cyano.decorators import permission_required
 
-import cyano.models as model
+import cyano.models as models
+from cyano.models import PermissionEnum as perm
 
 import itertools
 
@@ -31,10 +33,9 @@ def index(request):
         template = "cyano/index.html",
         )
 
-@read_permission_required
-def species(request, species_wid):
-    species = get_queryset_object_or_404(model.Species.objects.filter(wid = species_wid))
-    
+@resolve_to_objects
+@permission_required(perm.READ_NORMAL)
+def species(request, species):
     #gene_count = len(Seqfeature.filter_by_organism(organism).filter(type_term__name = "gene"))
 
     contentCol1 = []
@@ -43,7 +44,7 @@ def species(request, species_wid):
 #===============================================================================
 
     contentCol1.append([
-        [0, 'Genes', model.Gene.objects.filter(species__id = species.id).count, 'nt', reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
+        [0, 'Genes', models.Gene.objects.filter(species__id = species.id).count, 'nt', reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
     ])
     
     contentCol2.append([
@@ -64,13 +65,11 @@ def species(request, species_wid):
                         "contentRows": range(max(len(contentCol1), len(contentCol2), len(contentCol3)))
                        })
 
-def listing(request, species_wid, model_type):
-    species = get_queryset_object_or_404(model.Species.objects.filter(wid = species_wid))
-    model = get_model("cyano", model_type)
-    if model == None:
-        raise Http404
-    
+@resolve_to_objects
+@permission_required(perm.READ_NORMAL)
+def listing(request, species, model):    
     objects = model.objects.filter(species__id = species.id)
+    model_type = model._meta.object_name
     
     header = map(lambda x: get_verbose_name_for_field_by_name(model, x), model._meta.listing)
  
@@ -90,22 +89,18 @@ def listing(request, species_wid, model_type):
                 })
     pass
 
-def detail(request, species_wid, model_type, wid):
+@resolve_to_objects
+@permission_required(perm.READ_NORMAL)
+def detail(request, species, model, item):
     pass
 
-def permission(request, species_wid = None, model_type = None, wid = None):
-    if species_wid != None:
-        species = get_queryset_object_or_404(model.Species.objects.filter(wid = species_wid))
+@resolve_to_objects
+@permission_required(perm.READ_PERMISSION)
+def permission(request, species, model, item):
+    model_type = None
+    if model:
+        model_type = model._meta.object_name 
 
-    if request.user.is_authenticated():
-        # Do something for logged-in users.
-        main_group = model.GroupProfile.objects.get(group__name = "Registred")
-    else:
-        # Do something for anonymous users.
-        main_group = model.GroupProfile.objects.get(group__name = "Guest")
-    
-    
-    
     #= request.user.profile
         
         
@@ -114,11 +109,6 @@ def permission(request, species_wid = None, model_type = None, wid = None):
                 species = species,
                 error = 403,
                 msg = "You don't have permission to access the permission list for this item")
-    
-    if model_type != None:
-        model = get_model("cyano", model_type)
-        if model == None:
-            raise Http404
     
     # TODO: Wid
     #entry = get_queryset_object_or_404(species__id = species.id)
@@ -137,11 +127,8 @@ def permission(request, species_wid = None, model_type = None, wid = None):
 @sensitive_post_parameters()
 @csrf_protect
 @never_cache
-def login(request, species_wid=None):
-    species = None
-    if species_wid != None:
-        species = get_queryset_object_or_404(model.Species.objects.filter(wid = species_wid))
-    
+@resolve_to_objects
+def login(request, species):
     next_ = request.REQUEST.get('next', '')
     
     if request.method == "POST":
@@ -166,12 +153,9 @@ def login(request, species_wid=None):
             'form': form,
             'next': next_,
         })
-        
-def logout(request, species_wid=None):
-    species = None
-    if species_wid != None:
-        species = get_queryset_object_or_404(model.Species.objects.filter(wid = species_wid))
 
+@resolve_to_objects
+def logout(request, species):
     auth_logout(request)    
     return render_queryset_to_response(
         species = species,
