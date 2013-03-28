@@ -1,21 +1,23 @@
-#from polls.models import Poll
-#from polls.models import Choice
-#from django.contrib import admin
+'''
+Whole-cell knowledge base admin interface
 
-#class ChoiceInline(admin.TabularInline):
-#    model = Choice
-#    extra = 3
+Author: Jonathan Karr, jkarr@stanford.edu
+Affiliation: Covert Lab, Department of Bioengineering, Stanford University
+Last updated: 2012-07-17
+'''
 
-#class PollAdmin(admin.ModelAdmin):
-#    fieldsets = [
-#        (None, {"fields": ["question"]}),
-#        ("Date information", {"fields": ["pub_date"],
-#                              "classes": ["collapse"]}),
-#    ]
-#    inlines = [ChoiceInline]
-#    list_display = ("question", "pub_date", "was_published_recently")
-#    list_filter = ["pub_date"]
-#    search_fields = ["question"]
-#    date_hierarchy = "pub_date"
+from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import User
+from cyano.models import UserProfile
 
-#admin.site.register(Poll, PollAdmin)
+''' User profile admin '''
+class UserProfileInline(admin.StackedInline):
+	model = UserProfile
+
+class UserProfileAdmin(UserAdmin):
+	inlines = [ UserProfileInline, ]
+
+''' Register admins '''
+admin.site.unregister(User)
+admin.site.register(User, UserProfileAdmin)

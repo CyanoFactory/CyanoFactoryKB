@@ -48,12 +48,6 @@ Last updated: 2012-07-17
 {% block content %}
 <div id="error">
 	<h1>Error {{ type }}</h1>
-	<div class="content">
-	{{ message }}
-	{% if message_extra %}
-	<br/><br/>
-	{{ message_extra|safe }}
-	{% endif %}
-	</div>
+	<div class="content">{{ message }}</div>
 </div>
 {% endblock %}

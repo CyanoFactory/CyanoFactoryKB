@@ -18,10 +18,10 @@ Last updated: 2012-07-17
 	{% endif %}
 {% else %}
 	{% if species %}
-<a href="{% comment %}{% url "public.views.edit" species_wid=species.wid wid=species.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
-<a href="{% comment %}{% url "public.views.delete" species_wid=species.wid wid=species.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
+<a href="{% comment %}{% url "cyano.views.edit" species_wid=species.wid wid=species.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+<a href="{% comment %}{% url "cyano.views.delete" species_wid=species.wid wid=species.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
 	{% endif %}
-<a href="{% if species %}{% comment %}{% url "public.views.add" species_wid=species.wid model_type='Species' %}{% endcomment %}{% else %}{% comment %}{% url "public.views.add" model_type='Species' %}{% endcomment %}{% endif %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
+<a href="{% if species %}{% comment %}{% url "cyano.views.add" species_wid=species.wid model_type='Species' %}{% endcomment %}{% else %}{% comment %}{% url "cyano.views.add" model_type='Species' %}{% endcomment %}{% endif %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
 {% endif %}
 {{ block.super }}
 {% endblock %}

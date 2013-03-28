@@ -8,6 +8,7 @@ Last updated: 2013-01-17
 Based on:
 Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
+Last updated: 2012-07-17
 {% endcomment %}
 
 <?xml version="1.0" encoding="UTF-8"?>
@@ -18,7 +19,7 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 <head>
 	{% block head %}
 	<!-- meta data -->
-	<title>{% block head_title %}cyano{% endblock %}</title>
+	<title>{% block head_title %}CyanoFactory{% endblock %}</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<meta http-equiv="Content-Language" content="en-us" />
 	<meta http-equiv="Cache-Control" content="NO-CACHE" />
@@ -28,11 +29,11 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 	<meta name="author" content="Experimental &amp; Computational Biology, University of Applied Sciences Mittweida" />
 	<meta name="revised" content="2013" />
 	<meta name="copyright" content="&copy; Experimental & Computational Biology, University of Applied Sciences Mittweida 2013. Original work: &copy; Covert Lab, Stanford University 2008-2012" />
-
+	
 	{% if species %}
 	<meta name="species_wid" content="{{ species.wid }}" />
 	<meta name="species_name" content="{{ species.name }}" />
-	{% endif %}
+	{% endif %}	
 	
 	<!-- style -->
 	{% if not is_pdf %}
@@ -60,16 +61,29 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 	<![endif]–>
 	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/evidence.js"></script>
 	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/tooltip.js"></script>
+	
+	<!-- google analytics -->
+	<script type="text/javascript">
+	var _gaq = _gaq || [];
+	_gaq.push(['_setAccount', 'UA-34992113-1']);
+	_gaq.push(['_trackPageview']);
+
+	(function() {
+	var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+	ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+	var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+	})();
+	</script>
 	{% endblock %}
 </head>
 <body>
 	<!-- header -->
 	<div id="header" class="ui-widget-header">
-		<div class="title"><a href="{% if species %}{% comment %}{% url "public.views.index" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.index" %}{% endcomment %}{% endif %}">{{ species.name }}</a></div>
-		<div class="banner"><a href="{% if species %}{% comment %}{% url "public.views.index" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.index" %}{% endcomment %}{% endif %}"><img src="{% get_static_prefix %}cyano/img/banner.png" /></a></div>
+		<div class="title"><a href="{% if species %}{% url "cyano.views.index" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}">{{ species.name }}</a></div>
+		<div class="banner"><a href="{% if species %}{% url "cyano.views.index" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}"><img src="{% get_static_prefix %}public/img/banner.png" /></a></div>
 		<div class="search">
 			{% if species %}
-			<form name="search" action="{% comment %}{% url "public.views.search" species_wid=species.wid %}{% endcomment %}" method="get">
+			<form name="search" action="{% url "cyano.views.search" species_wid=species.wid %}" method="get">
 				<table cellpadding="0" cellspacing="0">
 				<tr>
 					<td><input name="q" type="text" 
@@ -82,7 +96,7 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 					<td><a href="javascript:document.search.submit()"><img src="{% get_static_prefix %}public/img/magnifier.png" /></a></td>
 				</tr>
 					<td class="engine">
-						<input type="radio" name="engine" value="haystack" {% if not engine or engine == 'haystack' %} checked="true" {% endif %}/><span>CyanoFactory KB</span>
+						<input type="radio" name="engine" value="haystack" {% if not engine or engine == 'haystack' %} checked="true" {% endif %}/><span>WholeCellKB</span>
 						<input type="radio" name="engine" value="google" {% if engine == 'google' %} checked="true" {% endif %}/><span>Google</span>
 					</td>
 					<td></td>
@@ -99,62 +113,59 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 				{% endfor %}
 				</ul>
 			</li>
-			{% if species %}
 			<li class="spacer"/>
 			<li><a href="#">Browse</a>
 				<ul>
+				{% if species %}
 				{% for key1 in modelnames %}
 					{% for key2, modelmetadata in modelmetadatas.iteritems %}
 						{% if key1 == key2 %}
-					<li><a href="{% comment %}{% url "public.views.list" species_wid=species.wid model_type=key2 %}{% endcomment %}">{{ modelmetadata.verbose_name_plural }}</a></li>
+					<li><a href="{% url "cyano.views.list" species_wid=species.wid model_type=key2 %}">{{ modelmetadata.verbose_name_plural }}</a></li>
 						{% endif %}
 					{% endfor %}
 				{% endfor %}
+				{% endif %}
 				</ul>
 			</li>
-			{% endif %}
-<!--
 			<li class="spacer"/>
 			<li><a href="#">Download</a>
 				<ul>
-				<li><a href="{% if species %}{% comment %}{% url "public.views.exportData" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.exportData" %}{% endcomment %}{% endif %}">Data</a></li>
+				<li><a href="{% if species %}{% url "cyano.views.exportData" species_wid=species.wid %}{% else %}{% url "cyano.views.exportData" %}{% endif %}">Data</a></li>
 				<li><a href="https://simtk.org/project/xml/downloads.xml?group_id=714#package_id1290">Source code</a></li>
 				</ul>
 			</li>
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
-			<li><a href="{% if species %}{% comment %}{% url "public.views.importData" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.importData" %}{% endcomment %}{% endif %}">Import</a></li>
+			<li><a href="{% if species %}{% url "cyano.views.importData" species_wid=species.wid %}{% else %}{% url "cyano.views.importData" %}{% endif %}">Import</a></li>
 				{% if species %}
 			<li class="spacer"/>
-			<li><a href="{% comment %}{% url "public.views.validate" species_wid=species.wid %}{% endcomment %}">Validate</a></li>
+			<li><a href="{% url "cyano.views.validate" species_wid=species.wid %}">Validate</a></li>
 				{% endif %}
 			<li class="spacer"/>
-			<li><a href="{% if species %}{% comment %}{% url "public.views.contributors" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.contributors" %}{% endcomment %}{% endif %}">Contributors</a></li>
+			<li><a href="{% if species %}{% url "cyano.views.contributors" species_wid=species.wid %}{% else %}{% url "cyano.views.contributors" %}{% endif %}">Contributors</a></li>
 			{% endif %}
 			<li class="spacer"/>
 			<li><a href="#">Help</a>
 				<ul>
-				<li><a href="{% if species %}{% comment %}{% url "public.views.tutorial" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.tutorial" %}{% endcomment %}{% endif %}">Getting started</a></li>				
-				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#downloading_content">Downloading data</a></li>
-				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#api">RESTful API</a></li>				
-				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#editing">Editing KB content</a></li>
-				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#data_model">Data model</a></li>
-				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#developing">Creating and customizing<div style="padding-left:10px;">new model organism<br/>databases</div></a></li>
-				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#modeling">Developing whole-cell<div style="padding-left:10px;">models</div></a></li>
+				<li><a href="{% if species %}{% url "cyano.views.tutorial" species_wid=species.wid %}{% else %}{% url "cyano.views.tutorial" %}{% endif %}">Getting started</a></li>				
+				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#downloading_content">Downloading data</a></li>
+				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#api">RESTful API</a></li>				
+				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#editing">Editing KB content</a></li>
+				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#data_model">Data model</a></li>
+				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#developing">Creating and customizing<div style="padding-left:10px;">new model organism<br/>databases</div></a></li>
+				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#modeling">Developing whole-cell<div style="padding-left:10px;">models</div></a></li>
 				<li><a href="{% get_static_prefix %}public/doc/">Source code docs</a></li>
-				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}">About</a></li>
-				<li><a href="{% if species %}{% comment %}{% url "public.views.about" species_wid=species.wid %}{% endcomment %}{% else %}{% comment %}{% url "public.views.about" %}{% endcomment %}{% endif %}#contact">Contact</a></li>
+				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}">About</a></li>
+				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#contact">Contact</a></li>
 				</ul>
 			</li>
--->
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
 			<li><a href="{% if species %}{% url "cyano.views.logout" species_wid=species.wid %}{% else %}{% url "cyano.views.logout" %}{% endif %}">Logout</a></li>
 			{% else %}
 			<li class="spacer"/>
-			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% url "cyano.views.login" species_wid=species.wid %}{% else %}{% url "cyano.views.login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
+			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% comment %}{% url "cyano.views.login" species_wid=species.wid %}{% endcomment %}{% else %}{% url "cyano.views.login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
 			{% endif %}
-
 		</ul>
 	</div>
 		

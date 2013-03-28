@@ -17,7 +17,7 @@ from django.db.models import Model, OneToOneField, CharField, IntegerField, URLF
 from django.db.models.query import EmptyQuerySet
 from django.utils.http import urlencode
 from itertools import chain
-from public.templatetags.templatetags import set_time_zone
+from cyano.templatetags.templatetags import set_time_zone
 import math
 import re
 import settings
@@ -245,7 +245,7 @@ for test in tests:
         print test
 '''
 def parse_regulatory_rule(equation, all_obj_data, species_wid):
-    from public.helpers import getModel, getEntry
+    from cyano.helpers import getModel, getEntry
     import settings
     
     pre = ''
@@ -384,54 +384,30 @@ class ProfileBase(Model):
         abstract = True
 
 class GroupProfile(ProfileBase):
-    """
-    Additional information for groups
-    """
     group = OneToOneField(Group, related_name = "profile")
     description = CharField(max_length=255, blank=True, default='', verbose_name = "Group description")
     
-    def get_permission_mask(self, entry):
-        """
-        Returns the allow/deny mask for an entry
-        
-        :param entry: Entry to get permissions from
-        :type entry: Entry
-        
-        :returns: Tuple (allow, deny). (None, None) if no permission object
-         was found.
-        """
+    def is_denied(self, entry, bitmask):
         try:
             group_perm = entry.group_permissions.get(group = self)
-            return group_perm.allow, group_perm.deny
+            if group_perm.deny & bitmask == bitmask:
+                return True
         except ObjectDoesNotExist:
-            return None, None
+            pass
+        return False
 
     def has_permission(self, entry, bitmask):
-        """
-        Checks if the group has allow or deny permissions set for a bitmask
-        specified.
-        
-        :param entry: Entry to check permissions against
-        :type entry: Entry
-        
-        :param bitmask: Bitmask containing the permissions to check
-        :type bitmask: PermissionEnum
-        
-        :return: Tuple (allow, deny). allow is True if the user has allow
-         permission for the bitmask specified (same for deny). (None, None)
-         if no permission object was found
-        """
-        allow_mask, deny_mask = self.get_permission_mask(entry)
-        if allow_mask == None:
-            return None, None
-        allow = allow_mask & bitmask == bitmask
-        deny = deny_mask & bitmask == bitmask
-        return allow, deny
+        try:
+            group_perm = entry.group_permissions.get(group = self)
+            if group_perm.deny & bitmask == bitmask:
+                return False
+            if group_perm.allow & bitmask == bitmask:
+                return True
+            return False
+        except ObjectDoesNotExist:
+            return False
 
 class UserProfile(ProfileBase):
-    """
-    Additional information for users
-    """
     user = OneToOneField(User, related_name = "profile")
     affiliation = CharField(max_length=255, blank=True, default='', verbose_name='Affiliation')
     website = URLField(max_length=255, blank=True, default='', verbose_name='Website')
@@ -442,83 +418,44 @@ class UserProfile(ProfileBase):
     zip = CharField(max_length=255, blank=True, default='', verbose_name='Zip')
     country = CharField(max_length=255, blank=True, default='', verbose_name='Country')
     
-    def get_groups(self):
-        """
-        Returns all groups where the user is in, including "Everybody" and
-        (if the user isn't a guest) "Registred"
-        
-        :returns: GroupProfile List
-        """
-        groups = self.user.groups.all()
-        profiles = map(lambda g: GroupProfile.objects.get(group = g), groups)
-        if self.user.username != "guest":
-            profiles += [GroupProfile.objects.get(group__name = "Registred")]
-        
-        profiles += [GroupProfile.objects.get(group__name = "Everybody")]
-        return profiles
-    
-    def get_permission_mask(self, entry):
-        """
-        Calculates the complete allow and deny bitmasks for an entry.
-        This includes the permissions for groups the user is in including
-        group "Everybody" and (except user guest) "Registred"
-        
-        :param entry: Entry to get permissions from
-        :type entry: Entry
-        
-        :returns: Tuple (allow, deny). (None, None) if no permission object
-         was found.
-        """
-        # Use None here so it's possible to distinguish between 0 permission
-        # and no permission at all
-        allow_mask = None
-        deny_mask = None
+    def is_denied(self, entry, bitmask):
         try:
             user_perm = entry.user_permissions.get(user = self)
-            allow_mask = 0
-            deny_mask = 0
-            allow_mask |= user_perm.allow
-            deny_mask |= user_perm.deny
+            if user_perm.deny & bitmask == bitmask:
+                return True
+        except ObjectDoesNotExist:
+            pass
+        return False
+    
+    def get_groups(self):
+        groups = self.user.groups.all()
+        return map(lambda g: GroupProfile.objects.get(group = g), groups)
+    
+    def has_permission(self, entry, bitmask):
+        # Has no permission if there is any deny for the bitmask
+        groups = self.get_groups()
+        groups.append(GroupProfile.objects.get(group__name = "Registred"))
+        groups.append(GroupProfile.objects.get(group__name = "Everybody"))
+
+        for g in groups:
+            if g.is_denied(entry, bitmask):
+                return False
+        
+        if self.is_denied(entry, bitmask):
+            return False
+        
+        for g in groups:
+            if g.has_permission(entry, bitmask):
+                return True    
+
+        try:
+            user_perm = entry.user_permissions.get(user = self)
+            if user_perm.allow & bitmask == bitmask:
+                return True
         except ObjectDoesNotExist:
             pass
         
-        groups = self.get_groups()
-        for g in groups:
-            try:
-                group_perm = entry.group_permissions.get(group = g)
-                if allow_mask == None:
-                    allow_mask = 0
-                    deny_mask = 0
-                allow_mask |= group_perm.allow
-                deny_mask |= group_perm.deny
-            except ObjectDoesNotExist:
-                pass
-        
-        return allow_mask, deny_mask
-    
-    def has_permission(self, entry, bitmask):
-        """
-        Checks if the user has allow or deny permissions set for a bitmask
-        specified. This includes the permissions for groups the user is in
-        including group "Everybody" and (except user guest) "Registred".
-        Deny usually has a higher priority then Allow. If Deny is set 
-        permission should be denied by the implementation.
-        
-        :param entry: Entry to check permissions against
-        :type entry: Entry
-        
-        :param bitmask: Bitmask containing the permissions to check
-        :type bitmask: PermissionEnum
-        
-        :return: Tuple (allow, deny). allow is True if the user has allow
-         permission for the bitmask specified (same for deny). (None, None)
-         if no permission object was found.
-        """
-        allow_mask, deny_mask = self.get_permission_mask(entry)
-        if allow_mask == None:
-            return None, None
-
-        return allow_mask & bitmask == bitmask, deny_mask & bitmask == bitmask
+        return False
 
     class Meta:
         verbose_name='User profile'
@@ -772,7 +709,7 @@ class Kinetics(EvidencedEntryData):
     vmax_unit = CharField(blank=True, max_length=255, choices=CHOICES_VMAX_UNITS, verbose_name='V<sub>max</sub> Unit')
     
     def get_vmax_normalized(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         if vmax_unit.name  == 'U/mg':
             enz = self.reactions.all()[0].enzyme
@@ -1250,7 +1187,7 @@ class SpeciesComponent(Entry):
     #getters
     @permalink
     def get_absolute_url(self):
-        return ('public.views.detail', (), {'species_wid':self.species.wid, 'wid': self.wid})
+        return ('cyano.views.detail', (), {'species_wid':self.species.wid, 'wid': self.wid})
         
     def get_all_references(self):
         return self.references.all() | Reference.objects.filter(evidence__species_component__id = self.id)
@@ -1267,7 +1204,7 @@ class SpeciesComponent(Entry):
         
         #provide links to references
         return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]', 
-            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('public.views.detail', kwargs={'species_wid':self.species.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
+            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':self.species.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
             
     def get_as_html_references(self, is_user_anonymous):
@@ -1308,7 +1245,7 @@ class Molecule(SpeciesComponent):
     
     #getters
     def get_empirical_formula(self):
-        from public.helpers import EmpiricalFormula
+        from cyano.helpers import EmpiricalFormula
         return EmpiricalFormula()
         
     def get_molecular_weight(self):
@@ -1522,7 +1459,7 @@ class Chromosome(Molecule):
         
     #http://www.owczarzy.net/extinct.htm
     def get_extinction_coefficient(self):    
-        from public.helpers import ExtinctionCoefficient
+        from cyano.helpers import ExtinctionCoefficient
         
         seq = self.sequence
         
@@ -1537,7 +1474,7 @@ class Chromosome(Molecule):
     
     #html formatting
     def get_as_html_sequence(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         return format_sequence_as_html(self.sequence)
         
     def get_as_html_structure(self, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None, zoom = 0):
@@ -2079,7 +2016,7 @@ class ChromosomeFeature(SpeciesComponent):
             highlight_wid = [self.wid])
             
     def get_as_html_sequence(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]        
         
@@ -2227,7 +2164,7 @@ class Gene(Molecule):
         return float(seq.count('G') + seq.count('C')) / float(len(seq))
         
     def get_empirical_formula(self):
-        from public.helpers import EmpiricalFormula
+        from cyano.helpers import EmpiricalFormula
         
         seq = self.get_sequence()
         return \
@@ -2239,7 +2176,7 @@ class Gene(Molecule):
 
     #http://www.owczarzy.net/extinct.htm
     def get_extinction_coefficient(self):    
-        from public.helpers import ExtinctionCoefficient
+        from cyano.helpers import ExtinctionCoefficient
         
         seq = Seq(self.get_sequence(), IUPAC.unambiguous_dna).transcribe()
         
@@ -2280,7 +2217,7 @@ class Gene(Molecule):
             highlight_wid = [self.wid])
         
     def get_as_html_sequence(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]        
         
@@ -2371,7 +2308,7 @@ class Metabolite(Molecule):
     
     #getters
     def get_empirical_formula(self):
-        from public.helpers import EmpiricalFormula
+        from cyano.helpers import EmpiricalFormula
         return EmpiricalFormula(self.empirical_formula)
         
     #calculations
@@ -2390,11 +2327,11 @@ class Metabolite(Molecule):
         
     #html formatting
     def get_as_html_structure(self, is_user_anonymous):
-        from public.helpers import draw_molecule
+        from cyano.helpers import draw_molecule
         return draw_molecule(self.smiles, 'svg', 636, 150)
     
     def get_as_html_empirical_formula(self, is_user_anonymous):
-        from public.helpers import EmpiricalFormula
+        from cyano.helpers import EmpiricalFormula
         return EmpiricalFormula(self.empirical_formula).get_as_html()        
         
     def get_as_html_biomass_composition(self, is_user_anonymous):
@@ -2856,7 +2793,7 @@ class ProteinComplex(Protein):
         return '%0.0f' % self.get_num_subunits()
         
     def get_empirical_formula(self):
-        from public.helpers import EmpiricalFormula, getModel
+        from cyano.helpers import EmpiricalFormula, getModel
         
         formula = EmpiricalFormula()
         for participant in self.biosynthesis.all():
@@ -2868,7 +2805,7 @@ class ProteinComplex(Protein):
         return formula
     
     def get_localization(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         localizations = []
         for participant in self.biosynthesis.all():
@@ -2895,7 +2832,7 @@ class ProteinComplex(Protein):
         raise TypeError(str(localizations))
         
     def get_half_life(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         val = 0
         for participant in self.biosynthesis.all():
@@ -2913,7 +2850,7 @@ class ProteinComplex(Protein):
         return val / self.get_molecular_weight()
         
     def get_neg_aa(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         val = 0
         for participant in self.biosynthesis.all():
@@ -2928,7 +2865,7 @@ class ProteinComplex(Protein):
         return val
         
     def get_pos_aa(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         val = 0
         for participant in self.biosynthesis.all():
@@ -2943,7 +2880,7 @@ class ProteinComplex(Protein):
         return val
         
     def get_extinction_coefficient(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         val = 0
         for participant in self.biosynthesis.all():
@@ -3052,7 +2989,7 @@ class ProteinComplex(Protein):
         verbose_name_plural = 'Protein complexes'
         
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            from public.helpers import getModel, getEntry
+            from cyano.helpers import getModel, getEntry
 
             #biosynthesis
             coeff = 0
@@ -3155,7 +3092,7 @@ class ProteinMonomer(Protein):
         return self.get_sequence()[0]
         
     def get_empirical_formula(self):
-        from public.helpers import EmpiricalFormula
+        from cyano.helpers import EmpiricalFormula
         
         seq = self.get_sequence()
         return \
@@ -3241,7 +3178,7 @@ class ProteinMonomer(Protein):
         
     #http://ca.expasy.org/tools/protparam-doc.html
     def get_instability(self):
-        from public.helpers import DipeptideInstabilityWeight
+        from cyano.helpers import DipeptideInstabilityWeight
         
         seq = self.get_sequence()
         value = 0.;
@@ -3301,7 +3238,7 @@ class ProteinMonomer(Protein):
         
     #html formatting
     def get_as_html_sequence(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         return format_sequence_as_html(self.get_sequence())
         
     def get_as_html_signal_sequence(self, is_user_anonymous):
@@ -3576,7 +3513,7 @@ class Reaction(SpeciesComponent):
         verbose_name_plural = 'Reactions'    
 
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            from public.helpers import getEntry, getModel, EmpiricalFormula
+            from cyano.helpers import getEntry, getModel, EmpiricalFormula
             
             #stoichiometry
             formula = EmpiricalFormula()
@@ -3663,7 +3600,7 @@ class Species(Entry):
     #getters
     @permalink
     def get_absolute_url(self):
-        return ('public.views.index', (), {'species_wid': self.wid})
+        return ('cyano.views.index', (), {'species_wid': self.wid})
     
     #html formatting    
     def get_as_html_comments(self, is_user_anonymous):
@@ -3671,7 +3608,7 @@ class Species(Entry):
         
         #provide links to references
         return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]', 
-            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('public.views.detail', kwargs={'species_wid':self.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
+            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':self.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
             
     def get_as_html_genetic_code(self, is_user_anonymous):
@@ -3822,7 +3759,7 @@ class TranscriptionUnit(Molecule):
         return format_list_html(results, comma_separated=True)
         
     def get_as_html_sequence(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.get_direction())][1]        
         
@@ -3925,7 +3862,7 @@ class TranscriptionalRegulation(SpeciesComponent):
     
     #html formatting
     def get_as_html_binding_site(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         
         bs = self.binding_site
         if bs is None:
