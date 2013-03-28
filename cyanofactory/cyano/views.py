@@ -284,15 +284,15 @@ def species(request, species):
 		'evidence_temperature': [],
 	}
 	if species is not None:
-		refs = models.PublicationReference.objects.filter(species__id = species.id)
-		sources['total'] = refs.count()
-		sources['types'] = [
-				{'type': 'Articles', 'count': refs.filter(species__id = species.id, type__wid='article').count()},
-				{'type': 'Books', 'count': refs.filter(species__id = species.id, type__wid='book').count()},
-				{'type': 'Thesis', 'count': refs.filter(species__id = species.id, type__wid='thesis').count()},
-				{'type': 'Other', 'count': refs.filter(species__id = species.id, type__wid='misc').count()},
-			]
-		sources['dates'] = refs.filter(year__isnull=False).order_by('year').values('year').annotate(count=Count('year'))
+		#refs = models.PublicationReference.objects.filter(species__id = species.id)
+		#sources['total'] = refs.count()
+		#sources['types'] = [
+		#		{'type': 'Articles', 'count': refs.filter(species__id = species.id, type__wid='article').count()},
+		#		{'type': 'Books', 'count': refs.filter(species__id = species.id, type__wid='book').count()},
+		#		{'type': 'Thesis', 'count': refs.filter(species__id = species.id, type__wid='thesis').count()},
+		#		{'type': 'Other', 'count': refs.filter(species__id = species.id, type__wid='misc').count()},
+		#	]
+		#sources['dates'] = refs.filter(year__isnull=False).order_by('year').values('year').annotate(count=Count('year'))
 		
 			
 		nEstimated = models.Parameter.objects.filter(species__id = species.id, value__evidence__is_experimentally_constrained=False).count()
@@ -316,7 +316,7 @@ def species(request, species):
 			'sources': sources,			
 			},
 		request = request, 
-		template = 'cyano/index.html')
+		template = 'cyano/species.html')
 	
 def about(request, species_wid=None):
 	return render_queryset_to_response(

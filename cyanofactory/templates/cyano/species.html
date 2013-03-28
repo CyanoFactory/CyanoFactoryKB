@@ -18,10 +18,10 @@ Last updated: 2012-07-17
 	{% endif %}
 {% else %}
 	{% if species %}
-<a href="{% comment %}{% url "cyano.views.edit" species_wid=species.wid wid=species.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
-<a href="{% comment %}{% url "cyano.views.delete" species_wid=species.wid wid=species.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
+<a href="{% url "cyano.views.edit" species_wid=species.wid wid=species.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+<a href="{% url "cyano.views.delete" species_wid=species.wid wid=species.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
 	{% endif %}
-<a href="{% if species %}{% comment %}{% url "cyano.views.add" species_wid=species.wid model_type='Species' %}{% endcomment %}{% else %}{% comment %}{% url "cyano.views.add" model_type='Species' %}{% endcomment %}{% endif %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
+<a href="{% if species %}{% url "cyano.views.add" species_wid=species.wid model_type='Species' %}{% else %}{% url "cyano.views.add" model_type='Species' %}{% endif %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
 {% endif %}
 {{ block.super }}
 {% endblock %}
@@ -78,7 +78,7 @@ Last updated: 2012-07-17
 
 {% block content %}
 {% if species %}
-<div><h1>Welcome to the <i>{{ species.get_scientific_name }}</i> database!</h1>
+<div><h1>Welcome to the <i>{{ species.name }}</i> database!</h1>
 
 <p>{% autoescape off %}{{ species.comments }}{% endautoescape %}</p>
 
@@ -102,7 +102,7 @@ Last updated: 2012-07-17
 	{% for tmp in content %}
 		<th>Content</th>
 		<th>Value</th>
-		<th>Units</th>
+		<th>Units</td>
 		<th>&nbsp;</th>
 	{% endfor %}
 	</tr>
@@ -115,23 +115,23 @@ Last updated: 2012-07-17
 		{% if tmp2|length > forloop.parentloop.counter0 %}		
 			{% with val=tmp2|getattribute:forloop.parentloop.counter0 %}
 			<td class="
-				{% if forloop.parentloop.counter0 < tmp2|length and forloop.parentloop.counter|divisibleby:2 %}even {% endif %}
+				{% if forloop.parentloop.counter0 < tmp2|length and val.0|divisibleby:2 %}even {% endif %}
 				{% if forloop.parentloop.counter0 == tmp2|length|add:-1 %}last-row {% endif %}
 				" 
-				style="{% if val.0 == 0 %}font-weight:bold;{% else %}padding-left:{{ val.0|multiply:12 }}px;{% endif %}">{% if val.4 %}
-				<a href="{{ val.4 }}">{% autoescape off %}{{ val.1 }}{% endautoescape %}</a>
+				style="{% if val.1 == 0 %}font-weight:bold;{% else %}padding-left:{{ val.1|multiply:12 }}px;{% endif %}">{% if val.5 %}
+				<a href="{{ val.5 }}">{% autoescape off %}{{ val.2 }}{% endautoescape %}</a>
 				{% else %}
-				{% autoescape off %}{{ val.1 }}{% endautoescape %}
+				{% autoescape off %}{{ val.2 }}{% endautoescape %}
 				{% endif %}
 			</td>
 			<td class="
-				{% if forloop.parentloop.counter0 < tmp2|length and forloop.parentloop.counter|divisibleby:2 %}even {% endif %}
+				{% if forloop.parentloop.counter0 < tmp2|length and val.0|divisibleby:2 %}even {% endif %}
 				{% if forloop.parentloop.counter0 == tmp2|length|add:-1 %}last-row {% endif %}
-				">{{ val.2|default_if_none:'&nbsp;' }}</td>
+				">{{ val.3|default_if_none:'&nbsp;' }}</td>
 			<td class="
-				{% if forloop.parentloop.counter0 < tmp2|length and forloop.parentloop.counter|divisibleby:2 %}even {% endif %}
+				{% if forloop.parentloop.counter0 < tmp2|length and val.0|divisibleby:2 %}even {% endif %}
 				{% if forloop.parentloop.counter0 == tmp2|length|add:-1 %}last-row {% endif %}"
-				>{{ val.3|default_if_none:'&nbsp;' }}</td>
+				>{{ val.4|default_if_none:'&nbsp;' }}</td>
 			<td>&nbsp;</td>
 			{% endwith %}
 		{% else %}
@@ -443,5 +443,4 @@ $(document).ready(function (){
 </div>
 </div>
 {% endif %}
-
 {% endblock %}

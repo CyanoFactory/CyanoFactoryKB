@@ -66,8 +66,8 @@ Last updated: 2012-07-17
 <body>
 	<!-- header -->
 	<div id="header" class="ui-widget-header">
-		<div class="title"><a href="{% if species %}{% url "cyano.views.index" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}">{{ species.name }}</a></div>
-		<div class="banner"><a href="{% if species %}{% url "cyano.views.index" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}"><img src="{% get_static_prefix %}cyano/img/banner.png" /></a></div>
+		<div class="title"><a href="{% if species %}{% url "cyano.views.species" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}">{{ species.name }}</a></div>
+		<div class="banner"><a href="{% if species %}{% url "cyano.views.species" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}"><img src="{% get_static_prefix %}cyano/img/banner.png" /></a></div>
 		<div class="search">
 			{% if species %}
 			<form name="search" action="{% url "cyano.views.search" species_wid=species.wid %}" method="get">
@@ -83,7 +83,7 @@ Last updated: 2012-07-17
 					<td><a href="javascript:document.search.submit()"><img src="{% get_static_prefix %}public/img/magnifier.png" /></a></td>
 				</tr>
 					<td class="engine">
-						<input type="radio" name="engine" value="haystack" {% if not engine or engine == 'haystack' %} checked="true" {% endif %}/><span>WholeCellKB</span>
+						<input type="radio" name="engine" value="haystack" {% if not engine or engine == 'haystack' %} checked="true" {% endif %}/><span>CyanoFactory KB</span>
 						<input type="radio" name="engine" value="google" {% if engine == 'google' %} checked="true" {% endif %}/><span>Google</span>
 					</td>
 					<td></td>
