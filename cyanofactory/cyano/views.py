@@ -29,12 +29,21 @@ from public import models
 from cyano.forms import ExportDataForm, ImportDataForm
 from cyano.helpers import getEntry, format_field_detail_view, objectToQuerySet, render_queryset_to_response, getObjectTypes, getModel, get_invalid_objects, get_edit_form_fields, get_edit_form_data
 from cyano.helpers import validate_object_fields, validate_model_objects, validate_model_unique, save_object_data, batch_import_from_excel, readFasta
-from cyano.models import Entry, Species, SpeciesComponent, Reference
+from cyano.models import Entry, Species, SpeciesComponent, PublicationReference
 from urlparse import urlparse
 import numpy
 import os
 import settings
 import tempfile
+
+from cyano.helpers import render_queryset_to_response,\
+    get_verbose_name_for_field_by_name, render_queryset_to_response_error
+
+from cyano.decorators import resolve_to_objects
+from cyano.decorators import permission_required
+
+import cyano.models as models
+from cyano.models import PermissionEnum as perm
 
 def index(request):
     return render_queryset_to_response(
@@ -275,7 +284,7 @@ def species(request, species):
 		'evidence_temperature': [],
 	}
 	if species is not None:
-		refs = models.Reference.objects.filter(species__id = species.id)
+		refs = models.PublicationReference.objects.filter(species__id = species.id)
 		sources['total'] = refs.count()
 		sources['types'] = [
 				{'type': 'Articles', 'count': refs.filter(species__id = species.id, type__wid='article').count()},
@@ -300,20 +309,20 @@ def species(request, species):
 		sources['evidence_temperature'] = models.Evidence.objects.filter(species_component__species__id = species.id).values('temperature').annotate(count = Count('id'))
 			
 	return render_queryset_to_response(
-		species_wid = species_wid,
+		species = species,
 		data = {
 			'content': [contentCol1, contentCol2, contentCol3],
 			'contentRows': range(max(len(contentCol1), len(contentCol2), len(contentCol3))),
 			'sources': sources,			
 			},
 		request = request, 
-		templateFile = 'cyano/index.html')
+		template = 'cyano/index.html')
 	
 def about(request, species_wid=None):
 	return render_queryset_to_response(
-		species_wid = species_wid,
+		species = species,
 		request = request, 
-		templateFile = 'cyano/about.html', 
+		template = 'cyano/about.html', 
 		data = {
 			'ROOT_URL': settings.ROOT_URL,
 		}
@@ -321,29 +330,29 @@ def about(request, species_wid=None):
 		
 def tutorial(request, species_wid=None):
 	return render_queryset_to_response(
-		species_wid = species_wid,
+		species = species,
 		request = request, 
-		templateFile = 'cyano/tutorial.html')	
+		template = 'cyano/tutorial.html')	
 
 @login_required	
 def contributors(request, species_wid=None):
 	queryset = User.objects.all().filter(is_active = True)
 	return render_queryset_to_response(
-		species_wid = species_wid,
+		species = species,
 		request = request, 
 		models = [User],
 		queryset = queryset,
-		templateFile = 'cyano/contributors.html')	
+		template = 'cyano/contributors.html')	
 		
 @login_required	
 def contributor(request, username, species_wid=None):
 	queryset = objectToQuerySet(get_object_or_404(User, username = username), model = User)
 	return render_queryset_to_response(
-		species_wid = species_wid,
+		species = species,
 		request = request,
 		models = [User],
 		queryset = queryset,
-		templateFile = 'cyano/contributor.html')	
+		template = 'cyano/contributor.html')	
 
 def search(request, species_wid = None):
 	query = request.GET.get('q', '')
@@ -358,7 +367,7 @@ def search_haystack(request, species_wid, query):
 	#search
 	if species_wid is None:
 		species_wid = Species.objects.all()[0].wid
-	results = SearchQuerySet().filter(species_wid=species_wid).filter(content=query)
+	results = SearchQuerySet().filter(species=species).filter(content=query)
 	
 	#calculate facets		
 	facets = results.facet('model_type')
@@ -393,11 +402,11 @@ def search_haystack(request, species_wid, query):
 	
 	#form response
 	return render_queryset_to_response(
-		species_wid = species_wid,
+		species = species,
 		request = request, 
 		models = models, 
 		queryset = queryset, 
-		templateFile = 'cyano/search.html', 
+		template = 'cyano/search.html', 
 		data = {
 			'query': query,
 			'engine': 'haystack',
@@ -407,9 +416,9 @@ def search_haystack(request, species_wid, query):
 
 def search_google(request, species_wid, query):
 	return render_queryset_to_response(
-		species_wid = species_wid,
+		species = species,
 		request = request, 
-		templateFile = 'cyano/googleSearch.html', 
+		template = 'cyano/googleSearch.html', 
 		data = {
 			'query': query,
 			'engine': 'google',
@@ -496,7 +505,7 @@ def list(request, species, model):
 		request = request, 
 		models = [model], 
 		queryset = objects, 
-		templateFile = 'cyano/list.html', 
+		template = 'cyano/list.html', 
 		data = {
 			'model_type': model_type,
 			'model_verbose_name': model._meta.verbose_name,
@@ -549,11 +558,11 @@ def detail(request, species, model, item):
 
 	#render response
 	return render_queryset_to_response(
-		species_wid = species_wid,		
+		species = species,		
 		request = request, 
 		models = [model],
 		queryset = qs,
-		templateFile = 'cyano/detail.html', 
+		template = 'cyano/detail.html', 
 		data = {
 			'model_type': model_type,
 			'model': model,
@@ -563,13 +572,13 @@ def detail(request, species, model, item):
 			
 @login_required		
 def add(request, model_type, species_wid=None):
-	return edit(request, model_type=model_type, species_wid=species_wid, action='add')
+	return edit(request, model_type=model_type, species=species, action='add')
 		
 @login_required
 def edit(request, wid=None, model_type=None, species_wid=None, action='edit'):
 	#retrieve object
 	if action == 'edit':
-		obj = getEntry(species_wid = species_wid, wid = wid)
+		obj = getEntry(species = species, wid = wid)
 		if obj is None:
 			raise Http404
 		model = obj.__class__ 
@@ -623,7 +632,7 @@ def edit(request, wid=None, model_type=None, species_wid=None, action='edit'):
 	
 	#form query set
 	if action == 'edit':
-		obj = getEntry(species_wid = species_wid, wid = wid)
+		obj = getEntry(species = species, wid = wid)
 		if obj is None:
 			raise Http404
 		qs = objectToQuerySet(obj, model = model)
@@ -637,16 +646,16 @@ def edit(request, wid=None, model_type=None, species_wid=None, action='edit'):
 	if request.method == 'POST':
 		initial_values = submitted_data
 	return render_queryset_to_response(
-		species_wid = species_wid,
+		species = species,
 		request = request, 
 		models = [model],
 		queryset = qs,
-		templateFile = 'cyano/edit.html', 
+		template = 'cyano/edit.html', 
 		data = {
 			'model_verbose_name': model._meta.verbose_name,
 			'action': action,
 			'fields': fields,
-			'references_choices': Reference.objects.filter(species__wid = species_wid).values_list('wid'),
+			'references_choices': PublicationReference.objects.filter(species__wid = species_wid).values_list('wid'),
 			'initial_values': initial_values,
 			'error_messages': error_messages,
 			}
@@ -655,7 +664,7 @@ def edit(request, wid=None, model_type=None, species_wid=None, action='edit'):
 @login_required		
 def delete(request, species_wid, wid):
 	#retrieve object
-	obj = getEntry(species_wid = species_wid, wid = wid)
+	obj = getEntry(species = species, wid = wid)
 	if obj is None:
 		raise Http404	
 	model = obj.__class__ 
@@ -668,11 +677,11 @@ def delete(request, species_wid, wid):
 		
 	#confirmation message
 	return render_queryset_to_response(
-		species_wid = species_wid,
+		species = species,
 		request = request, 
 		models = [model],
 		queryset = qs,
-		templateFile = 'cyano/delete.html', 
+		template = 'cyano/delete.html', 
 		data = {
 			'model_verbose_name': model._meta.verbose_name
 			}
@@ -685,15 +694,15 @@ def exportData(request, species_wid=None):
 	form = ExportDataForm(getDict or None)
 	if not form.is_valid():		
 		return render_queryset_to_response(
-			species_wid=species_wid,
+			species=species,
 			request = request,
-			templateFile = 'cyano/exportDataForm.html', 
+			template = 'cyano/exportDataForm.html', 
 			data = {
 				'form': form
 				}
 			)
 	else:		
-		species = Species.objects.get(wid = form.cleaned_data['species'])
+		species = species.objects.get(wid = form.cleaned_data['species'])
 		queryset = EmptyQuerySet()
 		models = []
 		
@@ -711,10 +720,10 @@ def exportData(request, species_wid=None):
 			models.append(getModel(model_type))
 		
 		return render_queryset_to_response(
-			species_wid = species_wid,
+			species = species,
 			request = request, 
 			queryset = queryset, 
-			templateFile = 'cyano/exportDataResult.html', 
+			template = 'cyano/exportDataResult.html', 
 			models = models)
 
 @login_required
@@ -754,9 +763,9 @@ def importData(request, species_wid=None):
 				
 				#render response
 				return render_queryset_to_response(
-					species_wid = species_wid,
+					species = species,
 					request = request,
-					templateFile = 'cyano/importDataResult.html', 
+					template = 'cyano/importDataResult.html', 
 					data = {
 						'success': success,
 						'message': message,
@@ -765,9 +774,9 @@ def importData(request, species_wid=None):
 		form = ImportDataForm(None)
 
 	return render_queryset_to_response(
-		species_wid = species_wid,
+		species = species,
 		request = request, 
-		templateFile = 'cyano/importDataForm.html', 
+		template = 'cyano/importDataForm.html', 
 		data = {
 			'form': form},
 		)
@@ -776,9 +785,9 @@ def validate(request, species_wid):
 	errors = get_invalid_objects(Species.objects.values('id').get(wid=species_wid)['id'])
 	
 	return render_queryset_to_response(
-		species_wid = species_wid,
+		species = species,
 		request = request, 
-		templateFile = 'cyano/validate.html', 
+		template = 'cyano/validate.html', 
 		data = {			
 			'errors': errors
 			},
@@ -808,7 +817,7 @@ def login(request, species=None):
 	return render_queryset_to_response(
 		species = species,
 		request = request, 
-		templateFile = 'cyano/login.html', 
+		template = 'cyano/login.html', 
 		data = {
 			'form': form,
 			'next': next,
@@ -820,13 +829,13 @@ def logout(request, species=None):
 	return render_queryset_to_response(
 		species = species,
 		request = request, 
-		templateFile = 'cyano/logout.html', 
+		template = 'cyano/logout.html', 
 		)
 	
 def sitemap(request):
 	return render_queryset_to_response(
 		request = request, 
-		templateFile = 'public/sitemap.xml', 
+		template = 'public/sitemap.xml', 
 		data = {
 			'ROOT_URL': settings.ROOT_URL,
 			'qs_species': Species.objects.all(),
@@ -836,17 +845,17 @@ def sitemap(request):
 def sitemap_toplevel(request):
 	return render_queryset_to_response(
 		request = request, 
-		templateFile = 'public/sitemap_toplevel.xml', 
+		template = 'public/sitemap_toplevel.xml', 
 		data = {
 			'ROOT_URL': settings.ROOT_URL,
 		}
 	)
 	
 def sitemap_species(request, species_wid):
-	species = Species.objects.get(wid=species_wid)
+	species = species.objects.get(wid=species_wid)
 	return render_queryset_to_response(
 		request = request, 
-		templateFile = 'public/sitemap_species.xml', 
+		template = 'public/sitemap_species.xml', 
 		data = {
 			'ROOT_URL': settings.ROOT_URL,
 			'species': species,

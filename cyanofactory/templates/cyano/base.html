@@ -40,7 +40,7 @@ Last updated: 2012-07-17
 	<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}public/css/jquery-ui-1.8.23.custom.css" />
 	<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}public/css/PTSans.min.css" />
 	{% endif %}
-	<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/styles.css" />		
+	<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/styles.css" />
 	<link rel="stylesheet" type="text/css" media="print" href="{% get_static_prefix %}public/css/styles.print.css" />
 	<style type="text/css" media="print">
 	{{ pdfstyles }}
@@ -61,26 +61,13 @@ Last updated: 2012-07-17
 	<![endif]–>
 	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/evidence.js"></script>
 	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/tooltip.js"></script>
-	
-	<!-- google analytics -->
-	<script type="text/javascript">
-	var _gaq = _gaq || [];
-	_gaq.push(['_setAccount', 'UA-34992113-1']);
-	_gaq.push(['_trackPageview']);
-
-	(function() {
-	var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-	ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-	var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-	})();
-	</script>
 	{% endblock %}
 </head>
 <body>
 	<!-- header -->
 	<div id="header" class="ui-widget-header">
 		<div class="title"><a href="{% if species %}{% url "cyano.views.index" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}">{{ species.name }}</a></div>
-		<div class="banner"><a href="{% if species %}{% url "cyano.views.index" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}"><img src="{% get_static_prefix %}public/img/banner.png" /></a></div>
+		<div class="banner"><a href="{% if species %}{% url "cyano.views.index" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}"><img src="{% get_static_prefix %}cyano/img/banner.png" /></a></div>
 		<div class="search">
 			{% if species %}
 			<form name="search" action="{% url "cyano.views.search" species_wid=species.wid %}" method="get">
@@ -113,10 +100,10 @@ Last updated: 2012-07-17
 				{% endfor %}
 				</ul>
 			</li>
+			{% if species %}
 			<li class="spacer"/>
 			<li><a href="#">Browse</a>
 				<ul>
-				{% if species %}
 				{% for key1 in modelnames %}
 					{% for key2, modelmetadata in modelmetadatas.iteritems %}
 						{% if key1 == key2 %}
@@ -124,9 +111,10 @@ Last updated: 2012-07-17
 						{% endif %}
 					{% endfor %}
 				{% endfor %}
-				{% endif %}
 				</ul>
 			</li>
+			{% endif %}
+			{% comment %}
 			<li class="spacer"/>
 			<li><a href="#">Download</a>
 				<ul>
@@ -159,6 +147,7 @@ Last updated: 2012-07-17
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#contact">Contact</a></li>
 				</ul>
 			</li>
+			{% endcomment %}
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
 			<li><a href="{% if species %}{% url "cyano.views.logout" species_wid=species.wid %}{% else %}{% url "cyano.views.logout" %}{% endif %}">Logout</a></li>

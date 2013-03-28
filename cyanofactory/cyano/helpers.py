@@ -33,7 +33,7 @@ from openpyxl.shared.date_time import SharedDate, CALENDAR_WINDOWS_1900
 from openpyxl.style import NumberFormat, Border, Color, HashableObject, Protection, Alignment
 from openpyxl.writer.styles import StyleWriter
 from cyano.templatetags.templatetags import ceil
-from cyano.models import Entry, Species, SpeciesComponent, Reference, Chromosome, format_list_html, format_evidence, Evidence, EvidencedEntryData
+from cyano.models import Entry, Species, SpeciesComponent, PublicationReference, Chromosome, format_list_html, format_evidence, Evidence, EvidencedEntryData
 from cyano.models import EntryData, EntryBooleanData, EntryCharData, EntryFloatData, EntryPositiveFloatData, EntryTextData
 from StringIO import StringIO
 from subprocess import Popen, PIPE
@@ -1876,7 +1876,7 @@ def write_bibtex(species, qs):
 		if not isinstance(obj, SpeciesComponent):
 			continue
 			
-		if isinstance(obj, Reference):
+		if isinstance(obj, PublicationReference):
 			refs[obj.wid] = obj
 		for sub_obj in obj.references.all():
 			refs[sub_obj.wid] = sub_obj

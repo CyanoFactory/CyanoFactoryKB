@@ -3600,9 +3600,9 @@ class Species(Entry):
     #getters
     @permalink
     def get_absolute_url(self):
-        return ('cyano.views.index', (), {'species_wid': self.wid})
+        return ('cyano.views.species', (), {'species_wid': self.wid})
     
-    #html formatting    
+    #html formatting
     def get_as_html_comments(self, is_user_anonymous):
         txt = self.comments
         
