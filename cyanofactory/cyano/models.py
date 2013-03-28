@@ -17,7 +17,7 @@ from django.db.models import Model, OneToOneField, CharField, IntegerField, URLF
 from django.db.models.query import EmptyQuerySet
 from django.utils.http import urlencode
 from itertools import chain
-from public.templatetags.templatetags import set_time_zone
+from cyano.templatetags.templatetags import set_time_zone
 import math
 import re
 import settings
@@ -245,7 +245,7 @@ for test in tests:
         print test
 '''
 def parse_regulatory_rule(equation, all_obj_data, species_wid):
-    from public.helpers import getModel, getEntry
+    from cyano.helpers import getModel, getEntry
     import settings
     
     pre = ''
@@ -563,10 +563,6 @@ class Revision(Model):
     column = IntegerField(verbose_name = '')
     new_value = TextField(blank = True, null = True)
 
-class References(Model):
-    publications = ManyToManyField("PublicationReference", related_name = "references_publications")
-    cross_references = ManyToManyField("CrossReference", related_name = "references_cross_references")
-
 class Evidence(Model):
     value = TextField(blank=True, default='', verbose_name='Value')    
     units = CharField(max_length=255, blank=True, null=True, verbose_name='Units')
@@ -576,7 +572,7 @@ class Evidence(Model):
     pH = FloatField(blank=True, null=True, verbose_name='pH')
     temperature = FloatField(blank=True, null=True, verbose_name='Temperature (C)')
     comments = TextField(blank=True, default='', verbose_name='Comments')
-    references = ForeignKey(References, blank=True, null=True, related_name='evidence', verbose_name='References')
+    references = ForeignKey("PublicationReference", blank=True, null=True, related_name='evidence', verbose_name='References')
         
     species_component = ManyToManyField('SpeciesComponent', blank=True, verbose_name='Species component', related_name='+')
     
@@ -772,7 +768,7 @@ class Kinetics(EvidencedEntryData):
     vmax_unit = CharField(blank=True, max_length=255, choices=CHOICES_VMAX_UNITS, verbose_name='V<sub>max</sub> Unit')
     
     def get_vmax_normalized(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         if vmax_unit.name  == 'U/mg':
             enz = self.reactions.all()[0].enzyme
@@ -895,6 +891,8 @@ class Entry(Model):
     wid = SlugField(max_length=150, unique = True, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
+    cross_references = ManyToManyField(CrossReference, blank=True, null=True, related_name='cross_referenced_entries', verbose_name='Cross references')
+    publication_references = ManyToManyField('PublicationReference', blank=True, null=True, related_name='publication_referenced_entries', verbose_name='Publication references')
     comments = TextField(blank=True, default='', verbose_name='Comments')
     #permissions = OneToOneField(Permission, blank=True, null=True, verbose_name = "Permissions for this entry")
     
@@ -1013,12 +1011,14 @@ class Entry(Model):
         return format_list_html(results, separator=', ')
     
     def get_as_html_created_user(self, is_user_anonymous):
+        return ""# FIXME
         if is_user_anonymous:
             return '%s' % (self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
         else:
             return '<a href="%s">%s %s</a> on %s' % (self.created_user.get_absolute_url(), self.created_user.first_name, self.created_user.last_name, self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
     
     def get_as_html_last_updated_user(self, is_user_anonymous):
+        return ""# FIXME
         if is_user_anonymous:
             return '%s' % (self.last_updated_date.strftime("%Y-%m-%d %H:%M:%S"))
         else:
@@ -1220,7 +1220,7 @@ class PublicationReference(Entry):
             ('Classification', {'fields': ['type']}),            
             ('Citation', {'fields': [{'verbose_name': 'Citation', 'name': 'citation'}]}), 
             ('Cited by', {'fields': [{'verbose_name': 'Cited by', 'name': 'referenced_entries'}]}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]            
         field_list = [
@@ -1228,12 +1228,12 @@ class PublicationReference(Entry):
             'type',             
             'authors', 'editors', 'year', 'title', 'publication', 'publisher', 'volume', 'issue', 'pages', 
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type', 'year', 'publication']
-        verbose_name='Reference'
-        verbose_name_plural = 'References'
+        verbose_name='Publication Reference'
+        verbose_name_plural = 'Publication References'
 
 class CrossReferenceMeta(Model):
     name = CharField(max_length=255, verbose_name = "Identifier for crossreference (DB name or URL)", editable = False)
@@ -1244,16 +1244,15 @@ class SpeciesComponent(Entry):
     Improves the lookup speed and allows inheritance.
     '''
     species = ManyToManyField("Species", verbose_name = "Organism containing that entry", related_name = "species")
-    #type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
-    references = OneToOneField(References, blank=True, null=True, verbose_name = 'Publication and Crossreferences', editable = False)
+    type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
 
     #getters
     @permalink
     def get_absolute_url(self):
-        return ('public.views.detail', (), {'species_wid':self.species.wid, 'wid': self.wid})
+        return ('cyano.views.detail', (), {'species_wid':'NC_000911', 'model_type':self.model_type.name, 'wid': self.wid})
         
     def get_all_references(self):
-        return self.references.all() | Reference.objects.filter(evidence__species_component__id = self.id)
+        return self.publication_references.all() | PublicationReference.objects.filter(evidence__species_component__id = self.id)
         
     #html formatting
     def get_as_html_parameters(self, is_user_anonymous):
@@ -1267,7 +1266,7 @@ class SpeciesComponent(Entry):
         
         #provide links to references
         return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]', 
-            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('public.views.detail', kwargs={'species_wid':self.species.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
+            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':self.species.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
             
     def get_as_html_references(self, is_user_anonymous):
@@ -1290,11 +1289,11 @@ class SpeciesComponent(Entry):
             ('Type', {'fields': ['model_type']}),
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
             ('Classification', {'fields': ['type']}), 
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type']
         verbose_name = 'Species component'
@@ -1302,17 +1301,18 @@ class SpeciesComponent(Entry):
 
 class Molecule(SpeciesComponent):
     #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_molecule', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_molecule', parent_link=True, verbose_name='Species component')
     
     #additional fields
     
     #getters
     def get_empirical_formula(self):
-        from public.helpers import EmpiricalFormula
+        from cyano.helpers import EmpiricalFormula
         return EmpiricalFormula()
         
     def get_molecular_weight(self):
-        return self.get_empirical_formula().get_molecular_weight()
+        return 0 # FIXME
+        #return self.get_empirical_formula().get_molecular_weight()
         
     def get_atoms(self):
         return sum(self.get_empirical_formula().values())
@@ -1322,24 +1322,30 @@ class Molecule(SpeciesComponent):
     
     #html formatting        
     def get_as_html_empirical_formula(self, is_user_anonymous):
-        return self.get_empirical_formula().get_as_html()
+        return ""# FIXME
+        #return self.get_empirical_formula().get_as_html()
         
     def get_as_html_molecular_weight(self, is_user_anonymous):
+        return ""# FIXME
         return self.get_molecular_weight()
         
     def get_as_html_extinction_coefficient(self, is_user_anonymous):
+        return ""# FIXME
         return self.get_extinction_coefficient()
         
     def get_as_html_absorbance_factor(self, is_user_anonymous):
+        return ""# FIXME
         return self.get_absorbance_factor()
         
     def get_as_html_pi(self, is_user_anonymous):
+        return ""# FIXME
         if hasattr(self, 'pi'):
             return self.pi
         else:
             return self.get_pi()
             
     def get_as_html_modification_reactions(self, is_user_anonymous):
+        return ""# FIXME
         results = []
         for obj in self.modification_reactions.all():
             if len(obj.reactions.all()) == 0:
@@ -1349,6 +1355,7 @@ class Molecule(SpeciesComponent):
         return format_list_html(results, vertical_spacing=True)
             
     def get_as_html_reaction_stoichiometry_participants(self, is_user_anonymous):
+        return ""# FIXME
         results = []
         for obj in self.reaction_stoichiometry_participants.all():
             if len(obj.reactions.all()) == 0:
@@ -1358,6 +1365,7 @@ class Molecule(SpeciesComponent):
         return format_list_html(list(set(results)), vertical_spacing=True)
         
     def get_as_html_protein_complex_biosythesis_participants(self, is_user_anonymous):
+        return ""# FIXME
         results = []
         for obj in self.protein_complex_biosythesis_participants.all():            
             if len(obj.protein_complexes.all()) == 0:
@@ -1378,11 +1386,11 @@ class Molecule(SpeciesComponent):
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}),
             ('Parameters', {'fields': ['parameters']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type']
         verbose_name = 'Molecule'
@@ -1390,7 +1398,7 @@ class Molecule(SpeciesComponent):
         
 class Protein(Molecule):
     #parent pointer
-    #parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_protein', parent_link=True, verbose_name='Molecule')
+    parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_protein', parent_link=True, verbose_name='Molecule')
     
     #additional fields
     prosthetic_groups = ManyToManyField(ProstheticGroupParticipant, blank=True, null=True, related_name='proteins', verbose_name='Prosthetic groups')
@@ -1462,11 +1470,11 @@ class Protein(Molecule):
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}), 
             ('Parameters', {'fields': ['parameters']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]            
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
         verbose_name='Protein'
@@ -1503,7 +1511,7 @@ BEGIN: Specific data types
 
 class Chromosome(Molecule):
     #parent pointer
-    #parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_chromosome', parent_link=True, verbose_name='Molecule')
+    parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_chromosome', parent_link=True, verbose_name='Molecule')
     
     #additional fields
     sequence = TextField(blank=True, default='', verbose_name='Sequence', validators=[validate_dna_sequence])
@@ -1522,7 +1530,7 @@ class Chromosome(Molecule):
         
     #http://www.owczarzy.net/extinct.htm
     def get_extinction_coefficient(self):    
-        from public.helpers import ExtinctionCoefficient
+        from cyano.helpers import ExtinctionCoefficient
         
         seq = self.sequence
         
@@ -1537,7 +1545,7 @@ class Chromosome(Molecule):
     
     #html formatting
     def get_as_html_sequence(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         return format_sequence_as_html(self.sequence)
         
     def get_as_html_structure(self, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None, zoom = 0):
@@ -1591,63 +1599,64 @@ class Chromosome(Molecule):
         tus = []
         for i in range(len(genesList)):
             gene = genesList[i]
-            tu = gene.transcription_units.all()[0]
-            if iTUs.has_key(tu.wid):
-                iTu = iTUs[tu.wid]
-            else:
-                tus.append(tu)
-                iTu = nTus
-                iTUs[tu.wid] = iTu
-                nTus += 1
+            if gene.transcription_units.count() > 0:
+                tu = gene.transcription_units.all()[0]
+                if iTUs.has_key(tu.wid):
+                    iTu = iTUs[tu.wid]
+                else:
+                    tus.append(tu)
+                    iTu = nTus
+                    iTUs[tu.wid] = iTu
+                    nTus += 1
+                    
+                iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
                 
-            iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
-            
-            if gene.direction == 'f':
-                x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                x3 = min(segmentLeft + segmentW, x1 + gene.length / ntPerSegment * segmentW)
-                x2 = max(x1, x3 - 5)
-            else:
-                x3 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                x1 = min(segmentLeft + segmentW, x3 + gene.length / ntPerSegment * segmentW)
-                x2 = min(x1, x3 + 5)
+                if gene.direction == 'f':
+                    x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                    x3 = min(segmentLeft + segmentW, x1 + gene.length / ntPerSegment * segmentW)
+                    x2 = max(x1, x3 - 5)
+                else:
+                    x3 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                    x1 = min(segmentLeft + segmentW, x3 + gene.length / ntPerSegment * segmentW)
+                    x2 = min(x1, x3 + 5)
+                    
+                y2 = chrTop + (iSegment + 1) * segmentHeight - 2
+                y1 = y2 - geneHeight
                 
-            y2 = chrTop + (iSegment + 1) * segmentHeight - 2
-            y1 = y2 - geneHeight
-            
-            if math.fabs(x3 - x1) > len(gene.wid) * 5:
-                label = gene.wid
-            else:
-                label = ''
-                
-            if gene.name:
-                tip_title = gene.name
-            else:
-                tip_title = gene.wid
-            tip_content = 'Transcription unit: %s' % tu.name
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
-                
-            genes += '<g>\
-                <a xlink:href="%s">\
-                    <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/>\
-                </a>\
-                <a xlink:href="%s">\
-                    <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\
-                </a>\
-                </g>' % (                
-                gene.get_absolute_url(),
-                iTu % len(colors),
-                x1, y1,
-                x2, y1,
-                x3, (y1 + y2) / 2, 
-                x2, y2,
-                x1, y2,
-                tip_title, tip_content,
-                gene.get_absolute_url(),
-                (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
-                tip_title, tip_content,
-                label,                
-                )
+                if math.fabs(x3 - x1) > len(gene.wid) * 5:
+                    label = gene.wid
+                else:
+                    label = ''
+                    
+                if gene.name:
+                    tip_title = gene.name
+                else:
+                    tip_title = gene.wid
+                tip_content = 'Transcription unit: %s' % tu.name
+                tip_title = tip_title.replace("'", "\'")
+                tip_content = tip_content.replace("'", "\'")
+                    
+                genes += '<g>\
+                    <a xlink:href="%s">\
+                        <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/>\
+                    </a>\
+                    <a xlink:href="%s">\
+                        <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\
+                    </a>\
+                    </g>' % (                
+                    gene.get_absolute_url(),
+                    iTu % len(colors),
+                    x1, y1,
+                    x2, y1,
+                    x3, (y1 + y2) / 2, 
+                    x2, y2,
+                    x1, y2,
+                    tip_title, tip_content,
+                    gene.get_absolute_url(),
+                    (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
+                    tip_title, tip_content,
+                    label,                
+                    )
         
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
@@ -1794,75 +1803,76 @@ class Chromosome(Molecule):
             if gene.coordinate > end_coordinate or gene.coordinate + gene.length - 1 < start_coordinate:
                 continue
             
-            tu = gene.transcription_units.all()[0]
-            if iTUs.has_key(tu.wid):
-                iTu = iTUs[tu.wid]
-            else:
-                tus.append(tu)
-                iTu = nTus
-                iTUs[tu.wid] = iTu
-                nTus += 1
-            
-            if gene.direction == 'f':
-                x1 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
-                x3 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
-                x2 = max(x1, x3 - 5)
-            else:
-                x3 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
-                x1 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
-                x2 = min(x1, x3 + 5)
+            if gene.transcription_units.count() > 0:
+                tu = gene.transcription_units.all()[0]
+                if iTUs.has_key(tu.wid):
+                    iTu = iTUs[tu.wid]
+                else:
+                    tus.append(tu)
+                    iTu = nTus
+                    iTUs[tu.wid] = iTu
+                    nTus += 1
                 
-            x1 = max(chrL, min(chrR, x1))
-            x2 = max(chrL, min(chrR, x2))
-            x3 = max(chrL, min(chrR, x3))
-                        
-            y1 = geneY
-            y2 = geneY + geneHeight
-            
-            if highlight_wid is None or gene.wid in highlight_wid:
-                fillOpacity = 0.75
-                strokeOpacity = 1
-                strokeWidth = 3
-            else:
-                fillOpacity = 0.15
-                strokeOpacity = 0.35
-                strokeWidth = 1
-            
-            if math.fabs(x3 - x1) > len(gene.wid) * 5:
-                label = gene.wid
-            else:
-                label = ''
-            
-            if gene.name:
-                tip_title = gene.name
-            else:
-                tip_title = gene.wid
-            tip_content = 'Transcription unit: %s' % tu.name
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
+                if gene.direction == 'f':
+                    x1 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
+                    x3 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
+                    x2 = max(x1, x3 - 5)
+                else:
+                    x3 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
+                    x1 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
+                    x2 = min(x1, x3 + 5)
+                    
+                x1 = max(chrL, min(chrR, x1))
+                x2 = max(chrL, min(chrR, x2))
+                x3 = max(chrL, min(chrR, x3))
+                            
+                y1 = geneY
+                y2 = geneY + geneHeight
                 
-            genes += '<g style="">\n\
-                <a xlink:href="%s">\n\
-                    <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="fill-opacity: %s; stroke-opacity: %s; stroke-width: %spx"/>\n\
-                </a>\n\
-                <a xlink:href="%s">\n\
-                    <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\n\
-                </a>\n\
-                </g>\n' % (                
-                gene.get_absolute_url(),
-                iTu % len(colors),
-                x1, y1,
-                x2, y1,
-                x3, (y1 + y2) / 2, 
-                x2, y2,
-                x1, y2,
-                tip_title, tip_content,
-                fillOpacity, strokeOpacity, strokeWidth,
-                gene.get_absolute_url(),
-                (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
-                tip_title, tip_content,
-                label,
-                )
+                if highlight_wid is None or gene.wid in highlight_wid:
+                    fillOpacity = 0.75
+                    strokeOpacity = 1
+                    strokeWidth = 3
+                else:
+                    fillOpacity = 0.15
+                    strokeOpacity = 0.35
+                    strokeWidth = 1
+                
+                if math.fabs(x3 - x1) > len(gene.wid) * 5:
+                    label = gene.wid
+                else:
+                    label = ''
+                
+                if gene.name:
+                    tip_title = gene.name
+                else:
+                    tip_title = gene.wid
+                tip_content = 'Transcription unit: %s' % tu.name
+                tip_title = tip_title.replace("'", "\'")
+                tip_content = tip_content.replace("'", "\'")
+                    
+                genes += '<g style="">\n\
+                    <a xlink:href="%s">\n\
+                        <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="fill-opacity: %s; stroke-opacity: %s; stroke-width: %spx"/>\n\
+                    </a>\n\
+                    <a xlink:href="%s">\n\
+                        <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\n\
+                    </a>\n\
+                    </g>\n' % (                
+                    gene.get_absolute_url(),
+                    iTu % len(colors),
+                    x1, y1,
+                    x2, y1,
+                    x3, (y1 + y2) / 2, 
+                    x2, y2,
+                    x1, y2,
+                    tip_title, tip_content,
+                    fillOpacity, strokeOpacity, strokeWidth,
+                    gene.get_absolute_url(),
+                    (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
+                    tip_title, tip_content,
+                    label,
+                    )
                 
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
@@ -2011,11 +2021,11 @@ class Chromosome(Molecule):
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}),
             ('Parameters', {'fields': ['parameters']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'sequence', 'length', 'comments', 'references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'sequence', 'length', 'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type']
         verbose_name='Chromosome'
@@ -2027,7 +2037,7 @@ class Chromosome(Molecule):
 
 class ChromosomeFeature(SpeciesComponent):
     #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_chromosome_feature', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_chromosome_feature', parent_link=True, verbose_name='Species component')
     
     #additional fields
     chromosome = ForeignKey(Chromosome, related_name='features', verbose_name='Chromosome')
@@ -2079,7 +2089,7 @@ class ChromosomeFeature(SpeciesComponent):
             highlight_wid = [self.wid])
             
     def get_as_html_sequence(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]        
         
@@ -2113,11 +2123,11 @@ class ChromosomeFeature(SpeciesComponent):
                 {'verbose_name': 'Genes', 'name': 'genes'}, 
                 {'verbose_name': 'Transcription units', 'name': 'transcription_units'}, 
                 ]}), 
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'chromosome', 'coordinate', 'length', 'direction', 'comments', 'references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'chromosome', 'coordinate', 'length', 'direction', 'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type', 'chromosome', 'direction']
         verbose_name='Chromosome feature'
@@ -2141,7 +2151,7 @@ class ChromosomeFeature(SpeciesComponent):
                 
 class Compartment(SpeciesComponent):
     #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_compartment', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_compartment', parent_link=True, verbose_name='Species component')
     
     #additional fields
     def get_protein_complexes(self):
@@ -2185,11 +2195,11 @@ class Compartment(SpeciesComponent):
                 {'verbose_name': 'Protein monomers', 'name': 'protein_monomers'},
                 {'verbose_name': 'Protein complexes', 'name': 'protein_complexes'},
                 ]}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'comments', 'references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type']
         verbose_name='Compartment'
@@ -2197,7 +2207,7 @@ class Compartment(SpeciesComponent):
         
 class Gene(Molecule):
     #parent pointer
-    #parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_gene', parent_link=True, verbose_name='Molecule')
+    parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_gene', parent_link=True, verbose_name='Molecule')
     
     #additional fields
     symbol = CharField(max_length=255, blank=True, default='', verbose_name='Symbol')
@@ -2227,7 +2237,7 @@ class Gene(Molecule):
         return float(seq.count('G') + seq.count('C')) / float(len(seq))
         
     def get_empirical_formula(self):
-        from public.helpers import EmpiricalFormula
+        from cyano.helpers import EmpiricalFormula
         
         seq = self.get_sequence()
         return \
@@ -2239,7 +2249,7 @@ class Gene(Molecule):
 
     #http://www.owczarzy.net/extinct.htm
     def get_extinction_coefficient(self):    
-        from public.helpers import ExtinctionCoefficient
+        from cyano.helpers import ExtinctionCoefficient
         
         seq = Seq(self.get_sequence(), IUPAC.unambiguous_dna).transcribe()
         
@@ -2280,7 +2290,7 @@ class Gene(Molecule):
             highlight_wid = [self.wid])
         
     def get_as_html_sequence(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]        
         
@@ -2318,11 +2328,11 @@ class Gene(Molecule):
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}),
             ('Parameters', {'fields': ['parameters']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'symbol', 'synonyms', 'cross_references', 'homologs', 'type', 'chromosome', 'coordinate', 'length', 'direction',  'is_essential', 'expression', 'half_life', 'codons', 'amino_acid', 'comments', 'references', 'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'symbol', 'synonyms', 'cross_references', 'homologs', 'type', 'chromosome', 'coordinate', 'length', 'direction',  'is_essential', 'expression', 'half_life', 'codons', 'amino_acid', 'comments', 'publication_references', 'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         listing = ['wid', 'symbol']
         facet_fields = ['type', 'chromosome', 'direction', 'is_essential', 'amino_acid']
@@ -2348,7 +2358,7 @@ class Gene(Molecule):
         
 class Metabolite(Molecule):
     #parent pointer
-    #parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_metabolite', parent_link=True, verbose_name='Molecule')
+    parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_metabolite', parent_link=True, verbose_name='Molecule')
     
     #additional fields
     traditional_name = TextField(blank=True, default='', verbose_name='Traditional name')
@@ -2371,7 +2381,7 @@ class Metabolite(Molecule):
     
     #getters
     def get_empirical_formula(self):
-        from public.helpers import EmpiricalFormula
+        from cyano.helpers import EmpiricalFormula
         return EmpiricalFormula(self.empirical_formula)
         
     #calculations
@@ -2390,11 +2400,11 @@ class Metabolite(Molecule):
         
     #html formatting
     def get_as_html_structure(self, is_user_anonymous):
-        from public.helpers import draw_molecule
+        from cyano.helpers import draw_molecule
         return draw_molecule(self.smiles, 'svg', 636, 150)
     
     def get_as_html_empirical_formula(self, is_user_anonymous):
-        from public.helpers import EmpiricalFormula
+        from cyano.helpers import EmpiricalFormula
         return EmpiricalFormula(self.empirical_formula).get_as_html()        
         
     def get_as_html_biomass_composition(self, is_user_anonymous):
@@ -2460,7 +2470,7 @@ class Metabolite(Molecule):
                 {'verbose_name': 'Reaction participant', 'name':'reaction_stoichiometry_participants'},
                 ]}),
             ('Parameters', {'fields': ['parameters']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
@@ -2469,7 +2479,7 @@ class Metabolite(Molecule):
             'biomass_composition', 'media_composition', 
             'map_coordinates',
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type', 'charge', 'is_hydrophobic']
@@ -2478,7 +2488,7 @@ class Metabolite(Molecule):
         
 class Note(SpeciesComponent):
     #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_note', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_note', parent_link=True, verbose_name='Species component')
     
     #additional fields
     
@@ -2491,14 +2501,14 @@ class Note(SpeciesComponent):
             ('Type', {'fields': ['model_type']}),
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
             ('Classification', {'fields': ['type']}), 
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
             'id', 'wid', 'name', 'synonyms', 'cross_references',
             'type', 
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type']
@@ -2507,7 +2517,7 @@ class Note(SpeciesComponent):
     
 class Parameter(SpeciesComponent):
     #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_parameter', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_parameter', parent_link=True, verbose_name='Species component')
     
     #additional fields
     value = ForeignKey(EntryCharData, verbose_name='Value')
@@ -2529,7 +2539,7 @@ class Parameter(SpeciesComponent):
             ('Classification', {'fields': ['type']}),
             ('Value', {'fields': ['value']}),
             ('Associations', {'fields': ['reactions', 'molecules', 'state', 'process']}), 
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
@@ -2538,7 +2548,7 @@ class Parameter(SpeciesComponent):
             'value',
             'reactions', 'molecules', 'state', 'process', 
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type', 'reactions', 'molecules', 'state', 'process']
@@ -2547,7 +2557,7 @@ class Parameter(SpeciesComponent):
         
 class Pathway(SpeciesComponent):
     #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_pathway', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_pathway', parent_link=True, verbose_name='Species component')
     
     #additional fields
     
@@ -2760,14 +2770,14 @@ class Pathway(SpeciesComponent):
                 {'verbose_name': 'Reactions', 'name': 'reaction_map'},
                 'reactions',
                 ]}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]            
         field_list = [
             'id', 'wid', 'name', 'synonyms', 'cross_references',
             'type', 
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type']
@@ -2776,7 +2786,7 @@ class Pathway(SpeciesComponent):
         
 class Process(SpeciesComponent):
     #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_process', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_process', parent_link=True, verbose_name='Species component')
     
     #additional fields
     initialization_order = PositiveIntegerField(verbose_name='Initialization order')
@@ -2806,7 +2816,7 @@ class Process(SpeciesComponent):
             ('Implementation', {'fields': ['initialization_order']}), 
             ('Reactions', {'fields': [{'verbose_name': 'Chemical reactions', 'name': 'reactions'}, {'verbose_name': 'Complex formation reactions', 'name': 'formed_complexes'}]}),
             ('Parameters', {'fields': ['parameters']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
@@ -2814,7 +2824,7 @@ class Process(SpeciesComponent):
             'type', 
             'initialization_order', 
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type']
@@ -2856,7 +2866,7 @@ class ProteinComplex(Protein):
         return '%0.0f' % self.get_num_subunits()
         
     def get_empirical_formula(self):
-        from public.helpers import EmpiricalFormula, getModel
+        from cyano.helpers import EmpiricalFormula, getModel
         
         formula = EmpiricalFormula()
         for participant in self.biosynthesis.all():
@@ -2868,7 +2878,7 @@ class ProteinComplex(Protein):
         return formula
     
     def get_localization(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         localizations = []
         for participant in self.biosynthesis.all():
@@ -2895,7 +2905,7 @@ class ProteinComplex(Protein):
         raise TypeError(str(localizations))
         
     def get_half_life(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         val = 0
         for participant in self.biosynthesis.all():
@@ -2913,7 +2923,7 @@ class ProteinComplex(Protein):
         return val / self.get_molecular_weight()
         
     def get_neg_aa(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         val = 0
         for participant in self.biosynthesis.all():
@@ -2928,7 +2938,7 @@ class ProteinComplex(Protein):
         return val
         
     def get_pos_aa(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         val = 0
         for participant in self.biosynthesis.all():
@@ -2943,7 +2953,7 @@ class ProteinComplex(Protein):
         return val
         
     def get_extinction_coefficient(self):
-        from public.helpers import getModel
+        from cyano.helpers import getModel
         
         val = 0
         for participant in self.biosynthesis.all():
@@ -3034,7 +3044,7 @@ class ProteinComplex(Protein):
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}), 
             ('Parameters', {'fields': ['parameters']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]            
         field_list = [
@@ -3044,7 +3054,7 @@ class ProteinComplex(Protein):
             'formation_process', 'chaperones', 
             'regulatory_rule',
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type', 'dna_footprint__binding', 'dna_footprint__region', 'formation_process', 'chaperones']
@@ -3052,7 +3062,7 @@ class ProteinComplex(Protein):
         verbose_name_plural = 'Protein complexes'
         
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            from public.helpers import getModel, getEntry
+            from cyano.helpers import getModel, getEntry
 
             #biosynthesis
             coeff = 0
@@ -3128,7 +3138,7 @@ class ProteinComplex(Protein):
         
 class ProteinMonomer(Protein):
     #parent pointer
-    #parent_ptr_protein = OneToOneField(Protein, related_name='child_ptr_protein_monomer', parent_link=True, verbose_name='Protein')
+    parent_ptr_protein = OneToOneField(Protein, related_name='child_ptr_protein_monomer', parent_link=True, verbose_name='Protein')
     
     #additional fields
     gene = ForeignKey(Gene, related_name='protein_monomers', verbose_name='Gene')    
@@ -3155,7 +3165,7 @@ class ProteinMonomer(Protein):
         return self.get_sequence()[0]
         
     def get_empirical_formula(self):
-        from public.helpers import EmpiricalFormula
+        from cyano.helpers import EmpiricalFormula
         
         seq = self.get_sequence()
         return \
@@ -3241,7 +3251,7 @@ class ProteinMonomer(Protein):
         
     #http://ca.expasy.org/tools/protparam-doc.html
     def get_instability(self):
-        from public.helpers import DipeptideInstabilityWeight
+        from cyano.helpers import DipeptideInstabilityWeight
         
         seq = self.get_sequence()
         value = 0.;
@@ -3301,7 +3311,7 @@ class ProteinMonomer(Protein):
         
     #html formatting
     def get_as_html_sequence(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         return format_sequence_as_html(self.get_sequence())
         
     def get_as_html_signal_sequence(self, is_user_anonymous):
@@ -3363,7 +3373,7 @@ class ProteinMonomer(Protein):
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}), 
             ('Parameters', {'fields': ['parameters']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]        
         field_list = [
@@ -3374,7 +3384,7 @@ class ProteinMonomer(Protein):
             'localization', 'chaperones',
             'regulatory_rule', 
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type', 'is_n_terminal_methionine_cleaved__value', 'signal_sequence__type', 'signal_sequence__location', 'dna_footprint__binding', 'dna_footprint__region', 'localization', 'chaperones']
@@ -3397,7 +3407,7 @@ class ProteinMonomer(Protein):
 
 class Reaction(SpeciesComponent):
     #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_reaction', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_reaction', parent_link=True, verbose_name='Species component')
     
     #additional fields
     stoichiometry = ManyToManyField(ReactionStoichiometryParticipant, related_name='reactions', verbose_name='Stoichiometry')
@@ -3555,7 +3565,7 @@ class Reaction(SpeciesComponent):
             ('Kinetics', {'fields': ['kinetics_forward', 'kinetics_backward']}), 
             ('Parameters', {'fields': ['parameters']}),
             ('Associations', {'fields': ['pathways', 'processes', 'states']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
@@ -3568,7 +3578,7 @@ class Reaction(SpeciesComponent):
             'pathways', 'processes', 'states',
             'map_coordinates',
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type', 'direction', 'enzyme__protein', 'coenzymes__metabolite', 'is_spontaneous', 'pathways', 'processes', 'states']
@@ -3576,7 +3586,7 @@ class Reaction(SpeciesComponent):
         verbose_name_plural = 'Reactions'    
 
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            from public.helpers import getEntry, getModel, EmpiricalFormula
+            from cyano.helpers import getEntry, getModel, EmpiricalFormula
             
             #stoichiometry
             formula = EmpiricalFormula()
@@ -3654,7 +3664,7 @@ class Reaction(SpeciesComponent):
 
 class Species(Entry):
     #parent pointer
-    #parent_ptr_entry = OneToOneField(Entry, related_name='child_ptr_species', parent_link=True, verbose_name='Entry')
+    parent_ptr_entry = OneToOneField(Entry, related_name='child_ptr_species', parent_link=True, verbose_name='Entry')
     
     #additional fields
     #component = ManyToManyField("SpeciesComponent", verbose_name = "Components species consists of")
@@ -3663,15 +3673,15 @@ class Species(Entry):
     #getters
     @permalink
     def get_absolute_url(self):
-        return ('public.views.index', (), {'species_wid': self.wid})
+        return ('cyano.views.species', (), {'species_wid': self.wid})
     
-    #html formatting    
+    #html formatting
     def get_as_html_comments(self, is_user_anonymous):
         txt = self.comments
         
         #provide links to references
         return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]', 
-            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('public.views.detail', kwargs={'species_wid':self.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
+            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':self.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
             
     def get_as_html_genetic_code(self, is_user_anonymous):
@@ -3698,7 +3708,7 @@ class Species(Entry):
 
 class State(SpeciesComponent):
     #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_state', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_state', parent_link=True, verbose_name='Species component')
     
     #getters
     
@@ -3713,14 +3723,14 @@ class State(SpeciesComponent):
             ('Classification', {'fields': ['type']}),             
             ('Reactions', {'fields': ['reactions']}),
             ('Parameters', {'fields': ['parameters']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]        
         field_list = [
             'id', 'wid', 'name', 'synonyms', 'cross_references',
             'type', 
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type']
@@ -3729,7 +3739,7 @@ class State(SpeciesComponent):
         
 class Stimulus(Molecule):
     #parent pointer
-    #parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_stimulus', parent_link=True, verbose_name='Molecule')
+    parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_stimulus', parent_link=True, verbose_name='Molecule')
     
     #additional fields    
     value = ForeignKey(EntryFloatData, verbose_name='Value', related_name='+')
@@ -3751,7 +3761,7 @@ class Stimulus(Molecule):
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}),
             ('Parameters', {'fields': ['parameters']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
@@ -3759,7 +3769,7 @@ class Stimulus(Molecule):
             'type', 
             'value', 
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type', 'value__units']
@@ -3768,7 +3778,7 @@ class Stimulus(Molecule):
     
 class TranscriptionUnit(Molecule):
     #parent pointer
-    #parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_transcription_unit', parent_link=True, verbose_name='Molecule')
+    parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_transcription_unit', parent_link=True, verbose_name='Molecule')
     
     #additional fields
     genes = ManyToManyField('Gene', related_name='transcription_units', verbose_name='Genes')
@@ -3822,7 +3832,7 @@ class TranscriptionUnit(Molecule):
         return format_list_html(results, comma_separated=True)
         
     def get_as_html_sequence(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.get_direction())][1]        
         
@@ -3860,7 +3870,7 @@ class TranscriptionUnit(Molecule):
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}),
             ('Parameters', {'fields': ['parameters']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
@@ -3868,7 +3878,7 @@ class TranscriptionUnit(Molecule):
             'type', 
             'genes', 'promoter_35_coordinate', 'promoter_35_length', 'promoter_10_coordinate', 'promoter_10_length', 'tss_coordinate',    
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type']
@@ -3897,7 +3907,7 @@ class TranscriptionUnit(Molecule):
         
 class TranscriptionalRegulation(SpeciesComponent):
     #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_transcriptional_regulation', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_transcriptional_regulation', parent_link=True, verbose_name='Species component')
     
     #additional fields
     transcription_unit = ForeignKey('TranscriptionUnit', related_name='transcriptional_regulations', verbose_name='Transcription unit')
@@ -3925,7 +3935,7 @@ class TranscriptionalRegulation(SpeciesComponent):
     
     #html formatting
     def get_as_html_binding_site(self, is_user_anonymous):
-        from public.helpers import format_sequence_as_html
+        from cyano.helpers import format_sequence_as_html
         
         bs = self.binding_site
         if bs is None:
@@ -3962,7 +3972,7 @@ class TranscriptionalRegulation(SpeciesComponent):
                 'affinity', 
                 'activity'
                 ]}), 
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
@@ -3970,7 +3980,7 @@ class TranscriptionalRegulation(SpeciesComponent):
             'type', 
             'transcription_unit', 'transcription_factor', 'binding_site', 'affinity', 'activity', 
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type', 'transcription_unit', 'transcription_factor']
@@ -4017,7 +4027,7 @@ class TranscriptionalRegulation(SpeciesComponent):
         
 class Type(SpeciesComponent):
     #parent pointer
-    #parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_type', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_type', parent_link=True, verbose_name='Species component')
     
     #additional fields
     parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
@@ -4058,14 +4068,14 @@ class Type(SpeciesComponent):
             ('Type', {'fields': ['model_type']}),
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
             ('Classification', {'fields': ['type', 'parent', 'children', 'members']}),
-            ('Comments', {'fields': ['comments', 'references']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
             'id', 'wid', 'name', 'synonyms', 'cross_references',
             'type', 'parent',
             'comments',
-            'references', 
+            'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
         facet_fields = ['type', 'parent']
