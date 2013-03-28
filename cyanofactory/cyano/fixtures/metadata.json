@@ -302,13 +302,6 @@
   },
   {
     "model": "cyano.TableMeta",
-    "pk": 44,
-    "fields": {
-      "name": "References"
-    }
-  },
-  {
-    "model": "cyano.TableMeta",
     "pk": 45,
     "fields": {
       "name": "Revision"

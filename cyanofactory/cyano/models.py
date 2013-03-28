@@ -1011,12 +1011,14 @@ class Entry(Model):
         return format_list_html(results, separator=', ')
     
     def get_as_html_created_user(self, is_user_anonymous):
+        return ""# FIXME
         if is_user_anonymous:
             return '%s' % (self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
         else:
             return '<a href="%s">%s %s</a> on %s' % (self.created_user.get_absolute_url(), self.created_user.first_name, self.created_user.last_name, self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
     
     def get_as_html_last_updated_user(self, is_user_anonymous):
+        return ""# FIXME
         if is_user_anonymous:
             return '%s' % (self.last_updated_date.strftime("%Y-%m-%d %H:%M:%S"))
         else:
@@ -1309,7 +1311,8 @@ class Molecule(SpeciesComponent):
         return EmpiricalFormula()
         
     def get_molecular_weight(self):
-        return self.get_empirical_formula().get_molecular_weight()
+        return 0 # FIXME
+        #return self.get_empirical_formula().get_molecular_weight()
         
     def get_atoms(self):
         return sum(self.get_empirical_formula().values())
@@ -1319,24 +1322,30 @@ class Molecule(SpeciesComponent):
     
     #html formatting        
     def get_as_html_empirical_formula(self, is_user_anonymous):
-        return self.get_empirical_formula().get_as_html()
+        return ""# FIXME
+        #return self.get_empirical_formula().get_as_html()
         
     def get_as_html_molecular_weight(self, is_user_anonymous):
+        return ""# FIXME
         return self.get_molecular_weight()
         
     def get_as_html_extinction_coefficient(self, is_user_anonymous):
+        return ""# FIXME
         return self.get_extinction_coefficient()
         
     def get_as_html_absorbance_factor(self, is_user_anonymous):
+        return ""# FIXME
         return self.get_absorbance_factor()
         
     def get_as_html_pi(self, is_user_anonymous):
+        return ""# FIXME
         if hasattr(self, 'pi'):
             return self.pi
         else:
             return self.get_pi()
             
     def get_as_html_modification_reactions(self, is_user_anonymous):
+        return ""# FIXME
         results = []
         for obj in self.modification_reactions.all():
             if len(obj.reactions.all()) == 0:
@@ -1346,6 +1355,7 @@ class Molecule(SpeciesComponent):
         return format_list_html(results, vertical_spacing=True)
             
     def get_as_html_reaction_stoichiometry_participants(self, is_user_anonymous):
+        return ""# FIXME
         results = []
         for obj in self.reaction_stoichiometry_participants.all():
             if len(obj.reactions.all()) == 0:
@@ -1355,6 +1365,7 @@ class Molecule(SpeciesComponent):
         return format_list_html(list(set(results)), vertical_spacing=True)
         
     def get_as_html_protein_complex_biosythesis_participants(self, is_user_anonymous):
+        return ""# FIXME
         results = []
         for obj in self.protein_complex_biosythesis_participants.all():            
             if len(obj.protein_complexes.all()) == 0:
@@ -1588,63 +1599,64 @@ class Chromosome(Molecule):
         tus = []
         for i in range(len(genesList)):
             gene = genesList[i]
-            tu = gene.transcription_units.all()[0]
-            if iTUs.has_key(tu.wid):
-                iTu = iTUs[tu.wid]
-            else:
-                tus.append(tu)
-                iTu = nTus
-                iTUs[tu.wid] = iTu
-                nTus += 1
+            if gene.transcription_units.count() > 0:
+                tu = gene.transcription_units.all()[0]
+                if iTUs.has_key(tu.wid):
+                    iTu = iTUs[tu.wid]
+                else:
+                    tus.append(tu)
+                    iTu = nTus
+                    iTUs[tu.wid] = iTu
+                    nTus += 1
+                    
+                iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
                 
-            iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
-            
-            if gene.direction == 'f':
-                x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                x3 = min(segmentLeft + segmentW, x1 + gene.length / ntPerSegment * segmentW)
-                x2 = max(x1, x3 - 5)
-            else:
-                x3 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                x1 = min(segmentLeft + segmentW, x3 + gene.length / ntPerSegment * segmentW)
-                x2 = min(x1, x3 + 5)
+                if gene.direction == 'f':
+                    x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                    x3 = min(segmentLeft + segmentW, x1 + gene.length / ntPerSegment * segmentW)
+                    x2 = max(x1, x3 - 5)
+                else:
+                    x3 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                    x1 = min(segmentLeft + segmentW, x3 + gene.length / ntPerSegment * segmentW)
+                    x2 = min(x1, x3 + 5)
+                    
+                y2 = chrTop + (iSegment + 1) * segmentHeight - 2
+                y1 = y2 - geneHeight
                 
-            y2 = chrTop + (iSegment + 1) * segmentHeight - 2
-            y1 = y2 - geneHeight
-            
-            if math.fabs(x3 - x1) > len(gene.wid) * 5:
-                label = gene.wid
-            else:
-                label = ''
-                
-            if gene.name:
-                tip_title = gene.name
-            else:
-                tip_title = gene.wid
-            tip_content = 'Transcription unit: %s' % tu.name
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
-                
-            genes += '<g>\
-                <a xlink:href="%s">\
-                    <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/>\
-                </a>\
-                <a xlink:href="%s">\
-                    <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\
-                </a>\
-                </g>' % (                
-                gene.get_absolute_url(),
-                iTu % len(colors),
-                x1, y1,
-                x2, y1,
-                x3, (y1 + y2) / 2, 
-                x2, y2,
-                x1, y2,
-                tip_title, tip_content,
-                gene.get_absolute_url(),
-                (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
-                tip_title, tip_content,
-                label,                
-                )
+                if math.fabs(x3 - x1) > len(gene.wid) * 5:
+                    label = gene.wid
+                else:
+                    label = ''
+                    
+                if gene.name:
+                    tip_title = gene.name
+                else:
+                    tip_title = gene.wid
+                tip_content = 'Transcription unit: %s' % tu.name
+                tip_title = tip_title.replace("'", "\'")
+                tip_content = tip_content.replace("'", "\'")
+                    
+                genes += '<g>\
+                    <a xlink:href="%s">\
+                        <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/>\
+                    </a>\
+                    <a xlink:href="%s">\
+                        <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\
+                    </a>\
+                    </g>' % (                
+                    gene.get_absolute_url(),
+                    iTu % len(colors),
+                    x1, y1,
+                    x2, y1,
+                    x3, (y1 + y2) / 2, 
+                    x2, y2,
+                    x1, y2,
+                    tip_title, tip_content,
+                    gene.get_absolute_url(),
+                    (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
+                    tip_title, tip_content,
+                    label,                
+                    )
         
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
