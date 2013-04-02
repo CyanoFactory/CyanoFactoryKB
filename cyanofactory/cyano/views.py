@@ -1,7 +1,6 @@
 '''
 Whole-cell knowledge base views
 
-Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
 '''
@@ -541,7 +540,7 @@ def detail(request, species, model, item):
 				else:
 					verbose_name = field.verbose_name
 				
-			data = format_field_detail_view(item, field_name, request.user.is_anonymous())
+			data = format_field_detail_view(species, item, field_name, request.user.is_anonymous())
 			if (data is None) or (data == ''):
 				rmfields = [idx2] + rmfields
 			
@@ -727,7 +726,8 @@ def exportData(request, species_wid=None):
 			models = models)
 
 @login_required
-def importData(request, species_wid=None):
+@resolve_to_objects
+def importData(request, species=None):
 	if request.method == 'POST':
 		form = ImportDataForm(request.POST or None, request.FILES)
 		
