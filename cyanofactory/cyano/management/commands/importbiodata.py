@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from Bio import SeqIO
-from cyano.models import Entry, Species, RevisionDetail, UserProfile, Gene, Chromosome
+from cyano.models import Entry, Species, RevisionDetail, UserProfile, Gene, Chromosome, Type
 from django.core.exceptions import ObjectDoesNotExist
 from argparse import ArgumentError
 
@@ -13,7 +13,7 @@ class Command(BaseCommand):
             for record in f:
                 revdetail = RevisionDetail()
                 revdetail.user = UserProfile.objects.get(user__username__exact = "gabriel")
-                revdetail.reason = "Initial Load"
+                revdetail.reason = "Update"
 
                 try:
                     species = Species.objects.get(wid = record.name)
@@ -39,10 +39,13 @@ class Command(BaseCommand):
                 features = record.features
                 
                 gene_features = filter(lambda x : x.type == "gene", features)
-                cds_features = filter(lambda x : x.type == "CDS", features)
+                cds_features = filter(lambda x : x.type != "source" and x.type != "gene", features)
                 
                 gene_map = {}
                 for g in gene_features:
+                    if not "locus_tag" in g.qualifiers:
+                        print "WARN: " + str(g) + " without locus"
+                        continue
                     loci = g.qualifiers["locus_tag"][0]
                     if loci in gene_map:
                         raise ArgumentError("locus_tag " + loci + " appeared twice")
@@ -50,6 +53,9 @@ class Command(BaseCommand):
                 
                 cds_map = {}
                 for c in cds_features:
+                    if not "locus_tag" in c.qualifiers:
+                        print "WARN: " + str(c) + " without locus"
+                        continue
                     loci = c.qualifiers["locus_tag"][0]
                     if loci in cds_map:
                         raise ArgumentError("locus_tag " + loci + " appeared twice")
@@ -73,6 +79,21 @@ class Command(BaseCommand):
                     g.length = abs(v.location.start - v.location.end) # FIXME Not for joins
                     g.save(revision_detail = revdetail)
                     g.species.add(species)
+                    
+                    if v.type == "CDS":
+                        v.type = "mRNA"
+                    
+                    try:
+                        t = Type.objects.get(wid = v.type)
+                    except ObjectDoesNotExist:
+                        t = Type(wid = v.type, name = v.type)
+
+                    t.save(revision_detail = revdetail)
+                    t.species.add(species)
+                    t.save(revision_detail = revdetail)
+
+                    g.type.add(t)
+                    
                     g.save(revision_detail = revdetail)
                     
                 # r.annotations
