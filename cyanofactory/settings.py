@@ -29,6 +29,14 @@ DATABASES = {
         'PASSWORD': 'cyano',
         'HOST': 'localhost',
         'PORT': '5432',
+    },
+    'cyano': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'biowarehouse',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': 'bt-005.mni.hs-mittweida.de',
+        'PORT': '5432',
     }
 }
 
@@ -133,6 +141,7 @@ INSTALLED_APPS = (
     'cyano',
     'db_xref',
     'django_dumpdb',
+    'biowarehouse',
 	
 	#helpers
 	'haystack',
@@ -174,6 +183,8 @@ CACHES = {
         'LOCATION': ROOT_DIR + '/cache',
     }
 }
+
+DATABASE_ROUTERS = ['public.router.WarehouseRouter']
 
 AUTH_PROFILE_MODULE = 'public.UserProfile'
 LOGIN_URL = ROOT_URL + '/login/'
