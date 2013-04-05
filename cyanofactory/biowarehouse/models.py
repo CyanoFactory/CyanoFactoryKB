@@ -1622,7 +1622,7 @@ class Transcriptionunit(models.Model):
 
 class Transcriptionunitcomponent(models.Model):
     type = models.CharField(max_length=100, db_column='Type') # Field name made lowercase.
-    transcriptionunitWid = models.ForeignKey(Transcriptionunit, db_column='TranscriptionUnitWID', related_name = '+') # Field name made lowercase.
+    transcriptionunitWid = models.ForeignKey(Transcriptionunit, primary_key = True, db_column='TranscriptionUnitWID', related_name = '+') # Field name made lowercase.
     otherWid = models.BigIntegerField(db_column='OtherWID') # Field name made lowercase.
     class Meta:
         db_table = 'TranscriptionUnitComponent'

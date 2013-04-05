@@ -13,6 +13,7 @@ class Command(BaseCommand):
         
         proteins = bmodels.Protein.objects.all()
         genes = bmodels.Gene.objects.all()
+        tuc = bmodels.Transcriptionunitcomponent.objects.all()
         
         gene_to_replicon = \
             lambda x: "CHROMOSOME-1" if x >= 1 and x <= 3230  \
@@ -24,7 +25,7 @@ class Command(BaseCommand):
         
         revdetail = cmodels.RevisionDetail()
         revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "gabriel")
-        revdetail.reason = "Biocyc Import"
+        revdetail.reason = "Biocyc Update"
         
         try:
             species = cmodels.Species.objects.get(wid = "BioCyc_PPC6803")
@@ -59,6 +60,8 @@ class Command(BaseCommand):
                 chromosome = cmodels.Chromosome.objects.get(wid = chr)
             except ObjectDoesNotExist:
                 chromosome = cmodels.Chromosome(wid = chr)
+
+            chromosome.name = chr
             chromosome.sequence = seq
             chromosome.length = len(seq)
             chromosome.save(revision_detail = revdetail)
@@ -81,25 +84,49 @@ class Command(BaseCommand):
                 g.length = abs(gene.codingregionstart - gene.codingregionend) # FIXME Not for joins
                 g.save(revision_detail = revdetail)
                 g.species.add(species)
- 
+
                 typ = gene.name.split("-")
                 if len(typ) > 1:
-                    typ = typ[0]
+                    if "RNA" in typ[0]:
+                        typ = typ[0]
+                    else:
+                        typ = "mRNA"
                 else:
-                    typ = None
+                    typ = "mRNA"
                 
-                if typ != None:
-                    try:
-                        t = cmodels.Type.objects.get(wid = typ)
-                    except ObjectDoesNotExist:
-                        t = cmodels.Type(wid = typ, name = typ)
-        
-                    t.save(revision_detail = revdetail)
-                    t.species.add(species)
-                    t.save(revision_detail = revdetail)
-        
-                    g.type.add(t)
-                
+                try:
+                    t = cmodels.Type.objects.get(wid = typ)
+                except ObjectDoesNotExist:
+                    t = cmodels.Type(wid = typ, name = typ)
+
+                t.save(revision_detail = revdetail)
+                t.species.add(species)
+                t.save(revision_detail = revdetail)
+
+                g.type.add(t)
+
                 g.save(revision_detail = revdetail)
 
             f.close()
+
+        for t in tuc:
+            if t.type != "gene":
+                continue
+            
+            name = bmodels.Transcriptionunit.objects.get(Wid = t.transcriptionunitWid.Wid).name
+            
+            try:
+                tu = cmodels.TranscriptionUnit.objects.get(wid = name)
+            except ObjectDoesNotExist:
+                tu = cmodels.TranscriptionUnit(wid = name)
+
+            tu.name = name
+            tu.save(revision_detail = revdetail)
+            tu.species.add(species)
+            
+            gene = bmodels.Gene.objects.get(Wid = t.otherWid)
+            cgene = cmodels.Gene.objects.get(wid = gene.genomeid)
+            tu.genes.add(cgene)
+            
+            tu.save(revision_detail = revdetail)
+
