@@ -3819,8 +3819,7 @@ class TranscriptionUnit(Molecule):
         return self.genes.all().aggregate(Min('coordinate'))['coordinate__min']
         
     def get_length(self):
-        return 0
-        return self.genes.extra(select={"end_coordinate": "MAX(coordinate + length - 1)"}).values('end_coordinate')[0]['end_coordinate'] - self.get_coordinate() + 1
+        return max(self.genes.extra(select={"end_coordinate": "(coordinate + length - 1)"}).values('end_coordinate'))['end_coordinate'] - self.get_coordinate() + 1
         
     def get_direction(self):
         dir = list(set([g[0] for g in self.genes.values_list('direction').all()]))
