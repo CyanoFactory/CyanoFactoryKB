@@ -2,31 +2,13 @@ from django.http import HttpResponseBadRequest
 from django.shortcuts import render_to_response
 from django.shortcuts import redirect
 from django.template import Context, loader
-from django.utils.safestring import mark_safe
-from django.core.urlresolvers import reverse
-
-database_name = "cyano"
-
-def get_database_url_from_organism(organism):
-    stri = organism.split(':', 1)
-    return reverse("db_xref.views.dbxref", args=[stri[0], stri[1]])
-
-def get_database_url(database, organism):
-    database = database.lower()
-    
-    return {
-        "asap": lambda : "https://asap.ahabs.wisc.edu/annotation/php/feature_info.php?FeatureID=" + organism,
-        "ecocyc": lambda : "http://biocyc.org/ECOLI/new-image?type=GENE&object=" + organism,
-        "ecogene": lambda : "http://ecogene.org/geneInfo.php?eg_id=" + organism,
-        "geneid": lambda : "http://www.ncbi.nlm.nih.gov/sites/entrez?db=gene&cmd=Retrieve&dopt=full_report&list_uids=" + organism,
-        "gi": lambda: "http://www.ncbi.nlm.nih.gov/nuccore/" + organism,
-        "project": lambda: "http://www.ncbi.nlm.nih.gov/bioproject/" + organism,
-        "bioproject": lambda: "http://www.ncbi.nlm.nih.gov/bioproject?term=" + organism,
-        "pubmed": lambda: "http://www.ncbi.nlm.nih.gov/pubmed/" + organism,
-        "uniprotkb/swiss-prot" : lambda : "http://www.uniprot.org/uniprot/" + organism,        
-            }.get(database, lambda : "")
+from db_xref.helpers import get_database_url
 
 def index(request):
+    """Displayed when no arguments are passed. Renders the intro page.
+
+    :return: Website -- ``db_xref/index.html``
+    """
     data = {"db" : "ECOCYC",
             "value": "G7954",
             "item" : "ECOCYC:G7954",
@@ -36,6 +18,28 @@ def index(request):
     return render_to_response("db_xref/index.html", data)
 
 def dbxref(request, database, organism):
+    """Converts the db_xref identifier to a database url.
+
+    :URL:
+        ``(?P<database>[a-zA-Z0-9_-]+)\s*:\s*(?P<organism>[a-zA-Z0-9_-]+)``
+
+    :Example:
+        ``ECOCYC:G7954``
+    
+    :GET:
+        ``format:``
+            * ``redirect``: Default value. Redirects to the database.
+            * ``txt``: Returns a text file containing the url.
+            * ``json``: Returns a json file.
+            * ``xml``: Returns a XML file.
+            * ``html``: Returns a html file.
+    
+    :raises:
+        ``HttpResponseBadRequest:`` -- Unsupported database or format.
+      
+    :return:
+       Website -- ``db_xref/output.format``
+    """
     _format = request.GET.get('format', 'redirect')
     
     data = {

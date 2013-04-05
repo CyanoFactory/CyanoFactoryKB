@@ -16,7 +16,7 @@ Last updated: 2012-07-17
 
 {% block action_icons %}
 {% if not request.user.is_anonymous %}
-<a href="{% url admin:auth_user_add %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
+<a href="{% url "admin:auth_user_add" %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
 {% endif %}
 {{ block.super }}
 {% endblock %}
@@ -47,8 +47,8 @@ Last updated: 2012-07-17
 		<td><a href="{{ object.get_absolute_url }}/{{ species.wid }}">{{ profile.affiliation|truncatechars:80 }}</a></td>
 		{% if not request.user.is_anonymous %}
 		<td>
-			<a href="{% url admin:auth_user_change object.pk %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
-			<a href="{% url admin:auth_user_delete object.pk %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
+			<a href="{% url "admin:auth_user_change" object.pk %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+			<a href="{% url "admin:auth_user_delete" object.pk %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
 		</td>
 		{% endif %}
 	</tr>

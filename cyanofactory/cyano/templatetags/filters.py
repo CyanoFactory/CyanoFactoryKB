@@ -1,3 +1,4 @@
+import re
 from django import template
 
 register = template.Library()
@@ -11,3 +12,24 @@ def index(value, arg):
         from django.conf import settings
 
         value = settings.TEMPLATE_STRING_IF_INVALID
+
+#via http://stackoverflow.com/questions/844746/performing-a-getattr-style-lookup-in-a-django-template
+numeric_test = re.compile("^\d+$")
+
+@register.filter(name='getattr')
+def getattribute(value, arg):
+    """Gets an attribute of an object dynamically from a string name"""
+
+    if hasattr(value, str(arg)):
+        return getattr(value, arg)
+    elif hasattr(value, 'has_key') and value.has_key(arg):
+        return value[arg]
+    elif numeric_test.match(str(arg)) and len(value) > int(arg):
+        return value[int(arg)]
+    else:
+        from django.conf import settings
+        return settings.TEMPLATE_STRING_IF_INVALID
+
+@register.filter(name='get_absolute_url')
+def getabsoluteurlwithspecies(value, arg):
+    return value.get_absolute_url(arg)

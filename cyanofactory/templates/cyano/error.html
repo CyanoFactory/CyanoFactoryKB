@@ -29,7 +29,6 @@ Last updated: 2012-07-17
 #error .content{
 	padding:2px;
 	color:red;
-	font-style:italic;
 }
 @media print{
 	#error{
@@ -49,6 +48,12 @@ Last updated: 2012-07-17
 {% block content %}
 <div id="error">
 	<h1>Error {{ type }}</h1>
-	<div class="content">{{ message }}</div>
+	<div class="content">
+	{{ message }}
+	{% if message_extra %}
+	<br/><br/>
+	{{ message_extra|safe }}
+	{% endif %}
+	</div>
 </div>
 {% endblock %}

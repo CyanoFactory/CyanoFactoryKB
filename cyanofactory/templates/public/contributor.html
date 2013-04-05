@@ -11,11 +11,11 @@ Last updated: 2012-07-17
 {% load static %}
 
 {% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.first_name }} {{ object.last_name }}{% endwith %}{% endblock %}
-{% block page_title %}{% with object=queryset.0 %}<a href="{% if species %}{% url public.views.contributors species_wid=species.wid %}{% else %}{% url public.views.contributors %}{% endif %}">Contributors</a> :: {{ object.first_name }} {{ object.last_name }}{% endwith %}{% endblock %}
+{% block page_title %}{% with object=queryset.0 %}<a href="{% if species %}{% url "public.views.contributors" species_wid=species.wid %}{% else %}{% url "public.views.contributors" %}{% endif %}">Contributors</a> :: {{ object.first_name }} {{ object.last_name }}{% endwith %}{% endblock %}
 
 {% block action_icons %}
 {% if not request.user.is_anonymous %}
-<a href="{% url admin:auth_user_change queryset.0.id %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+<a href="{% url "admin:auth_user_change" queryset.0.id %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
 {% endif %}
 {{ block.super }}
 {% endblock %}

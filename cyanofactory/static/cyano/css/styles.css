@@ -44,7 +44,6 @@ select.select{
 }
 
 .errors{
-	font-style:italic;
 	color:red;
 	margin-bottom:10px;
 }

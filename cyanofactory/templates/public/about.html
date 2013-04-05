@@ -217,7 +217,7 @@ WholeCellKB separately versions each entry. Each entry's page displays two prope
 <div><h2><a name="editing"></a>Editing WholeCellKB</h2>
 <p>We welcome additions and corrections to the version of WholeCellKB at <a href="{{ ROOT_URL }}">{{ ROOT_URL }}</a>. Click the <img src="{% get_static_prefix %}public/img/pencil.png" class="inline-icon" alt="pencil"/> icon located at the bottom-right corner of most pages to email us additions and corrections to WholeCellKB.</p>
 
-<p>Alternatively, you can download the WholeCellKB source code and content to create and customize &ndash; including the content, data model, and user interface &ndash; your own model organism database. After you've installed and logged into your own version of WholeCellKB, the <img src="{% get_static_prefix %}public/img/pencil.png" class="inline-icon" alt="pencil"/> icons will direct you to web-forms which will enable to you to edit your model organism databases. Additionally, after you've logged in you will have access to a <a href="{% if species %}{% url public.views.importData species_wid=species.wid %}{% else %}{% url public.views.importData %}{% endif %}">batch upload page</a> which will enable you to use the WholeCellKB Excel interface to more rapidly edit your model organism databases.</p>
+<p>Alternatively, you can download the WholeCellKB source code and content to create and customize &ndash; including the content, data model, and user interface &ndash; your own model organism database. After you've installed and logged into your own version of WholeCellKB, the <img src="{% get_static_prefix %}public/img/pencil.png" class="inline-icon" alt="pencil"/> icons will direct you to web-forms which will enable to you to edit your model organism databases. Additionally, after you've logged in you will have access to a <a href="{% if species %}{% url "public.views.importData" species_wid=species.wid %}{% else %}{% url "public.views.importData" %}{% endif %}">batch upload page</a> which will enable you to use the WholeCellKB Excel interface to more rapidly edit your model organism databases.</p>
 
 <p>See <a href="#developing">below</a> for more information on creating your own model organism databases with WholeCellKB.</p>
 
@@ -225,7 +225,7 @@ WholeCellKB separately versions each entry. Each entry's page displays two prope
 </div>
 
 <div><h2><a name="downloading_content"></a>Downloading WholeCellKB content</h2>
-<p>The content of WholeCellKB can be downloaded <a href="{% if species %}{% url public.views.exportData species_wid=species.wid %}{% else %}{% url public.views.exportData %}{% endif %}">here</a>.</p>
+<p>The content of WholeCellKB can be downloaded <a href="{% if species %}{% url "public.views.exportData" species_wid=species.wid %}{% else %}{% url "public.views.exportData" %}{% endif %}">here</a>.</p>
 
 <p>The content of WholeCellKB is available in six formats:
 <ul class="download_formats">
@@ -269,7 +269,7 @@ WholeCellKB separately versions each entry. Each entry's page displays two prope
 </div>
 
 <div><h2><a name="starting"></a>Getting started</h2>
-<p>The best ways to get started are to browse or search WholeCellKB using the menu or the search box at the top of this page. See the <a href="{% if species %}{% url public.views.tutorial species_wid=species.wid %}{% else %}{% url public.views.tutorial %}{% endif %}">tutorial</a> for additional help getting started.</p>
+<p>The best ways to get started are to browse or search WholeCellKB using the menu or the search box at the top of this page. See the <a href="{% if species %}{% url "public.views.tutorial" species_wid=species.wid %}{% else %}{% url "public.views.tutorial" %}{% endif %}">tutorial</a> for additional help getting started.</p>
 </div>
 
 <div><h2><a name="citing"></a>Citing WholeCellKB</h2>	

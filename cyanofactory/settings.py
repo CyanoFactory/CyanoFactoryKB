@@ -23,10 +23,19 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'cyano',
+		#'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'cyano_new',
         'USER': 'cyano',
         'PASSWORD': 'cyano',
         'HOST': 'localhost',
+        'PORT': '5432',
+    },
+    'cyano': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'biowarehouse',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': 'bt-005.mni.hs-mittweida.de',
         'PORT': '5432',
     }
 }
@@ -131,22 +140,31 @@ INSTALLED_APPS = (
     'biosql',
     'cyano',
     'db_xref',
+    'django_dumpdb',
+    'biowarehouse',
 	
 	#helpers
 	'haystack',
 )
-
+import django.utils.log
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error.
 # See http://docs.djangoproject.com/en/dev/topics/logging for
 # more details on how to customize your logging configuration.
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse'
+            }     
+    },
     'handlers': {
         'mail_admins': {
             'level': 'ERROR',
+            'filters': ['require_debug_false'],
             'class': 'django.utils.log.AdminEmailHandler'
         }
     },
@@ -165,6 +183,8 @@ CACHES = {
         'LOCATION': ROOT_DIR + '/cache',
     }
 }
+
+DATABASE_ROUTERS = ['public.router.WarehouseRouter']
 
 AUTH_PROFILE_MODULE = 'public.UserProfile'
 LOGIN_URL = ROOT_URL + '/login/'

@@ -1,3 +1,4 @@
+# Utility class to load a Genebank File into the database
 from Bio import Entrez
 from Bio import SeqIO
 from BioSQL import BioSeqDatabase
