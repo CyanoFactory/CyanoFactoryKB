@@ -14,6 +14,7 @@ class Command(BaseCommand):
         proteins = bmodels.Protein.objects.all()
         genes = bmodels.Gene.objects.all()
         tuc = bmodels.Transcriptionunitcomponent.objects.all()
+        pathways = bmodels.Pathway.objects.all()
         
         gene_to_replicon = \
             lambda x: "CHROMOSOME-1" if x >= 1 and x <= 3230  \
@@ -25,7 +26,7 @@ class Command(BaseCommand):
         
         revdetail = cmodels.RevisionDetail()
         revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "gabriel")
-        revdetail.reason = "Biocyc Update"
+        revdetail.reason = "Biocyc Pathways"
         
         try:
             species = cmodels.Species.objects.get(wid = "BioCyc_PPC6803")
@@ -33,7 +34,7 @@ class Command(BaseCommand):
             species = cmodels.Species(wid = "BioCyc_PPC6803")
         species.name = "Synechosystis PPC6803 BioCyc"
         species.comments = ""
-        species.genetic_code = '2'
+        species.genetic_code = '11'
         species.save(revision_detail = revdetail)
         
         #for protein in proteins:
@@ -60,14 +61,14 @@ class Command(BaseCommand):
                 chromosome = cmodels.Chromosome.objects.get(wid = chr)
             except ObjectDoesNotExist:
                 chromosome = cmodels.Chromosome(wid = chr)
-
+ 
             chromosome.name = chr
             chromosome.sequence = seq
             chromosome.length = len(seq)
             chromosome.save(revision_detail = revdetail)
             chromosome.species.add(species)
             chromosome.save(revision_detail = revdetail)
-
+ 
             for gene in genes:
                 if gene_to_replicon(int(gene.genomeid.split("-")[1])) != chr:
                     continue
@@ -76,7 +77,7 @@ class Command(BaseCommand):
                     g = cmodels.Gene.objects.get(wid = gene.genomeid)
                 except ObjectDoesNotExist:
                     g = cmodels.Gene(wid = gene.genomeid)
-
+ 
                 g.name = gene.name
                 g.chromosome = chromosome
                 g.direction = gene.direction.lower()
@@ -84,7 +85,7 @@ class Command(BaseCommand):
                 g.length = abs(gene.codingregionstart - gene.codingregionend) # FIXME Not for joins
                 g.save(revision_detail = revdetail)
                 g.species.add(species)
-
+ 
                 typ = gene.name.split("-")
                 if len(typ) > 1:
                     if "RNA" in typ[0]:
@@ -98,17 +99,17 @@ class Command(BaseCommand):
                     t = cmodels.Type.objects.get(wid = typ)
                 except ObjectDoesNotExist:
                     t = cmodels.Type(wid = typ, name = typ)
-
+ 
                 t.save(revision_detail = revdetail)
                 t.species.add(species)
                 t.save(revision_detail = revdetail)
-
+ 
                 g.type.add(t)
-
+ 
                 g.save(revision_detail = revdetail)
-
+ 
             f.close()
-
+ 
         for t in tuc:
             if t.type != "gene":
                 continue
@@ -119,7 +120,7 @@ class Command(BaseCommand):
                 tu = cmodels.TranscriptionUnit.objects.get(wid = name)
             except ObjectDoesNotExist:
                 tu = cmodels.TranscriptionUnit(wid = name)
-
+ 
             tu.name = name
             tu.save(revision_detail = revdetail)
             tu.species.add(species)
@@ -130,3 +131,16 @@ class Command(BaseCommand):
             
             tu.save(revision_detail = revdetail)
 
+        for pathway in pathways:
+            wid = "P_" + str(pathway.Wid)
+   
+            try:
+                p = cmodels.Pathway.objects.get(wid = wid)
+            except ObjectDoesNotExist:
+                p = cmodels.Pathway(wid = wid)
+            
+            p.name = pathway.name
+            p.save(revision_detail = revdetail)
+            p.species.add(species)
+            p.save(revision_detail = revdetail)
+            

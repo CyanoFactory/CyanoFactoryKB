@@ -22,7 +22,7 @@ class Command(BaseCommand):
                 species.wid = record.name
                 species.name = record.annotations["organism"]
                 species.comments = record.description
-                species.genetic_code = '2'
+                species.genetic_code = '11'
                 species.save(revision_detail = revdetail)
                 
                 try:
