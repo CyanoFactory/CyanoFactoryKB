@@ -5,6 +5,7 @@ from django.contrib.auth.models import User
 from django.db.models.loading import get_model
 import django.http as http
 from settings import DEBUG
+from django.http.response import Http404
 
 def __get_and_delete(kw, key):
     if not key in kw:
@@ -38,6 +39,10 @@ def resolve_to_objects(function):
                 raise http.Http404
         if model and wid:
             item = get_queryset_object_or_404(model.objects.filter(wid = wid))
+            # Check if object is component of species
+            if species:
+                if not item.species.filter(id = species.id).exists():
+                    raise Http404
 
         # Prepare keyword arguments
         __assign_if_not_false(kw, "species", species)

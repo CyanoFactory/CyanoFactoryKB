@@ -577,7 +577,7 @@ class Revision(Model):
         * ``new_value``: New value in the cell of the column
     """
     current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False)
-    detail = ForeignKey(RevisionDetail, verbose_name = 'Edit operation', related_name = '+', editable = False)
+    detail = ForeignKey(RevisionDetail, verbose_name = 'Edit operation', related_name = 'revisions', editable = False)
     action = ForeignKey(RevisionOperation, verbose_name = '', related_name = '+')
     table = ForeignKey(TableMeta, verbose_name = '', related_name = '+')
     column = IntegerField(verbose_name = '')
@@ -3819,6 +3819,7 @@ class TranscriptionUnit(Molecule):
         return self.genes.all().aggregate(Min('coordinate'))['coordinate__min']
         
     def get_length(self):
+        return 0
         return self.genes.extra(select={"end_coordinate": "MAX(coordinate + length - 1)"}).values('end_coordinate')[0]['end_coordinate'] - self.get_coordinate() + 1
         
     def get_direction(self):
@@ -3839,7 +3840,7 @@ class TranscriptionUnit(Molecule):
         
     #html formatting
     def get_as_html_structure(self, species, is_user_anonymous):
-        return self.get_chromosome().get_as_html_structure(is_user_anonymous, 
+        return self.get_chromosome().get_as_html_structure(species, is_user_anonymous, 
             zoom = 1, 
             start_coordinate = self.get_coordinate() - 500, 
             end_coordinate = self.get_coordinate() + self.get_length() + 500, 

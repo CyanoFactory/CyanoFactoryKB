@@ -28,8 +28,8 @@ class Command(BaseCommand):
                 try:
                     chromosome = Chromosome.objects.get(wid = "CHR_1")
                 except ObjectDoesNotExist:
-                    chromosome = Chromosome()
-                chromosome.wid = "CHR_1"
+                    chromosome = Chromosome(wid = "CHR_1")
+                chromosome.name = "CHR_1"
                 chromosome.sequence = record.seq
                 chromosome.length = len(record.seq)
                 chromosome.save(revision_detail = revdetail)
