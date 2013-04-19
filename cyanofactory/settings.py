@@ -33,8 +33,8 @@ DATABASES = {
     'cyano': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'biowarehouse',
-        'USER': '',
-        'PASSWORD': '',
+        'USER': 'gabriel',
+        'PASSWORD': 'mastagk',
         'HOST': 'bt-005.mni.hs-mittweida.de',
         'PORT': '5432',
     }
@@ -142,6 +142,7 @@ INSTALLED_APPS = (
     'db_xref',
     'django_dumpdb',
     'biowarehouse',
+	'bioparser'
 	
 	#helpers
 	'haystack',
