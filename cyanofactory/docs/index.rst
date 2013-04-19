@@ -13,6 +13,7 @@ Contents:
 
    db_xref/index
    cyano/index
+   bioparser/index
 
 Indices and tables
 ==================

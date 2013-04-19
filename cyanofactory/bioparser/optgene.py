@@ -1,7 +1,66 @@
 import re
 
 class OptGeneParser:
+	"""Parses the specified OptGene file.
+	
+	OptGene (or BioOpt) is a text data format to describe interaction
+	between different metabolites.
+	
+	The original specification (http://129.16.106.142/tools.php?c=bioopt)
+	is incompatible to some sample files, because of that this parser is more
+	tolerant about the file structure. The format basicly consists of
+	identifiers delimited by operators. Identifiers are allowed to contain
+	spaces (spaces to the left and right are removed)
+	
+	An OptGene file consists of multiple sections:
+	
+	- ``-REACTIONS``
+	- ``-CONSTRAINTS``
+	- ``-EXTERNAL METABOLITES`` (or ``-UNCONSTRAINED METABOLITES`` and ``-EXTRACELLULAR METABOLITES (UNCONSTRAINED)``)
+	- ``-OBJECTIVE``
+	- ``-MAXIMIZE``
+	- ``-MINIMIZE``
+	
+	``-REACTIONS`` contains a list of chemical reactions, e.g.
+	
+	  GLK1_1 : alpha-D-Glucose + 2.31 ATP -> alpha-D-Glucose 6-phosphate + 3/4 ADP
+	
+	The identifier is everything to the left until the parser encounters a colon.
+	
+	The identifier is everything to the left until the parser encounters a colon
+	followed by a whitespace, no whitespace before the colon is needed. Then the
+	formula parsing follows. In a formula the identifiers are delimited by ``+``
+	and the reactants and products are delimited by an arrow, ``<->`` means
+	reversible, ``->`` means not reversible. Only one arrow is allowed in the
+	formula. Before the identifier can be a	float or a fraction number of two
+	floats, when this is missing 1 is assumed.
+	
+	``-CONSTRAINTS`` contain values for minflux and maxflux.
+	
+	  CO2xtI [min, max]
+
+	Everything up to the last ``[`` is parsed as an identifier (must be a known
+	identifier from a ``REACTIONS`` item, otherwise an error is reported. ``min``
+	and	``max`` are two float values. If a reaction is not listed the values
+	``[-1000, +1000]`` for reversible and ``[0, +max]`` for irreversible are
+	assumed.
+	
+	``-EXTERNAL METABOLITES`` contains external metabolites, is a list with
+	one identifier per line, the whole line is used as the identifier name.
+	An error is reported when a metabolite has the same name as a reaction.
+	
+	Other sections are not supported yet and skipped. A note is added to the
+	error list for every unknown section.
+	
+	``Variables``:
+	
+	- ``errors``: Contains parsing errors
+	- ``reactions``: All reactions
+	- ``constraints``: All constraints
+	- ``external_metabolites``: All external metabolites
+	"""
 	def __init__(self, filename):
+		"""Parses the specified OptGene file"""
 		self._file = filename
 		self.errors = []
 		self.reactions = {}
@@ -10,7 +69,6 @@ class OptGeneParser:
 		self.parse()
 		
 	# via http://stackoverflow.com/questions/36932/how-can-i-represent-an-enum-in-python
-	@staticmethod
 	def _enum(*sequential, **named):
 		enums = dict(zip(sequential, range(len(sequential))), **named)
 		return type('Enum', (), enums)

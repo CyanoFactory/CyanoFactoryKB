@@ -142,7 +142,7 @@ INSTALLED_APPS = (
     'db_xref',
     'django_dumpdb',
     'biowarehouse',
-	'bioparser'
+	'bioparser',
 	
 	#helpers
 	'haystack',
