@@ -1,0 +1,84 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Detail page template
+
+Author: Jonathan Karr, jkarr@stanford.edu
+Affiliation: Covert Lab, Department of Bioengineering, Stanford University
+Last updated: 2012-07-17
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+
+{% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.wid }}{% endwith %}{% endblock %}
+{% block page_title %}{% with object=queryset.0 %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}{% endblock %}
+
+{% block head %}
+{{ block.super }}
+{% with object=queryset.0 %}
+<meta name="entry_created" content="{{ object.created_date }}" />
+<meta name="entry_last_updated" content="{{ object.last_updated_date }}" />
+<meta name="entry_type" content="{{ model_verbose_name }}" />
+<meta name="entry_wid" content="{{ object.wid }}" />
+{% if object.name|length > 0 %}
+<meta name="entry_name" content="{{ object.name }}" />
+{% else %}
+<meta name="entry_name" content="{{ object.wid }}" />
+{% endif %}
+{% endwith %}
+{% endblock %}
+
+{% block action_icons %}
+{% with object=queryset.0 %}
+<a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
+<a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
+<a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" /></a>
+{{ block.super }}
+{% endwith %}
+{% endblock %}
+
+{% block content %}
+{% autoescape off %}
+{% with object=queryset.0 %}
+<table id="detail">
+	<tbody class="data">
+	<tr>
+		<th colspan="3">Summary</th>
+	</tr>
+	<tr>
+		<th>Note</th>
+		<td colspan="2">This is only a preview of all changes that will be applied to the warehouse based on the uploaded file.<br/>A diff view is displayed when old data is going to be overwritten.<br/><br/>Please check if all changes are correct!</td>
+	</tr>
+	<tbody class="spacing">
+		<tr><td colspan="3">&nbsp;</td></tr>
+	</tbody>
+	{% with object=queryset.0 %}
+	{% for fieldset in fieldsets %}
+		{% if not forloop.first %}
+	<tbody class="spacing">
+		<tr><td colspan="3">&nbsp;</td></tr>
+	</tbody>
+		{% endif %}
+	<tbody class="data">
+		<tr>
+			<th colspan="3">{{ fieldset.0 }}</th>
+		</tr>				
+		{% for field in fieldset.1.fields %}
+		<tr>			
+			<th>{{ field.verbose_name }}</th>
+			{% if not field.old_data %}
+			<td colspan="2">{{ field.data }}</td>
+			{% else %}
+			<td>{{ field.old_data }}</td>
+			<td>{{ field.data }}</td>
+			{% endif %}
+		</tr>
+		{% endfor %}
+	</tbody>
+	{% endfor %}
+	{% endwith %}	
+</table>
+{% endwith %}
+{% endautoescape %}
+{% endblock %}

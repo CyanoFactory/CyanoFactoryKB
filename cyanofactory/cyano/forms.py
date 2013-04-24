@@ -87,11 +87,22 @@ class ImportDataForm(forms.Form):
 		widget = forms.TextInput,
 		label = 'species',
 		help_text = 'Choose a name for a new PGDB'
-		)	
+		)
+	data_type = forms.ChoiceField(
+		required = True,
+		choices = [
+				("fasta", "FASTA"),
+				("genbank", "GenBank"),
+				("optgene", "OptGene / BioOpt"),
+				("sbml", "System Biology Markup Language (SBML)")
+				],
+		widget = forms.RadioSelect,
+		label = 'file format'
+		)
 	file = forms.FileField(
 		required = True,
 		widget = forms.ClearableFileInput, 
-		label = '(Excel or FASTA) file',
+		label = 'file',
 		help_text = 'Select a file (Excel or FASTA) to import'
 		)
 		
@@ -102,3 +113,4 @@ class ImportDataForm(forms.Form):
 		for species in Species.objects.values('wid', 'name').all():
 			choices.append((species['wid'], species['name'], ))
 		self.fields['species'].choices = choices
+		#self.fields['data_type'].choices = ImportDataForm.data_type.choices

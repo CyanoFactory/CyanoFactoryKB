@@ -729,10 +729,11 @@ def exportData(request, species_wid=None):
 @login_required
 @resolve_to_objects
 def importData(request, species=None):
+    import cyano.importer.fasta as FastaImporter
     if request.method == 'POST':
         form = ImportDataForm(request.POST or None, request.FILES)
         
-        if form.is_valid():        
+        if form.is_valid():       
             selected_species_wid = form.cleaned_data['species'] or form.cleaned_data['new_species']
             if selected_species_wid == '' or selected_species_wid is None:
                 form.species.errors += ['Please select a specices']    
@@ -746,31 +747,37 @@ def importData(request, species=None):
                 fid.close()
                 
                 #read file
-                if originalFileExtension == '.xlsx':
-                    try:
-                        batch_import_from_excel(selected_species_wid, filename, request.user)
-                        success = True
-                        message = 'Data successfully saved!'
-                    except ValidationError as error:
-                        success = False
-                        message = 'Unable to import data: ' + ' '.join(error.messages)
-                elif originalFileExtension == '.fna':
-                    success, message = readFasta(selected_species_wid, filename, request.user)
-                else:
-                    raise Http404
+                data_type = form.cleaned_data['data_type']
+                if data_type == "fasta":
+                    f = FastaImporter.Fasta()
+                    f.load(filename)
+                    return f.preview(request, selected_species_wid)
+                
+                #if originalFileExtension == '.xlsx':
+                #    try:
+                #        batch_import_from_excel(selected_species_wid, filename, request.user)
+                #        success = True
+                #        message = 'Data successfully saved!'
+                #    except ValidationError as error:
+                #        success = False
+                #        message = 'Unable to import data: ' + ' '.join(error.messages)
+                #elif originalFileExtension == '.fna':
+                #    success, message = readFasta(selected_species_wid, filename, request.user)
+                #else:
+                #    raise Http404
                 
                 #delete file
                 os.remove(filename)
                 
                 #render response
-                return render_queryset_to_response(
-                    species = species,
-                    request = request,
-                    template = 'cyano/importDataResult.html', 
-                    data = {
-                        'success': success,
-                        'message': message,
-                        })
+                ##return render_queryset_to_response(
+                ##    species = species,
+                ##    request = request,
+                ##    template = 'cyano/importDataResult.html', 
+                ##    data = {
+                ##       'success': success,
+                ##        'message': message,
+                ##        })
     else:
         form = ImportDataForm(None)
 
