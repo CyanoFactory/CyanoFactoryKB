@@ -730,6 +730,8 @@ def exportData(request, species_wid=None):
 @resolve_to_objects
 def importData(request, species=None):
     import cyano.importer.fasta as FastaImporter
+    from bioparser.fasta_to_genbank import FastaToGenbank
+    from cyano.importer.genbank import Genbank as GenbankImporter
     if request.method == 'POST':
         form = ImportDataForm(request.POST or None, request.FILES)
         
@@ -752,6 +754,12 @@ def importData(request, species=None):
                     f = FastaImporter.Fasta()
                     f.load(filename)
                     return f.preview(request, selected_species_wid)
+                elif data_type == "fastagene":
+                    gb = FastaToGenbank(filename).parse()
+                    g = GenbankImporter()
+                    g.load(gb)
+                    return g.preview(request, selected_species_wid)
+                    
                 
                 #if originalFileExtension == '.xlsx':
                 #    try:

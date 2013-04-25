@@ -1370,7 +1370,8 @@ def format_field_detail_view_diff(species, old_obj, new_obj, field_name, is_user
         return val
 
     if old_obj == None:
-        old_item = "<i>Not available</i>"
+        #old_item = "<i>Not available</i>"
+        old_item = None
         new_item = format_field_detail_view(species, new_obj, field_name, is_user_anonymous)
         return old_item, new_item
     else:

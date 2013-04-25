@@ -78,15 +78,14 @@ class Fasta(Importer):
         
         header = header[1:].split("|")
         if len(header) >= 5:
-            if header[0] != "gi":
+            if header[0] == "gi":
+                wid = header[3].strip()
+                name = header[4].strip()
+            elif header[0] == "ref":
+                wid = header[1].strip()
+                
+            else:
                 raise ParserError(header, lno, "Expected gi| in header")
-            wid = header[3].strip()
-            name = header[4].strip()
-        elif len(header) >= 3:
-            if header[0] != "ref":
-                raise ParserError(header, lno, "Expected ref| in header")
-            wid = header[1].strip()
-            name = header[2].strip()
         elif len(header) >= 2:
             wid = header[0].strip()
             name = header[1].strip()

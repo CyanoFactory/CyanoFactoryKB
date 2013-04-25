@@ -92,6 +92,7 @@ class ImportDataForm(forms.Form):
 		required = True,
 		choices = [
 				("fasta", "FASTA"),
+				("fastagene", "FASTA (Gene list)"),
 				("genbank", "GenBank"),
 				("optgene", "OptGene / BioOpt"),
 				("sbml", "System Biology Markup Language (SBML)")
