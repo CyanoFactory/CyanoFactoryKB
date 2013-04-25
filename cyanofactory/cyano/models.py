@@ -1567,6 +1567,39 @@ class Chromosome(Molecule):
     def get_as_html_sequence(self, species, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
         return format_sequence_as_html(self.sequence)
+
+    def get_as_html_diff_sequence(self, species, new_obj, is_user_anonymouse):
+            from Bio import pairwise2
+            import StringIO
+            pairwise2.MAX_ALIGNMENTS = 1
+            align = pairwise2.align.globalxx(self.sequence[:100], new_obj[:100])
+            output = StringIO.StringIO()
+            
+            for o, n in zip(align[0][0], align[0][1]):
+                output.write("|" if o == n else " ")
+            
+            align_graphic = output.getvalue()
+            output.close()
+            output = StringIO.StringIO()
+            
+            old_align = re.sub(r'(.{80})', r'\1\n', align[0][0]).split("\n")
+            new_align = re.sub(r'(.{80})', r'\1\n', align[0][1]).split("\n")
+            align_graphic = re.sub(r'(.{80})', r'\1\n', align_graphic).split("\n")
+            output.write("""<div class="sequence">""")
+            output.write("Alignment of first 500 bp.")
+            if self.sequence == new_obj:
+                output.write(" Sequences are completly identical.")
+            else:
+                output.write(" Sequences differ.")
+            output.write("<div></div><div>")
+            for ol, ag, ne in zip(old_align, align_graphic, new_align):
+                output.write(ol + "<br/>")
+                output.write(ag.replace(" ", "&nbsp;") + "<br/>")
+                output.write(ne + "<br/>")
+                output.write("<br/>")
+            output.write("</div></div>")
+            
+            return None, output.getvalue()
         
     def get_as_html_structure(self, species, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None, zoom = 0):
         if zoom == 0:

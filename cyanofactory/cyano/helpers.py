@@ -1364,17 +1364,21 @@ def diffgen(di):
 
 def format_field_detail_view_diff(species, old_obj, new_obj, field_name, is_user_anonymous):
     if hasattr(old_obj, "get_as_html_diff_%s" % field_name):
-        val = getattr(old_obj, 'get_as_html_diff_%s' % field_name)(species, is_user_anonymous)
+        val = getattr(old_obj, 'get_as_html_diff_%s' % field_name)(species, getattr(new_obj, field_name), is_user_anonymous)
         if isinstance(val, float) and val != 0. and val is not None:        
             return ('%.' + str(int(math.ceil(max(0, -math.log10(abs(val)))+2))) + 'f') % val
         return val
 
-    old_item = format_field_detail_view(species, old_obj, field_name, is_user_anonymous)
-    new_item = format_field_detail_view(species, new_obj, field_name, is_user_anonymous)
-    
-    import cyano.importer.diff_match_patch as diff
-    d = diff.diff_match_patch()
-    return diffgen(d.diff_main(old_item, new_item))
+    if old_obj == None:
+        old_item = "<i>Not available</i>"
+        new_item = format_field_detail_view(species, new_obj, field_name, is_user_anonymous)
+        return old_item, new_item
+    else:
+        old_item = format_field_detail_view(species, old_obj, field_name, is_user_anonymous)
+        new_item = format_field_detail_view(species, new_obj, field_name, is_user_anonymous)
+        import cyano.importer.diff_match_patch as diff
+        d = diff.diff_match_patch()
+        return diffgen(d.diff_main(old_item, new_item))
     
 def format_field_detail_view_helper():
     pass

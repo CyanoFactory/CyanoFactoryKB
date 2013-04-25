@@ -69,6 +69,35 @@ class Fasta(Importer):
         super(Importer, self).__init__()
         self.sequences = []
     
+    def __parse_header(self, lno, header):
+        """Parses a fasta header and returns name and wid based on the | char.
+        Detects with and without gi.
+        """
+        if len(header) == 0 or header[0] != ">":
+            raise ParserError(header, lno, "Invalid FASTA Header")
+        
+        header = header[1:].split("|")
+        if len(header) >= 5:
+            if header[0] != "gi":
+                raise ParserError(header, lno, "Expected gi| in header")
+            wid = header[3].strip()
+            name = header[4].strip()
+        elif len(header) >= 3:
+            if header[0] != "ref":
+                raise ParserError(header, lno, "Expected ref| in header")
+            wid = header[1].strip()
+            name = header[2].strip()
+        elif len(header) >= 2:
+            wid = header[0].strip()
+            name = header[1].strip()
+        else:
+            raise ParserError(header, lno, "Header needs wid and name delimited by |")
+        
+        if re.search(r"\s+", wid):
+            raise ParserError(header, lno, "wid must not contain whitespace characters")
+        
+        return wid, name
+    
     def load(self, filename):
         seqcount = -1 # To keep wid ordering
         with open(filename, 'r') as f:
@@ -76,12 +105,12 @@ class Fasta(Importer):
             for lno, line in enumerate(f, start = 1):                
                 if line[0] == '>':
                     seqcount += 1
-                    wid = line.strip()[1:]
-                    self.sequences.append([wid, ''])
+                    wid, name = self.__parse_header(lno, line)
+                    self.sequences.append({"wid": wid, "name": name, "sequence": ''})
                 else:
                     if wid is None:
                         raise ParserError(line, lno, "No FASTA header found")
-                    self.sequences[-1][1] += line.strip()    
+                    self.sequences[-1]["sequence"] += line.strip()    
         
         # File IO finished
         #self.messages.append(len(self.sequences) + " sequences read")
@@ -136,7 +165,10 @@ class Fasta(Importer):
         except ObjectDoesNotExist:
             species = models.Species(wid = species_wid)
         
-        for wid, sequence in self.sequences:
+        for sequence in self.sequences:
+            wid = sequence["wid"]
+            name = sequence["name"]
+            seq = sequence["sequence"]
             try:
                 old_chr = models.Chromosome.objects.get(species__wid = species_wid, wid = wid)
                 chr = models.Chromosome.objects.get(species__wid = species_wid, wid = wid)
@@ -144,11 +176,13 @@ class Fasta(Importer):
                 old_chr = None
                 chr = models.Chromosome(wid = wid)     
             
-            chr.sequence = sequence
+            chr.name = name
+            chr.sequence = seq
 
         fieldsets = [
             ("Update " + species.wid, {'fields': [
                 {'verbose_name': 'WID', 'name': 'wid'},
+                {'verbose_name': 'Name', 'name': 'name'},
                 {'verbose_name': 'Sequence', 'name': 'sequence'}]})
             ]
         
@@ -179,10 +213,10 @@ class Fasta(Importer):
                     
                 old_data, new_data = format_field_detail_view_diff(species, old_chr, chr, field_name, request.user.is_anonymous())
                 
-                if (old_data is None) or (old_data == ''):
+                if not old_data and not new_data:
                     rmfields = [idx2] + rmfields
                 
-                fieldsets[idx][1]['fields'][idx2] = {'verbose_name': verbose_name.replace(" ", '&nbsp;').replace("-", "&#8209;"), 'data': new_data, 'old_data': old_data}
+                fieldsets[idx][1]['fields'][idx2] = {'verbose_name': verbose_name.replace(" ", '&nbsp;').replace("-", "&#8209;"), 'new_data': new_data, 'old_data': old_data}
             for idx2 in rmfields:
                 del fieldsets[idx][1]['fields'][idx2]
             if len(fieldsets[idx][1]['fields']) == 0:
