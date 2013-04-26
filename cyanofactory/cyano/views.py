@@ -730,7 +730,6 @@ def exportData(request, species_wid=None):
 @resolve_to_objects
 def importData(request, species=None):
     import cyano.importer.fasta as FastaImporter
-    from bioparser.fasta_to_genbank import FastaToGenbank
     from cyano.importer.genbank import Genbank as GenbankImporter
     if request.method == 'POST':
         form = ImportDataForm(request.POST or None, request.FILES)
@@ -755,9 +754,8 @@ def importData(request, species=None):
                     f.load(filename)
                     return f.preview(request, selected_species_wid)
                 elif data_type == "fastagene":
-                    gb = FastaToGenbank(filename).parse()
                     g = GenbankImporter()
-                    g.load(gb)
+                    g.load(filename)
                     return g.preview(request, selected_species_wid)
                     
                 
@@ -796,6 +794,18 @@ def importData(request, species=None):
         data = {
             'form': form},
         )
+
+@login_required
+@resolve_to_objects
+def importSubmitData(request, species=None):
+    from cyano.importer.genbank import Genbank as GenbankImporter
+    if request.method == 'POST':
+        if request.POST["data_type"] == "fastagene":
+            g = GenbankImporter()
+            g.load(request.POST['filename'])
+            return g.submit(request, request.POST['species'])
+            
+    pass
     
 def validate(request, species_wid):
     errors = get_invalid_objects(Species.objects.values('id').get(wid=species_wid)['id'])

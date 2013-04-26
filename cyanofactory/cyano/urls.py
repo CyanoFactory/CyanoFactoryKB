@@ -35,6 +35,9 @@ urlpatterns = patterns('cyano.views',
 	url(r'^import/*$', 'importData'),
 	url(_species_wid + '/import(/.*)?$', 'importData'),
 	
+    url(r'^import_submit/*$', 'importSubmitData'),
+    url(_species_wid + '/import_submit(/.*)?$', 'importSubmitData'),
+    
 	url(r'^validate/' + _species_wid + '/*$', 'validate'),
 	
 	url(r'^sitemap.xml$', 'sitemap'),

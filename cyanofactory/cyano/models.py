@@ -954,10 +954,10 @@ class Entry(Model):
                 print "Creating " + real_new_value[:10]
                 revision.action = RevisionOperation.objects.get(name = "Create")
             elif new_value == None:
-                print "Deleting " + old_value[:10]
+                print "Deleting " + str(old_value)[:10]
                 revision.action = RevisionOperation.objects.get(name = "Delete")
             else:
-                print "Updating " + old_value[:10] + " with " + real_new_value[:10]
+                print "Updating " + str(old_value)[:10] + " with " + real_new_value[:10]
                 revision.action = RevisionOperation.objects.get(name = "Edit")
             
             revision.table = TableMeta.objects.get(name = field.model._meta.object_name)
@@ -2287,6 +2287,8 @@ class Gene(Molecule):
         
     def get_gc_content(self):
         seq = self.get_sequence()
+        if len(seq) == 0:
+            return 0
         return float(seq.count('G') + seq.count('C')) / float(len(seq))
         
     def get_empirical_formula(self):

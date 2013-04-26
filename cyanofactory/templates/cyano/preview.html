@@ -79,6 +79,13 @@ Last updated: 2012-07-17
 	{% endfor %}
 	{% endwith %}	
 </table>
+<form id="form" name="submitData" action="{% if species %}{% url "cyano.views.importSubmitData" species_wid=species.wid %}{% else %}{% url "cyano.views.importSubmitData" %}{% endif %}" method="post" enctype="multipart/form-data">
+	{% csrf_token %}
+	<input type='hidden' name='data_type' value='{{ request.POST.data_type }}' />
+	<input type='hidden' name='filename' value='{{ filename }}' />
+	<input type='hidden' name='species' value='{{ request.POST.species }}' />
+	<input type="submit" value="Submit">
+</form>
 {% endwith %}
 {% endautoescape %}
 {% endblock %}

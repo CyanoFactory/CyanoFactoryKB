@@ -42,8 +42,10 @@ class Genbank(Importer):
         
         return wid, name
     
-    def load(self, data):
-        self.data = data
+    def load(self, filename):
+        from bioparser.fasta_to_genbank import FastaToGenbank
+        self.filename = filename
+        self.data = FastaToGenbank(filename).parse()
 
     def preview(self, request, species_wid):
         #super(Importer, self).preview(request, species_wid)
@@ -62,8 +64,8 @@ class Genbank(Importer):
             comments = qualifiers["note"]
             
             try:
-                old_gene = models.Gene.objects.get(species__wid = species_wid, wid = wid)
-                new_gene = models.Gene.objects.get(species__wid = species_wid, wid = wid)
+                old_gene = models.Gene.objects.get(wid = wid)
+                new_gene = models.Gene.objects.get(wid = wid)
             except ObjectDoesNotExist:
                 old_gene = None
                 new_gene = models.Gene(wid = wid)     
@@ -124,7 +126,7 @@ class Genbank(Importer):
             fields.append(fieldsets[0])
         
         return render_queryset_to_response(
-            species = species,        
+            species = species,
             request = request, 
             models = [model],
             queryset = objectToQuerySet(new_gene),
@@ -134,7 +136,49 @@ class Genbank(Importer):
                 'model': model,
                 'fieldsets': fields,
                 'message': request.GET.get('message', ''),
+                'filename': self.filename
                 })
     
-    def submit(self, request, species):
-        pass
+    def submit(self, request, species_wid):
+        revdetail = models.RevisionDetail()
+        revdetail.user = request.user.profile
+        revdetail.reason = "Import FASTA Gene List"
+        
+        try:
+            species = models.Species.objects.get(wid = species_wid)
+        except ObjectDoesNotExist:
+            species = models.Species(wid = species_wid)
+            
+        chromosome = models.Chromosome.objects.get(wid = "CHROMOSOME-1")
+        
+        for feature in self.data.features:
+            qualifiers = feature.qualifiers
+            wid = qualifiers["locus_tag"]
+            name = qualifiers["gene"]
+            comments = qualifiers["note"]
+            
+            try:
+                gene = models.Gene.objects.get(wid = wid)
+            except ObjectDoesNotExist:
+                gene = models.Gene(wid = wid)
+                gene.chromosome = chromosome
+            
+            gene.name = name
+            gene.direction = 'f' if feature.location.start < feature.location.end else 'r'
+            gene.coordinate = feature.location.start if gene.direction == 'f' else feature.location.end
+            gene.length = abs(feature.location.start - feature.location.end)
+            gene.comments = comments
+            gene.wid = wid
+            
+            gene.save(revision_detail = revdetail)
+            gene.species.add(species)
+            gene.save(revision_detail = revdetail)
+        
+        return render_queryset_to_response(
+            species = species,
+            request = request,
+            template = 'cyano/importDataResult.html', 
+            data = {
+                    'success': 'success',
+                    'message': "Data imported",
+                   })
