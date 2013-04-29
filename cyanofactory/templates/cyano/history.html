@@ -8,7 +8,7 @@ Revision page template
 {% load templatetags %}
 
 {% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.wid }}{% endwith %}{% endblock %}
-{% block page_title %}History of {% with object=queryset.0 %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}{% endblock %}
+{% block page_title %}History of {{ block.super }}{% endblock %}
 
 {% block head %}
 {{ block.super }}
@@ -34,6 +34,25 @@ Revision page template
 {% endwith %}
 {% endblock %}
 
+{% block extrastyles %}
+#list{
+	width:100%;
+}
+#detail tbody.data tr td:nth-child(1){
+	width:3%;
+}
+#detail tbody.data tr td:nth-child(2n){
+	width:15%;
+}
+#detail tbody.data tr td:nth-child(3){
+	width:60%;
+}
+
+#detail a {
+	color: rgb(34, 34, 34);
+}
+{% endblock %}
+
 {% block content %}
 {% autoescape off %}
 <table id="detail">	
@@ -49,10 +68,10 @@ Revision page template
 		</tr>				
 		{% for field in revision.1 %}
 		<tr>
-			<th>{{ field.time }}</th>
-			<td>{{ field.item }}</td>
-			<td>{{ field.reason }}</td>
-			<td>{{ field.author }}</td>
+			<th><a href="{{ field.url }}">{{ field.time }}</a></th>
+			<td><a href="{{ field.url }}">{{ field.wid }}</a></td>
+			<td><a href="{{ field.url }}">{{ field.reason }}</a></td>
+			<td><a href="{{ field.author.user.get_absolute_url }}">{{ field.author.get_name }}</a></td>
 		</tr>
 		{% endfor %}
 	</tbody>

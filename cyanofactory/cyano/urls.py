@@ -53,6 +53,10 @@ urlpatterns = patterns('cyano.views',
     url(r'^' + _species_wid + r'/(?P<model_type>\w+)/' + r'history/?', 'history'),
     url(r'^' + _species_wid + r'/(?P<model_type>\w+)/' + _wid + '/history/?', 'history'),
     
+    url(r'^' + _species_wid + r'/history/(?P<detail_id>[0-9]+)/?', 'history'),
+    url(r'^' + _species_wid + r'/(?P<model_type>\w+)/' + r'history/(?P<detail_id>[0-9]+)/?', 'history'),
+    url(r'^' + _species_wid + r'/(?P<model_type>\w+)/' + _wid + '/history/(?P<detail_id>[0-9]+)/?', 'history'),
+    
 	url(r'^' + _species_wid + r'/permission$', 'permission'),
 
     url(r'^' + _species_wid + r'/(?P<model_type>\w+)/?$', 'list'),

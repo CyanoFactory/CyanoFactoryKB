@@ -168,7 +168,14 @@ Last updated: 2012-07-17
 	<div id="main">
 		<!-- content -->
 		<div id="content">
-		<h1>{% block page_title %}{% endblock %}</h1>
+		<h1>{% block page_title %}
+			{% if queryset %}
+			{% with object=queryset.0 %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}}
+			{% elif model_type %}
+			{{ model_verbose_name_plural }}
+			{% endif %}
+			{% endblock %}
+		</h1>
 		{% block content %}{% endblock %}		
 		</div>
 	</div>

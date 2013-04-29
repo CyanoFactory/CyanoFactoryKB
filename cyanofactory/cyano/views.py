@@ -506,8 +506,6 @@ def list(request, species, model):
         template = 'cyano/list.html', 
         data = {
             'model_type': model_type,
-            'model_verbose_name': model._meta.verbose_name,
-            'model_verbose_name_plural': model._meta.verbose_name_plural,
             'facet_fields': facet_fields,
             })
 
@@ -571,48 +569,64 @@ def detail(request, species, model, item):
 
 @resolve_to_objects
 #@permission_required(perm.READ_HISTORY)
-def history(request, species, model = None, item = None):
-    #objects = model.objects.filter(species__id=species.id)
-    #print "aaa"
-    #revision_history = models.Revision.objects.filter(table__name = model._meta.object_name).values('detail').annotate(dcount=Count('detail'))
+def history(request, species, model = None, item = None, detail_id = None):
+    if item:    
+        prefix = ""
+        objects = item.revisions
+    elif model:
+        objects = model.objects.filter(species__id=species.id)
+        prefix = "revisions__"
+    else:
+        objects = models.SpeciesComponent.objects.filter(species__id=species.id)
+        prefix = "revisions__"
     
-    #revision_history = models.Revision.objects.filter(current = item)
-    revision_history = item.revisions.all().order_by("-detail__date")
+    revision_history = objects.values('{0}detail'.format(prefix),
+                                      '{0}detail__date'.format(prefix),
+                                      '{0}detail__reason'.format(prefix),
+                                      '{0}detail__user'.format(prefix),
+                                      '{0}current__wid'.format(prefix),
+                                      '{0}current__model_type__name'.format(prefix))\
+                                      .annotate(Count('{0}detail'.format(prefix)))\
+                                      .order_by("-{0}detail__date".format(prefix), "{0}current__wid".format(prefix))
     
     revisions = []
     
     entry = []
     date = None
     
+    model_type = model.__name__ if model else None
+    
     for revision in revision_history:
-        detail = revision.detail
         last_date = date
-        date = detail.date.date()
-        date_str = detail.date.strftime("%d. %B %Y")
-        item_str = ""
-        time = detail.date.strftime("%H:%M")
-        reason = detail.reason
-        author = detail.user.get_name()
+        wid = revision[prefix + "current__wid"]
+        item_model = revision[prefix + "current__model_type__name"]
+        detail_id = revision[prefix + "detail"]
+        date = revision[prefix + "detail__date"].date()
+        time = revision[prefix + "detail__date"].strftime("%H:%M")
+        reason = revision[prefix + "detail__reason"]
+        author = models.UserProfile.objects.get(pk = revision[prefix + "detail__user"])
+        url = reverse("cyano.views.history", kwargs = {"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
         
         if last_date != date:
             revisions.append(entry)
             entry = [date, []]
         
-        entry[1].append({'time': time, 'item': item, 'reason': reason, 'author': author})
+        entry[1].append({'id': detail_id, 'time': time, 'wid': wid, 'reason': reason, 'author': author, 'url': url})
     revisions.append(entry)
     
-    qs = objectToQuerySet(item, model = model)
+    if item:
+        qs = objectToQuerySet(item, model = model)
+    else:
+        qs = None
 
     return render_queryset_to_response(
         species = species,        
         request = request, 
         models = [model],
         queryset = qs,
-        template = 'cyano/revision.html', 
+        template = 'cyano/history.html', 
         data = {
-            'model_type': model.__name__,
-            'model': model,
-            'revisions': revisions,
+            'revisions': revisions[1:],
             'message': request.GET.get('message', ''),
             })
             
