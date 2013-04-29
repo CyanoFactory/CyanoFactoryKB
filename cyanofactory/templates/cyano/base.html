@@ -137,7 +137,7 @@ Last updated: 2012-07-17
 			<li class="spacer"/>
 			<li><a href="#">Help</a>
 				<ul>
-				<li><a href="{% if species %}{% url "cyano.views.tutorial" species_wid=species.wid %}{% else %}{% url "cyano.views.tutorial" %}{% endif %}">Getting started</a></li>				
+				<li><a href="{% if species %}{% url "cyano.views.tutorial" species_wid=species.wid %}{% else %}{% url "cyano.views.tutorial" %}{% endif %}">Getting started</a></li>			
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#downloading_content">Downloading data</a></li>
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#api">RESTful API</a></li>				
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#editing">Editing KB content</a></li>
@@ -152,7 +152,12 @@ Last updated: 2012-07-17
 			{% endcomment %}
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
-			<li><a href="{% if species %}{% url "cyano.views.logout" species_wid=species.wid %}{% else %}{% url "cyano.views.logout" %}{% endif %}">Logout</a></li>
+			<li><a href="#">{{ request.user.username }}</a>
+				<ul>
+				<li><a href="{% url "cyano.views.user" username=request.user.username %}">My Profile</a></li>
+				<li><a href="{% if species %}{% url "cyano.views.logout" species_wid=species.wid %}{% else %}{% url "cyano.views.logout" %}{% endif %}">Logout</a></li>
+				</ul>
+			</li>
 			{% else %}
 			<li class="spacer"/>
 			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% url "cyano.views.login" species_wid=species.wid %}{% else %}{% url "cyano.views.login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
@@ -174,7 +179,7 @@ Last updated: 2012-07-17
 		</div>
 		
 		<div class="center">			
-			Last updated {{ last_updated_date }}. Contact <a href="mailto:{{ email }}">{{ email }}</a>.<br/> 
+			Last updated {{ last_updated_date }}. Contact: <a href="mailto:{{ email }}">{{ email }}</a>.<br/> 
 			&copy; <a href="http://http://www.hs-mittweida.de/wuenschi">Experimental &amp; Computational Biology</a>, <a href="http://www.hs-mittweida.de">University of Applied Sciences Mittweida</a> 2013.		
 		</div>
 		

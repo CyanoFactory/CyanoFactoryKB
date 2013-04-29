@@ -74,8 +74,26 @@ Last updated: 2012-07-17
 		<tr>
 			<th>Joined</th>
 			<td>{{ user.date_joined|date:"Y-m-d" }}</td>
-		</tr>		
+		</tr>
 	</tbody>
+	{% if request.user == user %}
+	<tbody class="spacing">
+		<tr><td colspan="2">&nbsp;</td></tr>
+	</tbody>
+	<tbody class="data">
+		<tr>
+			<th colspan="2">Group Membership</th>
+		</tr>
+		{% for group_profile in profile.get_groups %}
+		{% with group=group_profile.group %}
+		<tr>
+			<th>{{ group.name }}</th>
+			<td>{{ group_profile.description }}</td>
+		</tr>
+		{% endwith %}
+		{% endfor %}
+	</tbody>
+	{% endif %}
 </table>
 {% endwith %}
 {% endblock %}
