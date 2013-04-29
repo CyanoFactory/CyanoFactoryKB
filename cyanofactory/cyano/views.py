@@ -27,8 +27,7 @@ from itertools import chain
 from cyano.forms import ExportDataForm, ImportDataForm
 from cyano.helpers import getEntry, format_field_detail_view, objectToQuerySet, render_queryset_to_response, getObjectTypes, getModel, get_invalid_objects, get_edit_form_fields, get_edit_form_data
 from cyano.helpers import validate_object_fields, validate_model_objects, validate_model_unique, save_object_data, batch_import_from_excel, readFasta
-from cyano.models import Entry, Species, SpeciesComponent, PublicationReference,\
-    Revision, UserProfile
+import cyano.models as models
 from urlparse import urlparse
 import numpy
 import os
@@ -335,21 +334,21 @@ def tutorial(request, species_wid=None):
 
 @login_required    
 def users(request, species_wid=None):
-    queryset = UserProfile.objects.all().filter(user__is_active = True)
+    queryset = models.UserProfile.objects.all().filter(user__is_active = True)
     return render_queryset_to_response(
         species = species,
         request = request, 
-        models = [UserProfile],
+        models = [models.UserProfile],
         queryset = queryset,
         template = 'cyano/users.html')    
         
 @login_required    
 def user(request, username, species_wid=None):
-    queryset = objectToQuerySet(get_object_or_404(UserProfile, user__username = username), model = UserProfile)
+    queryset = objectToQuerySet(get_object_or_404(models.UserProfile, user__username = username), model = models.UserProfile)
     return render_queryset_to_response(
         species = species,
         request = request,
-        models = [UserProfile],
+        models = [models.UserProfile],
         queryset = queryset,
         template = 'cyano/user.html')    
 
@@ -365,7 +364,7 @@ def search(request, species_wid = None):
 def search_haystack(request, species_wid, query):
     #search
     if species_wid is None:
-        species_wid = Species.objects.all()[0].wid
+        species_wid = models.Species.objects.all()[0].wid
     results = SearchQuerySet().filter(species=species).filter(content=query)
     
     #calculate facets        
@@ -447,7 +446,7 @@ def list(request, species, model):
                 tmp_model = field.rel.to
         field_verbose_name = ' &#8250; '.join(field_verbose_name)
                 
-        if isinstance(field, (ForeignKey, ManyToManyField)) and not issubclass(field.rel.to, Entry):
+        if isinstance(field, (ForeignKey, ManyToManyField)) and not issubclass(field.rel.to, models.Entry):
             continue
         
         if isinstance(field, (ForeignKey, ManyToManyField)):
@@ -575,9 +574,9 @@ def detail(request, species, model, item):
 def history(request, species, model = None, item = None):
     #objects = model.objects.filter(species__id=species.id)
     #print "aaa"
-    #revision_history = Revision.objects.filter(table__name = model._meta.object_name).values('detail').annotate(dcount=Count('detail'))
+    #revision_history = models.Revision.objects.filter(table__name = model._meta.object_name).values('detail').annotate(dcount=Count('detail'))
     
-    #revision_history = Revision.objects.filter(current = item)
+    #revision_history = models.Revision.objects.filter(current = item)
     revision_history = item.revisions.all().order_by("-detail__date")
     
     revisions = []
@@ -645,8 +644,8 @@ def edit(request, wid=None, model_type=None, species_wid=None, action='edit'):
         
         try:
             #validate is WID unique
-            if issubclass(model, SpeciesComponent):
-                qs = SpeciesComponent.objects.values('wid', 'model_type').filter(species__wid=species_wid)
+            if issubclass(model, models.SpeciesComponent):
+                qs = models.SpeciesComponent.objects.values('wid', 'model_type').filter(species__wid=species_wid)
             else:
                 qs = model.objects.values('wid', 'model_type').all()
                 
@@ -702,7 +701,7 @@ def edit(request, wid=None, model_type=None, species_wid=None, action='edit'):
             'model_verbose_name': model._meta.verbose_name,
             'action': action,
             'fields': fields,
-            'references_choices': PublicationReference.objects.filter(species__wid = species_wid).values_list('wid'),
+            'references_choices': models.PublicationReference.objects.filter(species__wid = species_wid).values_list('wid'),
             'initial_values': initial_values,
             'error_messages': error_messages,
             }
@@ -760,7 +759,7 @@ def exportData(request, species_wid=None):
         
         for model_type in model_types:
             model = getModel(model_type)
-            if issubclass(model, SpeciesComponent):
+            if issubclass(model, models.SpeciesComponent):
                 queryset = chain(queryset, model.objects.filter(species__id=species.id).select_related(depth=2).all())
             else:
                 queryset = chain(queryset, model.objects.select_related(depth=2).filter(id=species.id))
@@ -855,7 +854,7 @@ def importSubmitData(request, species=None):
     pass
     
 def validate(request, species_wid):
-    errors = get_invalid_objects(Species.objects.values('id').get(wid=species_wid)['id'])
+    errors = get_invalid_objects(models.Species.objects.values('id').get(wid=species_wid)['id'])
     
     return render_queryset_to_response(
         species = species,
@@ -911,7 +910,7 @@ def sitemap(request):
         template = 'public/sitemap.xml', 
         data = {
             'ROOT_URL': settings.ROOT_URL,
-            'qs_species': Species.objects.all(),
+            'qs_species': models.Species.objects.all(),
         }
     )
     
@@ -932,7 +931,7 @@ def sitemap_species(request, species_wid):
         data = {
             'ROOT_URL': settings.ROOT_URL,
             'species': species,
-            'entries': SpeciesComponent.objects.filter(species__id = species.id),
+            'entries': models.SpeciesComponent.objects.filter(species__id = species.id),
         }
     )
 
