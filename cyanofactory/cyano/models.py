@@ -453,6 +453,9 @@ class UserProfile(ProfileBase):
     zip = CharField(max_length=255, blank=True, default='', verbose_name='Zip')
     country = CharField(max_length=255, blank=True, default='', verbose_name='Country')
     
+    def get_name(self):
+        return self.user.first_name + " " + self.user.last_name
+    
     def get_groups(self):
         """
         Returns all groups where the user is in, including "Everybody" and
@@ -582,6 +585,9 @@ class Revision(Model):
     table = ForeignKey(TableMeta, verbose_name = '', related_name = '+')
     column = IntegerField(verbose_name = '')
     new_value = TextField(blank = True, null = True)
+
+    def __unicode__(self):
+        return str(self.current)
 
 class Evidence(Model):
     value = TextField(blank=True, default='', verbose_name='Value')    

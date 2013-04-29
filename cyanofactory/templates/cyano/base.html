@@ -131,7 +131,7 @@ Last updated: 2012-07-17
 			<li><a href="{% url "cyano.views.validate" species_wid=species.wid %}">Validate</a></li>
 				{% endif %}
 			<li class="spacer"/>
-			<li><a href="{% if species %}{% url "cyano.views.contributors" species_wid=species.wid %}{% else %}{% url "cyano.views.contributors" %}{% endif %}">Contributors</a></li>
+			<li><a href="{% if species %}{% url "cyano.views.users" species_wid=species.wid %}{% else %}{% url "cyano.views.users" %}{% endif %}">Members</a></li>
 			{% endif %}
 			{% comment %}
 			<li class="spacer"/>

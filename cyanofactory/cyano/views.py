@@ -24,11 +24,11 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_protect
 from haystack.query import SearchQuerySet
 from itertools import chain
-from public import models
 from cyano.forms import ExportDataForm, ImportDataForm
 from cyano.helpers import getEntry, format_field_detail_view, objectToQuerySet, render_queryset_to_response, getObjectTypes, getModel, get_invalid_objects, get_edit_form_fields, get_edit_form_data
 from cyano.helpers import validate_object_fields, validate_model_objects, validate_model_unique, save_object_data, batch_import_from_excel, readFasta
-from cyano.models import Entry, Species, SpeciesComponent, PublicationReference
+from cyano.models import Entry, Species, SpeciesComponent, PublicationReference,\
+    Revision, UserProfile
 from urlparse import urlparse
 import numpy
 import os
@@ -334,24 +334,24 @@ def tutorial(request, species_wid=None):
         template = 'cyano/tutorial.html')    
 
 @login_required    
-def contributors(request, species_wid=None):
-    queryset = User.objects.all().filter(is_active = True)
+def users(request, species_wid=None):
+    queryset = UserProfile.objects.all().filter(user__is_active = True)
     return render_queryset_to_response(
         species = species,
         request = request, 
-        models = [User],
+        models = [UserProfile],
         queryset = queryset,
-        template = 'cyano/contributors.html')    
+        template = 'cyano/users.html')    
         
 @login_required    
-def contributor(request, username, species_wid=None):
-    queryset = objectToQuerySet(get_object_or_404(User, username = username), model = User)
+def user(request, username, species_wid=None):
+    queryset = objectToQuerySet(get_object_or_404(UserProfile, user__username = username), model = UserProfile)
     return render_queryset_to_response(
         species = species,
         request = request,
-        models = [User],
+        models = [UserProfile],
         queryset = queryset,
-        template = 'cyano/contributor.html')    
+        template = 'cyano/user.html')    
 
 def search(request, species_wid = None):
     query = request.GET.get('q', '')
@@ -513,7 +513,7 @@ def list(request, species, model):
             })
 
 @resolve_to_objects
-@permission_required(perm.READ_NORMAL)            
+@permission_required(perm.READ_NORMAL)
 def detail(request, species, model, item):
     model_type = model.__name__
 
@@ -567,6 +567,53 @@ def detail(request, species, model, item):
             'model_type': model_type,
             'model': model,
             'fieldsets': fieldsets,
+            'message': request.GET.get('message', ''),
+            })
+
+@resolve_to_objects
+#@permission_required(perm.READ_HISTORY)
+def history(request, species, model = None, item = None):
+    #objects = model.objects.filter(species__id=species.id)
+    #print "aaa"
+    #revision_history = Revision.objects.filter(table__name = model._meta.object_name).values('detail').annotate(dcount=Count('detail'))
+    
+    #revision_history = Revision.objects.filter(current = item)
+    revision_history = item.revisions.all().order_by("-detail__date")
+    
+    revisions = []
+    
+    entry = []
+    date = None
+    
+    for revision in revision_history:
+        detail = revision.detail
+        last_date = date
+        date = detail.date.date()
+        date_str = detail.date.strftime("%d. %B %Y")
+        item_str = ""
+        time = detail.date.strftime("%H:%M")
+        reason = detail.reason
+        author = detail.user.get_name()
+        
+        if last_date != date:
+            revisions.append(entry)
+            entry = [date, []]
+        
+        entry[1].append({'time': time, 'item': item, 'reason': reason, 'author': author})
+    revisions.append(entry)
+    
+    qs = objectToQuerySet(item, model = model)
+
+    return render_queryset_to_response(
+        species = species,        
+        request = request, 
+        models = [model],
+        queryset = qs,
+        template = 'cyano/revision.html', 
+        data = {
+            'model_type': model.__name__,
+            'model': model,
+            'revisions': revisions,
             'message': request.GET.get('message', ''),
             })
             
@@ -737,7 +784,7 @@ def importData(request, species=None):
         if form.is_valid():       
             selected_species_wid = form.cleaned_data['species'] or form.cleaned_data['new_species']
             if selected_species_wid == '' or selected_species_wid is None:
-                form.species.errors += ['Please select a specices']    
+                form.species.errors += ['Please select a species']
             else:
                 #save to temporary file
                 originalFileName, originalFileExtension = os.path.splitext(request.FILES['file'].name)

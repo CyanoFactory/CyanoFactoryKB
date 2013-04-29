@@ -147,6 +147,7 @@ INSTALLED_APPS = (
 	#helpers
 	'haystack',
 )
+
 import django.utils.log
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -192,5 +193,5 @@ LOGIN_URL = ROOT_URL + '/login/'
 LOGIN_REDIRECT_URL = ROOT_URL + '/'
 
 ABSOLUTE_URL_OVERRIDES = {
-    'auth.user': lambda o: ROOT_URL + '/contributor/' +  o.username,
+    'auth.user': lambda o: ROOT_URL + '/user/' +  o.username,
 }

@@ -1,0 +1,45 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+User list template
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+
+{% block head_title %}{{ block.super }} :: Members{% endblock %}
+{% block page_title %}Members{% endblock %}
+
+{% block action_icons %}
+{{ block.super }}
+{% endblock %}
+
+{% block extrastyles %}
+#list{
+	width:100%;
+}
+{% endblock %}
+
+{% block content %}
+{{ queryset.length }}
+<table id="list">
+<thead>
+	<tr>
+		<th>Name</th>
+		<th>Affiliation</th>
+	</tr>
+</thead>
+<tbody>
+	{% for object in queryset %}
+	{% with user=object.user profile=object%}
+	<tr>
+		<th><a href="{{ user.get_absolute_url }}/{{ species.wid }}">{{ user.first_name }}&nbsp;{{ user.last_name }}</a></th>
+		<td><a href="{{ user.get_absolute_url }}/{{ species.wid }}">{{ profile.affiliation|truncatechars:80 }}</a></td>
+	</tr>
+	{% endwith %}
+	{% endfor %}
+</tbody>
+</table>
+
+<div style="clear:both;"></div>
+{% endblock %}

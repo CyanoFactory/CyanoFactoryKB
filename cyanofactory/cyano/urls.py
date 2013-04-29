@@ -3,7 +3,10 @@ from django.conf.urls import patterns, url
 _species_wid = r'(?P<species_wid>[a-zA-Z0-9_\-]+)'
 _wid = r'(?P<wid>[a-zA-Z0-9_\-]+)'
 
-urlpatterns = patterns('cyano.views',
+urlpatterns = patterns('cyano.views',         
+    #url(r'^user/?$', 'user'),
+    #url(r'^')
+                                    
     url(r'^login$', 'login'),
     url(_species_wid + r'/login$', 'login'),
 
@@ -16,11 +19,11 @@ urlpatterns = patterns('cyano.views',
 	url(r'^tutorial/*$', 'tutorial'),
 	url(r'^tutorial/' + _species_wid + '/*$', 'tutorial'),
 	
-	url(r'^contributors/*$', 'contributors'),
-	url(r'^contributors/' + _species_wid + '/*$', 'contributors'),
+	url(r'^users/*$', 'users'),
+	url(r'^users/' + _species_wid + '/*$', 'users'),
 	
-	url(r'^contributor/(?P<username>[\w\d]+)/*$', 'contributor'),
-	url(r'^contributor/(?P<username>[\w\d]+)/' + _species_wid + '/*$', 'contributor'),
+	url(r'^user/(?P<username>[\w\d]+)/*$', 'user'),
+	url(r'^user/(?P<username>[\w\d]+)/' + _species_wid + '/*$', 'user'),
 	
 	url(r'^search/*', 'search'),
 	url(r'^search/' + _species_wid + '/*', 'search'),
@@ -46,6 +49,10 @@ urlpatterns = patterns('cyano.views',
 
 	url(r'^' + _species_wid + r'/?$', 'species'),
 	
+    url(r'^' + _species_wid + r'/history/?', 'history'),
+    url(r'^' + _species_wid + r'/(?P<model_type>\w+)/' + r'history/?', 'history'),
+    url(r'^' + _species_wid + r'/(?P<model_type>\w+)/' + _wid + '/history/?', 'history'),
+    
 	url(r'^' + _species_wid + r'/permission$', 'permission'),
 
     url(r'^' + _species_wid + r'/(?P<model_type>\w+)/?$', 'list'),

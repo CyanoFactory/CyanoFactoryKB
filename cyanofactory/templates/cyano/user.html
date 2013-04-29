@@ -10,18 +10,18 @@ Last updated: 2012-07-17
 
 {% load static %}
 
-{% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.first_name }} {{ object.last_name }}{% endwith %}{% endblock %}
-{% block page_title %}{% with object=queryset.0 %}<a href="{% if species %}{% url "cyano.views.contributors" species_wid=species.wid %}{% else %}{% url "cyano.views.contributors" %}{% endif %}">Contributors</a> :: {{ object.first_name }} {{ object.last_name }}{% endwith %}{% endblock %}
+{% block head_title %}{% with user=queryset.0.user %}{{ block.super }} :: {{ user.first_name }} {{ user.last_name }}{% endwith %}{% endblock %}
+{% block page_title %}{% with user=queryset.0.user %}<a href="{% if species %}{% url "cyano.views.users" species_wid=species.wid %}{% else %}{% url "cyano.views.users" %}{% endif %}">Members</a> :: {{ user.first_name }} {{ user.last_name }}{% endwith %}{% endblock %}
 
 {% block action_icons %}
 {% if not request.user.is_anonymous %}
-<a href="{% url "admin:auth_user_change" queryset.0.id %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+{% comment %}<a href="{% url "admin:auth_user_change" queryset.0.id %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>{% endcomment %}
 {% endif %}
 {{ block.super }}
 {% endblock %}
 
 {% block content %}
-{% with object=queryset.0 profile=queryset.0.get_profile %}
+{% with user=queryset.0.user profile=queryset.0 %}
 <table id="detail">
 	<tbody class="data">
 		<tr>
@@ -29,7 +29,7 @@ Last updated: 2012-07-17
 		</tr>
 		<tr>
 			<th>Name</th>
-			<td>{{ object.first_name }} {{ object.last_name }}</td>
+			<td>{{ user.first_name }} {{ user.last_name }}</td>
 		</tr>
 		<tr>
 			<th>Affiliation</th>
@@ -49,7 +49,7 @@ Last updated: 2012-07-17
 		</tr>
 		<tr>
 			<th>Email</th>
-			<td><a href="mailto:{{ object.email }}">{{ object.email }}</a></td>
+			<td><a href="mailto:{{ user.email }}">{{ user.email }}</a></td>
 		</tr>
 		<tr>
 			<th>Phone</th>
@@ -69,11 +69,11 @@ Last updated: 2012-07-17
 		</tr>
 		<tr>
 			<th>User</th>
-			<td>{{ object.username }}</td>
+			<td>{{ user.username }}</td>
 		</tr>
 		<tr>
 			<th>Joined</th>
-			<td>{{ object.date_joined|date:"Y-m-d" }}</td>
+			<td>{{ user.date_joined|date:"Y-m-d" }}</td>
 		</tr>		
 	</tbody>
 </table>
