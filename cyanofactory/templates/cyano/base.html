@@ -19,7 +19,7 @@ Last updated: 2012-07-17
 <head>
 	{% block head %}
 	<!-- meta data -->
-	<title>{% block head_title %}CyanoFactory{% endblock %}</title>
+	<title>{% block head_title %}CyanoFactory KB{% endblock %}</title>
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<meta http-equiv="Content-Language" content="en-us" />
 	<meta http-equiv="Cache-Control" content="NO-CACHE" />
@@ -168,13 +168,7 @@ Last updated: 2012-07-17
 	<div id="main">
 		<!-- content -->
 		<div id="content">
-		<h1>{% block page_title %}
-			{% if queryset %}
-			{% with object=queryset.0 %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}}
-			{% elif model_type %}
-			{{ model_verbose_name_plural }}
-			{% endif %}
-			{% endblock %}
+		<h1>{% block page_title %}{% endblock %}
 		</h1>
 		{% block content %}{% endblock %}		
 		</div>

@@ -431,7 +431,6 @@ def list(request, species, model):
     #    raise Http404
 
     objects = model.objects.all().filter(species__id=species.id)
-    model_type = model.__name__
     
     facet_fields = []    
     for field_full_name in model._meta.facet_fields:
@@ -505,15 +504,12 @@ def list(request, species, model):
         queryset = objects, 
         template = 'cyano/list.html', 
         data = {
-            'model_type': model_type,
             'facet_fields': facet_fields,
             })
 
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def detail(request, species, model, item):
-    model_type = model.__name__
-
     fieldsets = deepcopy(model._meta.fieldsets)
     
     #filter out type, metadata
@@ -561,8 +557,6 @@ def detail(request, species, model, item):
         queryset = qs,
         template = 'cyano/detail.html', 
         data = {
-            'model_type': model_type,
-            'model': model,
             'fieldsets': fieldsets,
             'message': request.GET.get('message', ''),
             })

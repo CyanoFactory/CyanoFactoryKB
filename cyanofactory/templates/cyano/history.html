@@ -8,7 +8,12 @@ Revision page template
 {% load templatetags %}
 
 {% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.wid }}{% endwith %}{% endblock %}
-{% block page_title %}History of {{ block.super }}{% endblock %}
+{% block page_title %}History of
+{% if queryset %}{% with object=queryset.0 %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}
+{% elif model_type %}{{ model_verbose_name_plural}}
+{% elif species %}
+{% with object=species %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}
+{% endif %}{% endblock %}
 
 {% block head %}
 {{ block.super }}

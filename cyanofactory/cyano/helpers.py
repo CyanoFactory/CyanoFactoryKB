@@ -409,12 +409,12 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
     data['queryargs'] = {}
     data['email'] = "wuenschi@hs-mittweida.de"
     
-    if len(models) > 0:
+    if len(models) > 0 and models[0] != None:
         data['model_verbose_name'] = models[0]._meta.verbose_name,
         data['model_verbose_name_plural'] = models[0]._meta.verbose_name_plural
         data['model_type'] = models[0].__name__
         data['model'] = models[0]
-    
+
     for key, val in request.GET.iterlists():
         data['queryargs'][key] = val
 
