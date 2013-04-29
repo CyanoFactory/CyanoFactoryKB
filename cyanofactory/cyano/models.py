@@ -456,6 +456,11 @@ class UserProfile(ProfileBase):
     def get_name(self):
         return self.user.first_name + " " + self.user.last_name
     
+    def get_website(self):
+        if not self.website.startswith("http://") and not self.website.startswith("https://"):
+            return "http://" + self.website
+        return self.website
+    
     def get_groups(self):
         """
         Returns all groups where the user is in, including "Everybody" and
