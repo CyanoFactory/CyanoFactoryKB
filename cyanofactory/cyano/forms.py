@@ -79,15 +79,21 @@ class ImportDataForm(forms.Form):
 	species = forms.ChoiceField(
 		required = False,
 		widget = forms.Select, 
-		label = 'species',
-		help_text = 'Select species to export'
+		label = "species",
+		help_text = "Select species to export"
 		)
 	new_species = forms.CharField(
 		required = False,
 		widget = forms.TextInput,
-		label = 'species',
-		help_text = 'Choose a name for a new PGDB'
+		label = "species",
+		help_text = "Choose a name for a new species"
 		)
+	new_wid = forms.SlugField(
+		required = False,
+		widget = forms.TextInput,
+		label = "species",
+		help_text = "Enter a new unique identifier"
+	)
 	data_type = forms.ChoiceField(
 		required = True,
 		choices = [
@@ -106,6 +112,11 @@ class ImportDataForm(forms.Form):
 		label = 'file',
 		help_text = 'Select a file (Excel or FASTA) to import'
 		)
+	reason = forms.CharField(
+		required = True,
+		widget = forms.TextInput,
+		label = "reason",
+		help_text = "Enter a summary for this import")
 		
 	def __init__(self, *args, **kwargs):
 		super(ImportDataForm, self).__init__(*args, **kwargs)

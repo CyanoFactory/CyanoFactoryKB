@@ -50,6 +50,10 @@ Last updated: 2012-07-17
 		<th>Note</th>
 		<td colspan="2">This is only a preview of all changes that will be applied to the warehouse based on the uploaded file.<br/>A diff view is displayed when old data is going to be overwritten.<br/><br/>Please check if all changes are correct!</td>
 	</tr>
+	<tr>
+		<th>Reason</th>
+		<td colspan="2">{{ request.POST.reason }}</td>
+	</tr>
 	<tbody class="spacing">
 		<tr><td colspan="3">&nbsp;</td></tr>
 	</tbody>
@@ -78,13 +82,18 @@ Last updated: 2012-07-17
 	</tbody>
 	{% endfor %}
 	{% endwith %}	
+	<tbody class="spacing">
+		<tr><td colspan="3">&nbsp;</td></tr>
+	</tbody>
 </table>
-<form id="form" name="submitData" action="{% if species %}{% url "cyano.views.importSubmitData" species_wid=species.wid %}{% else %}{% url "cyano.views.importSubmitData" %}{% endif %}" method="post" enctype="multipart/form-data">
+<form id="form" name="submitData" action="{% if request.POST.new_species %}{% url "cyano.views.importSubmitData" %}{% elif species %}{% url "cyano.views.importSubmitData" species_wid=species.wid %}{% else %}{% url "cyano.views.importSubmitData" %}{% endif %}" method="post" enctype="multipart/form-data">
 	{% csrf_token %}
 	<input type='hidden' name='data_type' value='{{ request.POST.data_type }}' />
 	<input type='hidden' name='filename' value='{{ filename }}' />
-	<input type='hidden' name='species' value='{{ request.POST.species }}' />
-	<input type="submit" value="Submit">
+	<input type='hidden' name='species_wid' value='{{ species_wid }}' />
+	<input type='hidden' name='new_species' value='{{ request.POST.new_species }}' />
+	<input type='hidden' name='reason' value='{{ request.POST.reason }}' />
+	<input class="button" type="submit" value="Submit">
 </form>
 {% endwith %}
 {% endautoescape %}

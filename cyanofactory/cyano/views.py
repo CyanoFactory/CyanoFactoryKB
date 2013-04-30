@@ -50,7 +50,7 @@ def index(request):
         )
 
 @resolve_to_objects
-@permission_required(perm.READ_NORMAL)
+#@permission_required(perm.READ_NORMAL)
 def species(request, species):
     content = []
     if species is not None:        
@@ -60,7 +60,7 @@ def species(request, species):
         
         chrs = models.Chromosome.objects.filter(species__id = species.id)
         chrcontent = chrs.aggregate(length=Sum('length'));
-        gc_content = sum([chr.get_gc_content() * chr.length for chr in chrs]) / chrcontent['length']        
+        gc_content = 0 if len(chrs) == 0 else sum([chr.get_gc_content() * chr.length for chr in chrs]) / chrcontent['length']        
         content.append([
             [0, 'Chromosomes', chrs.count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Chromosome'})],
             [1, 'Length', chrcontent['length'], 'nt'],
@@ -423,7 +423,7 @@ def search_google(request, species_wid, query):
             })
 
 @resolve_to_objects
-@permission_required(perm.READ_NORMAL)
+#@permission_required(perm.READ_NORMAL)
 def list(request, species, model):
     #try:
     #    getObjectTypes().index(model_type)
@@ -508,7 +508,7 @@ def list(request, species, model):
             })
 
 @resolve_to_objects
-@permission_required(perm.READ_NORMAL)
+#@permission_required(perm.READ_NORMAL)
 def detail(request, species, model, item):
     fieldsets = deepcopy(model._meta.fieldsets)
     
@@ -587,8 +587,6 @@ def history(request, species, model = None, item = None, detail_id = None):
     
     entry = []
     date = None
-    
-    model_type = model.__name__ if model else None
     
     for revision in revision_history:
         last_date = date
@@ -789,9 +787,11 @@ def importData(request, species=None):
         form = ImportDataForm(request.POST or None, request.FILES)
         
         if form.is_valid():       
-            selected_species_wid = form.cleaned_data['species'] or form.cleaned_data['new_species']
+            selected_species_wid = form.cleaned_data['species'] or form.cleaned_data['new_wid']
             if selected_species_wid == '' or selected_species_wid is None:
-                form.species.errors += ['Please select a species']
+                form.errors["species"] = ['Please select a species or create a new one']
+            elif form.cleaned_data['new_wid'] and models.Species.objects.filter(wid = selected_species_wid).exists():
+                form.errors["new_wid"] = ['The identifier specified is already in use']
             else:
                 #save to temporary file
                 originalFileName, originalFileExtension = os.path.splitext(request.FILES['file'].name)
@@ -802,7 +802,11 @@ def importData(request, species=None):
                 fid.close()
                 
                 #read file
-                data_type = form.cleaned_data['data_type']
+                data_type = form.cleaned_data["data_type"]
+                request.POST["new_species"] = form.cleaned_data["new_species"]
+                request.POST["data_type"] = data_type
+                request.POST["reason"] = form.cleaned_data["reason"]
+                
                 if data_type == "fasta":
                     f = FastaImporter.Fasta()
                     f.load(filename)
@@ -811,7 +815,9 @@ def importData(request, species=None):
                     g = GenbankImporter()
                     g.load(filename)
                     return g.preview(request, selected_species_wid)
-                    
+                
+                os.remove(filename)
+                raise Http404
                 
                 #if originalFileExtension == '.xlsx':
                 #    try:
@@ -821,23 +827,7 @@ def importData(request, species=None):
                 #    except ValidationError as error:
                 #        success = False
                 #        message = 'Unable to import data: ' + ' '.join(error.messages)
-                #elif originalFileExtension == '.fna':
-                #    success, message = readFasta(selected_species_wid, filename, request.user)
-                #else:
-                #    raise Http404
-                
-                #delete file
-                os.remove(filename)
-                
-                #render response
-                ##return render_queryset_to_response(
-                ##    species = species,
-                ##    request = request,
-                ##    template = 'cyano/importDataResult.html', 
-                ##    data = {
-                ##       'success': success,
-                ##        'message': message,
-                ##        })
+
     else:
         form = ImportDataForm(None)
 
@@ -854,11 +844,18 @@ def importData(request, species=None):
 def importSubmitData(request, species=None):
     from cyano.importer.genbank import Genbank as GenbankImporter
     if request.method == 'POST':
-        if request.POST["data_type"] == "fastagene":
-            g = GenbankImporter()
-            g.load(request.POST['filename'])
-            return g.submit(request, request.POST['species'])
+        data_type = request.POST["data_type"]
+        filename = request.POST['filename']
+        #if data_type == "fasta":
             
+        if data_type == "fastagene":
+            g = GenbankImporter()
+            g.load(filename)
+            os.remove(filename)
+            return g.submit(request, request.POST['species_wid'])
+
+        os.remove(filename)
+        raise Http404
     pass
     
 def validate(request, species_wid):

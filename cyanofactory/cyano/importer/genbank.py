@@ -53,7 +53,7 @@ class Genbank(Importer):
         try:
             species = models.Species.objects.get(wid = species_wid)
         except ObjectDoesNotExist:
-            species = models.Species(wid = species_wid)
+            species = models.Species(wid = species_wid, name = request.POST["new_species"])
         
         fields = []
         
@@ -136,20 +136,29 @@ class Genbank(Importer):
                 'model': model,
                 'fieldsets': fields,
                 'message': request.GET.get('message', ''),
-                'filename': self.filename
+                'filename': self.filename,
+                'species_wid': species_wid
                 })
     
     def submit(self, request, species_wid):
         revdetail = models.RevisionDetail()
         revdetail.user = request.user.profile
-        revdetail.reason = "Import FASTA Gene List"
+        revdetail.reason = request.POST["reason"]
         
         try:
             species = models.Species.objects.get(wid = species_wid)
         except ObjectDoesNotExist:
-            species = models.Species(wid = species_wid)
+            species = models.Species(wid = species_wid, name = request.POST["new_species"])
+            species.save(revision_detail = revdetail)
             
-        chromosome = models.Chromosome.objects.get(wid = "CHROMOSOME-1")
+        try:
+            chromosome = models.Chromosome.objects.get(wid = "CHROMOSOME-1")
+        except ObjectDoesNotExist:
+            chromosome = models.Chromosome(wid = "CHROMOSOME-1")
+            chromosome.save(revision_detail = revdetail)
+        
+        chromosome.species.add(species)
+        chromosome.save(revision_detail = revdetail)
         
         for feature in self.data.features:
             qualifiers = feature.qualifiers
