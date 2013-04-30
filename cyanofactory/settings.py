@@ -8,6 +8,8 @@ Last updated: 2012-07-17
 
 import os
 
+from settings_private import *
+
 ROOT_URL = 'http://localhost:8000'
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -19,26 +21,6 @@ ADMINS = (
 )
 
 MANAGERS = ADMINS
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-		#'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'cyano_new',
-        'USER': 'cyano',
-        'PASSWORD': 'cyano',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    },
-    'cyano': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'biowarehouse',
-        'USER': 'gabriel',
-        'PASSWORD': 'mastagk',
-        'HOST': 'bt-005.mni.hs-mittweida.de',
-        'PORT': '5432',
-    }
-}
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -94,9 +76,6 @@ STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
-
-# Make this unique, and don't share it with anybody.
-SECRET_KEY = '!!l%%3iao+m!@q51vzr3a0+(nk_w7d*_c1u-7re!3tlbmh*mgs'
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
