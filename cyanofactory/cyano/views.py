@@ -332,8 +332,9 @@ def tutorial(request, species_wid=None):
         request = request, 
         template = 'cyano/tutorial.html')    
 
-@login_required    
-def users(request, species_wid=None):
+@login_required
+@resolve_to_objects
+def users(request, species = None):
     queryset = models.UserProfile.objects.all().filter(user__is_active = True)
     return render_queryset_to_response(
         species = species,
@@ -342,8 +343,9 @@ def users(request, species_wid=None):
         queryset = queryset,
         template = 'cyano/users.html')    
         
-@login_required    
-def user(request, username, species_wid=None):
+@login_required   
+@resolve_to_objects
+def user(request, username, species = None):
     queryset = objectToQuerySet(get_object_or_404(models.UserProfile, user__username = username), model = models.UserProfile)
     return render_queryset_to_response(
         species = species,

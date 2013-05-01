@@ -407,13 +407,30 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
     data['queryset'] = queryset
     data['request'] = request
     data['queryargs'] = {}
-    data['email'] = "wuenschi@hs-mittweida.de"
+    data['email'] = "wuenschi@hs-mittweida.de"   
+    
+    social_text = ""
     
     if len(models) > 0 and models[0] != None:
         data['model_verbose_name'] = models[0]._meta.verbose_name,
         data['model_verbose_name_plural'] = models[0]._meta.verbose_name_plural
         data['model_type'] = models[0].__name__
         data['model'] = models[0]
+        
+        if len(queryset) > 0:
+            if len(queryset) == 1 and isinstance(queryset[0], Entry):
+                social_text += data['model_verbose_name'][0] + " "
+                social_text += queryset[0].name
+            else:
+                social_text += data['model_verbose_name_plural']
+            
+            if species:
+                social_text += " of "
+    
+    if species:
+        social_text += species.name
+    
+    data['social_text'] = social_text
 
     for key, val in request.GET.iterlists():
         data['queryargs'][key] = val
