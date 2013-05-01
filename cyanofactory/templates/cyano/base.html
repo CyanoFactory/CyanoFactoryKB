@@ -185,9 +185,13 @@ Last updated: 2012-07-17
 		</div>
 		
 		<div class="right">
-			{% block action_icons %}			
-			<a href="?{% makeurl queryargs 'format' 'pdf' %}"><img src="{% get_static_prefix %}public/img/page_white_acrobat.png" /></a>
-			<a href="javascript:window.print()"><img src="{% get_static_prefix %}public/img/printer.png" /></a>
+			{% block action_icons %}
+			<a href="?{% makeurl queryargs 'format' 'facebook' %}" title="Share on Facebook"><img src="{% get_static_prefix %}cyano/img/social/facebook.png" /></a>
+			<a href="?{% makeurl queryargs 'format' 'twitter' %}" title="Share on Twitter"><img src="{% get_static_prefix %}cyano/img/social/twitter.png" /></a>
+			<a href="?{% makeurl queryargs 'format' 'googleplus' %}" title="Share on Google Plus"><img src="{% get_static_prefix %}cyano/img/social/google+.png" /></a>
+			<a href="?{% makeurl queryargs 'format' 'email' %}" title="Share via E-Mail"><img src="{% get_static_prefix %}cyano/img/social/email.png" /></a>
+			<a href="?{% makeurl queryargs 'format' 'pdf' %}" title="Convert to PDF"><img src="{% get_static_prefix %}public/img/page_white_acrobat.png" /></a>
+			<a href="javascript:window.print()" title="Print this page"><img src="{% get_static_prefix %}public/img/printer.png" /></a>
 			{% endblock %}
 		</div>
 	</div>	
