@@ -400,7 +400,7 @@ def get_queryset_object_or_404(queryset):
     except ObjectDoesNotExist:
         raise Http404
 
-def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):
+def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):    
     format = request.GET.get('format', 'html')
 
     data['species'] = species
@@ -443,6 +443,8 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['modelnames'] = getObjectTypes(SpeciesComponent)
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
         
+        if isinstance(data['queryset'], EmptyQuerySet):
+            del data['queryset'] 
         return render_to_response(template, data, context_instance = RequestContext(request))
     elif format == 'bib':
         response = HttpResponse(
