@@ -154,7 +154,7 @@ Last updated: 2012-07-17
 			<li class="spacer"/>
 			<li><a href="#">{{ request.user.username }}</a>
 				<ul>
-				<li><a href="{% url "cyano.views.user" username=request.user.username %}">My Profile</a></li>
+				<li><a href="{% if species %}{% url "cyano.views.user" username=request.user.username species_wid=species.wid %}{% else %}{% url "cyano.views.user" username=request.user.username %}{% endif %}">My Profile</a></li>
 				<li><a href="{% if species %}{% url "cyano.views.logout" species_wid=species.wid %}{% else %}{% url "cyano.views.logout" %}{% endif %}">Logout</a></li>
 				</ul>
 			</li>

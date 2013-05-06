@@ -443,7 +443,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['modelnames'] = getObjectTypes(SpeciesComponent)
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
         
-        if isinstance(data['queryset'], EmptyQuerySet):
+        if data['queryset'].model is None:
             del data['queryset'] 
         return render_to_response(template, data, context_instance = RequestContext(request))
     elif format == 'bib':
