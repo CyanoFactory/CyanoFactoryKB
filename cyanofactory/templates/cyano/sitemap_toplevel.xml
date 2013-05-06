@@ -1,32 +1,31 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 {% comment %}
 Top-level site map
-
-Author: Jonathan Karr, jkarr@stanford.edu
-Affiliation: Covert Lab, Department of Bioengineering, Stanford University
-Last updated: 2012-07-17
 {% endcomment %}
+
 {% load templatetags %}
+
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 	<!-- top-level pages -->
 	<url>
-		<loc>{{ ROOT_URL }}{% url cyano.views.index %}</loc>
-		<lastmod>{{ "/public/index.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<loc>{{ ROOT_URL }}{% url "cyano.views.index" %}</loc>
+		<lastmod>{{ "/cyano/index.html"|get_template_last_updated|date:"c" }}</lastmod>
 	</url>
 	<url>
-		<loc>{{ ROOT_URL }}{% url cyano.views.tutorial %}</loc>
-		<lastmod>{{ "/public/tutorial.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<loc>{{ ROOT_URL }}{% url "cyano.views.tutorial" %}</loc>
+		<lastmod>{{ "/cyano/tutorial.html"|get_template_last_updated|date:"c" }}</lastmod>
 	</url>
 	<url>
-		<loc>{{ ROOT_URL }}{% url cyano.views.about %}</loc>
-		<lastmod>{{ "/public/about.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<loc>{{ ROOT_URL }}{% url "cyano.views.about" %}</loc>
+		<lastmod>{{ "/cyano/about.html"|get_template_last_updated|date:"c" }}</lastmod>
 	</url>
 	<url>
-		<loc>{{ ROOT_URL }}{% url cyano.views.login %}</loc>
-		<lastmod>{{ "/public/login.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<loc>{{ ROOT_URL }}{% url "cyano.views.login" %}</loc>
+		<lastmod>{{ "/cyano/login.html"|get_template_last_updated|date:"c" }}</lastmod>
 	</url>
 	<url>
-		<loc>{{ ROOT_URL }}{% url cyano.views.exportData %}</loc>
-		<lastmod>{{ "/public/exportDataForm.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<loc>{{ ROOT_URL }}{% url "cyano.views.exportData" %}</loc>
+		<lastmod>{{ "/cyano/exportDataForm.html"|get_template_last_updated|date:"c" }}</lastmod>
 	</url>
 </urlset>

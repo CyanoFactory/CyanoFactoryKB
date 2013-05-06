@@ -914,7 +914,7 @@ def logout(request, species=None):
 def sitemap(request):
     return render_queryset_to_response(
         request = request, 
-        template = 'public/sitemap.xml', 
+        template = 'cyano/sitemap.xml', 
         data = {
             'ROOT_URL': settings.ROOT_URL,
             'qs_species': models.Species.objects.all(),
@@ -924,20 +924,19 @@ def sitemap(request):
 def sitemap_toplevel(request):
     return render_queryset_to_response(
         request = request, 
-        template = 'public/sitemap_toplevel.xml', 
+        template = 'cyano/sitemap_toplevel.xml', 
         data = {
             'ROOT_URL': settings.ROOT_URL,
         }
     )
-    
-def sitemap_species(request, species_wid):
-    species = species.objects.get(wid=species_wid)
+
+@resolve_to_objects
+def sitemap_species(request, species):
     return render_queryset_to_response(
         request = request, 
-        template = 'public/sitemap_species.xml', 
+        template = 'cyano/sitemap_species.xml', 
         data = {
             'ROOT_URL': settings.ROOT_URL,
-            'species': species,
             'entries': models.SpeciesComponent.objects.filter(species__id = species.id),
         }
     )
