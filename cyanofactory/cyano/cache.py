@@ -19,12 +19,12 @@ class Cache(object):
         start = time.time()
         item = Cache.get(name)
         if item == None:
-            print "Cache miss for " + name
+            #print "Cache miss for " + name
             item = function()
             Cache.set(name, item)
-        else:
-            print "Cache hit for " + name
+        #else:
+            #print "Cache hit for " + name
         end = time.time()
         elapsed = end - start
-        print "Operation took: ", elapsed, "seconds."
+        #print "Operation took: ", elapsed, "seconds."
         return item

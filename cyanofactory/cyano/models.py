@@ -13,7 +13,7 @@ from django.core import validators
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db import models
-from django.db.models import Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, ForeignKey, BooleanField, SlugField, ManyToManyField, TextField, DateTimeField, options, permalink, SET_NULL, Min, Max
+from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, ForeignKey, BooleanField, SlugField, ManyToManyField, TextField, DateTimeField, options, permalink, SET_NULL, Min, Max
 from django.db.models.query import EmptyQuerySet
 from django.utils.http import urlencode
 from itertools import chain
@@ -24,6 +24,8 @@ import settings
 import subprocess
 from datetime import datetime
 from cyano.exceptions import WidAlreadyExist
+from cyano.cache import Cache
+import StringIO
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -1280,7 +1282,9 @@ class SpeciesComponent(Entry):
     #getters
     @permalink
     def get_absolute_url(self, species):
-        return ('cyano.views.detail', (), {'species_wid':species.wid, 'model_type':self.model_type.name, 'wid': self.wid})
+        model_type_key = "model/model_type/" + str(self.model_type_id)
+        cache_model_type = Cache.try_get(model_type_key, lambda: self.model_type)
+        return ('cyano.views.detail', (), {'species_wid':species.wid, 'model_type':cache_model_type.name, 'wid': self.wid})
         
     def get_all_references(self):
         return self.publication_references.all() | PublicationReference.objects.filter(evidence__species_component__id = self.id)
@@ -1581,7 +1585,6 @@ class Chromosome(Molecule):
 
     def get_as_html_diff_sequence(self, species, new_obj, is_user_anonymouse):
             from Bio import pairwise2
-            import StringIO
             pairwise2.MAX_ALIGNMENTS = 1
             align = pairwise2.align.globalxx(self.sequence[:100], new_obj[:100])
             output = StringIO.StringIO()
@@ -1642,29 +1645,32 @@ class Chromosome(Molecule):
             .chr line{stroke:#666; stroke-width:0.5px;}\
         '
         
-        chr = ''
+        chr = StringIO.StringIO()
         for i in range(nSegments):
             x1 = segmentLeft
             x2 = segmentLeft + ((min(self.length, (i+1) * ntPerSegment) - 1) % ntPerSegment) / ntPerSegment * segmentW
             y = chrTop + (i + 1) * segmentHeight
-            chr += '<text x="%s" y="%s">%d</text>' % (segmentLeft - 2, y, i * ntPerSegment + 1)
-            chr += '<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y)
+            chr.write('<text x="%s" y="%s">%d</text>' % (segmentLeft - 2, y, i * ntPerSegment + 1))
+            chr.write('<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y))
         
         #genes
         geneStyle = '\
             .genes g polygon{stroke-width:1px; fill-opacity:0.5;}\
             .genes g text{text-anchor:middle; alignment-baseline:middle; font-size:8px; fill: #222}\
         '
-            
-        genes = ''        
-        genesList = self.genes.all()
+
+        genes = StringIO.StringIO()
+
+        print "a"
+        genesList = list(self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all())
+        print "b"
         nTus = 0
         iTUs = {}
         tus = []
-        for i in range(len(genesList)):
-            gene = genesList[i]
+
+        for i, gene in enumerate(genesList):
             if gene.transcription_units.count() > 0:
-                tu = gene.transcription_units.all()[0]
+                tu = gene.transcription_units.all()[:1][0]
                 if iTUs.has_key(tu.wid):
                     iTu = iTUs[tu.wid]
                 else:
@@ -1700,7 +1706,9 @@ class Chromosome(Molecule):
                 tip_title = tip_title.replace("'", "\'")
                 tip_content = tip_content.replace("'", "\'")
                     
-                genes += '<g>\
+                gene_abs_url = gene.get_absolute_url(species)
+                
+                genes.write('<g>\
                     <a xlink:href="%s">\
                         <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/>\
                     </a>\
@@ -1708,7 +1716,7 @@ class Chromosome(Molecule):
                         <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\
                     </a>\
                     </g>' % (                
-                    gene.get_absolute_url(species),
+                    gene_abs_url,
                     iTu % len(colors),
                     x1, y1,
                     x2, y1,
@@ -1716,17 +1724,18 @@ class Chromosome(Molecule):
                     x2, y2,
                     x1, y2,
                     tip_title, tip_content,
-                    gene.get_absolute_url(species),
+                    gene_abs_url,
                     (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
                     tip_title, tip_content,
                     label,                
-                    )
+                    ))
         
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
         tfSiteStyle = '.tfSites rect{fill:#%s; opacity:0.5}' % (colors[1], )
-        promoters = ''        
-        tfSites = ''
+        
+        promoters = StringIO.StringIO()
+        tfSites = StringIO.StringIO()
         for tu in tus:
             if tu.promoter_35_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_35_coordinate
@@ -1745,8 +1754,8 @@ class Chromosome(Molecule):
                     tip_title = tu.wid
                 tip_title = tip_title.replace("'", "\'")
                     
-                promoters += '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                    tu.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Promoter -35 box')
+                promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
+                    tu.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Promoter -35 box'))
                     
             if tu.promoter_10_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_10_coordinate
@@ -1765,8 +1774,8 @@ class Chromosome(Molecule):
                     tip_title = tu.wid
                 tip_title = tip_title.replace("'", "\'")
                     
-                promoters += '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                    tu.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Promoter -10 box')
+                promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
+                    tu.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Promoter -10 box'))
 
             for tr in tu.transcriptional_regulations.all():
                 if tr.binding_site is not None:    
@@ -1783,14 +1792,13 @@ class Chromosome(Molecule):
                         tip_title = tr.wid
                     tip_title = tip_title.replace("'", "\'")
                         
-                    tfSites += '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                        tr.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Transcription factor binding site')
+                    tfSites.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
+                        tr.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Transcription factor binding site'))
         
         #features
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
-        features = ''
-        types = {}
-        nTypes = 0
+        features = StringIO.StringIO()
+        
         for feature in self.features.all():        
             iSegment = math.floor((feature.coordinate - 1) / ntPerSegment)
             
@@ -1800,9 +1808,9 @@ class Chromosome(Molecule):
             y = chrTop + (iSegment + 1) * segmentHeight + 2
                         
             if feature.type.all().count() > 0:
-                type = feature.type.all()[0].name
+                type_ = feature.type.all()[0].name
             else:
-                type = ''
+                type_ = ''
                 
             if feature.name:
                 tip_title = feature.name
@@ -1810,11 +1818,11 @@ class Chromosome(Molecule):
                 tip_title = feature.wid
             tip_title = tip_title.replace("'", "\'")
             
-            features += '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                feature.get_absolute_url(species), x, y, w, featureHeight, tip_title, type, )
+            features.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
+                feature.get_absolute_url(species), x, y, w, featureHeight, tip_title, type_, ))
     
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
-            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chr, genes, promoters, tfSites, features)
+            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chr.getvalue(), genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
             
     def get_as_html_structure_local(self, species, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None):
         length = end_coordinate - start_coordinate + 1
@@ -1827,7 +1835,6 @@ class Chromosome(Molecule):
         geneY = 2
         chrY = geneY + geneHeight + 4
         promoterY = chrY + 1 + 2
-        tfSiteY = promoterY
         featureY = promoterY
         
         #style
@@ -1855,20 +1862,18 @@ class Chromosome(Molecule):
         geneStyle = '\
             .genes g polygon{}\
             .genes g text{text-anchor:middle; alignment-baseline:middle; font-size:8px; fill: #222}\
-        '            
-        genes = ''        
-        genesList = self.genes.all()
+        '
+
+        genes = StringIO.StringIO()      
+        genesList = self.genes.filter(coordinate__lte = end_coordinate, coordinate__gte = start_coordinate + 1 - F("length")).prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all()
+
         nTus = 0
         iTUs = {}
         tus = []
-        for i in range(len(genesList)):
-            gene = genesList[i]
-            
-            if gene.coordinate > end_coordinate or gene.coordinate + gene.length - 1 < start_coordinate:
-                continue
-            
+
+        for i, gene in enumerate(genesList):
             if gene.transcription_units.count() > 0:
-                tu = gene.transcription_units.all()[0]
+                tu = gene.transcription_units.all()[:1][0]
                 if iTUs.has_key(tu.wid):
                     iTu = iTUs[tu.wid]
                 else:
@@ -1914,8 +1919,10 @@ class Chromosome(Molecule):
                 tip_content = 'Transcription unit: %s' % tu.name
                 tip_title = tip_title.replace("'", "\'")
                 tip_content = tip_content.replace("'", "\'")
+                
+                gene_abs_url = gene.get_absolute_url(species)
                     
-                genes += '<g style="">\n\
+                genes.write('<g style="">\n\
                     <a xlink:href="%s">\n\
                         <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="fill-opacity: %s; stroke-opacity: %s; stroke-width: %spx"/>\n\
                     </a>\n\
@@ -1923,7 +1930,7 @@ class Chromosome(Molecule):
                         <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\n\
                     </a>\n\
                     </g>\n' % (                
-                    gene.get_absolute_url(species),
+                    gene_abs_url,
                     iTu % len(colors),
                     x1, y1,
                     x2, y1,
@@ -1932,17 +1939,18 @@ class Chromosome(Molecule):
                     x1, y2,
                     tip_title, tip_content,
                     fillOpacity, strokeOpacity, strokeWidth,
-                    gene.get_absolute_url(species),
+                    gene_abs_url,
                     (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
                     tip_title, tip_content,
                     label,
-                    )
+                    ))
                 
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
         tfSiteStyle = '.tfSites rect{fill:#%s; opacity:0.5}' % (colors[1], )
-        promoters = ''        
-        tfSites = ''
+
+        promoters = StringIO.StringIO()
+        tfSites = StringIO.StringIO()
         for tu in tus:
             if tu.promoter_35_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_35_coordinate
@@ -1966,8 +1974,8 @@ class Chromosome(Molecule):
                         tip_title = tu.wid
                     tip_title = tip_title.replace("'", "\'")
                         
-                    promoters += '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                        tu.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Promoter -35 box', opacity)
+                    promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
+                        tu.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Promoter -35 box', opacity))
                     
             if tu.promoter_10_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_10_coordinate
@@ -1991,8 +1999,8 @@ class Chromosome(Molecule):
                         tip_title = tu.wid
                     tip_title = tip_title.replace("'", "\'")
                     
-                    promoters += '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                        tu.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Promoter -10 box', opacity)
+                    promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
+                        tu.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Promoter -10 box', opacity))
 
             for tr in tu.transcriptional_regulations.all():
                 if tr.binding_site is not None and not (tr.binding_site.coordinate > end_coordinate or tr.binding_site.coordinate + tr.binding_site.length - 1 < start_coordinate):    
@@ -2013,14 +2021,13 @@ class Chromosome(Molecule):
                         tip_title = tr.wid
                     tip_title = tip_title.replace("'", "\'")
                     
-                    tfSites += '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                        tr.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Transcription factor binding site', opacity)
+                    tfSites.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
+                        tr.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Transcription factor binding site', opacity))
                 
         #features
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
-        features = ''
-        types = {}
-        nTypes = 0
+        features = StringIO.StringIO()
+
         for feature in self.features.all():        
             if feature.coordinate > end_coordinate or feature.coordinate + feature.length - 1 < start_coordinate:
                 continue
@@ -2032,9 +2039,9 @@ class Chromosome(Molecule):
             x2 = max(chrL, min(chrR, x2))
                             
             if feature.type.all().count() > 0:
-                type = feature.type.all()[0].name
+                type_ = feature.type.all()[0].name
             else:
-                type = ''
+                type_ = ''
                 
             if highlight_wid is None or feature.wid in highlight_wid:
                 opacity = 1
@@ -2047,11 +2054,11 @@ class Chromosome(Molecule):
                 tip_title = feature.wid
             tip_title = tip_title.replace("'", "\'")
             
-            features += '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                feature.get_absolute_url(species), x1, featureY, x2 - x1, featureHeight, tip_title, type, opacity)    
+            features.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
+                feature.get_absolute_url(species), x1, featureY, x2 - x1, featureHeight, tip_title, type_, opacity))
         
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
-            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chr, genes, promoters, tfSites, features)
+            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chr, genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
         
     def get_as_html_genes(self, species, is_user_anonymous):
         return ""
