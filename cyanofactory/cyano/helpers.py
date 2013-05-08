@@ -417,7 +417,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['model_type'] = models[0].__name__
         data['model'] = models[0]
         
-        if len(queryset) > 0:
+        if queryset and len(queryset) > 0:
             if len(queryset) == 1 and isinstance(queryset[0], Entry):
                 social_text += data['model_verbose_name'][0] + " "
                 social_text += queryset[0].name
@@ -443,7 +443,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['modelnames'] = getObjectTypes(SpeciesComponent)
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
         
-        if data['queryset'].model is None:
+        if queryset and data['queryset'].model is None:
             del data['queryset'] 
         return render_to_response(template, data, context_instance = RequestContext(request))
     elif format == 'bib':
@@ -525,8 +525,9 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         objects = doc.createElement('objects')
         doc.appendChild(objects)
 
-        for obj in queryset:
-            objects.appendChild(convert_modelobject_to_xml(obj, doc, request.user.is_anonymous()))
+        if queryset:
+            for obj in queryset:
+                objects.appendChild(convert_modelobject_to_xml(obj, doc, request.user.is_anonymous()))
 
         response = HttpResponse(
             doc.toprettyxml(indent=" "*2, encoding = 'utf-8'),
@@ -1256,8 +1257,8 @@ def remove_new_objects(newobjects, newsubobjects):
 def objectToQuerySet(obj, model = None):
     if model is None:
         model = obj.__class__
-    qs = model.objects.none()
-    qs._result_cache.append(obj)
+    qs = model.objects.filter(wid = obj.wid)
+    #qs._result_cache.append(obj)
     return qs
 
 def format_field_detail_view(species, obj, field_name, is_user_anonymous):

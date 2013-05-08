@@ -567,38 +567,30 @@ def detail(request, species, model, item):
 #@permission_required(perm.READ_HISTORY)
 def history(request, species, model = None, item = None, detail_id = None):
     if item:    
-        prefix = ""
-        objects = item.revisions
+        objects = objectToQuerySet(item, model = model)[0].revisions.prefetch_related("detail", "detail__user", "current", "current__model_type").order_by("-detail__id").distinct("detail__id")
     elif model:
-        objects = model.objects.filter(species__id=species.id)
-        prefix = "revisions__"
+        objects = model.objects.filter(species__id=species.id)#.prefetch_related("revisions", "revisions__detail", "revisions__detail__user", "model_type").order_by("-revisions__detail__id").distinct("revisions__detail__id")
+        #tmeta = models.TableMeta.objects.get(name = model._meta.object_name)
+        #objects = models.Revision.objects.filter(current__)
     else:
-        objects = models.SpeciesComponent.objects.filter(species__id=species.id)
-        prefix = "revisions__"
-    
-    revision_history = objects.values('{0}detail'.format(prefix),
-                                      '{0}detail__date'.format(prefix),
-                                      '{0}detail__reason'.format(prefix),
-                                      '{0}detail__user'.format(prefix),
-                                      '{0}current__wid'.format(prefix),
-                                      '{0}current__model_type__name'.format(prefix))\
-                                      .annotate(Count('{0}detail'.format(prefix)))\
-                                      .order_by("-{0}detail__date".format(prefix), "{0}current__wid".format(prefix))
-    
+        objects = models.SpeciesComponent.objects.filter(species__id=species.id).prefetch_related("detail", "detail__user", "current", "current__model_type").order_by("-detail__id").distinct("detail__id")
+
+    #objects = objects.prefetch_related("detail", "detail__user", "current", "current__model_type").order_by("-detail__id").distinct("detail__id")
+
     revisions = []
     
     entry = []
     date = None
     
-    for revision in revision_history:
+    for revision in objects:
         last_date = date
-        wid = revision[prefix + "current__wid"]
-        item_model = revision[prefix + "current__model_type__name"]
-        detail_id = revision[prefix + "detail"]
-        date = revision[prefix + "detail__date"].date()
-        time = revision[prefix + "detail__date"].strftime("%H:%M")
-        reason = revision[prefix + "detail__reason"]
-        author = models.UserProfile.objects.get(pk = revision[prefix + "detail__user"])
+        wid = revision.current.wid
+        item_model = revision.current.model_type.name
+        detail_id = revision.detail.pk
+        date = revision.detail.date.date()
+        time = revision.detail.date.strftime("%H:%M")
+        reason = revision.detail.reason
+        author = revision.detail.user
         url = reverse("cyano.views.history", kwargs = {"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
         
         if last_date != date:
@@ -611,17 +603,16 @@ def history(request, species, model = None, item = None, detail_id = None):
     if item:
         qs = objectToQuerySet(item, model = model)
     else:
-        qs = None
+        qs = objects
 
     return render_queryset_to_response(
-        species = species,        
-        request = request, 
+        species = species,
+        request = request,
         models = [model],
         queryset = qs,
-        template = 'cyano/history.html', 
+        template = 'cyano/history.html',
         data = {
-            'revisions': revisions[1:],
-            'message': request.GET.get('message', ''),
+            'revisions': revisions[1:]
             })
             
 @login_required        

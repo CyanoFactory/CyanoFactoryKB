@@ -964,13 +964,13 @@ class Entry(Model):
                 real_new_value = unicode(new_value)
             
             if old_value == None:
-                print u"Creating " + real_new_value[:10]
+                #print u"Creating " + real_new_value[:10]
                 revision.action = RevisionOperation.objects.get(name = "Create")
             elif new_value == None:
-                print u"Deleting " + unicode(old_value)[:10]
+                #print u"Deleting " + unicode(old_value)[:10]
                 revision.action = RevisionOperation.objects.get(name = "Delete")
             else:
-                print u"Updating " + unicode(old_value)[:10] + u" with " + real_new_value[:10]
+                #print u"Updating " + unicode(old_value)[:10] + u" with " + real_new_value[:10]
                 revision.action = RevisionOperation.objects.get(name = "Edit")
             
             revision.table = TableMeta.objects.get(name = field.model._meta.object_name)
