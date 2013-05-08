@@ -959,18 +959,18 @@ class Entry(Model):
             
             if hasattr(new_value, "id"):
                 # resolve value of foreign keys
-                real_new_value = str(new_value.id)
+                real_new_value = unicode(new_value.id)
             else:
-                real_new_value = str(new_value)
+                real_new_value = unicode(new_value)
             
             if old_value == None:
-                print "Creating " + real_new_value[:10]
+                print u"Creating " + real_new_value[:10]
                 revision.action = RevisionOperation.objects.get(name = "Create")
             elif new_value == None:
-                print "Deleting " + str(old_value)[:10]
+                print u"Deleting " + unicode(old_value)[:10]
                 revision.action = RevisionOperation.objects.get(name = "Delete")
             else:
-                print "Updating " + str(old_value)[:10] + " with " + real_new_value[:10]
+                print u"Updating " + unicode(old_value)[:10] + u" with " + real_new_value[:10]
                 revision.action = RevisionOperation.objects.get(name = "Edit")
             
             revision.table = TableMeta.objects.get(name = field.model._meta.object_name)
