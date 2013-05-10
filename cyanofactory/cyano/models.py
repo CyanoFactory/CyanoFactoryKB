@@ -346,49 +346,49 @@ def parse_regulatory_rule(equation, all_obj_data, species_wid):
     
 ''' END: validators '''
 
+class Permission(Model):
+    name = CharField(max_length=255, blank=False, default='', verbose_name = "Permission name")
+    description = CharField(max_length=255, blank=False, default='', verbose_name = "Permission description")
+
 class UserPermission(Model):
     entry = ForeignKey("Entry", related_name = "user_permissions")
     user = ForeignKey("UserProfile", related_name = 'permissions')
-    #permission = ForeignKey(Permission, verbose_name = 'Permissions', related_name = 'users')
-    allow = IntegerField()
-    deny = IntegerField()
+    permission = ForeignKey(Permission, verbose_name = 'Permissions', related_name = '+')
     
-    def __unicode__(self):
-        return "[{!s}, {!s}]".format(
-            bin(self.allow_mask or 0)[2:].rjust(8, '0'), bin(self.deny_mask or 0)[2:].rjust(8, '0'))
+    #def __unicode__(self):
+        #return "[{!s}, {!s}]".format(
+        #    bin(self.allow_mask or 0)[2:].rjust(8, '0'), bin(self.deny_mask or 0)[2:].rjust(8, '0'))
 
 class GroupPermission(Model):
     entry = ForeignKey("Entry", related_name = "group_permissions")
     group = ForeignKey("GroupProfile", related_name = 'permissions')
-    #permission = ForeignKey(Permission, verbose_name = 'Permissions', related_name = 'groups')
-    allow = IntegerField()
-    deny = IntegerField()
-    
-    def __unicode__(self):
-        return "[{!s}, {!s}]".format(
-            bin(self.allow_mask or 0)[2:].rjust(8, '0'), bin(self.deny_mask or 0)[2:].rjust(8, '0'))
+    permission = ForeignKey(Permission, verbose_name = 'Permissions', related_name = '+')
 
-class ProfileBase(Model):
+    #def __unicode__(self):
+    #    return "[{!s}, {!s}]".format(
+    #        bin(self.allow_mask or 0)[2:].rjust(8, '0'), bin(self.deny_mask or 0)[2:].rjust(8, '0'))
+
+class ProfileBase(Model):    
     def can_read(self, species, entry):
-        return self.has_permission(entry, PermissionEnum.READ_NORMAL)
+        return self.has_permission(species, entry, PermissionEnum.READ_NORMAL)
     
-    def can_read_delete(self, entry):
-        return self.has_permission(entry, PermissionEnum.READ_DELETE)
+    def can_read_delete(self, species, entry):
+        return self.has_permission(species, entry, PermissionEnum.READ_DELETE)
 
-    def can_read_permission(self, entry):
-        return self.has_permission(entry, PermissionEnum.READ_PERMISSION)
+    def can_read_permission(self, species, entry):
+        return self.has_permission(species, entry, PermissionEnum.READ_PERMISSION)
     
-    def can_read_history(self, entry):
-        return self.has_permission(entry, PermissionEnum.READ_HISTORY)
+    def can_read_history(self, species, entry):
+        return self.has_permission(species, entry, PermissionEnum.READ_HISTORY)
 
-    def can_write(self, entry):
-        return self.has_permission(entry, PermissionEnum.WRITE_NORMAL)
+    def can_write(self, species, entry):
+        return self.has_permission(species, entry, PermissionEnum.WRITE_NORMAL)
     
-    def can_delete(self, entry):
-        return self.has_permission(entry, PermissionEnum.WRITE_DELETE)
+    def can_delete(self, species, entry):
+        return self.has_permission(species, entry, PermissionEnum.WRITE_DELETE)
 
-    def can_write_permission(self, entry):
-        return self.has_permission(entry, PermissionEnum.WRITE_PERMISSION)
+    def can_write_permission(self, species, entry):
+        return self.has_permission(species, entry, PermissionEnum.WRITE_PERMISSION)
 
     class Meta:
         abstract = True
@@ -927,7 +927,7 @@ class Entry(Model):
     cross_references = ManyToManyField(CrossReference, blank=True, null=True, related_name='cross_referenced_entries', verbose_name='Cross references')
     publication_references = ManyToManyField('PublicationReference', blank=True, null=True, related_name='publication_referenced_entries', verbose_name='Publication references')
     comments = TextField(blank=True, default='', verbose_name='Comments')
-    #permissions = OneToOneField(Permission, blank=True, null=True, verbose_name = "Permissions for this entry")
+    detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry')
     
     def __unicode__(self):
         return self.wid
@@ -973,7 +973,10 @@ class Entry(Model):
                 #print u"Updating " + unicode(old_value)[:10] + u" with " + real_new_value[:10]
                 revision.action = RevisionOperation.objects.get(name = "Edit")
             
-            revision.table = TableMeta.objects.get(name = field.model._meta.object_name)
+            model_type_key = "model/model_type/" + str(field.model._meta.object_name)
+            cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(name = field.model._meta.object_name))
+            
+            revision.table = cache_model_type
             revision.column = get_column_index(field)
             
             revision.new_value = real_new_value
@@ -1002,10 +1005,12 @@ class Entry(Model):
         if old_object != None and old_object != self:
             raise WidAlreadyExist("Wid already exists, if you want to update retrieve that item and save it")
         
-        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)    
-    
         rev_detail = kwargs["revision_detail"]
         rev_detail.save()
+        
+        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
+        self.detail = rev_detail
+        
         # Prevent error on save later
         del kwargs["revision_detail"]
 

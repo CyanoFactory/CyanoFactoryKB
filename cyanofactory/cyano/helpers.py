@@ -49,6 +49,7 @@ import sys
 import tempfile
 import time
 import xhtml2pdf.pisa as pisa
+from cyano.cache import Cache
 
 class ELEMENT_MWS:
     H = 1.0079
@@ -2209,11 +2210,19 @@ def get_column_index(column):
 
     :returns: int -- Column index
     """
-    from django.db import connection
-    cursor = connection.cursor()
-    cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [column.model._meta.db_table, column.column])
-    row = cursor.fetchone()
-    return row[0]
+    
+    model_type_key = "column/%s/%s" % (column.model._meta.db_table, column.column)
+    col_index = Cache.get(model_type_key)
+    
+    if col_index == None:
+        from django.db import connection
+        cursor = connection.cursor()
+        cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [column.model._meta.db_table, column.column])
+        row = cursor.fetchone()
+        Cache.set(model_type_key, row[0])
+        col_index = row[0]
+    
+    return col_index
 
 def get_verbose_name_for_field_by_name(model, field_name):
     return model._meta.get_field_by_name(field_name)[0].verbose_name
