@@ -31,13 +31,14 @@ def enum(**enums):
     return type(str('Enum'), (), enums)
 
 PermissionEnum = enum(
-    READ_NORMAL = 1,
-    READ_DELETE = 2,
-    READ_PERMISSION = 4,
-    READ_HISTORY = 8,
-    WRITE_NORMAL = 16,
-    WRITE_DELETE = 32,
-    WRITE_PERMISSION = 64
+    FULL_ACCESS = "Full",
+    READ_NORMAL = "Read Normal",
+    READ_DELETE = "Read Delete",
+    READ_PERMISSION = "Read Permission",
+    READ_HISTORY = "Read History",
+    WRITE_NORMAL = "Write Normal",
+    WRITE_DELETE = "Write Delete",
+    WRITE_PERMISSION = "Write Permission"
 )
 
 ''' BEGIN: choices '''

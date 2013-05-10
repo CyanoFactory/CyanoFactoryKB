@@ -447,12 +447,20 @@
     "pk": 3,
     "fields": {
       "name": "Read Permission",
-      "description": "Can see deleted entries"
+      "description": "Can see the permission of the entry"
     }
   },
   {
     "model": "cyano.Permission",
     "pk": 4,
+    "fields": {
+      "name": "Read Delete",
+      "description": "Can see deleted entries"
+    }
+  },
+  {
+    "model": "cyano.Permission",
+    "pk": 5,
     "fields": {
       "name": "Read History",
       "description": "Can view the revision history and all history entries"
@@ -460,7 +468,7 @@
   },
   {
     "model": "cyano.Permission",
-    "pk": 5,
+    "pk": 6,
     "fields": {
       "name": "Write Normal",
       "description": "Can update the entry"
@@ -468,7 +476,7 @@
   },
   {
     "model": "cyano.Permission",
-    "pk": 6,
+    "pk": 7,
     "fields": {
       "name": "Write Delete",
       "description": "Can delete the entry"
@@ -476,7 +484,7 @@
   },
   {
     "model": "cyano.Permission",
-    "pk": 7,
+    "pk": 8,
     "fields": {
       "name": "Write Permission",
       "description": "Can alter the permission list"
