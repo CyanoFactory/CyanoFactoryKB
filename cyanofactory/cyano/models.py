@@ -354,7 +354,8 @@ class Permission(Model):
 class UserPermission(Model):
     entry = ForeignKey("Entry", related_name = "user_permissions")
     user = ForeignKey("UserProfile", related_name = 'permissions')
-    permission = ForeignKey(Permission, verbose_name = 'Permissions', related_name = '+')
+    allow = ManyToManyField(Permission, verbose_name = 'Allowed Permissions', related_name = 'user_permission_allow')
+    deny = ManyToManyField(Permission, verbose_name = 'Denied Permissions', related_name = 'user_permission_deny')
     
     #def __unicode__(self):
         #return "[{!s}, {!s}]".format(
@@ -363,33 +364,37 @@ class UserPermission(Model):
 class GroupPermission(Model):
     entry = ForeignKey("Entry", related_name = "group_permissions")
     group = ForeignKey("GroupProfile", related_name = 'permissions')
-    permission = ForeignKey(Permission, verbose_name = 'Permissions', related_name = '+')
+    allow = ManyToManyField(Permission, verbose_name = 'Allowed Permissions', related_name = 'group_permission_allow')
+    deny = ManyToManyField(Permission, verbose_name = 'Denied Permissions', related_name = 'group_permission_deny')
 
     #def __unicode__(self):
     #    return "[{!s}, {!s}]".format(
     #        bin(self.allow_mask or 0)[2:].rjust(8, '0'), bin(self.deny_mask or 0)[2:].rjust(8, '0'))
 
 class ProfileBase(Model):    
-    def can_read(self, species, entry):
-        return self.has_permission(species, entry, PermissionEnum.READ_NORMAL)
+    def has_full_access(self, entry):
+        return self.has_permission(entry, PermissionEnum.FULL_ACCESS)
+    
+    def can_read(self, entry):
+        return self.has_permission(entry, PermissionEnum.READ_NORMAL)
     
     def can_read_delete(self, species, entry):
-        return self.has_permission(species, entry, PermissionEnum.READ_DELETE)
+        return self.has_permission(entry, PermissionEnum.READ_DELETE)
 
     def can_read_permission(self, species, entry):
-        return self.has_permission(species, entry, PermissionEnum.READ_PERMISSION)
+        return self.has_permission(entry, PermissionEnum.READ_PERMISSION)
     
     def can_read_history(self, species, entry):
-        return self.has_permission(species, entry, PermissionEnum.READ_HISTORY)
+        return self.has_permission(entry, PermissionEnum.READ_HISTORY)
 
     def can_write(self, species, entry):
-        return self.has_permission(species, entry, PermissionEnum.WRITE_NORMAL)
+        return self.has_permission(entry, PermissionEnum.WRITE_NORMAL)
     
     def can_delete(self, species, entry):
-        return self.has_permission(species, entry, PermissionEnum.WRITE_DELETE)
+        return self.has_permission(entry, PermissionEnum.WRITE_DELETE)
 
     def can_write_permission(self, species, entry):
-        return self.has_permission(species, entry, PermissionEnum.WRITE_PERMISSION)
+        return self.has_permission(entry, PermissionEnum.WRITE_PERMISSION)
 
     class Meta:
         abstract = True
@@ -401,9 +406,9 @@ class GroupProfile(ProfileBase):
     group = OneToOneField(Group, related_name = "profile")
     description = CharField(max_length=255, blank=True, default='', verbose_name = "Group description")
     
-    def get_permission_mask(self, entry):
+    def get_permissions(self, entry):
         """
-        Returns the allow/deny mask for an entry
+        Returns the allow/deny list for an entry
         
         :param entry: Entry to get permissions from
         :type entry: Entry
@@ -413,30 +418,30 @@ class GroupProfile(ProfileBase):
         """
         try:
             group_perm = entry.group_permissions.get(group = self)
-            return group_perm.allow, group_perm.deny
+            return group_perm.allow.all(), group_perm.deny.all()
         except ObjectDoesNotExist:
             return None, None
 
-    def has_permission(self, entry, bitmask):
+    def has_permission(self, entry, permissions):
         """
-        Checks if the group has allow or deny permissions set for a bitmask
+        Checks if the group has allow or deny permissions set for a list
         specified.
         
         :param entry: Entry to check permissions against
         :type entry: Entry
         
-        :param bitmask: Bitmask containing the permissions to check
-        :type bitmask: PermissionEnum
+        :param permissions: List containing the permissions to check
+        :type permissions: PermissionEnum
         
-        :return: Tuple (allow, deny). allow is True if the user has allow
-         permission for the bitmask specified (same for deny). (None, None)
+        :return: Tuple (allow, deny). allow is True if the group has allow
+         permission for the list specified (same for deny). (None, None)
          if no permission object was found
         """
-        allow_mask, deny_mask = self.get_permission_mask(entry)
-        if allow_mask == None:
+        allow, deny = self.get_permissions(entry)
+        if allow == None:
             return None, None
-        allow = allow_mask & bitmask == bitmask
-        deny = deny_mask & bitmask == bitmask
+        allow = all(perm in permissions for perm in allow)
+        deny = all(perm in permissions for perm in deny)
         return allow, deny
     
     def __unicode__(self):
@@ -479,9 +484,9 @@ class UserProfile(ProfileBase):
         profiles += [GroupProfile.objects.get(group__name = "Everybody")]
         return profiles
     
-    def get_permission_mask(self, entry):
+    def get_permissions(self, entry):
         """
-        Calculates the complete allow and deny bitmasks for an entry.
+        Calculates the complete allow and deny list for an entry.
         This includes the permissions for groups the user is in including
         group "Everybody" and (except user guest) "Registred"
         
@@ -493,14 +498,12 @@ class UserProfile(ProfileBase):
         """
         # Use None here so it's possible to distinguish between 0 permission
         # and no permission at all
-        allow_mask = None
-        deny_mask = None
+        allow = None
+        deny = None
         try:
             user_perm = entry.user_permissions.get(user = self)
-            allow_mask = 0
-            deny_mask = 0
-            allow_mask |= user_perm.allow
-            deny_mask |= user_perm.deny
+            allow = user_perm.allow.all()
+            deny = user_perm.deny.all()
         except ObjectDoesNotExist:
             pass
         
@@ -508,19 +511,19 @@ class UserProfile(ProfileBase):
         for g in groups:
             try:
                 group_perm = entry.group_permissions.get(group = g)
-                if allow_mask == None:
-                    allow_mask = 0
-                    deny_mask = 0
-                allow_mask |= group_perm.allow
-                deny_mask |= group_perm.deny
+                if allow == None:
+                    allow = []
+                    deny = []
+                allow += group_perm.allow.all()
+                deny += group_perm.deny.all()
             except ObjectDoesNotExist:
                 pass
         
-        return allow_mask, deny_mask
+        return allow, deny
     
-    def has_permission(self, entry, bitmask):
+    def has_permission(self, entry, permissions):
         """
-        Checks if the user has allow or deny permissions set for a bitmask
+        Checks if the user has allow or deny permissions set for a list
         specified. This includes the permissions for groups the user is in
         including group "Everybody" and (except user guest) "Registred".
         Deny usually has a higher priority then Allow. If Deny is set 
@@ -529,19 +532,22 @@ class UserProfile(ProfileBase):
         :param entry: Entry to check permissions against
         :type entry: Entry
         
-        :param bitmask: Bitmask containing the permissions to check
-        :type bitmask: PermissionEnum
+        :param permissions: List containing the permissions to check
+        :type permissions: PermissionEnum
         
         :return: Tuple (allow, deny). allow is True if the user has allow
          permission for the bitmask specified (same for deny). (None, None)
          if no permission object was found.
         """
         if isinstance(entry, Entry): 
-            allow_mask, deny_mask = self.get_permission_mask(entry)
-            if allow_mask == None:
+            allow, deny = self.get_permissions(entry)
+            if allow == None:
                 return None, None
     
-            return allow_mask & bitmask == bitmask, deny_mask & bitmask == bitmask
+            allow = all(perm in permissions for perm in allow)
+            deny = all(perm in permissions for perm in deny)
+            
+            return allow, deny
         elif isinstance(entry, list):
             # Mass permission check
             return 0

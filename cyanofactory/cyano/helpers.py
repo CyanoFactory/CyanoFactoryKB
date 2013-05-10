@@ -418,7 +418,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['model_type'] = models[0].__name__
         data['model'] = models[0]
         
-        if queryset and len(queryset) > 0:
+        if queryset != None and len(queryset) > 0:
             if len(queryset) == 1 and isinstance(queryset[0], Entry):
                 social_text += data['model_verbose_name'][0] + " "
                 social_text += queryset[0].name
@@ -444,7 +444,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['modelnames'] = getObjectTypes(SpeciesComponent)
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
         
-        if queryset and data['queryset'].model is None:
+        if queryset != None and data['queryset'].model is None:
             del data['queryset'] 
         return render_to_response(template, data, context_instance = RequestContext(request))
     elif format == 'bib':
@@ -563,6 +563,9 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     data['pdfstyles'] = ''
     data['species_list'] = Species.objects.all()
     data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/cyano/error.html'))
+
+    if queryset != None and data['queryset'].model is None:
+            del data['queryset'] 
     
     if error == 404:
         data['type'] = "Not Found"

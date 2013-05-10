@@ -1,11 +1,7 @@
 {% extends "cyano/base.html" %}
 
 {% comment %}
-Detail page template
-
-Author: Jonathan Karr, jkarr@stanford.edu
-Affiliation: Covert Lab, Department of Bioengineering, Stanford University
-Last updated: 2012-07-17
+Permission template
 {% endcomment %}
 
 {% load static %}
@@ -27,6 +23,90 @@ Last updated: 2012-07-17
 <meta name="entry_name" content="{{ object.wid }}" />
 {% endif %}
 {% endwith %}
+
+<script type="text/javascript">
+var users = new Array();
+{% for user in users %}
+users.push("{{ user.user.username }} ({{ user.get_name }})")
+{% endfor %}
+
+var user_options = '<option>(Add a new user)</option>{% for user in users %}<option>{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}'
+
+var groups = new Array();
+{% for group in groups %}
+groups.push("{{ group.group.name }}")
+{% endfor %}
+
+var group_options = '<option>(Add a new group)</option>{% for group in groups %}<option>{{ group.group.name }}</option>{% endfor %}'
+
+user_row_count = 0;
+group_row_count = 0;
+
+function addUserRow(item) {
+	if (item != null) {
+		if (item.selectedIndex == 0) {
+			$(item).closest('tr').remove();
+			// Fixup IDs
+			selects = $('#userperm_table select');
+			$.each(selects, function(index, value) {
+				$(value).data("userRow", index + 1);
+			})
+			
+			user_row_count--;
+			return;
+		}
+		else {
+			alert($(item).data("userRow"));
+			inputs = $('#userperm_table input [data-user-row="' + $(item).data("userRow") + '"]');
+			$.each(inputs, function(index, value) {
+				$(value).removeProp('disabled');
+			})
+		}
+		
+		if ($(item).data("userRow") != user_row_count)
+		{
+			return;
+		}
+	}
+	user_row_count++;
+	$('#userperm_table tr:last').after('<tr><th> \
+<select class="select" id="userperm_select" data-user-row="'+ user_row_count + '" name="userperm" id="userperm" style="width:300px;" onChange="addUserRow(this)">' +
+user_options +
+'</select> \
+</th> \
+<td><input type="checkbox" name="userperm_full" data-user-row="'+ user_row_count + '" nvalue="perm_full" disabled></td> \
+<td><input type="checkbox" name="userperm_read_normal" data-user-row="'+ user_row_count + '" nvalue="perm_read_normal" disabled></td> \
+<td><input type="checkbox" name="userperm_read_delete" data-user-row="'+ user_row_count + '" nvalue="perm_read_delete" disabled></td> \
+<td><input type="checkbox" name="userperm_read_permission" data-user-row="'+ user_row_count + '" nvalue="perm_read_permission" disabled></td> \
+<td><input type="checkbox" name="userperm_read_history" data-user-row="'+ user_row_count + '" nvalue="perm_read_history" disabled></td> \
+<td><input type="checkbox" name="userperm_write_normal" data-user-row="'+ user_row_count + '" nvalue="perm_write_normal" disabled></td> \
+<td><input type="checkbox" name="userperm_write_delete" data-user-row="'+ user_row_count + '" nvalue="perm_write_delete" disabled></td> \
+<td><input type="checkbox" name="userperm_write_permission" data-user-row="'+ user_row_count + '" nvalue="perm_write_permission" disabled></td></tr>');
+}
+
+function addGroupRow(item) {
+	group_row_count++;
+	$('#groupperm_table tr:last').after('<tr><th> \
+<select class="select" id="userperm_select_' + group_row_count + '" name="groupperm" id="groupperm" style="width:300px;" onChange="addGroupRow(this)">' +
+group_options +
+'</select> \
+</th> \
+<td><input type="checkbox" name="perm_full" value="perm_full"></td> \
+<td><input type="checkbox" name="perm_read_normal" value="perm_read_normal"></td> \
+<td><input type="checkbox" name="perm_read_delete" value="perm_read_delete"></td> \
+<td><input type="checkbox" name="perm_read_permission" value="perm_read_permission"></td> \
+<td><input type="checkbox" name="perm_read_history" value="perm_read_history"></td> \
+<td><input type="checkbox" name="perm_write_normal" value="perm_write_normal"></td> \
+<td><input type="checkbox" name="perm_write_delete" value="perm_write_delete"></td> \
+<td><input type="checkbox" name="perm_write_permission" value="perm_write_permission"></td></tr>');
+}
+
+window.onload = function()
+                {
+					addUserRow(null);
+					addGroupRow(null);
+				}
+</script>
 {% endblock %}
 
 {% block action_icons %}
@@ -47,29 +127,56 @@ Last updated: 2012-07-17
 {% block content %}
 {% autoescape off %}
 {% with object=queryset.0 %}
+<noscript>Permission editing needs javascript to work correctly!</noscript>
+
 <table id="detail">
-	{% with object=queryset.0 %}
-	{% for fieldset in fieldsets %}
-		{% if not forloop.first %}
-	<tbody class="spacing">
-		<tr><td colspan="2">&nbsp;</td></tr>
-	</tbody>
-		{% endif %}
-	<tbody class="data">
+	<tbody class="data" id="userperm_table">
 		<tr>
-			<th colspan="2">{{ fieldset.0 }}</th>
+			<th colspan="9">User Permissions</th>
 		</tr>
-		{% for field in fieldset.1 %}
-		{% if field.data|length|get_digit:"-1" > 0 %}
-		<tr>			
-			<th>{{ field.name }}</th>
-			<td>{{ field.data }}</td>
+		<tr>
+			<th></th>
+			<td></td>
+			<td colspan="4">Read</td>
+			<td colspan="3">Write</td>
 		</tr>
-		{% endif %}
-		{% endfor %}
+		<tr>
+			<th></th>
+			<td>Full</td>
+			<td>Normal</td>
+			<td>Del</td>
+			<td>Perm</td>
+			<td>Hist</td>
+			<td>Normal</td>
+			<td>Del</td>
+			<td>Perm</td>
+		</tr>
 	</tbody>
-	{% endfor %}
-	{% endwith %}	
+	<tbody class="spacing">
+		<tr><td colspan="9">&nbsp;</td></tr>
+	</tbody>
+	<tbody class="data" id="groupperm_table">
+		<tr>
+			<th colspan="9">Group Permissions</th>
+		</tr>
+		<tr>
+			<th></th>
+			<td></td>
+			<td colspan="4">Read</td>
+			<td colspan="3">Write</td>
+		</tr>
+		<tr>
+			<th></th>
+			<td>Full</td>
+			<td>Normal</td>
+			<td>Del</td>
+			<td>Perm</td>
+			<td>Hist</td>
+			<td>Normal</td>
+			<td>Del</td>
+			<td>Perm</td>
+		</tr>
+	</tbody>
 </table>
 {% endwith %}
 {% endautoescape %}

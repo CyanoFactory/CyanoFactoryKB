@@ -50,7 +50,7 @@ def index(request):
         )
 
 @resolve_to_objects
-#@permission_required(perm.READ_NORMAL)
+@permission_required(perm.READ_NORMAL)
 def species(request, species):
     content = []
     if species is not None:        
@@ -933,30 +933,15 @@ def sitemap_species(request, species):
     )
 
 @resolve_to_objects
-@permission_required(perm.READ_PERMISSION)
-def permission(request, species, model, item):
-    model_type = None
-    if model:
-        model_type = model._meta.object_name 
-
-    #= request.user.profile
-        
-        
-        return render_queryset_to_response_error(
-                request,
-                species = species,
-                error = 403,
-                msg = "You don't have permission to access the permission list for this item")
-    
-    # TODO: Wid
-    #entry = get_queryset_object_or_404(species__id = species.id)
-
+#@permission_required(perm.READ_PERMISSION)
+def permission(request, species, model = None, item = None):
+    users = models.UserProfile.objects.all().filter(user__is_active = True)
+    groups = models.GroupProfile.objects.all()
     return render_queryset_to_response(
                 request,
                 species = species,
-                #template = Genes.Meta.template,
-                data = {"contentHeaders" : contentHeaders,
-                        "content" : content,
-                        "contentRows" : range(len(content[0])),
-                        "urls" : urls,
+                template = "cyano/permission.html",
+                data = {
+                    'users': users,
+                    'groups': groups
                 })
