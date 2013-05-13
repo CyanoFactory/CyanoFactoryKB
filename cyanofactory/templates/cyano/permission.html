@@ -25,19 +25,19 @@ Permission template
 {% endwith %}
 
 <script type="text/javascript">
-var users = new Array();
+var users = {};
 {% for user in users %}
-users.push("{{ user.user.username }} ({{ user.get_name }})")
+users[{{ user.user.id }}] = 0;
 {% endfor %}
 
-var user_options = '<option id="addnew">(Add a new user)</option>{% for user in users %}<option id="{{ user.user.id }}">{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}'
+var user_options = '<option id="0">(Add a new user)</option>{% for user in users %}<option id="{{ user.user.id }}">{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}'
 
-var groups = new Array();
+var groups = {};
 {% for group in groups %}
-groups.push("{{ group.group.name }}")
+groups[{{ group.group.id }}] = 0;
 {% endfor %}
 
-var group_options = '<option id="addnew">(Add a new group)</option>{% for group in groups %}<option id="{{ group.group.id }}">{{ group.group.name }}</option>{% endfor %}'
+var group_options = '<option id="0">(Add a new group)</option>{% for group in groups %}<option id="{{ group.group.id }}">{{ group.group.name }}</option>{% endfor %}'
 
 user_row_count = 0;
 group_row_count = 0;
@@ -54,7 +54,7 @@ checkboxes = '\
 
 new_element_user = '\
 <tr><th> \
-<input type="hidden" name="uid" id="itemid" value=""/>\
+<input type="hidden" name="uid" id="itemid" value="0"/>\
 <select class="select" id="userperm_select" id="user" style="width:300px;" onChange="addUserRow(this)">' +
 user_options + '\
 </select> \
@@ -63,7 +63,7 @@ user_options + '\
 
 new_element_group = '\
 <tr><th> \
-<input type="hidden" name="gid" id="itemid" value="{{ request.POST.data_type }}"/> \
+<input type="hidden" name="gid" id="itemid" value="0"/> \
 <select class="select" id="usergroup_select" id="group" style="width:300px;" onChange="addGroupRow(this)">' +
 group_options + '\
 </select> \
@@ -75,15 +75,15 @@ function updateCheck(item) {
 }
 
 function addRow(what, item) {
-	new_element = (what == 0 ? new_element_user : new_element_group);
-	target_table = (what == 0 ? "#userperm_table" : "#groupperm_table");
+	var new_element = (what == 0 ? new_element_user : new_element_group);
+	var target_table = (what == 0 ? "#userperm_table" : "#groupperm_table");
 
 	if (item != null) {
 		parent_tr = $(item).closest('tr');
 		
-		selected_item = $(item).children(":selected").attr("id");
+		var selected_item = $(item).children(":selected").attr("id");
+		
 		parent_tr.find('#itemid').val(selected_item);
-		//alert(parent_tr.find('input [name="itemid"]'));
 	
 		if (item.selectedIndex == 0) {
 			// Option was "Add new" -> Remove the entry
@@ -94,15 +94,32 @@ function addRow(what, item) {
 			// add checkboxes to the now old one
 			if (parent_tr.next().length == 0) {
 				parent_tr.find('td').remove();
-				new_items = $(item).closest('th').after(checkboxes);
+				var new_items = $(item).closest('th').after(checkboxes);
 				
 				// Change text of "Add new" to "Remove the entry"
-				parent_tr.find('select option[id="addnew"]').text('(Remove item)');
+				parent_tr.find('select option[id="0"]').text('(Remove item)');
 		
 				// Add new one if used combobox was the last
 				$(target_table + ' tr:last').after(new_element);
 			}
 		}
+		
+		//parent_tr.find('select').children('option[id=' + selected_item + ']').attr('disabled', true);
+		
+		// via http://stackoverflow.com/questions/7309730
+		// start by setting everything to enabled
+		$(target_table).find("select option").attr('disabled', false);
+		// loop each select and set the selected value to disabled in all other selects
+		$(target_table).find("select").each(function(){
+			var $this = $(this);
+			var $sel_id = $(this).children(":selected").attr("id");
+			$(target_table).find("select").not($this).find('option').each(function(){
+				if($sel_id != 0 && $(this).attr('id') == $sel_id)
+					$(this).attr('disabled',true);
+			});
+		});
+		
+		//$(target_table).find("select").not($(item)).children('option[id=' + selected_item + ']').attr('disabled', true).siblings().removeAttr('disabled');
 	} else {
 		$(target_table + ' tr:last').after(new_element);
 	}
@@ -144,7 +161,7 @@ window.onload = function()
 {% with object=queryset.0 %}
 <noscript>Permission editing needs javascript to work correctly!</noscript>
 
-<form id="permission_form">
+<form id="permission_form" method="get">
 <table id="detail">
 	<tbody class="data" id="userperm_table">
 		<tr>
