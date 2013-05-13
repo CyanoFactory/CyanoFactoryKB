@@ -30,75 +30,90 @@ var users = new Array();
 users.push("{{ user.user.username }} ({{ user.get_name }})")
 {% endfor %}
 
-var user_options = '<option>(Add a new user)</option>{% for user in users %}<option>{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}'
+var user_options = '<option id="addnew">(Add a new user)</option>{% for user in users %}<option id="{{ user.user.id }}">{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}'
 
 var groups = new Array();
 {% for group in groups %}
 groups.push("{{ group.group.name }}")
 {% endfor %}
 
-var group_options = '<option>(Add a new group)</option>{% for group in groups %}<option>{{ group.group.name }}</option>{% endfor %}'
+var group_options = '<option id="addnew">(Add a new group)</option>{% for group in groups %}<option id="{{ group.group.id }}">{{ group.group.name }}</option>{% endfor %}'
 
 user_row_count = 0;
 group_row_count = 0;
 
-function addUserRow(item) {
+checkboxes = '\
+<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="FULL_ACCESS" value="0"></td> \
+<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="READ_NORMAL" value="0"></td> \
+<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="READ_DELETE" value="0"></td> \
+<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="READ_PERMISSION" value="0"></td> \
+<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="READ_HISTORY" value="0"></td> \
+<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="WRITE_NORMAL" value="0"></td> \
+<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="WRITE_DELETE" value="0"></td> \
+<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="WRITE_PERMISSION" value="0"></td>';
+
+new_element_user = '\
+<tr><th> \
+<input type="hidden" name="uid" id="itemid" value=""/>\
+<select class="select" id="userperm_select" id="user" style="width:300px;" onChange="addUserRow(this)">' +
+user_options + '\
+</select> \
+</th> \
+<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
+
+new_element_group = '\
+<tr><th> \
+<input type="hidden" name="gid" id="itemid" value="{{ request.POST.data_type }}"/> \
+<select class="select" id="usergroup_select" id="group" style="width:300px;" onChange="addGroupRow(this)">' +
+group_options + '\
+</select> \
+</th> \
+<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
+
+function updateCheck(item) {
+	$(item).next().val($(item).is(':checked') ? 1 : 0);
+}
+
+function addRow(what, item) {
+	new_element = (what == 0 ? new_element_user : new_element_group);
+	target_table = (what == 0 ? "#userperm_table" : "#groupperm_table");
+
 	if (item != null) {
+		parent_tr = $(item).closest('tr');
+		
+		selected_item = $(item).children(":selected").attr("id");
+		parent_tr.find('#itemid').val(selected_item);
+		//alert(parent_tr.find('input [name="itemid"]'));
+	
 		if (item.selectedIndex == 0) {
-			$(item).closest('tr').remove();
-			// Fixup IDs
-			selects = $('#userperm_table select');
-			$.each(selects, function(index, value) {
-				$(value).data("userRow", index + 1);
-			})
-			
-			user_row_count--;
-			return;
+			// Option was "Add new" -> Remove the entry
+			parent_tr.remove();
 		}
 		else {
-			alert($(item).data("userRow"));
-			inputs = $('#userperm_table input [data-user-row="' + $(item).data("userRow") + '"]');
-			$.each(inputs, function(index, value) {
-				$(value).removeProp('disabled');
-			})
-		}
+			// add new row
+			// add checkboxes to the now old one
+			if (parent_tr.next().length == 0) {
+				parent_tr.find('td').remove();
+				new_items = $(item).closest('th').after(checkboxes);
+				
+				// Change text of "Add new" to "Remove the entry"
+				parent_tr.find('select option[id="addnew"]').text('(Remove item)');
 		
-		if ($(item).data("userRow") != user_row_count)
-		{
-			return;
+				// Add new one if used combobox was the last
+				$(target_table + ' tr:last').after(new_element);
+			}
 		}
+	} else {
+		$(target_table + ' tr:last').after(new_element);
 	}
-	user_row_count++;
-	$('#userperm_table tr:last').after('<tr><th> \
-<select class="select" id="userperm_select" data-user-row="'+ user_row_count + '" name="userperm" id="userperm" style="width:300px;" onChange="addUserRow(this)">' +
-user_options +
-'</select> \
-</th> \
-<td><input type="checkbox" name="userperm_full" data-user-row="'+ user_row_count + '" nvalue="perm_full" disabled></td> \
-<td><input type="checkbox" name="userperm_read_normal" data-user-row="'+ user_row_count + '" nvalue="perm_read_normal" disabled></td> \
-<td><input type="checkbox" name="userperm_read_delete" data-user-row="'+ user_row_count + '" nvalue="perm_read_delete" disabled></td> \
-<td><input type="checkbox" name="userperm_read_permission" data-user-row="'+ user_row_count + '" nvalue="perm_read_permission" disabled></td> \
-<td><input type="checkbox" name="userperm_read_history" data-user-row="'+ user_row_count + '" nvalue="perm_read_history" disabled></td> \
-<td><input type="checkbox" name="userperm_write_normal" data-user-row="'+ user_row_count + '" nvalue="perm_write_normal" disabled></td> \
-<td><input type="checkbox" name="userperm_write_delete" data-user-row="'+ user_row_count + '" nvalue="perm_write_delete" disabled></td> \
-<td><input type="checkbox" name="userperm_write_permission" data-user-row="'+ user_row_count + '" nvalue="perm_write_permission" disabled></td></tr>');
+}
+
+function addUserRow(item) {
+	addRow(0, item);
 }
 
 function addGroupRow(item) {
-	group_row_count++;
-	$('#groupperm_table tr:last').after('<tr><th> \
-<select class="select" id="userperm_select_' + group_row_count + '" name="groupperm" id="groupperm" style="width:300px;" onChange="addGroupRow(this)">' +
-group_options +
-'</select> \
-</th> \
-<td><input type="checkbox" name="perm_full" value="perm_full"></td> \
-<td><input type="checkbox" name="perm_read_normal" value="perm_read_normal"></td> \
-<td><input type="checkbox" name="perm_read_delete" value="perm_read_delete"></td> \
-<td><input type="checkbox" name="perm_read_permission" value="perm_read_permission"></td> \
-<td><input type="checkbox" name="perm_read_history" value="perm_read_history"></td> \
-<td><input type="checkbox" name="perm_write_normal" value="perm_write_normal"></td> \
-<td><input type="checkbox" name="perm_write_delete" value="perm_write_delete"></td> \
-<td><input type="checkbox" name="perm_write_permission" value="perm_write_permission"></td></tr>');
+	addRow(1, item);
 }
 
 window.onload = function()
@@ -129,6 +144,7 @@ window.onload = function()
 {% with object=queryset.0 %}
 <noscript>Permission editing needs javascript to work correctly!</noscript>
 
+<form id="permission_form">
 <table id="detail">
 	<tbody class="data" id="userperm_table">
 		<tr>
@@ -178,6 +194,8 @@ window.onload = function()
 		</tr>
 	</tbody>
 </table>
+<input class="button" type="submit" value="Submit" />
+</form>
 {% endwith %}
 {% endautoescape %}
 {% endblock %}
