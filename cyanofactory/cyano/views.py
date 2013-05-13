@@ -937,11 +937,26 @@ def sitemap_species(request, species):
 def permission(request, species, model = None, item = None):
     users = models.UserProfile.objects.all().filter(user__is_active = True)
     groups = models.GroupProfile.objects.all()
+    user_permissions = [[1, [1,1,0,0,0,0,0,0]], [2, [0,1,0,0,0,0,0,1]]]
+    group_permissions = [[1, [0,0,0,1,0,0,0,0]], [2, [0,1,1,0,0,0,0,0]], [5, [1,1,0,0,0,0,0,1]]]
+    
+    permission_types = ["FULL_ACCESS",
+                        "READ_NORMAL",
+                        "READ_DELETE",
+                        "READ_PERMISSION",
+                        "READ_HISTORY",
+                        "WRITE_NORMAL",
+                        "WRITE_DELETE",
+                        "WRITE_PERMISSION"]
+
     return render_queryset_to_response(
                 request,
                 species = species,
                 template = "cyano/permission.html",
                 data = {
                     'users': users,
-                    'groups': groups
+                    'groups': groups,
+                    'user_permissions': user_permissions,
+                    'group_permissions': group_permissions,
+                    'permission_types': permission_types
                 })

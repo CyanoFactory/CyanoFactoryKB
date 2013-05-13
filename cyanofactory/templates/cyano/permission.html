@@ -6,6 +6,7 @@ Permission template
 
 {% load static %}
 {% load templatetags %}
+{% load filters %}
 
 {% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.wid }}{% endwith %}{% endblock %}
 {% block page_title %}{{ type }} &ndash; {{ name }}{% endblock %}
@@ -25,37 +26,19 @@ Permission template
 {% endwith %}
 
 <script type="text/javascript">
-var users = {};
-{% for user in users %}
-users[{{ user.user.id }}] = 0;
-{% endfor %}
-
 var user_options = '<option id="0">(Add a new user)</option>{% for user in users %}<option id="{{ user.user.id }}">{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}'
-
-var groups = {};
-{% for group in groups %}
-groups[{{ group.group.id }}] = 0;
-{% endfor %}
 
 var group_options = '<option id="0">(Add a new group)</option>{% for group in groups %}<option id="{{ group.group.id }}">{{ group.group.name }}</option>{% endfor %}'
 
-user_row_count = 0;
-group_row_count = 0;
-
-checkboxes = '\
-<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="FULL_ACCESS" value="0"></td> \
-<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="READ_NORMAL" value="0"></td> \
-<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="READ_DELETE" value="0"></td> \
-<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="READ_PERMISSION" value="0"></td> \
-<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="READ_HISTORY" value="0"></td> \
-<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="WRITE_NORMAL" value="0"></td> \
-<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="WRITE_DELETE" value="0"></td> \
-<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="WRITE_PERMISSION" value="0"></td>';
+checkboxes = ''
+{% for type in permission_types %}
+checkboxes += '<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="{{ type }}" value="0"></td>'
+{% endfor %}
 
 new_element_user = '\
 <tr><th> \
 <input type="hidden" name="uid" id="itemid" value="0"/>\
-<select class="select" id="userperm_select" id="user" style="width:300px;" onChange="addUserRow(this)">' +
+<select class="select" id="user" style="width:300px;" onChange="addUserRow(this)">' +
 user_options + '\
 </select> \
 </th> \
@@ -64,7 +47,7 @@ user_options + '\
 new_element_group = '\
 <tr><th> \
 <input type="hidden" name="gid" id="itemid" value="0"/> \
-<select class="select" id="usergroup_select" id="group" style="width:300px;" onChange="addGroupRow(this)">' +
+<select class="select" id="group" style="width:300px;" onChange="addGroupRow(this)">' +
 group_options + '\
 </select> \
 </th> \
@@ -72,6 +55,21 @@ group_options + '\
 
 function updateCheck(item) {
 	$(item).next().val($(item).is(':checked') ? 1 : 0);
+}
+
+function disableItems(target_table) {
+	// via http://stackoverflow.com/questions/7309730
+	// start by setting everything to enabled
+	$(target_table).find("select option").attr('disabled', false);
+	// loop each select and set the selected value to disabled in all other selects
+	$(target_table).find("select").each(function(){
+		var $this = $(this);
+		var $sel_id = $(this).children(":selected").attr("id");
+		$(target_table).find("select").not($this).find('option').each(function(){
+			if($sel_id != 0 && $(this).attr('id') == $sel_id)
+				$(this).attr('disabled',true);
+		});
+	});
 }
 
 function addRow(what, item) {
@@ -104,22 +102,7 @@ function addRow(what, item) {
 			}
 		}
 		
-		//parent_tr.find('select').children('option[id=' + selected_item + ']').attr('disabled', true);
-		
-		// via http://stackoverflow.com/questions/7309730
-		// start by setting everything to enabled
-		$(target_table).find("select option").attr('disabled', false);
-		// loop each select and set the selected value to disabled in all other selects
-		$(target_table).find("select").each(function(){
-			var $this = $(this);
-			var $sel_id = $(this).children(":selected").attr("id");
-			$(target_table).find("select").not($this).find('option').each(function(){
-				if($sel_id != 0 && $(this).attr('id') == $sel_id)
-					$(this).attr('disabled',true);
-			});
-		});
-		
-		//$(target_table).find("select").not($(item)).children('option[id=' + selected_item + ']').attr('disabled', true).siblings().removeAttr('disabled');
+		disableItems(target_table);
 	} else {
 		$(target_table + ' tr:last').after(new_element);
 	}
@@ -135,8 +118,10 @@ function addGroupRow(item) {
 
 window.onload = function()
                 {
-					addUserRow(null);
-					addGroupRow(null);
+					disableItems("#userperm_table");
+					disableItems("#groupperm_table");
+					//addUserRow(null);
+					//addGroupRow(null);
 				}
 </script>
 {% endblock %}
@@ -161,7 +146,7 @@ window.onload = function()
 {% with object=queryset.0 %}
 <noscript>Permission editing needs javascript to work correctly!</noscript>
 
-<form id="permission_form" method="get">
+<form id="permission_form" method="post">
 <table id="detail">
 	<tbody class="data" id="userperm_table">
 		<tr>
@@ -183,6 +168,31 @@ window.onload = function()
 			<td>Normal</td>
 			<td>Del</td>
 			<td>Perm</td>
+		</tr>
+		{% for permission in user_permissions %}
+		<tr>
+			<th>
+				<input type="hidden" name="uid" id="itemid" value="{{ permission.0 }}"/>
+				<select class="select" id="user" style="width:300px;" onChange="addUserRow(this)">
+					<option id="0">(Add a new user)</option>
+					{% for user in users %}<option id="{{ user.user.id }}" {% if permission.0 == user.user.id %}selected{% endif %}>{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}
+			</th>
+			{% with single_perm=permission.1 %}
+			{% for type in permission_types %}
+			<td><input type="checkbox" onchange="updateCheck(this)" {% if single_perm|index:forloop.counter0 %}checked{% endif %}><input type="hidden" name="{{ type }}" value="{% if single_perm|index:forloop.counter0 %}1{% else %}0{% endif %}"></td>
+			{% endfor %}
+			{% endwith %}
+		</tr>
+		{% endfor %}
+		<tr>
+			<th>
+				<input type="hidden" name="uid" id="itemid" value="0"/>
+				<select class="select" id="user" style="width:300px;" onChange="addUserRow(this)">
+					<option id="0">(Add a new user)</option>
+					{% for user in users %}<option id="{{ user.user.id }}">{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}
+				</select>
+			</th>
+			<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
 		</tr>
 	</tbody>
 	<tbody class="spacing">
@@ -208,6 +218,31 @@ window.onload = function()
 			<td>Normal</td>
 			<td>Del</td>
 			<td>Perm</td>
+		</tr>
+		{% for permission in group_permissions %}
+		<tr>
+			<th>
+				<input type="hidden" name="gid" id="itemid" value="{{ permission.0 }}"/>
+				<select class="select" id="group" style="width:300px;" onChange="addGroupRow(this)">
+					<option id="0">(Add a new group)</option>
+					{% for group in groups %}<option id="{{ group.group.id }}" {% if permission.0 == group.group.id %}selected{% endif %}>{{ group.group.name }}</option>{% endfor %}
+			</th>
+			{% with single_perm=permission.1 %}
+			{% for type in permission_types %}
+			<td><input type="checkbox" onchange="updateCheck(this)" {% if single_perm|index:forloop.counter0 %}checked{% endif %}><input type="hidden" name="{{ type }}" value="{% if single_perm|index:forloop.counter0 %}1{% else %}0{% endif %}"></td>
+			{% endfor %}
+			{% endwith %}
+		</tr>
+		{% endfor %}
+		<tr>
+			<th>
+				<input type="hidden" name="gid" id="itemid" value="0"/>
+				<select class="select" id="group" style="width:300px;" onChange="addGroupRow(this)">
+					<option id="0">(Add a new group)</option>
+					{% for group in groups %}<option id="{{ group.group.id }}">{{ group.group.name }}</option>{% endfor %}
+				</select>
+			</th>
+			<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
 		</tr>
 	</tbody>
 </table>
