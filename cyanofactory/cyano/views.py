@@ -990,7 +990,7 @@ def permission(request, species, model = None, item = None):
         new_permissions_user = {}
         new_permissions_group = {}
         
-        user_count = len(new_permissions["uid"]) # Note that id 0 is at the end must be ignored
+        user_count = len(new_permissions["uid"]) # Note that id 0 at the end must be ignored
 
         # Rotate array to user/group -> permissions
         for i, user in enumerate(new_permissions["uid"][:-1]):           
@@ -999,6 +999,18 @@ def permission(request, species, model = None, item = None):
         for i, group in enumerate(new_permissions["gid"][:-1], user_count - 1):  
             new_permissions_group[models.GroupProfile.objects.get(pk = group)] = [new_permissions[x][i] for x in permission_types]
         
+        # Check if user or group is completly missing but had permissions before
+        # Delete if this is the case
+        all_user_perms = models.UserPermission.objects.filter(entry = entry).prefetch_related("user")
+        for permission in all_user_perms:
+            if not permission.user in new_permissions_user:
+                permission.delete()
+        
+        all_group_perms = models.GroupPermission.objects.filter(entry = entry).prefetch_related("group")
+        for permission in all_group_perms:
+            if not permission.group in new_permissions_group:
+                permission.delete()
+
         for u, p in new_permissions_user.iteritems():
             new_perm, _ = models.UserPermission.objects.get_or_create(entry = entry, user = u)
             allows = new_perm.allow.all()
@@ -1034,22 +1046,12 @@ def permission(request, species, model = None, item = None):
     group_permissions = []
 
     for permission in user_permissions_db:
-        #perm_flags = []
-        #for x in permission_types:
-            #1 if permission_mapping[x] in permission.allow.all() else 0
-            #    perm_flags.append(1)
-            #else:
-            #    perm_flags.append(0)
-        
         user_perm = [permission.user.user.id, [1 if permission_mapping[x] in permission.allow.all() else 0 for x in permission_types]]
         user_permissions.append(user_perm)
       
     for permission in group_permissions_db:
         group_perm = [permission.group.group.id, [1 if permission_mapping[x] in permission.allow.all() else 0 for x in permission_types]]       
         group_permissions.append(group_perm)
-
-    #user_permissions = [[1, [1,1,0,0,0,0,0,0]], [2, [0,1,0,0,0,0,0,1]]]
-    #group_permissions = [[1, [0,0,0,1,0,0,0,0]], [2, [0,1,1,0,0,0,0,0]], [5, [1,1,0,0,0,0,0,1]]]
 
     return render_queryset_to_response(
                 request,
