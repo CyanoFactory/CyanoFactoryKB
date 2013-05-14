@@ -567,12 +567,15 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     if queryset != None and data['queryset'].model is None:
             del data['queryset'] 
     
-    if error == 404:
+    if error == 400:
+        data['type'] = "Bad request"
+        response = http.HttpResponseBadRequest
+    elif error == 404:
         data['type'] = "Not Found"
         response = http.HttpResponseNotFound
     else:
         data['type'] = "Forbidden"
-        response = http.HttpResponseBadRequest
+        response = http.HttpResponseForbidden
     
     t = loader.get_template('cyano/error.html')
     data['message'] = msg
