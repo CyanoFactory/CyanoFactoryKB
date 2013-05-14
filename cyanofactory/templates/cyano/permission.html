@@ -75,6 +75,7 @@ function disableItems(target_table) {
 function addRow(what, item) {
 	var new_element = (what == 0 ? new_element_user : new_element_group);
 	var target_table = (what == 0 ? "#userperm_table" : "#groupperm_table");
+	var text_string = (what == 0 ? "(Remove this user)" : "(Remove this group)");
 
 	if (item != null) {
 		parent_tr = $(item).closest('tr');
@@ -95,7 +96,7 @@ function addRow(what, item) {
 				var new_items = $(item).closest('th').after(checkboxes);
 				
 				// Change text of "Add new" to "Remove the entry"
-				parent_tr.find('select option[id="0"]').text('(Remove item)');
+				parent_tr.find('select option[id="0"]').text(text_string);
 		
 				// Add new one if used combobox was the last
 				$(target_table + ' tr:last').after(new_element);
@@ -147,6 +148,7 @@ window.onload = function()
 <noscript>Permission editing needs javascript to work correctly!</noscript>
 
 <form id="permission_form" method="post">
+{% csrf_token %}
 <table id="detail">
 	<tbody class="data" id="userperm_table">
 		<tr>
@@ -174,7 +176,7 @@ window.onload = function()
 			<th>
 				<input type="hidden" name="uid" id="itemid" value="{{ permission.0 }}"/>
 				<select class="select" id="user" style="width:300px;" onChange="addUserRow(this)">
-					<option id="0">(Add a new user)</option>
+					<option id="0">(Remove this user)</option>
 					{% for user in users %}<option id="{{ user.user.id }}" {% if permission.0 == user.user.id %}selected{% endif %}>{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}
 			</th>
 			{% with single_perm=permission.1 %}
@@ -224,7 +226,7 @@ window.onload = function()
 			<th>
 				<input type="hidden" name="gid" id="itemid" value="{{ permission.0 }}"/>
 				<select class="select" id="group" style="width:300px;" onChange="addGroupRow(this)">
-					<option id="0">(Add a new group)</option>
+					<option id="0">(Remove this group)</option>
 					{% for group in groups %}<option id="{{ group.group.id }}" {% if permission.0 == group.group.id %}selected{% endif %}>{{ group.group.name }}</option>{% endfor %}
 			</th>
 			{% with single_perm=permission.1 %}
