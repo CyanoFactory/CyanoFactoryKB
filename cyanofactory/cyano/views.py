@@ -934,7 +934,7 @@ def sitemap_species(request, species):
 
 @resolve_to_objects
 #@permission_required(perm.READ_PERMISSION)
-def permission(request, species, model = None, item = None):    
+def permission(request, species, model = None, item = None):
     permission_types = ["FULL_ACCESS",
                         "READ_NORMAL",
                         "READ_DELETE",
@@ -943,7 +943,7 @@ def permission(request, species, model = None, item = None):
                         "WRITE_NORMAL",
                         "WRITE_DELETE",
                         "WRITE_PERMISSION"]
-    
+
     permissions = models.Permission.objects.all()
     
     permission_mapping = {
@@ -959,25 +959,32 @@ def permission(request, species, model = None, item = None):
 
     users = models.UserProfile.objects.all().filter(user__is_active = True)
     groups = models.GroupProfile.objects.all()
-
+    
+    # Permissions for item or species depending on page
     entry = species if item == None else item
 
     if request.method == 'POST':
+        # Form submit -> Save changes
         post_types = permission_types + ["uid", "gid"]
         error = False
+        # Check that all needed fields are in the request
         if not all(p in request.POST.keys() for p in post_types):
             error = True
 
         if not error:
             new_permissions = {}
 
+            # Remove all fields except the needed ones, verify
+            # that all new permissions are numbers
             for k, v in request.POST.lists():
                 if k in post_types:
                     try:
                         new_permissions[k] = map(lambda x: int(x), v)
-                        
                     except ValueError:
                         error = True
+
+        # TODO
+        # Verify that user and group ids are valid
 
         if error:
             return render_queryset_to_response_error(
@@ -985,17 +992,20 @@ def permission(request, species, model = None, item = None):
                 species = species,
                 error = 400,
                 msg = "Invalid POST request on permission page.",
-                msg_debug = "POST was: " + str(request.POST.keys()))
+                msg_debug = "POST was: " + str(request.POST.keys()))        
+        
+        # Data is valid, begin with database operations
         
         new_permissions_user = {}
         new_permissions_group = {}
         
         user_count = len(new_permissions["uid"]) # Note that id 0 at the end must be ignored
 
-        # Rotate array to user/group -> permissions
+        # Rotate array to user -> permissions
         for i, user in enumerate(new_permissions["uid"][:-1]):           
             new_permissions_user[models.UserProfile.objects.get(pk = user)] = [new_permissions[x][i] for x in permission_types]
         
+        # Rotate array to group -> permissions
         for i, group in enumerate(new_permissions["gid"][:-1], user_count - 1):  
             new_permissions_group[models.GroupProfile.objects.get(pk = group)] = [new_permissions[x][i] for x in permission_types]
         
@@ -1011,6 +1021,8 @@ def permission(request, species, model = None, item = None):
             if not permission.group in new_permissions_group:
                 permission.delete()
 
+        # Create or alter the permission object associated to entry+user/group depending on the
+        # new permission settings
         for u, p in new_permissions_user.iteritems():
             new_perm, _ = models.UserPermission.objects.get_or_create(entry = entry, user = u)
             allows = new_perm.allow.all()
@@ -1039,12 +1051,15 @@ def permission(request, species, model = None, item = None):
                         new_perm.allow.add(permission_mapping[x])
             new_perm.save()
 
+    # Rendering of the permission page
     user_permissions_db = models.UserPermission.objects.filter(entry = entry).prefetch_related("allow", "deny", "user", "user__user")
     group_permissions_db = models.GroupPermission.objects.filter(entry = entry).prefetch_related("allow", "deny", "group", "group__group")
 
     user_permissions = []
     group_permissions = []
-
+    
+    # Calculate permission array for user and groups
+    # Contains user mapping to 8 numbers, 1 if permission available, 0 if not
     for permission in user_permissions_db:
         user_perm = [permission.user.user.id, [1 if permission_mapping[x] in permission.allow.all() else 0 for x in permission_types]]
         user_permissions.append(user_perm)
