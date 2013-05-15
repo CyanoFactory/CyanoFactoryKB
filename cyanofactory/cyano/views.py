@@ -943,7 +943,7 @@ def permission(request, species, model = None, item = None):
 
     if request.method == 'POST':
         # Form submit -> Save changes
-        post_types = models.Permission.permission_types + ["uid_allow", "gid_allow", "uid_deny", "gid_deny"]
+        post_types = ["uid_allow", "gid_allow", "uid_deny", "gid_deny"]
         error = False
         
         # Check that all needed fields are in the request
@@ -952,13 +952,36 @@ def permission(request, species, model = None, item = None):
 
         if not error:
             new_permissions = {}
+            
+            # Make QueryDict writable
+            request.POST = request.POST.copy()
+            
+            # Add missing fields to the POST request
+            for k in models.Permission.permission_types + post_types:
+                if not k in request.POST:
+                    request.POST[k] = None
+            
+            perm_len = None
 
             # Remove all fields except the needed ones, verify
             # that all new permissions are numbers
-            for k, v in request.POST.lists():
+            for k, v in request.POST.lists():                                
                 if k in models.Permission.permission_types + post_types:
                     try:
-                        new_permissions[k] = map(lambda x: int(x), v)
+                        # was missing
+                        if v[0] == None:
+                            new_permissions[k] = []
+                        else:
+                            new_permissions[k] = map(lambda x: int(x), v)
+
+                        if k in models.Permission.permission_types:
+                            # Verify that all permission fields have the same length
+                            if perm_len == None:
+                                perm_len = len(new_permissions[k])
+                            else:
+                                
+                                if perm_len != len(new_permissions[k]):
+                                    raise ValueError()
                     except ValueError:
                         error = True
 
@@ -979,9 +1002,15 @@ def permission(request, species, model = None, item = None):
             user_verify += models.UserProfile.objects.filter(pk__in = new_permissions["uid_deny"]).count()
             group_verify = models.GroupProfile.objects.filter(pk__in = new_permissions["gid_allow"]).count()
             group_verify += models.GroupProfile.objects.filter(pk__in = new_permissions["gid_deny"]).count()
+            
+            # If number of permissions and users+groups mismatches
+            new_perm_count = user_count_allow + group_count_allow + user_count_deny + group_count_deny
+            
+            if len(new_permissions["FULL_ACCESS"]) != new_perm_count:
+                error = True
 
             # If number of submitted data larger then database data at least one item was invalid
-            if user_count_allow + group_count_allow + user_count_deny + group_count_deny != user_verify + group_verify:
+            if new_perm_count != user_verify + group_verify:
                 error = True
 
         if error:
