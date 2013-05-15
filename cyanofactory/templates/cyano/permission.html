@@ -35,19 +35,37 @@ checkboxes = ''
 checkboxes += '<td><input type="checkbox" onchange="updateCheck(this)"><input type="hidden" name="{{ type }}" value="0"></td>'
 {% endfor %}
 
-new_element_user = '\
+new_element_user_allow = '\
 <tr><th> \
-<input type="hidden" name="uid" id="itemid" value="0"/>\
+<input type="hidden" name="uid_allow" id="itemid" value="0"/>\
 <select class="select" id="user" style="width:300px;" onChange="addUserRow(this)">' +
 user_options + '\
 </select> \
 </th> \
 <td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
 
-new_element_group = '\
+new_element_user_deny = '\
 <tr><th> \
-<input type="hidden" name="gid" id="itemid" value="0"/> \
+<input type="hidden" name="uid_deny" id="itemid" value="0"/>\
+<select class="select" id="user" style="width:300px;" onChange="addUserRowDeny(this)">' +
+user_options + '\
+</select> \
+</th> \
+<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
+
+new_element_group_allow = '\
+<tr><th> \
+<input type="hidden" name="gid_allow" id="itemid" value="0"/> \
 <select class="select" id="group" style="width:300px;" onChange="addGroupRow(this)">' +
+group_options + '\
+</select> \
+</th> \
+<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
+
+new_element_group_deny = '\
+<tr><th> \
+<input type="hidden" name="gid_deny" id="itemid" value="0"/> \
+<select class="select" id="group" style="width:300px;" onChange="addGroupRowDeny(this)">' +
 group_options + '\
 </select> \
 </th> \
@@ -73,9 +91,15 @@ function disableItems(target_table) {
 }
 
 function addRow(what, item) {
-	var new_element = (what == 0 ? new_element_user : new_element_group);
-	var target_table = (what == 0 ? "#userperm_table" : "#groupperm_table");
-	var text_string = (what == 0 ? "(Remove this user)" : "(Remove this group)");
+	var new_element = ( what == 0 ? new_element_user_allow :
+						what == 1 ? new_element_group_allow :
+						what == 2 ? new_element_user_deny : new_element_group_deny);
+	var target_table = (what == 0 ? "#userperm_table_allow" :
+						what == 1 ? "#groupperm_table_allow" :
+						what == 2 ? "#userperm_table_deny" : "#groupperm_table_deny");
+	var text_string = ( what == 0 ? "(Remove this user)" :
+						what == 1 ? "(Remove this group)" :
+						what == 2 ? "(Remove this user)" : "(Remove this group)");
 
 	if (item != null) {
 		parent_tr = $(item).closest('tr');
@@ -117,12 +141,20 @@ function addGroupRow(item) {
 	addRow(1, item);
 }
 
+function addUserRowDeny(item) {
+	addRow(2, item);
+}
+
+function addGroupRowDeny(item) {
+	addRow(3, item);
+}
+
 window.onload = function()
                 {
 					disableItems("#userperm_table");
 					disableItems("#groupperm_table");
-					//addUserRow(null);
-					//addGroupRow(null);
+					disableItems("#userperm_table_deny");
+					disableItems("#groupperm_table_deny");
 				}
 </script>
 {% endblock %}
@@ -150,9 +182,9 @@ window.onload = function()
 <form id="permission_form" method="post">
 {% csrf_token %}
 <table id="detail">
-	<tbody class="data" id="userperm_table">
+	<tbody class="data" id="userperm_table_allow">
 		<tr>
-			<th colspan="9">User Permissions</th>
+			<th colspan="9">User Permissions (Allow)</th>
 		</tr>
 		<tr>
 			<th></th>
@@ -171,13 +203,13 @@ window.onload = function()
 			<td>Del</td>
 			<td>Perm</td>
 		</tr>
-		{% for permission in user_permissions %}
+		{% for permission in user_permissions_allow %}
 		<tr>
 			<th>
-				<input type="hidden" name="uid" id="itemid" value="{{ permission.0 }}"/>
+				<input type="hidden" name="uid_allow" id="itemid" value="{{ permission.0 }}"/>
 				<select class="select" id="user" style="width:300px;" onChange="addUserRow(this)">
 					<option id="0">(Remove this user)</option>
-					{% for user in users %}<option id="{{ user.user.id }}" {% if permission.0 == user.user.id %}selected{% endif %}>{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}
+					{% for user in users %}<option id="{{ user.id }}" {% if permission.0 == user.id %}selected{% endif %}>{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}
 			</th>
 			{% with single_perm=permission.1 %}
 			{% for type in permission_types %}
@@ -188,10 +220,10 @@ window.onload = function()
 		{% endfor %}
 		<tr>
 			<th>
-				<input type="hidden" name="uid" id="itemid" value="0"/>
+				<input type="hidden" name="uid_allow" id="itemid" value="0"/>
 				<select class="select" id="user" style="width:300px;" onChange="addUserRow(this)">
 					<option id="0">(Add a new user)</option>
-					{% for user in users %}<option id="{{ user.user.id }}">{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}
+					{% for user in users %}<option id="{{ user.id }}">{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}
 				</select>
 			</th>
 			<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
@@ -200,9 +232,9 @@ window.onload = function()
 	<tbody class="spacing">
 		<tr><td colspan="9">&nbsp;</td></tr>
 	</tbody>
-	<tbody class="data" id="groupperm_table">
+	<tbody class="data" id="groupperm_table_allow">
 		<tr>
-			<th colspan="9">Group Permissions</th>
+			<th colspan="9">Group Permissions (Allow)</th>
 		</tr>
 		<tr>
 			<th></th>
@@ -221,13 +253,13 @@ window.onload = function()
 			<td>Del</td>
 			<td>Perm</td>
 		</tr>
-		{% for permission in group_permissions %}
+		{% for permission in group_permissions_allow %}
 		<tr>
 			<th>
-				<input type="hidden" name="gid" id="itemid" value="{{ permission.0 }}"/>
+				<input type="hidden" name="gid_allow" id="itemid" value="{{ permission.0 }}"/>
 				<select class="select" id="group" style="width:300px;" onChange="addGroupRow(this)">
 					<option id="0">(Remove this group)</option>
-					{% for group in groups %}<option id="{{ group.group.id }}" {% if permission.0 == group.group.id %}selected{% endif %}>{{ group.group.name }}</option>{% endfor %}
+					{% for group in groups %}<option id="{{ group.id }}" {% if permission.0 == group.id %}selected{% endif %}>{{ group.group.name }}</option>{% endfor %}
 			</th>
 			{% with single_perm=permission.1 %}
 			{% for type in permission_types %}
@@ -238,10 +270,110 @@ window.onload = function()
 		{% endfor %}
 		<tr>
 			<th>
-				<input type="hidden" name="gid" id="itemid" value="0"/>
+				<input type="hidden" name="gid_allow" id="itemid" value="0"/>
 				<select class="select" id="group" style="width:300px;" onChange="addGroupRow(this)">
 					<option id="0">(Add a new group)</option>
-					{% for group in groups %}<option id="{{ group.group.id }}">{{ group.group.name }}</option>{% endfor %}
+					{% for group in groups %}<option id="{{ group.id }}">{{ group.group.name }}</option>{% endfor %}
+				</select>
+			</th>
+			<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+		</tr>
+	</tbody>
+	<tbody class="spacing">
+		<tr><td colspan="9">&nbsp;</td></tr>
+	</tbody>
+	<tbody class="data" id="userperm_table_deny">
+		<tr>
+			<th colspan="9">User Permissions (Deny)</th>
+		</tr>
+		<tr>
+			<th></th>
+			<td></td>
+			<td colspan="4">Read</td>
+			<td colspan="3">Write</td>
+		</tr>
+		<tr>
+			<th></th>
+			<td>Full</td>
+			<td>Normal</td>
+			<td>Del</td>
+			<td>Perm</td>
+			<td>Hist</td>
+			<td>Normal</td>
+			<td>Del</td>
+			<td>Perm</td>
+		</tr>
+		{% for permission in user_permissions_deny %}
+		<tr>
+			<th>
+				<input type="hidden" name="uid_deny" id="itemid" value="{{ permission.0 }}"/>
+				<select class="select" id="user" style="width:300px;" onChange="addUserRowDeny(this)">
+					<option id="0">(Remove this user)</option>
+					{% for user in users %}<option id="{{ user.id }}" {% if permission.0 == user.id %}selected{% endif %}>{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}
+			</th>
+			{% with single_perm=permission.1 %}
+			{% for type in permission_types %}
+			<td><input type="checkbox" onchange="updateCheck(this)" {% if single_perm|index:forloop.counter0 %}checked{% endif %}><input type="hidden" name="{{ type }}" value="{% if single_perm|index:forloop.counter0 %}1{% else %}0{% endif %}"></td>
+			{% endfor %}
+			{% endwith %}
+		</tr>
+		{% endfor %}
+		<tr>
+			<th>
+				<input type="hidden" name="uid_deny" id="itemid" value="0"/>
+				<select class="select" id="user" style="width:300px;" onChange="addUserRowDeny(this)">
+					<option id="0">(Add a new user)</option>
+					{% for user in users %}<option id="{{ user.id }}">{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}
+				</select>
+			</th>
+			<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>
+		</tr>
+	</tbody>
+	<tbody class="spacing">
+		<tr><td colspan="9">&nbsp;</td></tr>
+	</tbody>
+	<tbody class="data" id="groupperm_table_deny">
+		<tr>
+			<th colspan="9">Group Permissions (Deny)</th>
+		</tr>
+		<tr>
+			<th></th>
+			<td></td>
+			<td colspan="4">Read</td>
+			<td colspan="3">Write</td>
+		</tr>
+		<tr>
+			<th></th>
+			<td>Full</td>
+			<td>Normal</td>
+			<td>Del</td>
+			<td>Perm</td>
+			<td>Hist</td>
+			<td>Normal</td>
+			<td>Del</td>
+			<td>Perm</td>
+		</tr>
+		{% for permission in group_permissions_deny %}
+		<tr>
+			<th>
+				<input type="hidden" name="gid_deny" id="itemid" value="{{ permission.0 }}"/>
+				<select class="select" id="group" style="width:300px;" onChange="addGroupRowDeny(this)">
+					<option id="0">(Remove this group)</option>
+					{% for group in groups %}<option id="{{ group.id }}" {% if permission.0 == group.id %}selected{% endif %}>{{ group.group.name }}</option>{% endfor %}
+			</th>
+			{% with single_perm=permission.1 %}
+			{% for type in permission_types %}
+			<td><input type="checkbox" onchange="updateCheck(this)" {% if single_perm|index:forloop.counter0 %}checked{% endif %}><input type="hidden" name="{{ type }}" value="{% if single_perm|index:forloop.counter0 %}1{% else %}0{% endif %}"></td>
+			{% endfor %}
+			{% endwith %}
+		</tr>
+		{% endfor %}
+		<tr>
+			<th>
+				<input type="hidden" name="gid_deny" id="itemid" value="0"/>
+				<select class="select" id="group" style="width:300px;" onChange="addGroupRowDeny(this)">
+					<option id="0">(Add a new group)</option>
+					{% for group in groups %}<option id="{{ group.id }}">{{ group.group.name }}</option>{% endfor %}
 				</select>
 			</th>
 			<td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td>

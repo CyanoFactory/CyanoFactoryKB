@@ -350,6 +350,38 @@ def parse_regulatory_rule(equation, all_obj_data, species_wid):
 class Permission(Model):
     name = CharField(max_length=255, blank=False, default='', verbose_name = "Permission name")
     description = CharField(max_length=255, blank=False, default='', verbose_name = "Permission description")
+    
+    permission_mapping = None
+    permission_types = ["FULL_ACCESS",
+                        "READ_NORMAL",
+                        "READ_DELETE",
+                        "READ_PERMISSION",
+                        "READ_HISTORY",
+                        "WRITE_NORMAL",
+                        "WRITE_DELETE",
+                        "WRITE_PERMISSION"]
+    
+    @staticmethod
+    def get_by_name(name):
+        if Permission.permission_mapping == None:
+            Permission.permission_mapping = {}
+            permissions = Permission.objects.all()
+            for i, t in enumerate(Permission.permission_types, 1):
+                Permission.permission_mapping[t] = permissions.get(pk = i)
+        
+        if not name in Permission.permission_mapping:
+            return None
+        return Permission.permission_mapping[name]
+    
+    @staticmethod
+    def get_by_pk(pk):
+        if pk < 1 or pk > len(Permission.permission_types):
+            return None
+        
+        return Permission.get_by_name(Permission.permission_types[pk - 1])
+    
+    def __unicode__(self):
+        return self.name
 
 class UserPermission(Model):
     entry = ForeignKey("Entry", related_name = "user_permissions")
@@ -357,9 +389,13 @@ class UserPermission(Model):
     allow = ManyToManyField(Permission, verbose_name = 'Allowed Permissions', related_name = 'user_permission_allow')
     deny = ManyToManyField(Permission, verbose_name = 'Denied Permissions', related_name = 'user_permission_deny')
     
-    #def __unicode__(self):
-        #return "[{!s}, {!s}]".format(
-        #    bin(self.allow_mask or 0)[2:].rjust(8, '0'), bin(self.deny_mask or 0)[2:].rjust(8, '0'))
+    def __unicode__(self):
+        perm_allow = [str(1) if Permission.get_by_pk(x) in self.allow.all() else str(0) for x in range(1, 9)]
+        perm_deny = [str(1) if Permission.get_by_pk(x) in self.deny.all() else str(0) for x in range(1, 9)]
+        
+        return "[{}, {}]".format(
+            "".join(perm_allow), "".join(perm_deny)
+        )
 
 class GroupPermission(Model):
     entry = ForeignKey("Entry", related_name = "group_permissions")
@@ -367,9 +403,13 @@ class GroupPermission(Model):
     allow = ManyToManyField(Permission, verbose_name = 'Allowed Permissions', related_name = 'group_permission_allow')
     deny = ManyToManyField(Permission, verbose_name = 'Denied Permissions', related_name = 'group_permission_deny')
 
-    #def __unicode__(self):
-    #    return "[{!s}, {!s}]".format(
-    #        bin(self.allow_mask or 0)[2:].rjust(8, '0'), bin(self.deny_mask or 0)[2:].rjust(8, '0'))
+    def __unicode__(self):
+        perm_allow = [str(1) if Permission.get_by_pk(x) in self.allow.all() else str(0) for x in range(1, 9)]
+        perm_deny = [str(1) if Permission.get_by_pk(x) in self.deny.all() else str(0) for x in range(1, 9)]
+        
+        return "[{}, {}]".format(
+            "".join(perm_allow), "".join(perm_deny)
+        )
 
 class ProfileBase(Model):    
     def has_full_access(self, entry):
