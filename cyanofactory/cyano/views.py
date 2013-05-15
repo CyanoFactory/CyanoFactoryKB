@@ -1147,9 +1147,12 @@ def permission(request, species, model = None, item = None):
         group_permissions_allow.append(group_perm_allow)
         group_permissions_deny.append(group_perm_deny)
 
+    queryset = objectToQuerySet(entry)
+
     return render_queryset_to_response(
                 request,
                 species = species,
+                queryset = queryset,
                 template = "cyano/permission.html",
                 data = {
                     'users': users,
