@@ -79,13 +79,13 @@ def permission_required(permission):
                 extra = None
                 
                 if DEBUG:
-                    allow_mask, deny_mask = profile.get_permission_mask(species)
+                    #allow_mask, deny_mask = profile.get_permission_mask(species)
                     extra = "DEBUG: Permissions are (allow, deny, needed):<br>"
-                    extra += "<pre>{0}</pre><pre>{1}</pre><pre>{2}</pre>".format(
-                            bin(allow_mask or 0)[2:].rjust(8, '0'),
-                            bin(deny_mask or 0)[2:].rjust(8, '0'),
-                            bin(permission)[2:].rjust(8, '0'))
-                    print extra
+                    #extra += "<pre>{0}</pre><pre>{1}</pre><pre>{2}</pre>".format(
+                    #        bin(allow_mask or 0)[2:].rjust(8, '0'),
+                    #        bin(deny_mask or 0)[2:].rjust(8, '0'),
+                    #        bin(permission)[2:].rjust(8, '0'))
+                    #print extra
                             
                 return render_queryset_to_response_error(
                     request,

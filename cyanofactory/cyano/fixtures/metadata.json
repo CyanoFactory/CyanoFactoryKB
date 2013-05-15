@@ -418,5 +418,76 @@
     "fields": {
        "name": "Delete"
     }
+  },
+  {
+    "model": "cyano.RevisionOperation",
+    "pk": 3,
+    "fields": {
+       "name": "Delete"
+    }
+  },
+  {
+    "model": "cyano.Permission",
+    "pk": 1,
+    "fields": {
+      "name": "Full",
+      "description": "Full Access"
+    }
+  },
+  {
+    "model": "cyano.Permission",
+    "pk": 2,
+    "fields": {
+      "name": "Read Normal",
+      "description": "Can Read the entry"
+    }
+  },
+  {
+    "model": "cyano.Permission",
+    "pk": 3,
+    "fields": {
+      "name": "Read Permission",
+      "description": "Can see the permission of the entry"
+    }
+  },
+  {
+    "model": "cyano.Permission",
+    "pk": 4,
+    "fields": {
+      "name": "Read Delete",
+      "description": "Can see deleted entries"
+    }
+  },
+  {
+    "model": "cyano.Permission",
+    "pk": 5,
+    "fields": {
+      "name": "Read History",
+      "description": "Can view the revision history and all history entries"
+    }
+  },
+  {
+    "model": "cyano.Permission",
+    "pk": 6,
+    "fields": {
+      "name": "Write Normal",
+      "description": "Can update the entry"
+    }
+  },
+  {
+    "model": "cyano.Permission",
+    "pk": 7,
+    "fields": {
+      "name": "Write Delete",
+      "description": "Can delete the entry"
+    }
+  },
+  {
+    "model": "cyano.Permission",
+    "pk": 8,
+    "fields": {
+      "name": "Write Permission",
+      "description": "Can alter the permission list"
+    }
   }
 ]

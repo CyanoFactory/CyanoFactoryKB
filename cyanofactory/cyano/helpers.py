@@ -49,6 +49,7 @@ import sys
 import tempfile
 import time
 import xhtml2pdf.pisa as pisa
+from cyano.cache import Cache
 
 class ELEMENT_MWS:
     H = 1.0079
@@ -417,7 +418,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['model_type'] = models[0].__name__
         data['model'] = models[0]
         
-        if queryset and len(queryset) > 0:
+        if queryset != None and len(queryset) > 0:
             if len(queryset) == 1 and isinstance(queryset[0], Entry):
                 social_text += data['model_verbose_name'][0] + " "
                 social_text += queryset[0].name
@@ -443,7 +444,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['modelnames'] = getObjectTypes(SpeciesComponent)
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
         
-        if queryset and data['queryset'].model is None:
+        if queryset != None and data['queryset'].model is None:
             del data['queryset'] 
         return render_to_response(template, data, context_instance = RequestContext(request))
     elif format == 'bib':
@@ -562,13 +563,19 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     data['pdfstyles'] = ''
     data['species_list'] = Species.objects.all()
     data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/cyano/error.html'))
+
+    if queryset != None and data['queryset'].model is None:
+            del data['queryset'] 
     
-    if error == 404:
+    if error == 400:
+        data['type'] = "Bad request"
+        response = http.HttpResponseBadRequest
+    elif error == 404:
         data['type'] = "Not Found"
         response = http.HttpResponseNotFound
     else:
         data['type'] = "Forbidden"
-        response = http.HttpResponseBadRequest
+        response = http.HttpResponseForbidden
     
     t = loader.get_template('cyano/error.html')
     data['message'] = msg
@@ -2209,11 +2216,19 @@ def get_column_index(column):
 
     :returns: int -- Column index
     """
-    from django.db import connection
-    cursor = connection.cursor()
-    cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [column.model._meta.db_table, column.column])
-    row = cursor.fetchone()
-    return row[0]
+    
+    model_type_key = "column/%s/%s" % (column.model._meta.db_table, column.column)
+    col_index = Cache.get(model_type_key)
+    
+    if col_index == None:
+        from django.db import connection
+        cursor = connection.cursor()
+        cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [column.model._meta.db_table, column.column])
+        row = cursor.fetchone()
+        Cache.set(model_type_key, row[0])
+        col_index = row[0]
+    
+    return col_index
 
 def get_verbose_name_for_field_by_name(model, field_name):
     return model._meta.get_field_by_name(field_name)[0].verbose_name
