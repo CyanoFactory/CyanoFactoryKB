@@ -72,7 +72,17 @@ def permission_required(permission):
             perm = models.Permission.objects.get(name = permission)
             
             profile = user.profile
-            allow, deny = profile.has_permission(species, perm)
+            
+            check_species = True
+            if item:
+                allow, deny = profile.has_permission(item, perm)
+                
+                # No permission for that item, check species permissions instead
+                check_species = allow == None                                    
+            
+            if check_species:
+                allow, deny = profile.has_permission(species, perm)
+            
             if allow and not deny:
                 # Has permission
                 return function(request, *args, **kw)
