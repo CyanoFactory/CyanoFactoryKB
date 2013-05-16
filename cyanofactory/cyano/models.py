@@ -542,8 +542,8 @@ class UserProfile(ProfileBase):
         deny = None
         try:
             user_perm = entry.user_permissions.get(user = self)
-            allow = user_perm.allow.all()
-            deny = user_perm.deny.all()
+            allow = list(user_perm.allow.all())
+            deny = list(user_perm.deny.all())
         except ObjectDoesNotExist:
             pass
         
@@ -554,8 +554,8 @@ class UserProfile(ProfileBase):
                 if allow == None:
                     allow = []
                     deny = []
-                allow += group_perm.allow.all()
-                deny += group_perm.deny.all()
+                allow += list(group_perm.allow.all())
+                deny += list(group_perm.deny.all())
             except ObjectDoesNotExist:
                 pass
         
@@ -579,13 +579,15 @@ class UserProfile(ProfileBase):
          permission for the bitmask specified (same for deny). (None, None)
          if no permission object was found.
         """
+        
+        
         if isinstance(entry, Entry): 
             allow, deny = self.get_permissions(entry)
             if allow == None:
                 return None, None
-    
-            allow = all(perm in permissions for perm in allow)
-            deny = all(perm in permissions for perm in deny)
+
+            allow = permissions in allow
+            deny = permissions in deny
             
             return allow, deny
         elif isinstance(entry, list):

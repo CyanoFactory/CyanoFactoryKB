@@ -425,7 +425,7 @@ def search_google(request, species_wid, query):
             })
 
 @resolve_to_objects
-#@permission_required(perm.READ_NORMAL)
+@permission_required(perm.READ_NORMAL)
 def list(request, species, model):
     #try:
     #    getObjectTypes().index(model_type)
@@ -510,7 +510,7 @@ def list(request, species, model):
             })
 
 @resolve_to_objects
-#@permission_required(perm.READ_NORMAL)
+@permission_required(perm.READ_NORMAL)
 def detail(request, species, model, item):
     fieldsets = deepcopy(model._meta.fieldsets)
     
@@ -564,7 +564,7 @@ def detail(request, species, model, item):
             })
 
 @resolve_to_objects
-#@permission_required(perm.READ_HISTORY)
+@permission_required(perm.READ_HISTORY)
 def history(request, species, model = None, item = None, detail_id = None):
     if item:    
         objects = objectToQuerySet(item, model = model)[0].revisions.prefetch_related("detail", "detail__user", "current", "current__model_type").order_by("-detail__id").distinct("detail__id")
@@ -933,7 +933,7 @@ def sitemap_species(request, species):
     )
 
 @resolve_to_objects
-#@permission_required(perm.READ_PERMISSION)
+@permission_required(perm.WRITE_PERMISSION)
 def permission(request, species, model = None, item = None):
     users = models.UserProfile.objects.all().filter(user__is_active = True)
     groups = models.GroupProfile.objects.all()
