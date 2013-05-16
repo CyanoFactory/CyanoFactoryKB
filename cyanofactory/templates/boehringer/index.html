@@ -2,6 +2,9 @@
 
 <html>
 <head>
+<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-svgpan.js"></script>
+
 <title>Boehringer Pathways</title>
     <style type="text/css">
         #scrolly{
@@ -15,6 +18,7 @@
             border-radius: 25px;
             box-shadow: 10px 10px 5px #888888;
             white-space: nowrap;
+			
             }
         #sidebar{
         font-family:"Verdana", Sans-serif;
@@ -48,7 +52,7 @@
 
 
 <div id="sidebar"  align="left">
-<img class="roundrect" src="logo-facebook.png" width="100"/>
+<!--<img class="roundrect" src="logo-facebook.png" width="100"/>-->
 <br>
 <br>
 <form method="get" >
@@ -68,9 +72,10 @@
 
 <div id="scrolly" >
 
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="6871" height="4804" pointer-events="visible"> 
-
-<image x="0" y="0" width="6871" height="4804" xlink:href="{% get_static_prefix %}boehringer/pathways.gif" />
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" pointer-events="visible"> 
+<script xlink:href="{% get_static_prefix %}boehringer/SVGPan.js"/>
+<g id="viewport">
+<image x="0" y="0" width="6871" height="4804" xlink:href="{% get_static_prefix %}boehringer/pathways.png" />
 
 {% for enzyme in enzymes %}
 {% with object=enzyme.0 %}
@@ -89,9 +94,11 @@
 {% endwith %}
 {% endwith %}
 {% endfor %}
-
+</g>
 </svg>
-<!-- <img src="boepathways.gif" border="0" height="4804" wigth="6871"/> -->
+<script type="text/javascript">
+$('svg').svgPan('viewport');
+</script>
 </div>
 
 <h5> by Robbe Wunschiers / Version 2013.5 / ECs: hits={{ enzymes_hits }} - missing={{ enzymes_no_hits}} / Metabolites: hits={{ metabolites_hits }} - missing={{ metabolites_no_hits}}</h5>
