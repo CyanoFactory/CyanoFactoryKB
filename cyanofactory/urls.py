@@ -1,9 +1,5 @@
 '''
-Whole-cell knowledge base URL patterns
-
-Author: Jonathan Karr, jkarr@stanford.edu
-Affiliation: Covert Lab, Department of Bioengineering, Stanford University
-Last updated: 2012-07-17
+URL patterns
 '''
 
 from django.conf.urls.defaults import patterns, include, url
@@ -23,6 +19,11 @@ urlpatterns = patterns('db_xref.views',
 #	url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
 #	url(r'^admin/', include(admin.site.urls)),
 #)
+
+# boehringer map
+urlpatterns += patterns('boehringer.views',
+    url(r'boehringer/', include("boehringer.urls")),
+)
 
 # cyanofactory project
 urlpatterns += patterns('cyano.views',

@@ -123,8 +123,9 @@ INSTALLED_APPS = (
     'cyano',
     'db_xref',
     'django_dumpdb',
-    'biowarehouse',
+    #'biowarehouse',
 	'bioparser',
+    'boehringer',
 	
 	#helpers
 	'haystack',
