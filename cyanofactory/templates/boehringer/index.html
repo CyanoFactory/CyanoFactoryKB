@@ -1,0 +1,107 @@
+{% load static %}
+
+<html>
+<head>
+<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}boehringer/jquery-svgpan.js"></script>
+
+<title>Boehringer Pathways</title>
+    <style type="text/css">
+        #scrolly{
+            overflow-x: auto;
+            overflow-y: auto;
+            width: 75%;
+            height: 85%;
+            margin: auto;
+            border: 5px;
+            border: 1px solid;
+            border-radius: 25px;
+            box-shadow: 10px 10px 5px #888888;
+            white-space: nowrap;
+			
+            }
+        #sidebar{
+        font-family:"Verdana", Sans-serif;
+        font-size: 13px;
+        width: 200px;
+        height: 85%;
+        margin: 50px 20px;
+        border: 5px;
+        border: 1px solid;
+        border-radius: 15px;
+        box-shadow: 10px 10px 5px #888888;
+        float: right
+        }
+        h2{
+        text-align:center;
+        color:blue;
+        font-family:"Verdana", Sans-serif
+        }
+        h5{
+        text-align:center;
+        color:black;
+        font-family:"Verdana", Sans-serif
+        }
+		.roundrect{
+		border-radius: 10px;
+		}
+    </style>
+
+</head>
+<body>
+
+
+<div id="sidebar"  align="left">
+<!--<img class="roundrect" src="logo-facebook.png" width="100"/>-->
+<br>
+<br>
+<form method="get" >
+  <br><br><p style="margin-left: 3" align="left"><b>ECs:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors with #.<br><br>
+  <textarea name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
+  <br>
+  <input type="submit">
+  </p>
+</form>
+
+</div>
+
+
+<h2> CyanoFactory - Annotated Pathway Map </h2>
+
+<!-- viewbox -->
+
+<div id="scrolly" >
+
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" pointer-events="visible"> 
+<script xlink:href="{% get_static_prefix %}boehringer/SVGPan.js"/>
+<g id="viewport">
+<image x="0" y="0" width="6871" height="4804" xlink:href="{% get_static_prefix %}boehringer/pathways.png" />
+
+{% for enzyme in enzymes %}
+{% with object=enzyme.0 %}
+{% with color=enzyme.1 %}
+<a xlink:href="http://www.brenda-enzymes.org/php/result_flat.php4?ecno={{ object.ec }}" xlink:title="{{ object.title }}">
+<rect x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:{% if color %}{{ color }}{% else %}{{object.color.name}}{% endif %}; fill-opacity:0.2"/>
+</a>
+{% endwith %}
+{% endwith %}
+{% endfor %}
+
+{% for metabolite in metabolites %}
+{% with object=metabolite.0 %}
+{% with color=metabolite.1 %}
+<rect x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:{% if color %}{{ color }}{% else %}{{object.color.name}}{% endif %}; fill-opacity:0.2"/>
+{% endwith %}
+{% endwith %}
+{% endfor %}
+</g>
+</svg>
+<script type="text/javascript">
+$('svg').svgPan('viewport');
+</script>
+</div>
+
+<h5> by Robbe Wunschiers / Version 2013.5 / ECs: hits={{ enzymes_hits }} - missing={{ enzymes_no_hits}} / Metabolites: hits={{ metabolites_hits }} - missing={{ metabolites_no_hits}}</h5>
+
+</body>
+</html>
