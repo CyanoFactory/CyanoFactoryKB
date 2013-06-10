@@ -933,11 +933,12 @@ def sitemap_species(request, species):
     )
 
 @resolve_to_objects
+@permission_required(perm.WRITE_PERMISSION)
 def permission_edit(request, species, model = None, item = None):
-    return permission(request, species, model, item, edit = True)
+    return permission(request, species = species, model = model, item = item, edit = True)
 
 @resolve_to_objects
-#@permission_required(perm.READ_PERMISSION)
+@permission_required(perm.READ_PERMISSION)
 def permission(request, species, model = None, item = None, edit = False):
     users = models.UserProfile.objects.all().filter(user__is_active = True)
     groups = models.GroupProfile.objects.all()
