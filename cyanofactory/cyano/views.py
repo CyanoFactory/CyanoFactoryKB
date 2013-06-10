@@ -1153,7 +1153,7 @@ def permission(request, species, model = None, item = None):
                 request,
                 species = species,
                 queryset = queryset,
-                template = "cyano/permission.html",
+                template = "cyano/permission_edit.html",
                 data = {
                     'users': users,
                     'groups': groups,
