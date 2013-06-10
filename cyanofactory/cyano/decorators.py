@@ -58,7 +58,7 @@ def permission_required(permission):
     """
     def decorator(function):
         @wraps(function)
-        def wrapper(request, *args, **kw):
+        def wrapper(request, *args, **kw):            
             species = kw.get("species", False)
             model = kw.get("model", False)
             item = kw.get("item", False)
@@ -72,13 +72,17 @@ def permission_required(permission):
             perm = models.Permission.objects.get(name = permission)
             
             profile = user.profile
+            
+            # Admins always have full access
+            if profile.is_admin():
+                return function(request, *args, **kw)
 
             allow_item = True
             deny_item = False
 
             if item:
                 allow_item, deny_item = profile.has_permission(item, perm)
-
+            
             # allow or deny are not None if an item had permission assigned
             # Mix item permissions with species permissions now
             allow_species, deny_species = profile.has_permission(species, perm)
