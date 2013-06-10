@@ -161,12 +161,6 @@ window.onload = function()
 
 {% block action_icons %}
 {% with object=queryset.0 %}
-{% if request.user.is_anonymous %}
-<a href="mailto:wholecell[at]lists.stanford.edu?subject=WholeCellKB Object Species={{ species.wid }} WID={{ object.wid }}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Suggest an edit" alt="Suggest an edit" /></a>
-{% else %}
-<a href="{% comment %}{% url "cyano.views.edit" species_wid=species.wid wid=queryset.0.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
-<a href="{% comment %}{% url "cyano.views.delete" species_wid=species.wid wid=queryset.0.wid %}{% endcomment %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
-{% endif %}
 <a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
 <a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
 <a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" /></a>
@@ -210,6 +204,7 @@ window.onload = function()
 				<select class="select" id="user" style="width:300px;" onChange="addUserRow(this)">
 					<option id="0">(Remove this user)</option>
 					{% for user in users %}<option id="{{ user.id }}" {% if permission.0 == user.id %}selected{% endif %}>{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}
+				</select>
 			</th>
 			{% with single_perm=permission.1 %}
 			{% for type in permission_types %}
@@ -260,6 +255,7 @@ window.onload = function()
 				<select class="select" id="group" style="width:300px;" onChange="addGroupRow(this)">
 					<option id="0">(Remove this group)</option>
 					{% for group in groups %}<option id="{{ group.id }}" {% if permission.0 == group.id %}selected{% endif %}>{{ group.group.name }}</option>{% endfor %}
+				</select>
 			</th>
 			{% with single_perm=permission.1 %}
 			{% for type in permission_types %}
@@ -310,6 +306,7 @@ window.onload = function()
 				<select class="select" id="user" style="width:300px;" onChange="addUserRowDeny(this)">
 					<option id="0">(Remove this user)</option>
 					{% for user in users %}<option id="{{ user.id }}" {% if permission.0 == user.id %}selected{% endif %}>{{ user.user.username }} ({{ user.get_name }})</option>{% endfor %}
+				</select>
 			</th>
 			{% with single_perm=permission.1 %}
 			{% for type in permission_types %}
@@ -360,6 +357,7 @@ window.onload = function()
 				<select class="select" id="group" style="width:300px;" onChange="addGroupRowDeny(this)">
 					<option id="0">(Remove this group)</option>
 					{% for group in groups %}<option id="{{ group.id }}" {% if permission.0 == group.id %}selected{% endif %}>{{ group.group.name }}</option>{% endfor %}
+				</select>
 			</th>
 			{% with single_perm=permission.1 %}
 			{% for type in permission_types %}
