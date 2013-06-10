@@ -1152,11 +1152,13 @@ def permission(request, species, model = None, item = None, edit = False):
         group_permissions_allow.append(group_perm_allow)
         group_permissions_deny.append(group_perm_deny)
 
-    queryset = objectToQuerySet(entry)
+    
+    queryset = objectToQuerySet(item) if item else None
 
     return render_queryset_to_response(
                 request,
                 species = species,
+                models = [model],
                 queryset = queryset,
                 template = "cyano/permission_edit.html" if edit else "cyano/permission.html",
                 data = {

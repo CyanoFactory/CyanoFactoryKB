@@ -9,7 +9,7 @@ Permission template
 {% load filters %}
 
 {% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.wid }}{% endwith %}{% endblock %}
-{% block page_title %}{% with object=queryset.0 %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}{% endblock %}
+{% block page_title %}Permissions of {% if queryset %}{% with object=queryset.0 %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}{% else %}{% with object=species %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}{% endif %}{% endblock %}
 
 {% block head %}
 {{ block.super }}
@@ -32,7 +32,11 @@ Permission template
 {% if request.user.is_anonymous %}
 <a href="mailto:wholecell[at]lists.stanford.edu?subject=WholeCellKB Object Species={{ species.wid }} WID={{ object.wid }}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Suggest an edit" alt="Suggest an edit" /></a>
 {% else %}
+{% if object %}
+<a href="{% url "cyano.views.permission_edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+{% else %}
 <a href="{% url "cyano.views.permission_edit" species_wid=species.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+{% endif %}
 {% endif %}
 <a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
 <a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
