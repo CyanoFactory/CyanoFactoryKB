@@ -596,6 +596,13 @@ class UserProfile(ProfileBase):
         
         return 0, 0
     
+    def is_admin(self):
+        """
+        Checks if the user is in the administrator group
+        """
+        admin = Group.objects.get(name = "Administrator")
+        return self.user.groups.filter(pk = admin.pk).exists()
+    
     def __unicode__(self):
         return self.user.username
 

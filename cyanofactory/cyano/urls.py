@@ -29,11 +29,7 @@ urlpatterns = patterns('cyano.views',
 	url(r'^search/?$', 'search'),
 	url(r'^' + _species_wid + '/search/?$', 'search'),	
 
-	url(r'^' + _species_wid + '/' + _wid + '/edit/?$', 'edit'),
-
 	url(r'^' + _species_wid + '/' + _wid + '/delete/?$', 'delete'),
-
-	url(r'^' + _species_wid + '/' + _wid + '/edit/?$', 'edit'),
 
 	url(r'^' + _species_wid_model_type + r'/add/?$', 'add'),
 	url(r'^(?P<model_type>\w+)/add/?$', 'add'),
@@ -67,11 +63,17 @@ urlpatterns = patterns('cyano.views',
     url(r'^' + _species_wid_model_type_wid + r'/history/(?P<detail_id>[0-9]+)/?$', 'history'),
 
     url(r'^' + _species_wid + r'/permission/?$', 'permission'),
-    url(r'^' + _species_wid_model_type + r'/permission/?$', 'permission'),
+    #url(r'^' + _species_wid_model_type + r'/permission/?$', 'permission'),
     url(r'^' + _species_wid_model_type_wid + r'/permission/?$', 'permission'),
+
+    url(r'^' + _species_wid + r'/permission/edit/?$', 'permission_edit'),
+    #url(r'^' + _species_wid_model_type + r'/permission/edit/?$', 'permission_edit'),
+    url(r'^' + _species_wid_model_type_wid + r'/permission/edit/?$', 'permission_edit'),
 
     url(r'^' + _species_wid_model_type + r'/?$', 'list'),
     url(r'^' + _species_wid_model_type_wid + r'/?$', 'detail'),
+    
+    url(r'^' + _species_wid + '/' + _wid + '/edit/?$', 'edit'),
 
 	url(r'^$', 'index'),
 )
