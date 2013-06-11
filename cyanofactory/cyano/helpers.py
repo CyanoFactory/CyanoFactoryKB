@@ -1264,7 +1264,7 @@ def remove_new_objects(newobjects, newsubobjects):
 def objectToQuerySet(obj, model = None):
     if model is None:
         model = obj.__class__
-    qs = model.objects.filter(wid = obj.wid)
+    qs = model.objects.filter(pk = obj.pk)
     #qs._result_cache.append(obj)
     return qs
 
