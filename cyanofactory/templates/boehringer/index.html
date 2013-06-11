@@ -70,7 +70,8 @@
 
 <!-- viewbox -->
 <div id="canvasWrapper" style="position:fixed; top:45px; left:430px;">
-<select id="selectionField" style="position:fixed"> 
+<select id="selectionField" style="position:fixed">
+  <option id="0">(Select an item)</option>
   <optgroup label="Enzymes">
   {% for enzyme in enzymes %}
   {% with object=enzyme.0 %}
@@ -117,10 +118,15 @@
 	$('svg').svgPan('viewport'); 
 $(document.body).delegate("select", "change", function(){
 	i = $('#selectionField option:selected').attr("id");
-
+	if (i == "0") {
+		// (Select item) element
+		return;
+	}
 	item = $("rect#" + i);
-	//alert("translate(" + $(item).attr("x") + "," + $(item).attr("y")+")");
-	$("svg").find("g").attr("transform",  "translate(" + -$(item).attr("x") + "," + -$(item).attr("y")+")");
+	new_x = ($("#mysvg").width() / 2) - $(item).attr("x");
+	new_y = ($("#mysvg").height() / 2) - $(item).attr("y");
+
+	$("svg").find("g").attr("transform", "translate(" + new_x + "," + new_y +")");
 });
 </script>
 </div>
