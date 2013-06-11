@@ -99,10 +99,15 @@ def permission_required(permission):
                     extra = "DEBUG: Permissions are (allow, deny, needed):<br>"
                     
                     allow_perms, deny_perms = profile.get_permissions(species)
+                    if not allow_perms or not deny_perms:
+                        allow_perms = []
+                        deny_perms = []
+                    
                     if item:
                         allow_perms_item, deny_perms_item = profile.get_permissions(item)
-                        allow_perms += allow_perms_item
-                        deny_perms += deny_perms_item
+                        if allow_perms_item and deny_perms_item:
+                            allow_perms += allow_perms_item
+                            deny_perms += deny_perms_item
 
                     perm_list = [0 for x in range(8)]
                     perm_allow = list(perm_list)
