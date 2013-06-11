@@ -171,11 +171,28 @@ window.onload = function()
 {% block content %}
 {% autoescape off %}
 {% with object=queryset.0 %}
-<noscript>Permission editing needs javascript to work correctly!</noscript>
-
-<form id="permission_form" method="post">
+<form id="form" method="post">
 {% csrf_token %}
 <table id="detail">
+{% if queryset %}
+	<tbody class="data">
+		<tr>
+			<th colspan="9">Information</th>
+		</tr>
+		<noscript>
+		<tr>
+			<th colspan="9">Permission editing needs javascript to work correctly!</th>
+		</tr>
+		</noscript>
+		<tr>
+			<th>Permissions</th>
+			<td colspan="8">These are the permissions for a specific component of a species. <a href="{% url "cyano.views.permission" species_wid=species.wid %}" title="Additional permissions">Additional permissions</a> are inherited from the species it belongs to.</td>
+		</tr>
+	</tbody>
+	<tbody class="spacing">
+		<tr><td colspan="9">&nbsp;</td></tr>
+	</tbody>
+{% endif %}
 	<tbody class="data" id="userperm_table_allow">
 		<tr>
 			<th colspan="9">User Permissions (Allow)</th>
@@ -378,6 +395,7 @@ window.onload = function()
 		</tr>
 	</tbody>
 </table>
+<br>
 <input class="button" type="submit" value="Submit" />
 </form>
 {% endwith %}
