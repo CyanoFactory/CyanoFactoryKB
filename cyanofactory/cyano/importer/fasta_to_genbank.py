@@ -9,7 +9,7 @@ from django.template.defaultfilters import capfirst
 import re
 import StringIO
 
-class Genbank(Importer):
+class FastaToGenbankImporter(Importer):
     def __init__(self):
         super(Importer, self).__init__()
         self.sequences = []

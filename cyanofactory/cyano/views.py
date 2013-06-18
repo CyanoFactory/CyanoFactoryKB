@@ -775,7 +775,6 @@ def exportData(request, species_wid=None):
 @resolve_to_objects
 def importData(request, species=None):
     import cyano.importer.fasta as FastaImporter
-    from cyano.importer.genbank import Genbank as GenbankImporter
     if request.method == 'POST':
         form = ImportDataForm(request.POST or None, request.FILES)
         
@@ -805,9 +804,15 @@ def importData(request, species=None):
                     f.load(filename)
                     return f.preview(request, selected_species_wid)
                 elif data_type == "fastagene":
-                    g = GenbankImporter()
+                    from cyano.importer.fasta_to_genbank import FastaToGenbankImporter
+                    g = FastaToGenbankImporter()
                     g.load(filename)
                     return g.preview(request, selected_species_wid)
+                elif data_type == "optgene":
+                    from cyano.importer.optgene import OptGeneImporter
+                    o = OptGeneImporter()
+                    o.load(filename)
+                    return o.preview(request, selected_species_wid)
                 
                 os.remove(filename)
                 raise Http404
