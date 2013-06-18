@@ -17,11 +17,11 @@ def index(request):
     
     return render_to_response("db_xref/index.html", data)
 
-def dbxref(request, database, organism):
+def dbxref(request, source, xid):
     """Converts the db_xref identifier to a database url.
 
     :URL:
-        ``(?P<database>[a-zA-Z0-9_-]+)\s*:\s*(?P<organism>[a-zA-Z0-9_-]+)``
+        ``(?P<source>[a-zA-Z0-9_-]+)\s*:\s*(?P<xid>[a-zA-Z0-9_-]+)``
 
     :Example:
         ``ECOCYC:G7954``
@@ -41,6 +41,9 @@ def dbxref(request, database, organism):
        Website -- ``db_xref/output.format``
     """
     _format = request.GET.get('format', 'redirect')
+    
+    database = source
+    organism = xid
     
     data = {
         "database" : database,

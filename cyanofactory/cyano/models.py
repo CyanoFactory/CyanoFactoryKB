@@ -972,7 +972,8 @@ class Entry(Model):
         * ``wid``: Warehouse Identifier. Unique identifier in the warehouse, used in the URLs e.g.
         * ``name``: Short, human readable name of that entry
         * ``synonyms``: Other names for that entry
-        * ``references``: Publications and Databases referencing that entry
+        * ``cross_references``: Databases referencing that entry
+        * ``publication_references``: Publications referencing that entry
         * ``comments``: Detailed notes about this entry
         * ``permissions``: Reference to the permissions for this entry
     """
@@ -1047,6 +1048,8 @@ class Entry(Model):
         #
         #Kompletter History-Eintrag msus erst bei Aenderung geschrieben werden
         
+        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
+
         if "no_revision" in kwargs:
             del kwargs["no_revision"]
             super(Entry, self).save(*args, **kwargs)
@@ -1063,8 +1066,7 @@ class Entry(Model):
         
         rev_detail = kwargs["revision_detail"]
         rev_detail.save()
-        
-        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
+
         self.detail = rev_detail
         
         # Prevent error on save later
@@ -1101,7 +1103,7 @@ class Entry(Model):
     def get_as_html_cross_references(self, species, is_user_anonymous):
         results = []
         for cr in self.cross_references.all():
-            results.append('%s: <a href="%s">%s</a>' % (cr.source, CROSS_REFERENCE_SOURCE_URLS[cr.source] % cr.xid, cr.xid))
+            results.append('%s: <a href="%s">%s</a>' % (cr.source, reverse("db_xref.views.dbxref", kwargs={"source" : cr.source, "xid" : cr.xid}), cr.xid ))
         return format_list_html(results, separator=', ')
     
     def get_as_html_created_user(self, species, is_user_anonymous):
