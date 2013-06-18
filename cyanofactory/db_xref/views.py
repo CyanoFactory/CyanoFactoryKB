@@ -21,7 +21,7 @@ def dbxref(request, source, xid):
     """Converts the db_xref identifier to a database url.
 
     :URL:
-        ``(?P<source>[a-zA-Z0-9_-]+)\s*:\s*(?P<xid>[a-zA-Z0-9_-]+)``
+        ``(?P<source>[a-zA-Z0-9_-]+)\s*:\s*(?P<xid>[a-zA-Z0-9_.-]+)``
 
     :Example:
         ``ECOCYC:G7954``
