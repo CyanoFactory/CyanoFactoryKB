@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from Bio import SeqIO
-from cyano.models import Entry, Species, RevisionDetail, UserProfile, Gene, Chromosome, Type
+import cyano.models as cmodels
 from django.core.exceptions import ObjectDoesNotExist
 from argparse import ArgumentError
 
@@ -11,25 +11,91 @@ class Command(BaseCommand):
             handle = open(arg, "r")
             f = SeqIO.parse(handle, "genbank")
             for record in f:
-                revdetail = RevisionDetail()
-                revdetail.user = UserProfile.objects.get(user__username__exact = "gabriel")
+                if not record.annotations:
+                    return # TODO: FAIL
+                
+                anno = record.annotations
+                
+                revdetail = cmodels.RevisionDetail()
+                revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "gabriel")
                 revdetail.reason = "Update"
 
                 try:
-                    species = Species.objects.get(wid = record.name)
+                    species = cmodels.Species.objects.get(wid = record.name)
                 except ObjectDoesNotExist:
-                    species = Species()
-                species.wid = record.name
-                species.name = record.annotations["organism"]
-                species.comments = record.description
+                    species = cmodels.Species(wid = record.name)
+
+                if "organism" in anno:
+                    species.name = anno["organism"]
+                
+                species.comments = ""
+                if record.description != None:
+                    species.comments = record.description
+                if "comment" in anno:
+                    species.comments += "\n" + anno["comment"]
+
                 species.genetic_code = '11'
                 species.save(revision_detail = revdetail)
                 
+                if record.dbxrefs:
+                    for xref in record.dbxrefs:
+                        # BioPython doesnt always properly split the db xrefs
+                        xref = xref.split(" ")
+                        for x in xref:
+                            if ":" in x:
+                                source, xid = x.split(":")
+                                x, _ = cmodels.CrossReference.objects.get_or_create(xid = xid, source = source)
+                                species.cross_references.add(x)
+                    
+                    species.save(revision_detail = revdetail)
+                
+                if "references" in anno:
+                    for ref in anno["references"]:
+                        # calculate the wid
+                        if ref.pubmed_id:
+                            wid = "PUB_" + ref.pubmed_id
+                        elif ref.medline_id:
+                            wid = "MED_" + ref.medline_id
+                        else:
+                            refs = cmodels.PublicationReference.objects.filter(wid__startswith = "REF_")
+                            if refs.exists():
+                                last = refs.reverse()[0]
+                                next_id = int(last.wid[4:], 10) + 1
+                                wid = "REF_" + "%04d" % (next_id)
+                            else:
+                                wid = "REF_0001"
+                        
+                        try:
+                            pubref = cmodels.PublicationReference.objects.get(wid = wid)
+                        except ObjectDoesNotExist:
+                            pubref = cmodels.PublicationReference(wid = wid)
+                        pubref.authors = ref.authors
+                        pubref.title = ref.title
+                        pubref.journal = ref.journal
+                        pubref.save(revision_detail = revdetail)
+
+                        if ref.pubmed_id:
+                            xref, _ = cmodels.CrossReference.objects.get_or_create(xid = ref.pubmed_id, source = "PUBMED")
+                            pubref.cross_references.add(xref)
+
+                        if ref.medline_id:
+                            xref, _ = cmodels.CrossReference.objects.get_or_create(xid = ref.medline_id, source = "MEDLINE")
+                            pubref.cross_references.add(xref)
+                            
+                        pubref.save(revision_detail = revdetail)
+                        species.publication_references.add(pubref)
+
+                    species.save(revision_detail = revdetail)
+
+                if "gi" in anno:
+                    xref, _ = cmodels.CrossReference.objects.get_or_create(xid = anno["gi"], source = "GI")
+                    species.cross_references.add(xref)
+                
                 try:
-                    chromosome = Chromosome.objects.get(wid = "CHR_1")
+                    chromosome = cmodels.Chromosome.objects.get(wid = "CHROMOSOME")
                 except ObjectDoesNotExist:
-                    chromosome = Chromosome(wid = "CHR_1")
-                chromosome.name = "CHR_1"
+                    chromosome = cmodels.Chromosome(wid = "CHROMOSOME")
+                chromosome.name = "Chromosome"
                 chromosome.sequence = record.seq
                 chromosome.length = len(record.seq)
                 chromosome.save(revision_detail = revdetail)
@@ -65,18 +131,42 @@ class Command(BaseCommand):
                 for v in cds_map.values():
                     qualifiers = v.qualifiers
                     try:
-                        g = Gene.objects.get(wid = qualifiers["locus_tag"][0])
+                        g = cmodels.Gene.objects.get(wid = qualifiers["locus_tag"][0])
                     except ObjectDoesNotExist:
-                        g = Gene()
-                        g.wid = qualifiers["locus_tag"][0]
+                        g = cmodels.Gene(wid = qualifiers["locus_tag"][0])
 
                     g.chromosome = chromosome
 
                     if "gene" in qualifiers:
+                        g.name = qualifiers["gene"][0]
                         g.symbol = qualifiers["gene"][0]
+
                     g.direction = 'f' if v.location.strand == 1 else 'r'
-                    g.coordinate = v.location.start if g.direction == 'f' else v.location.end # FIXME Not for joins
-                    g.length = abs(v.location.start - v.location.end) # FIXME Not for joins
+                    
+                    # __len__ because len() fails for numbers < 0
+                    # Joins output the wrong length
+                    if v.location.__len__() < 0:
+                        g.length = v.location.__len__() + len(record.seq)
+                    else:
+                        g.length = len(v.location)
+                    
+                    g.coordinate = v.location.start if g.direction == 'f' else v.location.end
+                    
+                    if "note" in qualifiers:
+                        g.comments = "\n".join(qualifiers["note"])
+                    
+                    if "db_xref" in qualifiers:
+                        for xref in qualifiers["db_xref"]:
+                            if ":" in xref:
+                                source, xid = xref.split(":")
+                                xref, _ = cmodels.CrossReference.objects.get_or_create(xid = xid, source = source)
+                                g.cross_references.add(xref)
+                    
+                    if "EC_number" in qualifiers:
+                        for ec in qualifiers["EC_number"]:
+                            xref, _ = cmodels.CrossReference.objects.get_or_create(xid = ec, source = "EC")
+                            g.cross_references.add(xref)
+                    
                     g.save(revision_detail = revdetail)
                     g.species.add(species)
                     
@@ -84,9 +174,9 @@ class Command(BaseCommand):
                         v.type = "mRNA"
                     
                     try:
-                        t = Type.objects.get(wid = v.type)
+                        t = cmodels.Type.objects.get(wid = v.type)
                     except ObjectDoesNotExist:
-                        t = Type(wid = v.type, name = v.type)
+                        t = cmodels.Type(wid = v.type, name = v.type)
 
                     t.save(revision_detail = revdetail)
                     t.species.add(species)
