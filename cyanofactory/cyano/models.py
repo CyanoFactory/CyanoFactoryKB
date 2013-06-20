@@ -4075,31 +4075,34 @@ class PublicationReference(SpeciesComponent):
     pages = CharField(max_length=255, blank=True, default='', verbose_name='Page(s)')
     
     #getters
-    def get_citation(self, cross_references = False):
-        if self.type.all()[0].wid == 'article':
-            txt = '%s. %s. <i>%s</i> <b>%s</b>, %s (%s).' % (self.authors, self.title, self.publication, self.volume, self.pages, self.year, )
-        elif self.type.all()[0].wid == 'book':
-            authors = ''
-            editors = ''
-            if self.authors != '':
-                authors = '%s.' % self.authors 
-            if self.editors != '':
-                editors = 'Eds %s.' % self.editors
-            txt = '%s %s <i>%s</i>. %s %s (%s).' % (authors, editors, self.title, self.publisher, self.pages, self.year)
-        elif self.type.all()[0].wid == 'thesis':
-            txt = '%s. <i>%s</i>. %s (%s).' % (self.authors, self.title, self.publisher, self.year)
+    def get_citation(self, species, cross_references = False):
+        if self.type.exists():
+            if self.type.all()[0].wid == 'article':
+                txt = '%s. %s. <i>%s</i> <b>%s</b>, %s (%s).' % (self.authors, self.title, self.publication, self.volume, self.pages, self.year, )
+            elif self.type.all()[0].wid == 'book':
+                authors = ''
+                editors = ''
+                if self.authors != '':
+                    authors = '%s.' % self.authors 
+                if self.editors != '':
+                    editors = 'Eds %s.' % self.editors
+                txt = '%s %s <i>%s</i>. %s %s (%s).' % (authors, editors, self.title, self.publisher, self.pages, self.year)
+            elif self.type.all()[0].wid == 'thesis':
+                txt = '%s. <i>%s</i>. %s (%s).' % (self.authors, self.title, self.publisher, self.year)
+            else:
+                txt = '%s. <i>%s</i>. (%s).' % (self.authors, self.title, self.year)
         else:
             txt = '%s. <i>%s</i>. (%s).' % (self.authors, self.title, self.year)
-            
-        cr = self.get_as_html_cross_references(True)
+
+        cr = self.get_as_html_cross_references(species, True)
         cr_spacer = ''
         if cr != '':
             cr_spacer = ', '        
-        return '%s WholeCell: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(species), self.wid, cr_spacer, cr, )
+        return '%s CyanoFactory: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(species), self.wid, cr_spacer, cr, )
             
     def get_all_referenced_entries(self):
         entries = []
-        for entry in self.referenced_entries.all():
+        for entry in self.publication_referenced_entries.all():
             entries.append(entry)
         for ev in Evidence.objects.filter(references__id=self.id):
             entries.append(ev.species_component)
@@ -4107,7 +4110,7 @@ class PublicationReference(SpeciesComponent):
     
     #html formatting    
     def get_as_html_citation(self, species, is_user_anonymous):
-        return self.get_citation()
+        return self.get_citation(species)
         
     def get_as_html_referenced_entries(self, species, is_user_anonymous):
         results = []
