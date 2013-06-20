@@ -1036,6 +1036,9 @@ class Entry(Model):
         #Kompletter History-Eintrag msus erst bei Aenderung geschrieben werden
         
         self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
+        # Slugify the WID
+        self.wid = re.sub(r"[^A-Za-z0-9_-]", "-", self.wid)
+        
         ##rev_detail = kwargs["revision_detail"]
         ##rev_detail.save()
         ##self.detail = rev_detail
@@ -4026,6 +4029,10 @@ class Type(SpeciesComponent):
         verbose_name_plural = 'Types'
             
 class CrossReference(SpeciesComponent):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_crossreference', parent_link=True, verbose_name='Species component')
+    
+    #additional fields
     xid = CharField(max_length=255, verbose_name='External ID')
     source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source')
 
@@ -4043,12 +4050,16 @@ class CrossReference(SpeciesComponent):
             'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
-        facet_fields = ['type', 'parent']
+        facet_fields = ['type']
         ordering = ['xid']
         verbose_name='Cross reference'
         verbose_name_plural = 'Cross references'
 
 class PublicationReference(SpeciesComponent):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_publicationreference', parent_link=True, verbose_name='Species component')
+    
+    #additional fields
     authors = TextField(blank=True, default='', verbose_name='Author(s)')
     editors = TextField(blank=True, default='', verbose_name='Editor(s)')
     year = PositiveIntegerField(blank=True, null=True, verbose_name='Year')

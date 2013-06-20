@@ -45,10 +45,13 @@ class Command(BaseCommand):
                         for x in xref:
                             if ":" in x:
                                 source, xid = x.split(":")
+                                wid = source + ":" + xid
                                 try:
-                                    x = cmodels.CrossReference.objects.get(wid = source + "-" + xid)
+                                    x = cmodels.CrossReference.objects.get(wid = wid)
                                 except ObjectDoesNotExist:
-                                    x = cmodels.CrossReference(wid = source + "-" + xid)
+                                    x = cmodels.CrossReference(wid = wid)
+
+                                x.name = wid
                                 x.xid = xid
                                 x.source = source
                                 x.save(revision_detail = revdetail)
@@ -63,31 +66,39 @@ class Command(BaseCommand):
                         # calculate the wid
                         if ref.pubmed_id:
                             wid = "PUB_" + ref.pubmed_id
+                            name = "Pubmed #" + ref.pubmed_id
                         elif ref.medline_id:
                             wid = "MED_" + ref.medline_id
+                            name = "Pubmed #" + ref.medline_id
                         else:
                             refs = cmodels.PublicationReference.objects.filter(wid__startswith = "REF_")
+                            next_id = 0
                             if refs.exists():
                                 last = refs.reverse()[0]
                                 next_id = int(last.wid[4:], 10) + 1
                                 wid = "REF_" + "%04d" % (next_id)
+                                name = "Reference #%04d" % (next_id)
                             else:
                                 wid = "REF_0001"
+                                name = "Reference #0001"
                         
                         try:
                             pubref = cmodels.PublicationReference.objects.get(wid = wid)
                         except ObjectDoesNotExist:
                             pubref = cmodels.PublicationReference(wid = wid)
+                        pubref.name = name
                         pubref.authors = ref.authors
                         pubref.title = ref.title
                         pubref.journal = ref.journal
                         pubref.save(revision_detail = revdetail)
 
                         if ref.pubmed_id:
+                            wid = "PUBMED" + ":" + ref.pubmed_id
                             try:
-                                xref = cmodels.CrossReference.objects.get(wid = "PUBMED" + "-" + ref.pubmed_id)
+                                xref = cmodels.CrossReference.objects.get(wid = wid)
                             except ObjectDoesNotExist:
-                                xref = cmodels.CrossReference(wid = "PUBMED" + "-" + ref.pubmed_id)
+                                xref = cmodels.CrossReference(wid = wid)
+                            xref.name = wid
                             xref.xid = ref.pubmed_id
                             xref.source = "PUBMED"
                             xref.save(revision_detail = revdetail)
@@ -96,10 +107,12 @@ class Command(BaseCommand):
                             pubref.cross_references.add(xref)
 
                         if ref.medline_id:
+                            wid = "MEDLINE" + ":" + ref.medline_id
                             try:
-                                xref = cmodels.CrossReference.objects.get(wid = "MEDLINE" + "-" + ref.medline_id)
+                                xref = cmodels.CrossReference.objects.get(wid = wid)
                             except ObjectDoesNotExist:
-                                xref = cmodels.CrossReference(wid = "MEDLINE" + "-" + ref.medline_id)
+                                xref = cmodels.CrossReference(wid = wid)
+                            xref.name = wid
                             xref.xid = ref.medline_id
                             xref.source = "MEDLINE"
                             xref.save(revision_detail = revdetail)
@@ -114,10 +127,12 @@ class Command(BaseCommand):
                     species.save(revision_detail = revdetail)
 
                 if "gi" in anno:
+                    wid = "GI" + ":" + anno["gi"]
                     try:
-                        xref = cmodels.CrossReference.objects.get(wid = "GI" + "-" + anno["gi"])
+                        xref = cmodels.CrossReference.objects.get(wid = wid)
                     except ObjectDoesNotExist:
-                        xref = cmodels.CrossReference(wid = "GI" + "-" + anno["gi"])
+                        xref = cmodels.CrossReference(wid = wid)
+                    xref.name = wid
                     xref.xid = anno["gi"]
                     xref.source = "GI"
                     xref.save(revision_detail = revdetail)
@@ -196,11 +211,12 @@ class Command(BaseCommand):
                         for xref in qualifiers["db_xref"]:
                             if ":" in xref:
                                 source, xid = xref.split(":")
-                                wid = source + "-" + xid
+                                wid = source + ":" + xid
                                 try:
                                     xref = cmodels.CrossReference.objects.get(wid = wid)
                                 except ObjectDoesNotExist:
                                     xref = cmodels.CrossReference(wid = wid)
+                                xref.name = wid
                                 xref.xid = xid
                                 xref.source = source
                                                                 
@@ -211,11 +227,12 @@ class Command(BaseCommand):
                     
                     if "EC_number" in qualifiers:
                         for ec in qualifiers["EC_number"]:
-                            wid = "EC" + "-" + ec
+                            wid = "EC" + ":" + ec
                             try:
                                 xref = cmodels.CrossReference.objects.get(wid = wid)
                             except ObjectDoesNotExist:
                                 xref = cmodels.CrossReference(wid = wid)
+                            xref.name = wid
                             xref.source = "EC"
                             xref.xid = ec
                             xref.save(revision_detail = revdetail)
