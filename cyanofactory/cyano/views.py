@@ -50,7 +50,7 @@ def index(request):
         )
 
 @resolve_to_objects
-#@permission_required(perm.READ_NORMAL)
+@permission_required(perm.READ_NORMAL)
 def species(request, species):
     content = []
     if species is not None:        

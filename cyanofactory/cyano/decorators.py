@@ -77,8 +77,8 @@ def permission_required(permission):
             if profile.is_admin():
                 return function(request, *args, **kw)
 
-            allow_item = True
-            deny_item = False
+            allow_item = None
+            deny_item = None
 
             if item:
                 allow_item, deny_item = profile.has_permission(item, perm)
