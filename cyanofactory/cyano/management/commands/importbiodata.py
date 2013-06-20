@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from Bio import SeqIO
 import cyano.models as cmodels
+from cyano.helpers import slugify
 from django.core.exceptions import ObjectDoesNotExist
 from argparse import ArgumentError
 import sys
@@ -22,9 +23,9 @@ class Command(BaseCommand):
                 revdetail.reason = "Update"
 
                 try:
-                    species = cmodels.Species.objects.get(wid = record.name)
+                    species = cmodels.Species.objects.get(wid = slugify(record.name))
                 except ObjectDoesNotExist:
-                    species = cmodels.Species(wid = record.name)
+                    species = cmodels.Species(wid = slugifyrecord.name)
 
                 if "organism" in anno:
                     species.name = anno["organism"]
@@ -47,9 +48,9 @@ class Command(BaseCommand):
                                 source, xid = x.split(":")
                                 wid = source + ":" + xid
                                 try:
-                                    x = cmodels.CrossReference.objects.get(wid = wid)
+                                    x = cmodels.CrossReference.objects.get(wid = slugify(wid))
                                 except ObjectDoesNotExist:
-                                    x = cmodels.CrossReference(wid = wid)
+                                    x = cmodels.CrossReference(wid = slugify(wid))
 
                                 x.name = wid
                                 x.xid = xid
@@ -83,9 +84,9 @@ class Command(BaseCommand):
                                 name = "Reference #0001"
                         
                         try:
-                            pubref = cmodels.PublicationReference.objects.get(wid = wid)
+                            pubref = cmodels.PublicationReference.objects.get(wid = slugify(wid))
                         except ObjectDoesNotExist:
-                            pubref = cmodels.PublicationReference(wid = wid)
+                            pubref = cmodels.PublicationReference(wid = slugify(wid))
                         pubref.name = name
                         pubref.authors = ref.authors
                         pubref.title = ref.title
@@ -95,9 +96,9 @@ class Command(BaseCommand):
                         if ref.pubmed_id:
                             wid = "PUBMED" + ":" + ref.pubmed_id
                             try:
-                                xref = cmodels.CrossReference.objects.get(wid = wid)
+                                xref = cmodels.CrossReference.objects.get(wid = slugify(wid))
                             except ObjectDoesNotExist:
-                                xref = cmodels.CrossReference(wid = wid)
+                                xref = cmodels.CrossReference(wid = slugify(wid))
                             xref.name = wid
                             xref.xid = ref.pubmed_id
                             xref.source = "PUBMED"
@@ -109,9 +110,9 @@ class Command(BaseCommand):
                         if ref.medline_id:
                             wid = "MEDLINE" + ":" + ref.medline_id
                             try:
-                                xref = cmodels.CrossReference.objects.get(wid = wid)
+                                xref = cmodels.CrossReference.objects.get(wid = slugify(wid))
                             except ObjectDoesNotExist:
-                                xref = cmodels.CrossReference(wid = wid)
+                                xref = cmodels.CrossReference(wid = slugify(wid))
                             xref.name = wid
                             xref.xid = ref.medline_id
                             xref.source = "MEDLINE"
@@ -129,9 +130,9 @@ class Command(BaseCommand):
                 if "gi" in anno:
                     wid = "GI" + ":" + anno["gi"]
                     try:
-                        xref = cmodels.CrossReference.objects.get(wid = wid)
+                        xref = cmodels.CrossReference.objects.get(wid = slugify(wid))
                     except ObjectDoesNotExist:
-                        xref = cmodels.CrossReference(wid = wid)
+                        xref = cmodels.CrossReference(wid = slugify(wid))
                     xref.name = wid
                     xref.xid = anno["gi"]
                     xref.source = "GI"
@@ -181,9 +182,9 @@ class Command(BaseCommand):
                 for i, v in enumerate(cds_map.values()):
                     qualifiers = v.qualifiers
                     try:
-                        g = cmodels.Gene.objects.get(wid = qualifiers["locus_tag"][0])
+                        g = cmodels.Gene.objects.get(wid = slugify(qualifiers["locus_tag"][0]))
                     except ObjectDoesNotExist:
-                        g = cmodels.Gene(wid = qualifiers["locus_tag"][0])
+                        g = cmodels.Gene(wid = slugify(qualifiers["locus_tag"][0]))
 
                     g.chromosome = chromosome
 
@@ -213,9 +214,9 @@ class Command(BaseCommand):
                                 source, xid = xref.split(":")
                                 wid = source + ":" + xid
                                 try:
-                                    xref = cmodels.CrossReference.objects.get(wid = wid)
+                                    xref = cmodels.CrossReference.objects.get(wid = slugify(wid))
                                 except ObjectDoesNotExist:
-                                    xref = cmodels.CrossReference(wid = wid)
+                                    xref = cmodels.CrossReference(wid = slugify(wid))
                                 xref.name = wid
                                 xref.xid = xid
                                 xref.source = source
@@ -229,9 +230,9 @@ class Command(BaseCommand):
                         for ec in qualifiers["EC_number"]:
                             wid = "EC" + ":" + ec
                             try:
-                                xref = cmodels.CrossReference.objects.get(wid = wid)
+                                xref = cmodels.CrossReference.objects.get(wid = slugify(wid))
                             except ObjectDoesNotExist:
-                                xref = cmodels.CrossReference(wid = wid)
+                                xref = cmodels.CrossReference(wid = slugify(wid))
                             xref.name = wid
                             xref.source = "EC"
                             xref.xid = ec
@@ -247,9 +248,9 @@ class Command(BaseCommand):
                         v.type = "mRNA"
                     
                     try:
-                        t = cmodels.Type.objects.get(wid = v.type)
+                        t = cmodels.Type.objects.get(wid = slugify(v.type))
                     except ObjectDoesNotExist:
-                        t = cmodels.Type(wid = v.type, name = v.type)
+                        t = cmodels.Type(wid = slugify(v.type), name = v.type)
 
                     t.save(revision_detail = revdetail)
                     t.species.add(species)

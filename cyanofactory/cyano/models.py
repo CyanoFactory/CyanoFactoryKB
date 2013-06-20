@@ -1029,6 +1029,8 @@ class Entry(Model):
     
     def save(self, *args, **kwargs):
         from itertools import ifilter
+        from cyano.helpers import slugify
+
         #TODO:
         #Der erste Load ohne Edit braucht eigentlich keinen kompletten Revision History Eintrag.
         ##Einer muss aber dennoch erstellt werden, damit man den Editgrund und Zeit speichern kann...
@@ -1037,14 +1039,16 @@ class Entry(Model):
         
         self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
         # Slugify the WID
-        self.wid = re.sub(r"[^A-Za-z0-9_-]", "-", self.wid)
+        self.wid = slugify(self.wid)
         
+        # Debug code to remove rev control (speedup)
         ##rev_detail = kwargs["revision_detail"]
         ##rev_detail.save()
         ##self.detail = rev_detail
         ##del kwargs["revision_detail"]
         ##super(Entry, self).save(*args, **kwargs)
         ##return
+        # end of debug code
         if "no_revision" in kwargs:
             del kwargs["no_revision"]
             super(Entry, self).save(*args, **kwargs)
