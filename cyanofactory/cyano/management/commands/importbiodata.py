@@ -25,7 +25,7 @@ class Command(BaseCommand):
                 try:
                     species = cmodels.Species.objects.get(wid = slugify(record.name))
                 except ObjectDoesNotExist:
-                    species = cmodels.Species(wid = slugifyrecord.name)
+                    species = cmodels.Species(wid = slugify(record.name))
 
                 if "organism" in anno:
                     species.name = anno["organism"]
@@ -72,16 +72,23 @@ class Command(BaseCommand):
                             wid = "MED_" + ref.medline_id
                             name = "Pubmed #" + ref.medline_id
                         else:
-                            refs = cmodels.PublicationReference.objects.filter(wid__startswith = "REF_")
+                            publication = cmodels.PublicationReference.objects.filter(
+                                authors__exact = ref.authors, title__exact = ref.title, publication__exact = ref.journal)
                             next_id = 0
-                            if refs.exists():
-                                last = refs.reverse()[0]
-                                next_id = int(last.wid[4:], 10) + 1
-                                wid = "REF_" + "%04d" % (next_id)
-                                name = "Reference #%04d" % (next_id)
+                            if publication.exists():
+                                wid = publication.wid
+                                name = publication.name
                             else:
-                                wid = "REF_0001"
-                                name = "Reference #0001"
+                                refs = cmodels.PublicationReference.objects.filter(wid__startswith = "REF_")
+                                if refs.exists():
+                                    last = refs.reverse()[0]
+                                    next_id = int(last.wid[4:], 10) + 1
+                                    
+                                    wid = "REF_" + "%04d" % (next_id)
+                                    name = "Reference #%04d" % (next_id)
+                                else:
+                                    wid = "REF_0001"
+                                    name = "Reference #0001"
                         
                         try:
                             pubref = cmodels.PublicationReference.objects.get(wid = slugify(wid))
@@ -90,7 +97,7 @@ class Command(BaseCommand):
                         pubref.name = name
                         pubref.authors = ref.authors
                         pubref.title = ref.title
-                        pubref.journal = ref.journal
+                        pubref.publication = ref.journal
                         pubref.save(revision_detail = revdetail)
 
                         if ref.pubmed_id:

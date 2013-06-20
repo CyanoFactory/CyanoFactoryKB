@@ -4092,7 +4092,7 @@ class PublicationReference(SpeciesComponent):
             else:
                 txt = '%s. <i>%s</i>. (%s).' % (self.authors, self.title, self.year)
         else:
-            txt = '%s. <i>%s</i>. (%s).' % (self.authors, self.title, self.year)
+            txt = '%s. <i>%s</i>. (%s) %s.' % (self.authors, self.title, self.publication, self.year)
 
         cr = self.get_as_html_cross_references(species, True)
         cr_spacer = ''
