@@ -3,6 +3,7 @@ from Bio import SeqIO
 import cyano.models as cmodels
 from django.core.exceptions import ObjectDoesNotExist
 from argparse import ArgumentError
+import sys
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
@@ -44,11 +45,19 @@ class Command(BaseCommand):
                         for x in xref:
                             if ":" in x:
                                 source, xid = x.split(":")
-                                x, _ = cmodels.CrossReference.objects.get_or_create(xid = xid, source = source)
+                                try:
+                                    x = cmodels.CrossReference.objects.get(wid = source + "-" + xid)
+                                except ObjectDoesNotExist:
+                                    x = cmodels.CrossReference(wid = source + "-" + xid)
+                                x.xid = xid
+                                x.source = source
+                                x.save(revision_detail = revdetail)
+                                x.species.add(species)
+                                x.save(revision_detail = revdetail)
                                 species.cross_references.add(x)
                     
                     species.save(revision_detail = revdetail)
-                
+
                 if "references" in anno:
                     for ref in anno["references"]:
                         # calculate the wid
@@ -75,21 +84,47 @@ class Command(BaseCommand):
                         pubref.save(revision_detail = revdetail)
 
                         if ref.pubmed_id:
-                            xref, _ = cmodels.CrossReference.objects.get_or_create(xid = ref.pubmed_id, source = "PUBMED")
+                            try:
+                                xref = cmodels.CrossReference.objects.get(wid = "PUBMED" + "-" + ref.pubmed_id)
+                            except ObjectDoesNotExist:
+                                xref = cmodels.CrossReference(wid = "PUBMED" + "-" + ref.pubmed_id)
+                            xref.xid = ref.pubmed_id
+                            xref.source = "PUBMED"
+                            xref.save(revision_detail = revdetail)
+                            xref.species.add(species)
+                            xref.save(revision_detail = revdetail)
                             pubref.cross_references.add(xref)
 
                         if ref.medline_id:
-                            xref, _ = cmodels.CrossReference.objects.get_or_create(xid = ref.medline_id, source = "MEDLINE")
+                            try:
+                                xref = cmodels.CrossReference.objects.get(wid = "MEDLINE" + "-" + ref.medline_id)
+                            except ObjectDoesNotExist:
+                                xref = cmodels.CrossReference(wid = "MEDLINE" + "-" + ref.medline_id)
+                            xref.xid = ref.medline_id
+                            xref.source = "MEDLINE"
+                            xref.save(revision_detail = revdetail)
+                            xref.species.add(species)
+                            xref.save(revision_detail = revdetail)
                             pubref.cross_references.add(xref)
                             
+                        pubref.species.add(species)
                         pubref.save(revision_detail = revdetail)
                         species.publication_references.add(pubref)
 
                     species.save(revision_detail = revdetail)
 
                 if "gi" in anno:
-                    xref, _ = cmodels.CrossReference.objects.get_or_create(xid = anno["gi"], source = "GI")
+                    try:
+                        xref = cmodels.CrossReference.objects.get(wid = "GI" + "-" + anno["gi"])
+                    except ObjectDoesNotExist:
+                        xref = cmodels.CrossReference(wid = "GI" + "-" + anno["gi"])
+                    xref.xid = anno["gi"]
+                    xref.source = "GI"
+                    xref.save(revision_detail = revdetail)
+                    xref.species.add(species)
+                    xref.save(revision_detail = revdetail)
                     species.cross_references.add(xref)
+                    species.save(revision_detail = revdetail)
                 
                 try:
                     chromosome = cmodels.Chromosome.objects.get(wid = "CHROMOSOME")
@@ -128,7 +163,7 @@ class Command(BaseCommand):
                     if loci in gene_map:
                         cds_map[loci] = c
                 
-                for v in cds_map.values():
+                for i, v in enumerate(cds_map.values()):
                     qualifiers = v.qualifiers
                     try:
                         g = cmodels.Gene.objects.get(wid = qualifiers["locus_tag"][0])
@@ -151,21 +186,42 @@ class Command(BaseCommand):
                         g.length = len(v.location)
                     
                     g.coordinate = v.location.start if g.direction == 'f' else v.location.end
-                    
+
                     if "note" in qualifiers:
                         g.comments = "\n".join(qualifiers["note"])
+                    
+                    g.save(revision_detail = revdetail)
                     
                     if "db_xref" in qualifiers:
                         for xref in qualifiers["db_xref"]:
                             if ":" in xref:
                                 source, xid = xref.split(":")
-                                xref, _ = cmodels.CrossReference.objects.get_or_create(xid = xid, source = source)
+                                wid = source + "-" + xid
+                                try:
+                                    xref = cmodels.CrossReference.objects.get(wid = wid)
+                                except ObjectDoesNotExist:
+                                    xref = cmodels.CrossReference(wid = wid)
+                                xref.xid = xid
+                                xref.source = source
+                                                                
+                                xref.save(revision_detail = revdetail)
+                                xref.species.add(species)
                                 g.cross_references.add(xref)
+                                xref.save(revision_detail = revdetail)
                     
                     if "EC_number" in qualifiers:
                         for ec in qualifiers["EC_number"]:
-                            xref, _ = cmodels.CrossReference.objects.get_or_create(xid = ec, source = "EC")
+                            wid = "EC" + "-" + ec
+                            try:
+                                xref = cmodels.CrossReference.objects.get(wid = wid)
+                            except ObjectDoesNotExist:
+                                xref = cmodels.CrossReference(wid = wid)
+                            xref.source = "EC"
+                            xref.xid = ec
+                            xref.save(revision_detail = revdetail)
+                            xref.species.add(species)
                             g.cross_references.add(xref)
+                            xref.save(revision_detail = revdetail)
                     
                     g.save(revision_detail = revdetail)
                     g.species.add(species)
@@ -185,25 +241,5 @@ class Command(BaseCommand):
                     g.type.add(t)
                     
                     g.save(revision_detail = revdetail)
-                    
-                # r.annotations
-                # r.id = NC_000911.1
-                # r.name = NC_000911
-                # r.features
-                
-                # >>> a["comment"]
-#'PROVISIONAL REFSEQ: This record has not yet been subject to final\nNCBI review. The reference sequence was derived from
-# BA000022.\nCOMPLETENESS: full length.'
-                # a["sequence_version"] = 1
-                # a["source"] = 'Synechocystis sp. PCC 6803'
-                # >>> a["taxonomy"] = ['Bacteria', 'Cyanobacteria', 'Chroococcales', 'Synechocystis']
-                # a["references"] -> Liste -> authors, comment, title, journal
-                # >>> a["accessions"] = ['NC_000911']
-                # >>> a["date"] = '21-DEC-2012'
-                # a["gi"] = 16329170
-                
-                #
-                
-                
-
+                    sys.stdout.write("Importing Gene %s (%d/%d)%10s\r" % (g.wid, i + 1, len(cds_map.values()), " "))
 
