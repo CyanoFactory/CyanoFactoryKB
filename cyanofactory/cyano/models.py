@@ -3989,8 +3989,8 @@ class Type(SpeciesComponent):
             members.append(m)
         for c in self.children.all():
             members += c.get_all_members()
-        return members        
-    
+        return members      
+
     #html formatting    
     def get_as_html_parent(self, species, is_user_anonymous):
         if self.parent is not None:
@@ -4040,11 +4040,22 @@ class CrossReference(SpeciesComponent):
     xid = CharField(max_length=255, verbose_name='External ID')
     source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source')
 
+    #getters
+    def get_all_members(self, species):
+        return self.cross_referenced_entries.all()
+    
+    def get_as_html_members(self, species, is_user_anonymous):
+        results = []
+        for m in self.get_all_members(species):
+            results.append('<a href="%s">%s</a>' % (m.get_absolute_url(species), m.wid))        
+        return format_list_html(results, comma_separated=True)
+
     class Meta:
         concrete_entry_model = True
         fieldsets = [
             ('Type', {'fields': ['model_type']}),
-            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': [{'verbose_name': "Referenced by", 'name': 'members'}]}),
             ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
