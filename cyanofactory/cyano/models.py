@@ -3983,13 +3983,13 @@ class Type(SpeciesComponent):
     parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
 
     #getters
-    def get_all_members(self):
+    def get_all_members(self, species):
         members = []
-        for m in self.members.all():
+        for m in self.members.filter(species = species):
             members.append(m)
-        for c in self.children.all():
+        for c in self.children.filter(species = species):
             members += c.get_all_members()
-        return members      
+        return members
 
     #html formatting    
     def get_as_html_parent(self, species, is_user_anonymous):
@@ -4001,13 +4001,13 @@ class Type(SpeciesComponent):
         
     def get_as_html_children(self, species, is_user_anonymous):
         results = []
-        for c in self.children.all():
+        for c in self.children.filter(species = species):
             results.append('<a href="%s">%s</a>' % (c.get_absolute_url(species), c.wid))        
         return format_list_html(results, comma_separated=True)
         
     def get_as_html_members(self, species, is_user_anonymous):
         results = []
-        for m in self.get_all_members():
+        for m in self.get_all_members(species):
             results.append('<a href="%s">%s</a>' % (m.get_absolute_url(species), m.wid))        
         return format_list_html(results, comma_separated=True)
     
@@ -4042,7 +4042,7 @@ class CrossReference(SpeciesComponent):
 
     #getters
     def get_all_members(self, species):
-        return self.cross_referenced_entries.all()
+        return self.cross_referenced_entries.filter(species = species)
     
     def get_as_html_members(self, species, is_user_anonymous):
         results = []
@@ -4065,7 +4065,7 @@ class CrossReference(SpeciesComponent):
             'publication_references', 
             'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
             ]
-        facet_fields = ['type']
+        facet_fields = ['type', 'source']
         ordering = ['xid']
         verbose_name='Cross reference'
         verbose_name_plural = 'Cross references'
@@ -4111,9 +4111,9 @@ class PublicationReference(SpeciesComponent):
             cr_spacer = ', '        
         return '%s CyanoFactory: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(species), self.wid, cr_spacer, cr, )
             
-    def get_all_referenced_entries(self):
+    def get_all_referenced_entries(self, species):
         entries = []
-        for entry in self.publication_referenced_entries.all():
+        for entry in self.publication_referenced_entries.filter(species = species):
             entries.append(entry)
         for ev in Evidence.objects.filter(references__id=self.id):
             entries.append(ev.species_component)
@@ -4125,7 +4125,7 @@ class PublicationReference(SpeciesComponent):
         
     def get_as_html_referenced_entries(self, species, is_user_anonymous):
         results = []
-        for o in self.get_all_referenced_entries():
+        for o in self.get_all_referenced_entries(species):
             results.append('<a href="%s">%s</a>' % (o.get_absolute_url(species), o.wid))
         return format_list_html(results)
         
@@ -4321,7 +4321,7 @@ def calculate_nucleic_acid_pi(seq):
 
     return pH
 
-def format_list_html(val, comma_separated=False, numbered=False, separator=None, force_list=False, vertical_spacing=False, default_items=5):
+def format_list_html(val, comma_separated=False, numbered=False, separator=None, force_list=False, vertical_spacing=False, default_items=50):
     if val is None or len(val) == 0:
         return
     if len(val) == 1 and not force_list:
