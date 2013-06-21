@@ -1042,12 +1042,12 @@ class Entry(Model):
         self.wid = slugify(self.wid)
         
         # Debug code to remove rev control (speedup)
-        ##rev_detail = kwargs["revision_detail"]
-        ##rev_detail.save()
-        ##self.detail = rev_detail
-        ##del kwargs["revision_detail"]
-        ##super(Entry, self).save(*args, **kwargs)
-        ##return
+        rev_detail = kwargs["revision_detail"]
+        rev_detail.save()
+        self.detail = rev_detail
+        del kwargs["revision_detail"]
+        super(Entry, self).save(*args, **kwargs)
+        return
         # end of debug code
         if "no_revision" in kwargs:
             del kwargs["no_revision"]
