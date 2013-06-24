@@ -4108,7 +4108,7 @@ class PublicationReference(SpeciesComponent):
         cr = self.get_as_html_cross_references(species, True)
         cr_spacer = ''
         if cr != '':
-            cr_spacer = ', '        
+            cr_spacer = ', '
         return '%s CyanoFactory: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(species), self.wid, cr_spacer, cr, )
             
     def get_all_referenced_entries(self, species):
