@@ -119,7 +119,7 @@ INSTALLED_APPS = (
 	
 	#apps
 	'public',
-    'biosql',
+    #'biosql',
     'cyano',
     'db_xref',
     'django_dumpdb',
