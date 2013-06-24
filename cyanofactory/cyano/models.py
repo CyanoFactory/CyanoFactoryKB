@@ -3391,7 +3391,7 @@ class Reaction(SpeciesComponent):
                 tmp = ''
                 if s.coefficient != -1:
                     tmp += '(%d) ' % -s.coefficient
-                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.wid)
+                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.name)
                 if len(compartments) > 1:
                     tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(species), s.compartment.wid)
                 pos.append(tmp)
@@ -3399,7 +3399,7 @@ class Reaction(SpeciesComponent):
                 tmp = ''
                 if s.coefficient != 1:
                     tmp += '(%d) ' % s.coefficient
-                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.wid)
+                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.name)
                 if len(compartments) > 1:
                     tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(species), s.compartment.wid)
                 neg.append(tmp)
