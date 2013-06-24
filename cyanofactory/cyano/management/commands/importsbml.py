@@ -118,7 +118,7 @@ class Command(BaseCommand):
                     
                         participant_obj = cmodels.ReactionStoichiometryParticipant()
                         participant_obj.molecule = cmodels.Metabolite.objects.get(wid = slugify(reactant.species))
-                        participant_obj.coefficient = reactant.stoichiometry
+                        participant_obj.coefficient = -reactant.stoichiometry
                         participant_obj.compartment = cmodels.Compartment.objects.get(wid = slugify(model.getSpecies(reactant.species).compartment))
                         # TODO: EvidencedData needs Revisioning
                         participant_obj.detail = revdetail
@@ -134,7 +134,7 @@ class Command(BaseCommand):
                     
                         participant_obj = cmodels.ReactionStoichiometryParticipant()
                         participant_obj.molecule = cmodels.Metabolite.objects.get(wid = slugify(product.species))
-                        participant_obj.coefficient = -product.stoichiometry
+                        participant_obj.coefficient = product.stoichiometry
                         participant_obj.compartment = cmodels.Compartment.objects.get(wid = slugify(model.getSpecies(product.species).compartment))
                         # TODO: EvidencedData needs Revisioning
                         participant_obj.detail = revdetail
