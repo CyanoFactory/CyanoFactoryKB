@@ -19,7 +19,7 @@ class Command(BaseCommand):
                     
                     revdetail = cmodels.RevisionDetail()
                     revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "gabriel")
-                    revdetail.reason = "Update"
+                    revdetail.reason = "Import GenBank File " + arg
     
                     try:
                         species = cmodels.Species.objects.get(wid = slugify(record.name))
@@ -208,7 +208,7 @@ class Command(BaseCommand):
                         else:
                             g.length = len(v.location)
                         
-                        g.coordinate = v.location.start if g.direction == 'f' else v.location.end
+                        g.coordinate = v.location.start + 1 if 'f' else v.location.start
     
                         if "note" in qualifiers:
                             g.comments = "\n".join(qualifiers["note"])
@@ -259,7 +259,37 @@ class Command(BaseCommand):
                                         obj = cmodels.Synonym(name = syn.strip())
                                     obj.save()
                                     g.synonyms.add(obj)
-    
+                        
+                        if "protein_id" in qualifiers:
+                            protxref = qualifiers["protein_id"][0]
+                            protxref_wid = "Refseq" + ":" + protxref
+                            wid = slugify(g.wid + "_Monomer")
+                            try:
+                                protein = cmodels.ProteinMonomer.objects.get(wid = wid)
+                            except ObjectDoesNotExist:
+                                protein = cmodels.ProteinMonomer(wid = wid)
+                     
+                            if "product" in qualifiers:
+                                protein.name = qualifiers["product"][0]
+                                
+                            try:
+                                xref = cmodels.CrossReference.objects.get(wid = slugify(protxref_wid))
+                            except ObjectDoesNotExist:
+                                xref = cmodels.CrossReference(wid = slugify(protxref_wid))
+                            
+                            protein.gene = g
+                            protein.save(revision_detail = revdetail)
+
+                            protein.species.add(species)
+                        
+                            xref.xid = protxref
+                            xref.source = "RefSeq"
+                            xref.save(revision_detail = revdetail)
+                            xref.species.add(species)
+                            xref.save(revision_detail = revdetail)
+                            protein.cross_references.add(xref)
+                            protein.save(revision_detail = revdetail)
+
                         g.save(revision_detail = revdetail)
                         g.species.add(species)
                         

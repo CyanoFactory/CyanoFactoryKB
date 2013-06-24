@@ -3090,13 +3090,13 @@ class ProteinMonomer(Protein):
     
     #additional fields
     gene = ForeignKey(Gene, related_name='protein_monomers', verbose_name='Gene')    
-    is_n_terminal_methionine_cleaved = ForeignKey(EntryBooleanData, verbose_name='Is N-terminal methionine cleaved', related_name='+')
-    localization = ForeignKey(Compartment, related_name='protein_monomers', verbose_name='Localization')
+    is_n_terminal_methionine_cleaved = ForeignKey(EntryBooleanData, null = True, verbose_name='Is N-terminal methionine cleaved', related_name='+')
+    localization = ForeignKey(Compartment, null = True, related_name='protein_monomers', verbose_name='Localization')
     signal_sequence = ForeignKey(SignalSequence, blank=True, null=True, related_name='protein_monomers', on_delete=SET_NULL, verbose_name='Sequence sequence')
 
     #getters
-    def get_sequence(self):
-        return unicode(Seq(self.gene.get_sequence(), IUPAC.unambiguous_dna).translate(table=self.species.genetic_code))
+    def get_sequence(self, species):
+        return unicode(Seq(self.gene.get_sequence(), IUPAC.unambiguous_dna).translate(table=species.genetic_code))
         
     def get_length(self):
         return len(self.get_sequence())
@@ -3198,10 +3198,10 @@ class ProteinMonomer(Protein):
         return 20 * 60
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_instability(self):
+    def get_instability(self, species):
         from cyano.helpers import DipeptideInstabilityWeight
         
-        seq = self.get_sequence()
+        seq = self.get_sequence(species)
         value = 0.;
         for i in range(len(seq)-1):
             if seq[i] != '*' and seq[i+1] != '*':
@@ -3209,12 +3209,12 @@ class ProteinMonomer(Protein):
         return 10. / float(len(seq)) * value;
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_is_stable(self):
-        return self.get_instability() < 40.
+    def get_is_stable(self, species):
+        return self.get_instability(species) < 40.
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_aliphatic(self):
-        seq = self.get_sequence()
+    def get_aliphatic(self, species):
+        seq = self.get_sequence(species)
         return 100. * ( \
             + 1.0 * float(seq.count('A')) \
             + 2.9 * float(seq.count('V')) \
@@ -3223,8 +3223,8 @@ class ProteinMonomer(Protein):
             ) / float(len(seq))
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_gravy(self):        
-        seq = self.get_sequence()
+    def get_gravy(self, species):        
+        seq = self.get_sequence(species)
         return \
             ( \
             + 1.8 * float(seq.count('A')) \
@@ -3260,7 +3260,7 @@ class ProteinMonomer(Protein):
     #html formatting
     def get_as_html_sequence(self, species, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
-        return format_sequence_as_html(self.get_sequence())
+        return format_sequence_as_html(self.get_sequence(species))
         
     def get_as_html_signal_sequence(self, species, is_user_anonymous):
         ss = self.signal_sequence
@@ -3275,16 +3275,16 @@ class ProteinMonomer(Protein):
         return format_list_html(results)
         
     def get_as_html_instability(self, species, is_user_anonymous):
-        return self.get_instability()
+        return self.get_instability(species)
         
     def get_as_html_is_stable(self, species, is_user_anonymous):
-        return self.get_is_stable()
+        return self.get_is_stable(species)
     
     def get_as_html_aliphatic(self, species, is_user_anonymous):    
-        return self.get_aliphatic()
+        return self.get_aliphatic(species)
     
     def get_as_html_gravy(self, species, is_user_anonymous):
-        return self.get_gravy()        
+        return self.get_gravy(species)        
 
     #meta information
     class Meta:    

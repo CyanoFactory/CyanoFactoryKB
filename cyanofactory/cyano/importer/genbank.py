@@ -146,7 +146,7 @@ class GenbankImporter(Importer):
             
             gene.name = name
             gene.direction = 'f' if feature.location.start < feature.location.end else 'r'
-            gene.coordinate = feature.location.start if gene.direction == 'f' else feature.location.end
+            gene.coordinate = feature.location.start + 1 if gene.direction == 'f' else feature.location.start
             gene.length = abs(feature.location.start - feature.location.end)
             gene.comments = comments
             gene.wid = wid
