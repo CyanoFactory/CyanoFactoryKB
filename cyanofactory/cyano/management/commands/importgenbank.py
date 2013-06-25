@@ -1,30 +1,47 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from Bio import SeqIO
 import cyano.models as cmodels
 from cyano.helpers import slugify
 from django.core.exceptions import ObjectDoesNotExist
 import sys
+from optparse import make_option
 
 class Command(BaseCommand):
+    args = '<file file ...>'
+    help = 'Imports NCBI GenBank Files'
+    
+    option_list = BaseCommand.option_list + (
+        make_option('--wid', '-w',
+            action='store',
+            dest='wid',
+            default=False,
+            help='WID of the target species, uses record name of GenBank File if missing'),
+        )
+    
     def handle(self, *args, **options):
         for arg in args:
-            print "Parsing %s" % (arg)
+            self.stdout.write("Parsing %s" % (arg))
             with open(arg, "r") as handle:
                 f = SeqIO.parse(handle, "genbank")
                 for record in f:
                     if not record.annotations:
-                        raise ValueError("File lacks annotation block")
+                        raise CommandError("File lacks annotation block")
                     
                     anno = record.annotations
                     
                     revdetail = cmodels.RevisionDetail()
                     revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "management")
                     revdetail.reason = "Import GenBank File " + arg
-    
+
+                    if options["wid"]:
+                        wid = slugify(options["wid"])
+                    else:
+                        wid = slugify(record.name)
+
                     try:
-                        species = cmodels.Species.objects.get(wid = slugify(record.name))
+                        species = cmodels.Species.objects.get(wid = wid)
                     except ObjectDoesNotExist:
-                        species = cmodels.Species(wid = slugify(record.name))
+                        species = cmodels.Species(wid = wid)
     
                     if "organism" in anno:
                         species.name = anno["organism"]
@@ -168,21 +185,21 @@ class Command(BaseCommand):
                     gene_map = {}
                     for g in gene_features:
                         if not "locus_tag" in g.qualifiers:
-                            print "WARN: " + str(g) + " without locus"
+                            self.stderr.write("WARN: " + str(g) + " without locus")
                             continue
                         loci = g.qualifiers["locus_tag"][0]
                         if loci in gene_map:
-                            raise ValueError("locus_tag " + loci + " appeared twice")
+                            raise CommandError("locus_tag " + loci + " appeared twice")
                         gene_map[loci] = g
                     
                     cds_map = {}
                     for c in cds_features:
                         if not "locus_tag" in c.qualifiers:
-                            print "WARN: " + str(c) + " without locus"
+                            self.stderr.write("WARN: " + str(c) + " without locus")
                             continue
                         loci = c.qualifiers["locus_tag"][0]
                         if loci in cds_map:
-                            raise ValueError("locus_tag " + loci + " appeared twice")
+                            raise CommandError("locus_tag " + loci + " appeared twice")
                         if loci in gene_map:
                             cds_map[loci] = c
                     

@@ -1,14 +1,29 @@
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 import cyano.models as cmodels
 from cyano.helpers import slugify
 from django.core.exceptions import ObjectDoesNotExist
 from libsbml import SBMLReader
 import sys
+from optparse import make_option
 #from itertools import imap
 
-class Command(BaseCommand):    
+class Command(BaseCommand):  
+    args = '<file file ...>'
+    help = 'Imports SBML Files'
+    
+    option_list = BaseCommand.option_list + (
+        make_option('--wid', '-w',
+            action='store',
+            dest='Species',
+            default=False,
+            help='WID of the target species'),
+        )
+      
     def handle(self, *args, **options):
-        for arg in args:
+        if not options["wid"]:
+            raise CommandError("wid argument is mandatory")
+        
+        for arg in args:            
             reader= SBMLReader()
             document = reader.readSBMLFromFile(arg)
             model = document.getModel()
@@ -16,7 +31,7 @@ class Command(BaseCommand):
             species = map(lambda i: model.getSpecies(i), range(len(model.getListOfSpecies())))
             reactions = map(lambda i: model.getReaction(i), range(len(model.getListOfReactions())))
             
-            species_obj = cmodels.Species.objects.get(wid = "NC_000911")
+            species_obj = cmodels.Species.objects.get(wid = slugify(options["wid"]))
             
             revdetail = cmodels.RevisionDetail()
             revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "management")
@@ -31,7 +46,7 @@ class Command(BaseCommand):
                 else:
                     name = wid
                 
-                print("Importing Compartment %s (%d/%d)%10s" % (wid, i + 1, len(compartments), " "))
+                self.stdout.write("Importing Compartment %s (%d/%d)%10s" % (wid, i + 1, len(compartments), " "))
                 
                 # TODO: compartment.getOutside() not implemented
                 try:
@@ -47,7 +62,7 @@ class Command(BaseCommand):
             # Species (= Metabolites) importer
             for i, specie in enumerate(species):
                 if not model.getCompartment(specie.getCompartment()):
-                    sys.stderr.write("WARN: Species {} has invalid compartment {}".format(specie.id, specie.getCompartment()))
+                    self.stderr.write("WARN: Species {} has invalid compartment {}".format(specie.id, specie.getCompartment()))
                     continue
                     
                 wid = slugify(specie.id)
@@ -56,7 +71,7 @@ class Command(BaseCommand):
                 else:
                     name = wid
                 
-                print("Importing Metabolite %s (%d/%d)%10s" % (wid, i + 1, len(species), " "))
+                self.stdout.write("Importing Metabolite %s (%d/%d)%10s" % (wid, i + 1, len(species), " "))
                 
                 # TODO: specie.getBoundaryCondition() not implemented
                 try:
@@ -80,7 +95,7 @@ class Command(BaseCommand):
                     
                 valid = False
                 
-                print("Importing Reaction %s (%d/%d)%10s" % (wid, i + 1, len(reactions), " "))
+                self.stdout.write("Importing Reaction %s (%d/%d)%10s" % (wid, i + 1, len(reactions), " "))
                 
                 # Validation of reactants
                 reactants = map(lambda i: reaction.getReactant(i), range(len(reaction.getListOfReactants())))
@@ -88,13 +103,13 @@ class Command(BaseCommand):
                 
                 for reactant in reactants:
                     if not model.getSpecies(reactant.species):
-                        sys.stderr.write("WARN: Reactant {} has invalid species {}".format(reactant.id, reactant.species))
+                        self.stderr.write("WARN: Reactant {} has invalid species {}".format(reactant.id, reactant.species))
                         break
                 else:
                     # Validation of products
                     for product in products:
                         if not model.getSpecies(product.species):
-                            sys.stderr.write("WARN: Product {} has invalid species {}".format(product.id, product.species))
+                            self.stderr.write("WARN: Product {} has invalid species {}".format(product.id, product.species))
                             break
                     else:
                         # Validation passed
