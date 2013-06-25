@@ -25,7 +25,7 @@ class Command(BaseCommand):
                 else list()[1] # raise IndexError
         
         revdetail = cmodels.RevisionDetail()
-        revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "gabriel")
+        revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "management")
         revdetail.reason = "Biocyc Pathways"
         
         try:

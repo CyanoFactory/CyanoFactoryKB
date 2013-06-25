@@ -11,6 +11,7 @@ class Command(BaseCommand):
         create_user().handle("gabriel")
         create_user().handle("admin")
         create_user().handle("guest")
+        create_user().handle("management")
         
         create_groups().handle()
         
@@ -30,9 +31,20 @@ class Command(BaseCommand):
         gabriel.save()
         
         admin_user = User.objects.get(username="admin")
+        admin_user.profile.affiliation = "Administrator account"
         admin_user.groups = [admin]
+        admin_user.profile.save()
         admin_user.save()
         
         guest_user = User.objects.get(username="guest")
+        guest_user.profile.affiliation = "Pseudo account for guest visitors"
+        guest_user.is_active = False
         guest_user.groups = [guest]
+        guest_user.profile.save()
         guest_user.save()
+
+        importer_user = User.objects.get(username="management")
+        importer_user.profile.affiliation = "Used for operations via django management commands"
+        importer_user.is_active = False
+        importer_user.profile.save()
+        importer_user.save()

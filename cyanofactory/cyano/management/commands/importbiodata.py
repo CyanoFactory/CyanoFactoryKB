@@ -18,7 +18,7 @@ class Command(BaseCommand):
                     anno = record.annotations
                     
                     revdetail = cmodels.RevisionDetail()
-                    revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "gabriel")
+                    revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "management")
                     revdetail.reason = "Import GenBank File " + arg
     
                     try:

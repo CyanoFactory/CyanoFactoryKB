@@ -19,7 +19,7 @@ class Command(BaseCommand):
             species_obj = cmodels.Species.objects.get(wid = "NC_000911")
             
             revdetail = cmodels.RevisionDetail()
-            revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "gabriel")
+            revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "management")
             revdetail.reason = "Import SBML {}".format(arg)
             
             # Compartment importer
