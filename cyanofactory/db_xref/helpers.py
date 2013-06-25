@@ -34,5 +34,6 @@ def get_database_url(database, organism):
         "project": lambda: "http://www.ncbi.nlm.nih.gov/bioproject/" + organism,
         "bioproject": lambda: "http://www.ncbi.nlm.nih.gov/bioproject?term=" + organism,
         "pubmed": lambda: "http://www.ncbi.nlm.nih.gov/pubmed/" + organism,
+        "refseq": lambda: "http://www.ncbi.nlm.nih.gov/nuccore/" + organism,
         "uniprotkb/swiss-prot" : lambda : "http://www.uniprot.org/uniprot/" + organism,        
             }.get(database, lambda : "")
