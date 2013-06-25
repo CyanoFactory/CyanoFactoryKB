@@ -14,7 +14,7 @@ class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
         make_option('--wid', '-w',
             action='store',
-            dest='Species',
+            dest='wid',
             default=False,
             help='WID of the target species'),
         )
@@ -46,7 +46,7 @@ class Command(BaseCommand):
                 else:
                     name = wid
                 
-                self.stdout.write("Importing Compartment %s (%d/%d)%10s" % (wid, i + 1, len(compartments), " "))
+                self.stdout.write("Importing Compartment %s (%d/%d)" % (wid, i + 1, len(compartments)))
                 
                 # TODO: compartment.getOutside() not implemented
                 try:
@@ -71,7 +71,7 @@ class Command(BaseCommand):
                 else:
                     name = wid
                 
-                self.stdout.write("Importing Metabolite %s (%d/%d)%10s" % (wid, i + 1, len(species), " "))
+                self.stdout.write("Importing Metabolite %s (%d/%d)" % (wid, i + 1, len(species)))
                 
                 # TODO: specie.getBoundaryCondition() not implemented
                 try:
@@ -95,7 +95,7 @@ class Command(BaseCommand):
                     
                 valid = False
                 
-                self.stdout.write("Importing Reaction %s (%d/%d)%10s" % (wid, i + 1, len(reactions), " "))
+                self.stdout.write("Importing Reaction %s (%d/%d)" % (wid, i + 1, len(reactions)))
                 
                 # Validation of reactants
                 reactants = map(lambda i: reaction.getReactant(i), range(len(reaction.getListOfReactants())))

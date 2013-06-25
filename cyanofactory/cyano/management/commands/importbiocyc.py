@@ -14,7 +14,7 @@ class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
         make_option('--wid', '-w',
             action='store',
-            dest='Species',
+            dest='wid',
             default=False,
             help='WID of the target species'),
         )
@@ -51,7 +51,7 @@ class Command(BaseCommand):
             species = cmodels.Species.objects.get(wid = wid)
         except ObjectDoesNotExist:
             species = cmodels.Species(wid = wid)
-        species.name = "Synechosystis PPC6803 BioCyc"
+        species.name = "Synechocystis PCC6803 BioCyc"
         species.comments = ""
         species.genetic_code = '11'
         species.save(revision_detail = revdetail)

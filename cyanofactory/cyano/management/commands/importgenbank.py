@@ -325,5 +325,5 @@ class Command(BaseCommand):
                         g.type.add(t)
                         
                         g.save(revision_detail = revdetail)
-                        sys.stdout.write("Importing Gene %s (%d/%d)%10s\r" % (g.wid, i + 1, len(cds_map.values()), " "))
+                        self.stdout.write("Importing Gene %s (%d/%d)%10s\r" % (g.wid, i + 1, len(cds_map.values()), " "))
     
