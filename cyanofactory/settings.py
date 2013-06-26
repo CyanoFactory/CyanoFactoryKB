@@ -10,14 +10,10 @@ import os
 
 from settings_private import *
 
-ROOT_URL = 'http://localhost:8000'
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-DEBUG = True
-TEMPLATE_DEBUG = DEBUG
-
 ADMINS = (
-    #('Jonathan Karr', 'jkarr@stanford.edu'),
+    #('Max Mustermann', 'doe@example.com'),
 )
 
 MANAGERS = ADMINS
@@ -183,7 +179,7 @@ INTERNAL_IPS = ('127.0.0.1',)
 
 DATABASE_ROUTERS = ['public.router.WarehouseRouter']
 
-AUTH_PROFILE_MODULE = 'public.UserProfile'
+AUTH_PROFILE_MODULE = 'cyano.UserProfile'
 LOGIN_URL = ROOT_URL + '/login/'
 LOGIN_REDIRECT_URL = ROOT_URL + '/'
 
