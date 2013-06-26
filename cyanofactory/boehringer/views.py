@@ -1,18 +1,18 @@
-from django.http import HttpResponseBadRequest
 from django.shortcuts import render_to_response
-from django.shortcuts import redirect
-from django.template import Context, loader
-from db_xref.helpers import get_database_url
 import boehringer.models as models
 from django.template.context import RequestContext
-from django.core.exceptions import ObjectDoesNotExist
 import re
+from cyano.helpers import render_queryset_to_response
+from django.contrib.auth.decorators import login_required
 
-def index(request):
+def legacy(request):
+    return index(request, True)
+
+@login_required
+def index(request, legacy = None):
     """
     """
-    #models.BioMolecule
-    if not "items" in request.GET:
+    if not "items" in request.POST:
         items = [["1.1.1.1", None],
                  ["2.2.2.2", None],
                  ["4.1.2.20", "green"],
@@ -21,7 +21,7 @@ def index(request):
                  ["ascorbate", "red"]]
     else:
         items = []
-        for item in re.split("\s+", request.GET["items"]):
+        for item in re.split("\s+", request.POST["items"]):
             if len(item) == 0:
                 continue
 
@@ -45,7 +45,7 @@ def index(request):
                 # not a valid EC number, maybe a metabolite
                 pass
 
-        metabolite_items.append(item)    
+        metabolite_items.append(item)
     
     metabolites = []
     enzymes = []
@@ -82,7 +82,14 @@ def index(request):
     data['metabolites_no_hits'] = len(metabolite_items) - metabolites_hits
     data['enzymes_no_hits'] = len(enzyme_items) - enzymes_hits
 
-    return render_to_response(
-        "boehringer/index.html",
-        data,
-        context_instance = RequestContext(request))
+    if legacy:
+        return render_to_response(
+            "boehringer/legacy.html",
+            data,
+            context_instance = RequestContext(request))
+    else:
+        return render_queryset_to_response(
+            request,
+            data = data,
+            template = "boehringer/index.html"
+        )
