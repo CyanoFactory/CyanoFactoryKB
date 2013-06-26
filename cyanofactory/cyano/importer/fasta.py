@@ -64,7 +64,7 @@ def seqdiffgen(old_seq, new_seq):
     
     return output.getvalue()
 
-class Fasta(Importer):
+class FastaImporter(Importer):
     def __init__(self):
         super(Importer, self).__init__()
         self.sequences = []

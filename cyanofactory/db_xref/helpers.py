@@ -27,6 +27,7 @@ def get_database_url(database, organism):
     
     return {
         "asap": lambda : "https://asap.ahabs.wisc.edu/annotation/php/feature_info.php?FeatureID=" + organism,
+        "ec": lambda : "http://enzyme.expasy.org/EC/" + organism,
         "ecocyc": lambda : "http://biocyc.org/ECOLI/new-image?type=GENE&object=" + organism,
         "ecogene": lambda : "http://ecogene.org/geneInfo.php?eg_id=" + organism,
         "geneid": lambda : "http://www.ncbi.nlm.nih.gov/sites/entrez?db=gene&cmd=Retrieve&dopt=full_report&list_uids=" + organism,

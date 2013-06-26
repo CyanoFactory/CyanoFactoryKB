@@ -14,7 +14,7 @@ Last updated: 2012-07-17
 {% block action_icons %}
 {% if request.user.is_anonymous %}
 	{% if species %}
-<a href="mailto:wholecell[at]lists.stanford.edu?subject=WholeCellKB Species={{ species.wid }}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Suggest an edit" alt="Suggest an edit" /></a>
+<a href="mailto:{{ email }}?subject=WholeCellKB Species={{ species.wid }}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Suggest an edit" alt="Suggest an edit" /></a>
 	{% endif %}
 {% else %}
 	{% if species %}
@@ -89,7 +89,7 @@ Last updated: 2012-07-17
 
 {% if species.cross_references.all|length > 0 %}
 <h2>Cross references</h2>
-<p>{% for cr in species.cross_references.all %}{{ cr.source }}: <a href="{{ cr.source|get_cross_reference:cr.xid }}">{{ cr.xid }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+<p>{% for cr in species.cross_references.all %}{{ cr.source }}: <a href="{% url "db_xref.views.dbxref" source=cr.source xid=cr.xid %}">{{ cr.xid }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
 {% endif %}
 
 <h2>Genetic code</h2>

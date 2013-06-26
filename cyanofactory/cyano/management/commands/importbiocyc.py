@@ -1,11 +1,28 @@
-from django.core.management.base import BaseCommand
+# BioCyc importer, not intended for general use
+
+from django.core.management.base import BaseCommand, CommandError
 import cyano.models as cmodels
 import biowarehouse.models as bmodels
 from django.core.exceptions import ObjectDoesNotExist
-from argparse import ArgumentError
+from optparse import make_option
 
 class Command(BaseCommand):
+    args = '<file file ...>'
+    help = 'Imports BioCyc Data, needs database structure created by BioWarehouse.' +\
+            '\nNot intended for general use.'
+    
+    option_list = BaseCommand.option_list + (
+        make_option('--wid', '-w',
+            action='store',
+            dest='wid',
+            default=False,
+            help='WID of the target species'),
+        )
+    
     def handle(self, *args, **options):
+        if not options["wid"]:
+            raise CommandError("wid argument is mandatory")
+        
         files = ["NC_000911.1_Chromosome.fasta", "NC_005229.1_Plasmid-1.fasta",
                  "NC_005232.1_Plasmid-2.fasta", "NC_005230.1_Plasmid-3.fasta",
                  "NC_005231.1_Plasmid-4.fasta"]
@@ -25,14 +42,16 @@ class Command(BaseCommand):
                 else list()[1] # raise IndexError
         
         revdetail = cmodels.RevisionDetail()
-        revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "gabriel")
+        revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "management")
         revdetail.reason = "Biocyc Pathways"
         
+        wid = options["wid"]
+        
         try:
-            species = cmodels.Species.objects.get(wid = "BioCyc_PPC6803")
+            species = cmodels.Species.objects.get(wid = wid)
         except ObjectDoesNotExist:
-            species = cmodels.Species(wid = "BioCyc_PPC6803")
-        species.name = "Synechosystis PPC6803 BioCyc"
+            species = cmodels.Species(wid = wid)
+        species.name = "Synechocystis PCC6803 BioCyc"
         species.comments = ""
         species.genetic_code = '11'
         species.save(revision_detail = revdetail)

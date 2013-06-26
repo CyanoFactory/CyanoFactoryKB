@@ -9,15 +9,43 @@ from django.template.defaultfilters import capfirst
 import re
 import StringIO
 
-class GenbankImporter(Importer):
+class FastaToGenbankImporter(Importer):
     def __init__(self):
         super(Importer, self).__init__()
         self.sequences = []
-
+    
+    def __parse_header(self, lno, header):
+        """Parses a fasta header and returns name and wid based on the | char.
+        Detects with and without gi.
+        """
+        if len(header) == 0 or header[0] != ">":
+            raise ParserError(header, lno, "Invalid FASTA Header")
+        
+        header = header[1:].split("|")
+        if len(header) >= 5:
+            if header[0] == "gi":
+                wid = header[3].strip()
+                name = header[4].strip()
+            elif header[0] == "ref":
+                wid = header[1].strip()
+                
+            else:
+                raise ParserError(header, lno, "Expected gi| in header")
+        elif len(header) >= 2:
+            wid = header[0].strip()
+            name = header[1].strip()
+        else:
+            raise ParserError(header, lno, "Header needs wid and name delimited by |")
+        
+        if re.search(r"\s+", wid):
+            raise ParserError(header, lno, "wid must not contain whitespace characters")
+        
+        return wid, name
+    
     def load(self, filename):
+        from bioparser.fasta_to_genbank import FastaToGenbank
         self.filename = filename
-        with open(filename) as f:
-            self.data = list(for record in SeqIO.parse(f, "genbank"))
+        self.data = FastaToGenbank(filename).parse()
 
     def preview(self, request, species_wid):
         #super(Importer, self).preview(request, species_wid)
@@ -146,7 +174,7 @@ class GenbankImporter(Importer):
             
             gene.name = name
             gene.direction = 'f' if feature.location.start < feature.location.end else 'r'
-            gene.coordinate = feature.location.start + 1 if gene.direction == 'f' else feature.location.start
+            gene.coordinate = feature.location.start if gene.direction == 'f' else feature.location.end
             gene.length = abs(feature.location.start - feature.location.end)
             gene.comments = comments
             gene.wid = wid

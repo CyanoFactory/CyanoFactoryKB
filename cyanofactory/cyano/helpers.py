@@ -2232,3 +2232,6 @@ def get_column_index(column):
 
 def get_verbose_name_for_field_by_name(model, field_name):
     return model._meta.get_field_by_name(field_name)[0].verbose_name
+
+def slugify(string):
+    return re.sub(r"[^A-Za-z0-9_-]", "-", string)

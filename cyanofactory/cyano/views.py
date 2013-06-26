@@ -50,7 +50,7 @@ def index(request):
         )
 
 @resolve_to_objects
-#@permission_required(perm.READ_NORMAL)
+@permission_required(perm.READ_NORMAL)
 def species(request, species):
     content = []
     if species is not None:        
@@ -774,8 +774,6 @@ def exportData(request, species_wid=None):
 @login_required
 @resolve_to_objects
 def importData(request, species=None):
-    import cyano.importer.fasta as FastaImporter
-    from cyano.importer.genbank import Genbank as GenbankImporter
     if request.method == 'POST':
         form = ImportDataForm(request.POST or None, request.FILES)
         
@@ -801,13 +799,21 @@ def importData(request, species=None):
                 request.POST["reason"] = form.cleaned_data["reason"]
                 
                 if data_type == "fasta":
-                    f = FastaImporter.Fasta()
-                    f.load(filename)
-                    return f.preview(request, selected_species_wid)
+                    from cyano.importer.fasta import FastaImporter
+                    importer = FastaImporter()
                 elif data_type == "fastagene":
-                    g = GenbankImporter()
-                    g.load(filename)
-                    return g.preview(request, selected_species_wid)
+                    from cyano.importer.fasta_to_genbank import FastaToGenbankImporter
+                    importer = FastaToGenbankImporter()
+                elif data_type == "genbank":
+                    from cyano.importer.genbank import GenbankImporter
+                    importer = GenbankImporter()
+                elif data_type == "optgene":
+                    from cyano.importer.optgene import OptGeneImporter
+                    importer = OptGeneImporter()
+                
+                if importer:
+                    importer.load(filename)
+                    return importer.preview(request, selected_species_wid)
                 
                 os.remove(filename)
                 raise Http404

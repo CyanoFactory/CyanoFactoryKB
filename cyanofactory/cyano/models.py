@@ -802,16 +802,7 @@ class CoenzymeParticipant(EvidencedEntryData):
         ordering = []
         verbose_name='Coenzyme participant'
         verbose_name_plural = 'Coenzyme participants'
-            
-class CrossReference(EntryData):
-    xid = CharField(max_length=255, verbose_name='External ID')
-    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source')
-    
-    class Meta:
-        ordering = ['xid']
-        verbose_name='Cross reference'
-        verbose_name_plural = 'Cross references'
-            
+
 class DisulfideBond(EvidencedEntryData):
     protein_monomer = ForeignKey('ProteinMonomer', related_name = 'disulfide_bonds', verbose_name='Protein monomer')
     residue_1 = PositiveIntegerField(verbose_name='Residue-1')
@@ -972,7 +963,6 @@ class Entry(Model):
         * ``wid``: Warehouse Identifier. Unique identifier in the warehouse, used in the URLs e.g.
         * ``name``: Short, human readable name of that entry
         * ``synonyms``: Other names for that entry
-        * ``references``: Publications and Databases referencing that entry
         * ``comments``: Detailed notes about this entry
         * ``permissions``: Reference to the permissions for this entry
     """
@@ -980,8 +970,6 @@ class Entry(Model):
     wid = SlugField(max_length=150, unique = True, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
-    cross_references = ManyToManyField(CrossReference, blank=True, null=True, related_name='cross_referenced_entries', verbose_name='Cross references')
-    publication_references = ManyToManyField('PublicationReference', blank=True, null=True, related_name='publication_referenced_entries', verbose_name='Publication references')
     comments = TextField(blank=True, default='', verbose_name='Comments')
     detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry')
     
@@ -1041,12 +1029,26 @@ class Entry(Model):
     
     def save(self, *args, **kwargs):
         from itertools import ifilter
+        from cyano.helpers import slugify
+
         #TODO:
         #Der erste Load ohne Edit braucht eigentlich keinen kompletten Revision History Eintrag.
         ##Einer muss aber dennoch erstellt werden, damit man den Editgrund und Zeit speichern kann...
         #
         #Kompletter History-Eintrag msus erst bei Aenderung geschrieben werden
         
+        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
+        # Slugify the WID
+        self.wid = slugify(self.wid)
+        
+        # Debug code to remove rev control (speedup)
+        rev_detail = kwargs["revision_detail"]
+        rev_detail.save()
+        self.detail = rev_detail
+        del kwargs["revision_detail"]
+        super(Entry, self).save(*args, **kwargs)
+        return
+        # end of debug code
         if "no_revision" in kwargs:
             del kwargs["no_revision"]
             super(Entry, self).save(*args, **kwargs)
@@ -1063,8 +1065,7 @@ class Entry(Model):
         
         rev_detail = kwargs["revision_detail"]
         rev_detail.save()
-        
-        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
+
         self.detail = rev_detail
         
         # Prevent error on save later
@@ -1101,7 +1102,7 @@ class Entry(Model):
     def get_as_html_cross_references(self, species, is_user_anonymous):
         results = []
         for cr in self.cross_references.all():
-            results.append('%s: <a href="%s">%s</a>' % (cr.source, CROSS_REFERENCE_SOURCE_URLS[cr.source] % cr.xid, cr.xid))
+            results.append('%s: <a href="%s">%s</a>' % (cr.source, reverse("db_xref.views.dbxref", kwargs={"source" : cr.source, "xid" : cr.xid}), cr.xid ))
         return format_list_html(results, separator=', ')
     
     def get_as_html_created_user(self, species, is_user_anonymous):
@@ -1137,198 +1138,6 @@ class Entry(Model):
         verbose_name = 'Entry'
         verbose_name_plural = 'Entries'
 
-class PublicationReference(Entry):
-    authors = TextField(blank=True, default='', verbose_name='Author(s)')
-    editors = TextField(blank=True, default='', verbose_name='Editor(s)')
-    year = PositiveIntegerField(blank=True, null=True, verbose_name='Year')
-    title = TextField(blank=True, default='', verbose_name='Title')
-    publication = CharField(max_length=255, blank=True, default='', verbose_name='Publication')
-    publisher = CharField(max_length=255, blank=True, default='', verbose_name='Publisher')
-    volume = CharField(max_length=255, blank=True, default='', verbose_name='Volume')
-    issue = CharField(max_length=255, blank=True, default='', verbose_name='Issue')
-    pages = CharField(max_length=255, blank=True, default='', verbose_name='Page(s)')
-    
-    #getters
-    def get_citation(self, cross_references = False):
-        if self.type.all()[0].wid == 'article':
-            txt = '%s. %s. <i>%s</i> <b>%s</b>, %s (%s).' % (self.authors, self.title, self.publication, self.volume, self.pages, self.year, )
-        elif self.type.all()[0].wid == 'book':
-            authors = ''
-            editors = ''
-            if self.authors != '':
-                authors = '%s.' % self.authors 
-            if self.editors != '':
-                editors = 'Eds %s.' % self.editors
-            txt = '%s %s <i>%s</i>. %s %s (%s).' % (authors, editors, self.title, self.publisher, self.pages, self.year)
-        elif self.type.all()[0].wid == 'thesis':
-            txt = '%s. <i>%s</i>. %s (%s).' % (self.authors, self.title, self.publisher, self.year)
-        else:
-            txt = '%s. <i>%s</i>. (%s).' % (self.authors, self.title, self.year)
-            
-        cr = self.get_as_html_cross_references(True)
-        cr_spacer = ''
-        if cr != '':
-            cr_spacer = ', '        
-        return '%s WholeCell: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(species), self.wid, cr_spacer, cr, )
-            
-    def get_all_referenced_entries(self):
-        entries = []
-        for entry in self.referenced_entries.all():
-            entries.append(entry)
-        for ev in Evidence.objects.filter(references__id=self.id):
-            entries.append(ev.species_component)
-        return entries
-    
-    #html formatting    
-    def get_as_html_citation(self, species, is_user_anonymous):
-        return self.get_citation()
-        
-    def get_as_html_referenced_entries(self, species, is_user_anonymous):
-        results = []
-        for o in self.get_all_referenced_entries():
-            results.append('<a href="%s">%s</a>' % (o.get_absolute_url(species), o.wid))
-        return format_list_html(results)
-        
-    def get_as_bibtex(self):
-        type = None
-        props = []        
-        if self.type.all()[0].wid == 'article':
-            type = 'ARTICLE'            
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            if self.title != '':
-                props.append(('TITLE', self.title))
-            if self.publication != '':
-                props.append(('JOURNAL', self.publication))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            if self.volume != '':
-                props.append(('VOLUME', self.volume))
-            if self.issue != '':
-                props.append(('NUMBER', self.issue))
-            if self.pages != '':
-                props.append(('PAGES', self.pages))
-            for cr in self.cross_references.all():
-                if cr.source == 'PubMed':
-                    props.append(('eprint', cr.xid))
-                    props.append(('eprinttype', 'pubmed'))
-                    break
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-        elif self.type.all()[0].wid == 'book':
-            type = 'BOOK'
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            elif self.editors != '':
-                props.append(('EDITOR', self.format_authors_bibtex(self.editors)))
-            if self.title != '':
-                props.append(('TITLE', self.title))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            if self.volume != '':
-                props.append(('VOLUME', self.volume))
-            if self.publisher != '':
-                props.append(('PUBLISHER', self.publisher))
-            for cr in self.cross_references.all():
-                if cr.source == 'ISBN':
-                    props.append(('ISBN', cr.xid))
-                    break
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-        elif self.type.all()[0].wid == 'thesis':
-            type = 'THESIS'
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            if self.editors != '':
-                props.append(('TITLE', self.editors))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            if self.publisher is not None:
-                props.append(('SCHOOL', self.publisher))
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-        else:
-            type = 'MISC'
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            if self.editors != '':
-                props.append(('TITLE', self.editors))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-            
-        props.append(('created', set_time_zone(self.created_date).isoformat()))
-        props.append(('lastUpdated', set_time_zone(self.last_updated_date).isoformat()))
-        
-        tmp = []
-        for prop in props:
-            if prop[0] == 'TITLE':
-                tmp.append('\n\t%s = "{%s}",' % prop)
-            else:
-                tmp.append('\n\t%s = {%s},' % prop)
-        return '@%s{%s%s\n}' % (type, self.wid, ''.join(tmp))
-        
-    def format_authors_bibtex(self, authors):
-        authors = authors.split(", ")
-        for idx in range(len(authors)):
-            author = authors[idx]
-            
-            names = author.split(" ")
-            for fNameIdx in range(len(names)):
-                if names[fNameIdx].upper() == names[fNameIdx]:
-                    break    
-            
-            tmpFirstName = names[fNameIdx]
-            firstName = ""
-            for i in range(len(tmpFirstName)):
-                firstName += tmpFirstName[i] + ". "        
-            firstName = firstName.strip()
-            
-            lastName = " ".join(names[0:fNameIdx])
-
-            suffix = " ".join(names[fNameIdx + 1:len(names)])
-            
-            authors[idx] = lastName        
-            if firstName != '':
-                authors[idx] += ", " + firstName
-                if suffix != '':
-                    authors[idx] += " " + suffix
-            
-        return " and ".join(authors)
-    
-    #meta information
-    class Meta:        
-        concrete_entry_model = True
-        fieldsets = [
-            ('Type', {'fields': ['model_type']}),
-            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
-            ('Classification', {'fields': ['type']}),            
-            ('Citation', {'fields': [{'verbose_name': 'Citation', 'name': 'citation'}]}), 
-            ('Cited by', {'fields': [{'verbose_name': 'Cited by', 'name': 'referenced_entries'}]}),
-            ('Comments', {'fields': ['comments', 'publication_references']}),
-            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
-            ]            
-        field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references',
-            'type',             
-            'authors', 'editors', 'year', 'title', 'publication', 'publisher', 'volume', 'issue', 'pages', 
-            'comments',
-            'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
-            ]
-        facet_fields = ['type', 'year', 'publication']
-        verbose_name='Publication Reference'
-        verbose_name_plural = 'Publication References'
-
 class CrossReferenceMeta(Model):
     name = CharField(max_length=255, verbose_name = "Identifier for crossreference (DB name or URL)", editable = False)
 
@@ -1336,9 +1145,14 @@ class SpeciesComponent(Entry):
     '''
     Contains all components that belong to an organism.
     Improves the lookup speed and allows inheritance.
+    
+    * ``cross_references``: Databases referencing that entry
+    * ``publication_references``: Publications referencing that entry
     '''
     species = ManyToManyField("Species", verbose_name = "Organism containing that entry", related_name = "species")
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
+    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_entries', verbose_name='Cross references')
+    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_entries', verbose_name='Publication references')
 
     #getters
     @permalink
@@ -1722,9 +1536,9 @@ class Chromosome(Molecule):
 
         genes = StringIO.StringIO()
 
-        print "a"
+
         genesList = list(self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all())
-        print "b"
+
         nTus = 0
         iTUs = {}
         tus = []
@@ -3276,13 +3090,13 @@ class ProteinMonomer(Protein):
     
     #additional fields
     gene = ForeignKey(Gene, related_name='protein_monomers', verbose_name='Gene')    
-    is_n_terminal_methionine_cleaved = ForeignKey(EntryBooleanData, verbose_name='Is N-terminal methionine cleaved', related_name='+')
-    localization = ForeignKey(Compartment, related_name='protein_monomers', verbose_name='Localization')
+    is_n_terminal_methionine_cleaved = ForeignKey(EntryBooleanData, null = True, verbose_name='Is N-terminal methionine cleaved', related_name='+')
+    localization = ForeignKey(Compartment, null = True, related_name='protein_monomers', verbose_name='Localization')
     signal_sequence = ForeignKey(SignalSequence, blank=True, null=True, related_name='protein_monomers', on_delete=SET_NULL, verbose_name='Sequence sequence')
 
     #getters
-    def get_sequence(self):
-        return unicode(Seq(self.gene.get_sequence(), IUPAC.unambiguous_dna).translate(table=self.species.genetic_code))
+    def get_sequence(self, species):
+        return unicode(Seq(self.gene.get_sequence(), IUPAC.unambiguous_dna).translate(table=species.genetic_code))
         
     def get_length(self):
         return len(self.get_sequence())
@@ -3384,10 +3198,10 @@ class ProteinMonomer(Protein):
         return 20 * 60
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_instability(self):
+    def get_instability(self, species):
         from cyano.helpers import DipeptideInstabilityWeight
         
-        seq = self.get_sequence()
+        seq = self.get_sequence(species)
         value = 0.;
         for i in range(len(seq)-1):
             if seq[i] != '*' and seq[i+1] != '*':
@@ -3395,12 +3209,12 @@ class ProteinMonomer(Protein):
         return 10. / float(len(seq)) * value;
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_is_stable(self):
-        return self.get_instability() < 40.
+    def get_is_stable(self, species):
+        return self.get_instability(species) < 40.
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_aliphatic(self):
-        seq = self.get_sequence()
+    def get_aliphatic(self, species):
+        seq = self.get_sequence(species)
         return 100. * ( \
             + 1.0 * float(seq.count('A')) \
             + 2.9 * float(seq.count('V')) \
@@ -3409,8 +3223,8 @@ class ProteinMonomer(Protein):
             ) / float(len(seq))
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_gravy(self):        
-        seq = self.get_sequence()
+    def get_gravy(self, species):        
+        seq = self.get_sequence(species)
         return \
             ( \
             + 1.8 * float(seq.count('A')) \
@@ -3446,7 +3260,7 @@ class ProteinMonomer(Protein):
     #html formatting
     def get_as_html_sequence(self, species, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
-        return format_sequence_as_html(self.get_sequence())
+        return format_sequence_as_html(self.get_sequence(species))
         
     def get_as_html_signal_sequence(self, species, is_user_anonymous):
         ss = self.signal_sequence
@@ -3461,16 +3275,16 @@ class ProteinMonomer(Protein):
         return format_list_html(results)
         
     def get_as_html_instability(self, species, is_user_anonymous):
-        return self.get_instability()
+        return self.get_instability(species)
         
     def get_as_html_is_stable(self, species, is_user_anonymous):
-        return self.get_is_stable()
+        return self.get_is_stable(species)
     
     def get_as_html_aliphatic(self, species, is_user_anonymous):    
-        return self.get_aliphatic()
+        return self.get_aliphatic(species)
     
     def get_as_html_gravy(self, species, is_user_anonymous):
-        return self.get_gravy()        
+        return self.get_gravy(species)        
 
     #meta information
     class Meta:    
@@ -3577,7 +3391,7 @@ class Reaction(SpeciesComponent):
                 tmp = ''
                 if s.coefficient != -1:
                     tmp += '(%d) ' % -s.coefficient
-                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.wid)
+                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.name)
                 if len(compartments) > 1:
                     tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(species), s.compartment.wid)
                 pos.append(tmp)
@@ -3585,7 +3399,7 @@ class Reaction(SpeciesComponent):
                 tmp = ''
                 if s.coefficient != 1:
                     tmp += '(%d) ' % s.coefficient
-                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.wid)
+                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.name)
                 if len(compartments) > 1:
                     tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(species), s.compartment.wid)
                 neg.append(tmp)
@@ -3801,8 +3615,10 @@ class Species(Entry):
     parent_ptr_entry = OneToOneField(Entry, related_name='child_ptr_species', parent_link=True, verbose_name='Entry')
     
     #additional fields
-    #component = ManyToManyField("SpeciesComponent", verbose_name = "Components species consists of")
     genetic_code = CharField(max_length=50, verbose_name='Genetic code', choices = CHOICES_GENETIC_CODE)
+    
+    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_species', verbose_name='Cross references')
+    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_species', verbose_name='Publication references')
     
     #getters
     @permalink
@@ -4167,14 +3983,14 @@ class Type(SpeciesComponent):
     parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
 
     #getters
-    def get_all_members(self):
+    def get_all_members(self, species):
         members = []
-        for m in self.members.all():
+        for m in self.members.filter(species = species):
             members.append(m)
-        for c in self.children.all():
+        for c in self.children.filter(species = species):
             members += c.get_all_members()
-        return members        
-    
+        return members
+
     #html formatting    
     def get_as_html_parent(self, species, is_user_anonymous):
         if self.parent is not None:
@@ -4185,13 +4001,13 @@ class Type(SpeciesComponent):
         
     def get_as_html_children(self, species, is_user_anonymous):
         results = []
-        for c in self.children.all():
+        for c in self.children.filter(species = species):
             results.append('<a href="%s">%s</a>' % (c.get_absolute_url(species), c.wid))        
         return format_list_html(results, comma_separated=True)
         
     def get_as_html_members(self, species, is_user_anonymous):
         results = []
-        for m in self.get_all_members():
+        for m in self.get_all_members(species):
             results.append('<a href="%s">%s</a>' % (m.get_absolute_url(species), m.wid))        
         return format_list_html(results, comma_separated=True)
     
@@ -4215,7 +4031,244 @@ class Type(SpeciesComponent):
         facet_fields = ['type', 'parent']
         verbose_name='Type'
         verbose_name_plural = 'Types'
+            
+class CrossReference(SpeciesComponent):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_crossreference', parent_link=True, verbose_name='Species component')
+    
+    #additional fields
+    xid = CharField(max_length=255, verbose_name='External ID')
+    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source')
+
+    #getters
+    def get_all_members(self, species):
+        return self.cross_referenced_entries.filter(species = species)
+    
+    def get_as_html_members(self, species, is_user_anonymous):
+        results = []
+        for m in self.get_all_members(species):
+            results.append('<a href="%s">%s</a>' % (m.get_absolute_url(species), m.wid))        
+        return format_list_html(results, comma_separated=True)
+
+    class Meta:
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': [{'verbose_name': "Referenced by", 'name': 'members'}]}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references',
+            'comments',
+            'publication_references', 
+            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            ]
+        facet_fields = ['type', 'source']
+        ordering = ['xid']
+        verbose_name='Cross reference'
+        verbose_name_plural = 'Cross references'
+
+class PublicationReference(SpeciesComponent):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_publicationreference', parent_link=True, verbose_name='Species component')
+    
+    #additional fields
+    authors = TextField(blank=True, default='', verbose_name='Author(s)')
+    editors = TextField(blank=True, default='', verbose_name='Editor(s)')
+    year = PositiveIntegerField(blank=True, null=True, verbose_name='Year')
+    title = TextField(blank=True, default='', verbose_name='Title')
+    publication = CharField(max_length=255, blank=True, default='', verbose_name='Publication')
+    publisher = CharField(max_length=255, blank=True, default='', verbose_name='Publisher')
+    volume = CharField(max_length=255, blank=True, default='', verbose_name='Volume')
+    issue = CharField(max_length=255, blank=True, default='', verbose_name='Issue')
+    pages = CharField(max_length=255, blank=True, default='', verbose_name='Page(s)')
+    
+    #getters
+    def get_citation(self, species, cross_references = False):
+        if self.type.exists():
+            if self.type.all()[0].wid == 'article':
+                txt = '%s. %s. <i>%s</i> <b>%s</b>, %s (%s).' % (self.authors, self.title, self.publication, self.volume, self.pages, self.year, )
+            elif self.type.all()[0].wid == 'book':
+                authors = ''
+                editors = ''
+                if self.authors != '':
+                    authors = '%s.' % self.authors 
+                if self.editors != '':
+                    editors = 'Eds %s.' % self.editors
+                txt = '%s %s <i>%s</i>. %s %s (%s).' % (authors, editors, self.title, self.publisher, self.pages, self.year)
+            elif self.type.all()[0].wid == 'thesis':
+                txt = '%s. <i>%s</i>. %s (%s).' % (self.authors, self.title, self.publisher, self.year)
+            else:
+                txt = '%s. <i>%s</i>. (%s).' % (self.authors, self.title, self.year)
+        else:
+            txt = '%s. <i>%s</i>. (%s) %s.' % (self.authors, self.title, self.publication, self.year)
+
+        cr = self.get_as_html_cross_references(species, True)
+        cr_spacer = ''
+        if cr != '':
+            cr_spacer = ', '
+        return '%s CyanoFactory: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(species), self.wid, cr_spacer, cr, )
+            
+    def get_all_referenced_entries(self, species):
+        entries = []
+        for entry in self.publication_referenced_entries.filter(species = species):
+            entries.append(entry)
+        for ev in Evidence.objects.filter(references__id=self.id):
+            entries.append(ev.species_component)
+        return entries
+    
+    #html formatting    
+    def get_as_html_citation(self, species, is_user_anonymous):
+        return self.get_citation(species)
         
+    def get_as_html_referenced_entries(self, species, is_user_anonymous):
+        results = []
+        for o in self.get_all_referenced_entries(species):
+            results.append('<a href="%s">%s</a>' % (o.get_absolute_url(species), o.wid))
+        return format_list_html(results)
+        
+    def get_as_bibtex(self):
+        type = None
+        props = []        
+        if self.type.all()[0].wid == 'article':
+            type = 'ARTICLE'            
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            if self.title != '':
+                props.append(('TITLE', self.title))
+            if self.publication != '':
+                props.append(('JOURNAL', self.publication))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            if self.volume != '':
+                props.append(('VOLUME', self.volume))
+            if self.issue != '':
+                props.append(('NUMBER', self.issue))
+            if self.pages != '':
+                props.append(('PAGES', self.pages))
+            for cr in self.cross_references.all():
+                if cr.source == 'PubMed':
+                    props.append(('eprint', cr.xid))
+                    props.append(('eprinttype', 'pubmed'))
+                    break
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+        elif self.type.all()[0].wid == 'book':
+            type = 'BOOK'
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            elif self.editors != '':
+                props.append(('EDITOR', self.format_authors_bibtex(self.editors)))
+            if self.title != '':
+                props.append(('TITLE', self.title))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            if self.volume != '':
+                props.append(('VOLUME', self.volume))
+            if self.publisher != '':
+                props.append(('PUBLISHER', self.publisher))
+            for cr in self.cross_references.all():
+                if cr.source == 'ISBN':
+                    props.append(('ISBN', cr.xid))
+                    break
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+        elif self.type.all()[0].wid == 'thesis':
+            type = 'THESIS'
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            if self.editors != '':
+                props.append(('TITLE', self.editors))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            if self.publisher is not None:
+                props.append(('SCHOOL', self.publisher))
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+        else:
+            type = 'MISC'
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            if self.editors != '':
+                props.append(('TITLE', self.editors))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+            
+        props.append(('created', set_time_zone(self.created_date).isoformat()))
+        props.append(('lastUpdated', set_time_zone(self.last_updated_date).isoformat()))
+        
+        tmp = []
+        for prop in props:
+            if prop[0] == 'TITLE':
+                tmp.append('\n\t%s = "{%s}",' % prop)
+            else:
+                tmp.append('\n\t%s = {%s},' % prop)
+        return '@%s{%s%s\n}' % (type, self.wid, ''.join(tmp))
+        
+    def format_authors_bibtex(self, authors):
+        authors = authors.split(", ")
+        for idx in range(len(authors)):
+            author = authors[idx]
+            
+            names = author.split(" ")
+            for fNameIdx in range(len(names)):
+                if names[fNameIdx].upper() == names[fNameIdx]:
+                    break    
+            
+            tmpFirstName = names[fNameIdx]
+            firstName = ""
+            for i in range(len(tmpFirstName)):
+                firstName += tmpFirstName[i] + ". "        
+            firstName = firstName.strip()
+            
+            lastName = " ".join(names[0:fNameIdx])
+
+            suffix = " ".join(names[fNameIdx + 1:len(names)])
+            
+            authors[idx] = lastName        
+            if firstName != '':
+                authors[idx] += ", " + firstName
+                if suffix != '':
+                    authors[idx] += " " + suffix
+            
+        return " and ".join(authors)
+    
+    #meta information
+    class Meta:        
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
+            ('Classification', {'fields': ['type']}),            
+            ('Citation', {'fields': [{'verbose_name': 'Citation', 'name': 'citation'}]}), 
+            ('Cited by', {'fields': [{'verbose_name': 'Cited by', 'name': 'referenced_entries'}]}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]            
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references',
+            'type',             
+            'authors', 'editors', 'year', 'title', 'publication', 'publisher', 'volume', 'issue', 'pages', 
+            'comments',
+            'publication_references', 
+            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            ]
+        facet_fields = ['type', 'year', 'publication']
+        verbose_name='Publication Reference'
+        verbose_name_plural = 'Publication References'
+
 ''' END: specific data types'''
 
 #http://isoelectric.ovh.org/files/practise-isoelectric-point.html
@@ -4268,7 +4321,7 @@ def calculate_nucleic_acid_pi(seq):
 
     return pH
 
-def format_list_html(val, comma_separated=False, numbered=False, separator=None, force_list=False, vertical_spacing=False, default_items=5):
+def format_list_html(val, comma_separated=False, numbered=False, separator=None, force_list=False, vertical_spacing=False, default_items=50):
     if val is None or len(val) == 0:
         return
     if len(val) == 1 and not force_list:
