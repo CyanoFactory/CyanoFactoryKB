@@ -8,11 +8,11 @@ _species_wid_model_type_wid = _species_wid + r'/(?P<model_type>\w+)/' + _wid
 
 urlpatterns = patterns('cyano.views',         
                      
-    url(r'^login$', 'login'),
-    url(r'^' + _species_wid + r'/login$', 'login'),
+    url(r'^login/?$', 'login'),
+    url(r'^' + _species_wid + r'/login/?$', 'login'),
 
-    url(r'^logout$', 'logout'),
-    url(r'^' + _species_wid + r'/logout', 'logout'),
+    url(r'^logout/?$', 'logout'),
+    url(r'^' + _species_wid + r'/logout/?', 'logout'),
 	
 	url(r'^about/?$', 'about'),
 	url(r'^' + _species_wid + '/about/?$', 'about'),
