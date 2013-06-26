@@ -1536,9 +1536,9 @@ class Chromosome(Molecule):
 
         genes = StringIO.StringIO()
 
-        print "a"
+
         genesList = list(self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all())
-        print "b"
+
         nTus = 0
         iTUs = {}
         tus = []
