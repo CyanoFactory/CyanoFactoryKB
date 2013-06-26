@@ -123,6 +123,12 @@ Last updated: 2012-07-17
 				</ul>
 			</li>
 			{% endcomment %}
+			<li class="spacer"/>
+			<li><a href="#">Tools</a>
+				<ul>
+				<li><a href="{% url "boehringer.views.index" %}">Boehringer Pathway Map</a></li>	
+				</ul>
+			</li>
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
 			<li><a href="{% if species %}{% url "cyano.views.importData" species_wid=species.wid %}{% else %}{% url "cyano.views.importData" %}{% endif %}">Import</a></li>
