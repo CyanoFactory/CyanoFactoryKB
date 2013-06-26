@@ -58,7 +58,7 @@ def permission_required(permission):
     """
     def decorator(function):
         @wraps(function)
-        def wrapper(request, *args, **kw):
+        def wrapper(request, *args, **kw):            
             species = kw.get("species", False)
             model = kw.get("model", False)
             item = kw.get("item", False)
@@ -73,17 +73,21 @@ def permission_required(permission):
             
             profile = user.profile
             
-            check_species = True
+            # Admins always have full access
+            if profile.is_admin():
+                return function(request, *args, **kw)
+
+            allow_item = None
+            deny_item = None
+
             if item:
-                allow, deny = profile.has_permission(item, perm)
-                
-                # No permission for that item, check species permissions instead
-                check_species = allow == None                                    
+                allow_item, deny_item = profile.has_permission(item, perm)
             
-            if check_species:
-                allow, deny = profile.has_permission(species, perm)
+            # allow or deny are not None if an item had permission assigned
+            # Mix item permissions with species permissions now
+            allow_species, deny_species = profile.has_permission(species, perm)
             
-            if allow and not deny:
+            if (allow_species or allow_item) and not (deny_species or deny_item):
                 # Has permission
                 return function(request, *args, **kw)
             else:
@@ -95,16 +99,26 @@ def permission_required(permission):
                     extra = "DEBUG: Permissions are (allow, deny, needed):<br>"
                     
                     allow_perms, deny_perms = profile.get_permissions(species)
+                    if not allow_perms or not deny_perms:
+                        allow_perms = []
+                        deny_perms = []
+                    
+                    if item:
+                        allow_perms_item, deny_perms_item = profile.get_permissions(item)
+                        if allow_perms_item and deny_perms_item:
+                            allow_perms += allow_perms_item
+                            deny_perms += deny_perms_item
 
                     perm_list = [0 for x in range(8)]
-                    perm_allow = perm_list
-                    perm_deny = perm_list
-                    perm_needed = perm_list
+                    perm_allow = list(perm_list)
+                    perm_deny = list(perm_list)
+                    perm_needed = list(perm_list)
                     
                     for i in range(8):
-                        perm_allow[i] = 1 if models.Permission.get_by_pk(i + 1) in allow_perms else 0
-                        perm_deny[i] = 1 if models.Permission.get_by_pk(i + 1) in deny_perms else 0
-                        perm_needed[i] = 1 if models.Permission.get_by_pk(i + 1) == perm else 0
+                        cur_perm = models.Permission.get_by_pk(i + 1)
+                        perm_allow[i] = 1 if cur_perm in allow_perms else 0
+                        perm_deny[i] = 1 if cur_perm in deny_perms else 0
+                        perm_needed[i] = 1 if cur_perm == perm else 0
    
                     extra += "<pre>{0}</pre><pre>{1}</pre><pre>{2}</pre>".format(
                             "".join(str(x) for x in perm_allow),
