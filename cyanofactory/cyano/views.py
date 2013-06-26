@@ -53,7 +53,7 @@ def index(request):
 #@permission_required(perm.READ_NORMAL)
 def species(request, species):
     content = []
-    if species is not None:        
+    if species is not None:
         content.append([
             [0, 'Compartments', models.Compartment.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
         ])

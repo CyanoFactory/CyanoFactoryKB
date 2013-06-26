@@ -7,7 +7,7 @@
 
 <title>Boehringer Pathways</title>
     <style type="text/css">
-        #scrolly{
+        #map{
             overflow-x: auto;
             overflow-y: auto;
             width: 75%;
@@ -42,9 +42,6 @@
         color:black;
         font-family:"Verdana", Sans-serif
         }
-		.roundrect{
-		border-radius: 10px;
-		}
     </style>
 
 </head>
@@ -52,10 +49,10 @@
 
 
 <div id="sidebar"  align="left">
-<!--<img class="roundrect" src="logo-facebook.png" width="100"/>-->
 <br>
 <br>
-<form method="get" >
+<form method="post" >
+{% csrf_token %}
   <br><br><p style="margin-left: 3" align="left"><b>ECs:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors with #.<br><br>
   <textarea name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
   <br>
@@ -68,8 +65,7 @@
 
 <h2> CyanoFactory - Annotated Pathway Map </h2>
 
-<!-- viewbox -->
-<div id="canvasWrapper" style="position:fixed; top:45px; left:430px;">
+<div id="select_box" style="position:fixed; top:45px; left:430px;">
 <select id="selectionField" style="position:fixed">
   <option id="0">(Select an item)</option>
   <optgroup label="Enzymes">
@@ -85,13 +81,10 @@
   {% endwith %}
   {% endfor %}
 </select>
-<!--<canvas id="myCanvas" width="400" height="300" style="position:fixed">Your browser doesn't support canvas.</canvas>-->
 </div>
-<div id="scrolly" >
-<div id="mysvg">
+<div id="map">
 <svg id="boehringer" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" pointer-events="visible"> 
 <script xlink:href="{% get_static_prefix %}boehringer/SVGPan.js"/>
-<!--<rect x="10" y="10" width="20" height="30" style="fill:#red"/>-->
 <g id="viewport">
 <image x="0" y="0" width="6871" height="4804" xlink:href="{% get_static_prefix %}boehringer/pathways.png" />
 {% for enzyme in enzymes %}
@@ -113,7 +106,7 @@
 {% endfor %}
 </g>
 </svg>
-</div>
+
 <script type="text/javascript">
 	$('svg').svgPan('viewport'); 
 $(document.body).delegate("select", "change", function(){
@@ -123,15 +116,15 @@ $(document.body).delegate("select", "change", function(){
 		return;
 	}
 	item = $("rect#" + i);
-	new_x = ($("#mysvg").width() / 2) - $(item).attr("x");
-	new_y = ($("#mysvg").height() / 2) - $(item).attr("y");
+	new_x = ($("#map").width() / 2) - $(item).attr("x");
+	new_y = ($("#map").height() / 2) - $(item).attr("y");
 
 	$("svg").find("g").attr("transform", "translate(" + new_x + "," + new_y +")");
 });
 </script>
 </div>
 
-<h5> by Robbe Wunschiers / Version 2013.5 / ECs: hits={{ enzymes_hits }} - missing={{ enzymes_no_hits}} / Metabolites: hits={{ metabolites_hits }} - missing={{ metabolites_no_hits}}</h5>
+<h5> by R&ouml;bbe Wunschiers &amp; Gabriel Kind / Version 2013.6 / ECs: hits={{ enzymes_hits }} - missing={{ enzymes_no_hits}} / Metabolites: hits={{ metabolites_hits }} - missing={{ metabolites_no_hits}}</h5>
 
 </body>
 </html>
