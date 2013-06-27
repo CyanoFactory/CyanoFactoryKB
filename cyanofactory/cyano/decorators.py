@@ -35,27 +35,32 @@ def resolve_to_objects(function):
             species = models.Species.objects.filter(wid = species_wid)
             try:
                 species = species.get()
-            except (ObjectDoesNotExist, MultipleObjectsReturned):
+            except (ObjectDoesNotExist, MultipleObjectsReturned) as e:
                 return render_queryset_to_response_error(
                     request,
                     error = 404,
-                    msg = "The requested species \"{}\" was not found.".format(species_wid))
+                    msg = "The requested species \"{}\" was not found.".format(species_wid),
+                    msg_debug = repr(e))
         if model_type:
             model = get_model("cyano", model_type)
             if model == None:
                 return render_queryset_to_response_error(
                     request,
+                    species = species,
                     error = 404,
                     msg = "The requested species \"{}\" has no model \"{}\".".format(species_wid, model_type))
         if model and wid:
             item = model.objects.filter(wid = wid, species = species)
             try:
                 item = item.get()
-            except (ObjectDoesNotExist, MultipleObjectsReturned):
+            except (ObjectDoesNotExist, MultipleObjectsReturned) as e:
                 return render_queryset_to_response_error(
                     request,
                     error = 404,
-                    msg = "The requested species \"{}\" has no item \"{}\".".format(species_wid, wid))
+                    species = species,
+                    model = model,
+                    msg = "The requested species \"{}\" has no item \"{}\" of type \"{}\".".format(species_wid, wid, model_type),
+                    msg_debug = repr(e))
 
         # Prepare keyword arguments
         __assign_if_not_false(kw, "species", species)
