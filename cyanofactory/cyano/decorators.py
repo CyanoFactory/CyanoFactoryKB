@@ -1,11 +1,11 @@
 import cyano.models as models
-from cyano.helpers import get_queryset_object_or_404, render_queryset_to_response_error
+from cyano.helpers import render_queryset_to_response_error
 from django.utils.functional import wraps
 from django.contrib.auth.models import User
 from django.db.models.loading import get_model
-import django.http as http
 from settings import DEBUG
 from django.http.response import Http404
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 def __get_and_delete(kw, key):
     if not key in kw:
@@ -32,17 +32,30 @@ def resolve_to_objects(function):
         item = False
 
         if species_wid:
-            species = get_queryset_object_or_404(models.Species.objects.filter(wid = species_wid))
+            species = models.Species.objects.filter(wid = species_wid)
+            try:
+                species = species.get()
+            except (ObjectDoesNotExist, MultipleObjectsReturned):
+                return render_queryset_to_response_error(
+                    request,
+                    error = 404,
+                    msg = "The requested species \"{}\" was not found.".format(species_wid))
         if model_type:
             model = get_model("cyano", model_type)
             if model == None:
-                raise http.Http404
+                return render_queryset_to_response_error(
+                    request,
+                    error = 404,
+                    msg = "The requested species \"{}\" has no model \"{}\".".format(species_wid, model_type))
         if model and wid:
-            item = get_queryset_object_or_404(model.objects.filter(wid = wid))
-            # Check if object is component of species
-            if species:
-                if not item.species.filter(id = species.id).exists():
-                    raise Http404
+            item = model.objects.filter(wid = wid, species = species)
+            try:
+                item = item.get()
+            except (ObjectDoesNotExist, MultipleObjectsReturned):
+                return render_queryset_to_response_error(
+                    request,
+                    error = 404,
+                    msg = "The requested species \"{}\" has no item \"{}\".".format(species_wid, wid))
 
         # Prepare keyword arguments
         __assign_if_not_false(kw, "species", species)
@@ -124,7 +137,7 @@ def permission_required(permission):
                             "".join(str(x) for x in perm_allow),
                             "".join(str(x) for x in perm_deny),
                             "".join(str(x) for x in perm_needed))
-                    print extra
+                    #print extra
                             
                 return render_queryset_to_response_error(
                     request,

@@ -393,14 +393,6 @@ From http://www.peterbe.com/plog/uniqifiers-benchmark
 def uniqueSorted(seq):
     return {}.fromkeys(seq).keys()
 
-def get_queryset_object_or_404(queryset):
-    try:
-        return queryset.get()
-    except MultipleObjectsReturned:
-        raise Http404
-    except ObjectDoesNotExist:
-        raise Http404
-
 def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):    
     format = request.GET.get('format', 'html')
 
