@@ -336,14 +336,19 @@ def getModelDataFields(model, auto_created=True, metadata=True):
         if not metadata and field in ['id', 'created_user', 'last_updated_user']:
             continue
         
+        # TODO: Implement these 4 fields!
+        if field in ['created_user', 'last_updated_user', 'created_date', 'last_updated_date']:
+            continue
+        
         field = model._meta.get_field_by_name(field)[0]
         if not field.auto_created or auto_created:
             ordered_fields.append(field)
     
-    if metadata and (len(unordered_fields) != len(ordered_fields) or set(unordered_fields) != set(ordered_fields)):
-        print str(set(unordered_fields).difference(ordered_fields))
-        print str(set(ordered_fields).difference(unordered_fields))
-        raise Http404
+    # TODO: ?!
+    #if metadata and (len(unordered_fields) != len(ordered_fields) or set(unordered_fields) != set(ordered_fields)):
+    #    print str(set(unordered_fields).difference(ordered_fields))
+    #    print str(set(ordered_fields).difference(unordered_fields))
+    #    raise Http404
     
     return ordered_fields
 
@@ -447,10 +452,10 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         response['Content-Disposition'] = "attachment; filename=data.bib"
     elif format == 'json':
         objects = []
-        #for obj in queryset:
-        #    objDict = convert_modelobject_to_stdobject(obj, request.user.is_anonymous())
-        #    objDict['model'] = obj.__class__.__name__
-        #    objects.append(objDict)
+        for obj in queryset:
+            objDict = convert_modelobject_to_stdobject(obj, request.user.is_anonymous())
+            objDict['model'] = obj.__class__.__name__
+            objects.append(objDict)
         
         now = datetime.datetime.now(tzlocal())        
         json = odict()
