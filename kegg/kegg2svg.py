@@ -16,16 +16,18 @@ img_map = StringIO()
 
 with open("map01100.html", "r") as kegg:
     for line in kegg:
-        if line[:4] == "<map":
+        if line.startswith("<map"):
             print_map = 1
         
         if print_map:
-            # Fixup to valid XML
+            # fix up to valid XML
             line = re.sub(r"coords=([^\"\s]+)", r'coords="\1"', line.strip())
-            line = re.sub(r"shape=([^\"\s]+)", r'shape="\1"', line.strip())
-            img_map.write(line.strip() + "\n")
+            line = re.sub(r"shape=([^\"\s]+)", r'shape="\1"', line)
+            # escape non-escaped ampersands
+            line = re.sub(r"&(?!(?:apos|quot|[gl]t|amp);|#)", r'&amp;', line)
+            img_map.write(line + "\n")
         
-        if line[:6] == "</map>":
+        if line.endswith("</map>"):
             print_map = 0
 
 img_map.seek(0)
@@ -57,7 +59,8 @@ graphics.append(image)
 
 areas = tree.findall("area")
 
-# Draw polys before the rest
+# Draw polys before the rest because they are line segments and sometimes
+# overlap other elements
 pending = []
 
 for area in areas:
@@ -261,4 +264,3 @@ out.write('<script type="text/javascript">$("svg").svgPan("viewport");</script><
 
 with open("kegg_out.html", "w") as kegg:
     kegg.write(out.getvalue())
-
