@@ -1,3 +1,9 @@
+"""
+Takes the data from fetch_kegg and converts it to svg files
+(All image map components are detected and replaced by svg elements and color
+coding is added)
+"""
+
 import re
 import os
 import urllib2
@@ -5,9 +11,6 @@ import shutil
 from PIL import Image
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 from StringIO import StringIO
-
-# TODO:
-# EC-Nummern aus title lesen
 
 def extract_ecs(text):
     """Extracts EC numbers out of a string and returns a list with all numbers"""

@@ -1,3 +1,9 @@
+"""
+Converts KEGG pathway elements to a SVG graphic.
+
+This was more of an experiment and is not suitable for all pathways
+because they lack information about some components on the image map
+"""
 from PIL import Image
 from xml.etree.ElementTree import ElementTree, Element, SubElement
 from StringIO import StringIO
