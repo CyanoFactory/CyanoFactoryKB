@@ -1,5 +1,6 @@
 import re
 import urllib2
+
 response = urllib2.urlopen('http://www.kegg.jp/kegg-bin/download_htext?htext=br08901.keg&format=htext&filedir=')
 html = response.read()
 
