@@ -2609,25 +2609,25 @@ class Pathway(SpeciesComponent):
                 
                 elem = Element("a")
                 
-                # Pathways are green
-                # Something with EC numbers blue
+                # Pathways are blue
+                # Something with EC numbers green
                 # Everything else red 
                 color_component = "rgb(255,0,0)"
                 fill_opacity = "0.0"
-                fill_color = "blue" # not displayed with 0.0
+                fill_color = "green" # not displayed with 0.0
                 
                 # Found objects in the organism show a background color
                 
                 # Repoint pathway links to our versions
                 if "show_pathway?" in url:
                     pathway_name = url[url.index("?") + 1:]
-                    color_component = "rgb(0,255,0)"
+                    color_component = "rgb(0,0,255)"
                     
                     try:
                         pw_obj = Pathway.objects.get(wid = pathway_name)
                         elem.set("xlink:href", pw_obj.get_absolute_url(species))
                         fill_opacity = "0.2"
-                        fill_color = "green"
+                        fill_color = "blue"
                     except ObjectDoesNotExist:
                         elem.set("xlink:href", url)
                         pass
@@ -2641,7 +2641,7 @@ class Pathway(SpeciesComponent):
                 ecs = self.uniqify(self.extract_ecs(title))
                 
                 if len(ecs) > 0:
-                    color_component = "rgb(0,0,255)"
+                    color_component = "rgb(0,255,0)"
                     for ec in ecs:
                         if ec in species_ecs:
                             fill_opacity = "0.2"
