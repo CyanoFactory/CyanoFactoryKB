@@ -4037,8 +4037,8 @@ class CrossReference(SpeciesComponent):
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_crossreference', parent_link=True, verbose_name='Species component')
     
     #additional fields
-    xid = CharField(max_length=255, verbose_name='External ID')
-    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source')
+    xid = CharField(max_length=255, verbose_name='External ID', blank=True)
+    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source', blank=True)
 
     #getters
     def get_all_members(self, species):

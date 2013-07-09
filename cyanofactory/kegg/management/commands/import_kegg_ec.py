@@ -42,13 +42,8 @@ class Command(BaseCommand):
             with open("../kegg/fetch/{}.html".format(filename)) as infile:
                 tree = ElementTree()
                 tree.parse(infile)
-                root = tree.getroot()
         
                 areas = tree.findall("area")
-                
-                # Draw polys before the rest because they are line segments and sometimes
-                # overlap other elements
-                pending = []
                 
                 for area in areas:
                     title = area.get("title")
