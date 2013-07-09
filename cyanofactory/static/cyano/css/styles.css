@@ -509,8 +509,8 @@ select.select{
 }
 #detail tbody.data tr td{
 	border-left:1px solid #3d80b3;
-	width:50%;
-}
+	border-right:1px solid #3d80b3;
+	width:100%;}
 #detail tbody.spacing tr td{
 	border:none;
 	background-color:transparent;
