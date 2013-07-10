@@ -446,16 +446,16 @@
     "model": "cyano.Permission",
     "pk": 3,
     "fields": {
-      "name": "Read Permission",
-      "description": "Can see the permission of the entry"
+      "name": "Read Delete",
+      "description": "Can see deleted entries"
     }
   },
   {
     "model": "cyano.Permission",
     "pk": 4,
     "fields": {
-      "name": "Read Delete",
-      "description": "Can see deleted entries"
+      "name": "Read Permission",
+      "description": "Can see the permission of the entry"
     }
   },
   {

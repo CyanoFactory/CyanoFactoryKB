@@ -10,14 +10,10 @@ import os
 
 from settings_private import *
 
-ROOT_URL = 'http://localhost:8000'
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-DEBUG = True
-TEMPLATE_DEBUG = DEBUG
-
 ADMINS = (
-    #('Jonathan Karr', 'jkarr@stanford.edu'),
+    #('Max Mustermann', 'doe@example.com'),
 )
 
 MANAGERS = ADMINS
@@ -59,10 +55,6 @@ MEDIA_URL = ''
 # in apps' "static/" subdirectories and in STATICFILES_DIRS.
 # Example: "/home/media/media.lawrence.com/static/"
 STATIC_ROOT = ''
-
-# URL prefix for static files.
-# Example: "http://media.lawrence.com/static/"
-STATIC_URL = '/static/'
 
 # Additional locations of static files, use absolute paths
 STATICFILES_DIRS = (
@@ -119,13 +111,14 @@ INSTALLED_APPS = (
 	
 	#apps
 	'public',
-    'biosql',
+    #'biosql',
     'cyano',
     'db_xref',
     'django_dumpdb',
     #'biowarehouse',
 	'bioparser',
     'boehringer',
+	'kegg',
 	
 	#helpers
 	'haystack',
@@ -181,9 +174,7 @@ CACHE_MIDDLEWARE_KEY_PREFIX = "cyano-pagecache"
 
 INTERNAL_IPS = ('127.0.0.1',)
 
-DATABASE_ROUTERS = ['public.router.WarehouseRouter']
-
-AUTH_PROFILE_MODULE = 'public.UserProfile'
+AUTH_PROFILE_MODULE = 'cyano.UserProfile'
 LOGIN_URL = ROOT_URL + '/login/'
 LOGIN_REDIRECT_URL = ROOT_URL + '/'
 

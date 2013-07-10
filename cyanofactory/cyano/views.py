@@ -34,13 +34,11 @@ import os
 import settings
 import tempfile
 
-from cyano.helpers import render_queryset_to_response,\
-    get_verbose_name_for_field_by_name, render_queryset_to_response_error
+from cyano.helpers import render_queryset_to_response_error
 
 from cyano.decorators import resolve_to_objects
 from cyano.decorators import permission_required
 
-import cyano.models as models
 from cyano.models import PermissionEnum as perm
 
 def index(request):
@@ -50,7 +48,7 @@ def index(request):
         )
 
 @resolve_to_objects
-#@permission_required(perm.READ_NORMAL)
+@permission_required(perm.READ_NORMAL)
 def species(request, species):
     content = []
     if species is not None:
@@ -425,7 +423,7 @@ def search_google(request, species_wid, query):
             })
 
 @resolve_to_objects
-#@permission_required(perm.READ_NORMAL)
+@permission_required(perm.READ_NORMAL)
 def list(request, species, model):
     #try:
     #    getObjectTypes().index(model_type)
@@ -510,7 +508,7 @@ def list(request, species, model):
             })
 
 @resolve_to_objects
-#@permission_required(perm.READ_NORMAL)
+@permission_required(perm.READ_NORMAL)
 def detail(request, species, model, item):
     fieldsets = deepcopy(model._meta.fieldsets)
     
@@ -564,7 +562,7 @@ def detail(request, species, model, item):
             })
 
 @resolve_to_objects
-#@permission_required(perm.READ_HISTORY)
+@permission_required(perm.READ_HISTORY)
 def history(request, species, model = None, item = None, detail_id = None):
     if item:    
         objects = objectToQuerySet(item, model = model)[0].revisions.prefetch_related("detail", "detail__user", "current", "current__model_type").order_by("-detail__id").distinct("detail__id")
@@ -774,8 +772,6 @@ def exportData(request, species_wid=None):
 @login_required
 @resolve_to_objects
 def importData(request, species=None):
-    import cyano.importer.fasta as FastaImporter
-    from cyano.importer.genbank import Genbank as GenbankImporter
     if request.method == 'POST':
         form = ImportDataForm(request.POST or None, request.FILES)
         
@@ -801,13 +797,21 @@ def importData(request, species=None):
                 request.POST["reason"] = form.cleaned_data["reason"]
                 
                 if data_type == "fasta":
-                    f = FastaImporter.Fasta()
-                    f.load(filename)
-                    return f.preview(request, selected_species_wid)
+                    from cyano.importer.fasta import FastaImporter
+                    importer = FastaImporter()
                 elif data_type == "fastagene":
-                    g = GenbankImporter()
-                    g.load(filename)
-                    return g.preview(request, selected_species_wid)
+                    from cyano.importer.fasta_to_genbank import FastaToGenbankImporter
+                    importer = FastaToGenbankImporter()
+                elif data_type == "genbank":
+                    from cyano.importer.genbank import GenbankImporter
+                    importer = GenbankImporter()
+                elif data_type == "optgene":
+                    from cyano.importer.optgene import OptGeneImporter
+                    importer = OptGeneImporter()
+                
+                if importer:
+                    importer.load(filename)
+                    return importer.preview(request, selected_species_wid)
                 
                 os.remove(filename)
                 raise Http404
@@ -933,196 +937,202 @@ def sitemap_species(request, species):
     )
 
 @resolve_to_objects
-#@permission_required(perm.READ_PERMISSION)
-def permission(request, species, model = None, item = None):
+@permission_required(perm.WRITE_PERMISSION)
+def permission_edit(request, species, model = None, item = None):
+    return permission(request, species = species, model = model, item = item, edit = True)
+
+@resolve_to_objects
+@permission_required(perm.READ_PERMISSION)
+def permission(request, species, model = None, item = None, edit = False):
     users = models.UserProfile.objects.all().filter(user__is_active = True)
     groups = models.GroupProfile.objects.all()
     
     # Permissions for item or species depending on page
     entry = species if item == None else item
 
-    if request.method == 'POST':
-        # Form submit -> Save changes
-        post_types = ["uid_allow", "gid_allow", "uid_deny", "gid_deny"]
-        error = False
-        
-        # Check that all needed fields are in the request
-        if not all(p in request.POST.keys() for p in post_types):
-            error = True
-
-        if not error:
-            new_permissions = {}
+    if edit:
+        if request.method == 'POST':
+            # Form submit -> Save changes
+            post_types = ["uid_allow", "gid_allow", "uid_deny", "gid_deny"]
+            error = False
             
-            # Make QueryDict writable
-            request.POST = request.POST.copy()
-            
-            # Add missing fields to the POST request
-            for k in models.Permission.permission_types + post_types:
-                if not k in request.POST:
-                    request.POST[k] = None
-            
-            perm_len = None
-
-            # Remove all fields except the needed ones, verify
-            # that all new permissions are numbers
-            for k, v in request.POST.lists():                                
-                if k in models.Permission.permission_types + post_types:
-                    try:
-                        # was missing
-                        if v[0] == None:
-                            new_permissions[k] = []
-                        else:
-                            new_permissions[k] = map(lambda x: int(x), v)
-
-                        if k in models.Permission.permission_types:
-                            # Verify that all permission fields have the same length
-                            if perm_len == None:
-                                perm_len = len(new_permissions[k])
+            # Check that all needed fields are in the request
+            if not all(p in request.POST.keys() for p in post_types):
+                error = True
+    
+            if not error:
+                new_permissions = {}
+                
+                # Make QueryDict writable
+                request.POST = request.POST.copy()
+                
+                # Add missing fields to the POST request
+                for k in models.Permission.permission_types + post_types:
+                    if not k in request.POST:
+                        request.POST[k] = None
+                
+                perm_len = None
+    
+                # Remove all fields except the needed ones, verify
+                # that all new permissions are numbers
+                for k, v in request.POST.lists():                                
+                    if k in models.Permission.permission_types + post_types:
+                        try:
+                            # was missing
+                            if v[0] == None:
+                                new_permissions[k] = []
                             else:
-                                
-                                if perm_len != len(new_permissions[k]):
-                                    raise ValueError()
-                    except ValueError:
-                        error = True
-
-        if not error:
-            # Remove id 0 caused by "Add new" field
-            new_permissions["uid_allow"] = new_permissions["uid_allow"][:-1]
-            new_permissions["gid_allow"] = new_permissions["gid_allow"][:-1]
-            new_permissions["uid_deny"] = new_permissions["uid_deny"][:-1]
-            new_permissions["gid_deny"] = new_permissions["gid_deny"][:-1]
+                                new_permissions[k] = map(lambda x: int(x), v)
+    
+                            if k in models.Permission.permission_types:
+                                # Verify that all permission fields have the same length
+                                if perm_len == None:
+                                    perm_len = len(new_permissions[k])
+                                else:
+                                    
+                                    if perm_len != len(new_permissions[k]):
+                                        raise ValueError()
+                        except ValueError:
+                            error = True
+    
+            if not error:
+                # Remove id 0 caused by "Add new" field
+                new_permissions["uid_allow"] = new_permissions["uid_allow"][:-1]
+                new_permissions["gid_allow"] = new_permissions["gid_allow"][:-1]
+                new_permissions["uid_deny"] = new_permissions["uid_deny"][:-1]
+                new_permissions["gid_deny"] = new_permissions["gid_deny"][:-1]
+                
+                user_count_allow = len(new_permissions["uid_allow"])
+                group_count_allow = len(new_permissions["gid_allow"])
+                user_count_deny = len(new_permissions["uid_deny"])
+                group_count_deny = len(new_permissions["gid_deny"])
+    
+                # Verify that user and group ids are valid
+                user_verify = models.UserProfile.objects.filter(pk__in = new_permissions["uid_allow"]).count()
+                user_verify += models.UserProfile.objects.filter(pk__in = new_permissions["uid_deny"]).count()
+                group_verify = models.GroupProfile.objects.filter(pk__in = new_permissions["gid_allow"]).count()
+                group_verify += models.GroupProfile.objects.filter(pk__in = new_permissions["gid_deny"]).count()
+                
+                # If number of permissions and users+groups mismatches
+                new_perm_count = user_count_allow + group_count_allow + user_count_deny + group_count_deny
+                
+                if len(new_permissions["FULL_ACCESS"]) != new_perm_count:
+                    error = True
+    
+                # If number of submitted data larger then database data at least one item was invalid
+                if new_perm_count != user_verify + group_verify:
+                    error = True
+    
+            if error:
+                return render_queryset_to_response_error(
+                    request,
+                    species = species,
+                    error = 400,
+                    msg = "Invalid POST request on permission page.",
+                    msg_debug = "POST was: " + str(request.POST.lists()))        
             
-            user_count_allow = len(new_permissions["uid_allow"])
-            group_count_allow = len(new_permissions["gid_allow"])
-            user_count_deny = len(new_permissions["uid_deny"])
-            group_count_deny = len(new_permissions["gid_deny"])
-
-            # Verify that user and group ids are valid
-            user_verify = models.UserProfile.objects.filter(pk__in = new_permissions["uid_allow"]).count()
-            user_verify += models.UserProfile.objects.filter(pk__in = new_permissions["uid_deny"]).count()
-            group_verify = models.GroupProfile.objects.filter(pk__in = new_permissions["gid_allow"]).count()
-            group_verify += models.GroupProfile.objects.filter(pk__in = new_permissions["gid_deny"]).count()
+            # Data is valid, begin with database operations
             
-            # If number of permissions and users+groups mismatches
-            new_perm_count = user_count_allow + group_count_allow + user_count_deny + group_count_deny
+            new_permissions_user_allow = {}
+            new_permissions_group_allow = {}
+            new_permissions_user_deny = {}
+            new_permissions_group_deny = {}
+    
+            # Rotate array to user -> permissions
+            for i, user in enumerate(new_permissions["uid_allow"]):
+                new_permissions_user_allow[models.UserProfile.objects.get(pk = user)] = [new_permissions[x][i] for x in models.Permission.permission_types]
             
-            if len(new_permissions["FULL_ACCESS"]) != new_perm_count:
-                error = True
-
-            # If number of submitted data larger then database data at least one item was invalid
-            if new_perm_count != user_verify + group_verify:
-                error = True
-
-        if error:
-            return render_queryset_to_response_error(
-                request,
-                species = species,
-                error = 400,
-                msg = "Invalid POST request on permission page.",
-                msg_debug = "POST was: " + str(request.POST.lists()))        
-        
-        # Data is valid, begin with database operations
-        
-        new_permissions_user_allow = {}
-        new_permissions_group_allow = {}
-        new_permissions_user_deny = {}
-        new_permissions_group_deny = {}
-
-        # Rotate array to user -> permissions
-        for i, user in enumerate(new_permissions["uid_allow"]):
-            new_permissions_user_allow[models.UserProfile.objects.get(pk = user)] = [new_permissions[x][i] for x in models.Permission.permission_types]
-        
-        # Rotate array to group -> permissions
-        for i, group in enumerate(new_permissions["gid_allow"], user_count_allow):  
-            new_permissions_group_allow[models.GroupProfile.objects.get(pk = group)] = [new_permissions[x][i] for x in models.Permission.permission_types]
-        
-        # Rotate array to user -> permissions
-        for i, user in enumerate(new_permissions["uid_deny"], user_count_allow + group_count_allow):
-            new_permissions_user_deny[models.UserProfile.objects.get(pk = user)] = [new_permissions[x][i] for x in models.Permission.permission_types]
-        
-        # Rotate array to group -> permissions
-        for i, group in enumerate(new_permissions["gid_deny"], user_count_allow + group_count_allow + user_count_deny):  
-            new_permissions_group_deny[models.GroupProfile.objects.get(pk = group)] = [new_permissions[x][i] for x in models.Permission.permission_types]
-        
-        # Check if user or group is completly missing but had permissions before
-        # Delete if this is the case
-        all_user_perms = models.UserPermission.objects.filter(entry = entry).prefetch_related("user")
-        for permission in all_user_perms:
-            if not permission.user in new_permissions_user_allow and not permission.user in new_permissions_user_deny:
-                permission.delete()
-            else:
-                if not permission.user in new_permissions_user_allow:
-                    permission.allow.clear()
-                if not permission.user in new_permissions_user_deny:
-                    permission.deny.clear()
-        
-        all_group_perms = models.GroupPermission.objects.filter(entry = entry).prefetch_related("group")
-        for permission in all_group_perms:
-            if not permission.group in new_permissions_group_allow and not permission.group in new_permissions_group_deny:
-                permission.delete()
-            else:
-                if not permission.group in new_permissions_group_allow:
-                    permission.allow.clear()
-                if not permission.group in new_permissions_group_deny:
-                    permission.deny.clear()
-
-        # Create or alter the permission object associated to entry+user/group depending on the
-        # new permission settings
-        for u, p in new_permissions_user_allow.iteritems():
-            new_perm, _ = models.UserPermission.objects.get_or_create(entry = entry, user = u)
-            allows = new_perm.allow.all()
-            for i, x in enumerate(range(1, 9)):
-                if p[i] == 0:
-                    # delete the entry if it exists
-                    if models.Permission.get_by_pk(x) in allows:
-                        new_perm.allow.remove(models.Permission.get_by_pk(x))
+            # Rotate array to group -> permissions
+            for i, group in enumerate(new_permissions["gid_allow"], user_count_allow):  
+                new_permissions_group_allow[models.GroupProfile.objects.get(pk = group)] = [new_permissions[x][i] for x in models.Permission.permission_types]
+            
+            # Rotate array to user -> permissions
+            for i, user in enumerate(new_permissions["uid_deny"], user_count_allow + group_count_allow):
+                new_permissions_user_deny[models.UserProfile.objects.get(pk = user)] = [new_permissions[x][i] for x in models.Permission.permission_types]
+            
+            # Rotate array to group -> permissions
+            for i, group in enumerate(new_permissions["gid_deny"], user_count_allow + group_count_allow + user_count_deny):  
+                new_permissions_group_deny[models.GroupProfile.objects.get(pk = group)] = [new_permissions[x][i] for x in models.Permission.permission_types]
+            
+            # Check if user or group is completly missing but had permissions before
+            # Delete if this is the case
+            all_user_perms = models.UserPermission.objects.filter(entry = entry).prefetch_related("user")
+            for permission in all_user_perms:
+                if not permission.user in new_permissions_user_allow and not permission.user in new_permissions_user_deny:
+                    permission.delete()
                 else:
-                    # add the entry if missing
-                    if not models.Permission.get_by_pk(x) in allows:
-                        new_perm.allow.add(models.Permission.get_by_pk(x))
-
-        for u, p in new_permissions_user_deny.iteritems():
-            new_perm, _ = models.UserPermission.objects.get_or_create(entry = entry, user = u)
-            denies = new_perm.deny.all()
-            for i, x in enumerate(range(1, 9)):
-                if p[i] == 0:
-                    # delete the entry if it exists
-                    if models.Permission.get_by_pk(x) in denies:
-                        new_perm.deny.remove(models.Permission.get_by_pk(x))
-                else:
-                    # add the entry if missing
-                    if not models.Permission.get_by_pk(x) in denies:
-                        new_perm.deny.add(models.Permission.get_by_pk(x))
-
-            new_perm.save()
-                    
-        for g, p in new_permissions_group_allow.iteritems():
-            new_perm, _ = models.GroupPermission.objects.get_or_create(entry = entry, group = g)
-            allows = new_perm.allow.all()
-            for i, x in enumerate(range(1, 9)):
-                if p[i] == 0:
-                    # delete the entry if it exists
-                    if models.Permission.get_by_pk(x) in allows:
-                        new_perm.allow.remove(models.Permission.get_by_pk(x))
-                else:
-                    # add the entry if missing
-                    if not models.Permission.get_by_pk(x) in allows:
-                        new_perm.allow.add(models.Permission.get_by_pk(x))
+                    if not permission.user in new_permissions_user_allow:
+                        permission.allow.clear()
+                    if not permission.user in new_permissions_user_deny:
+                        permission.deny.clear()
             
-        for g, p in new_permissions_group_deny.iteritems():     
-            new_perm, _ = models.GroupPermission.objects.get_or_create(entry = entry, group = g)    
-            denies = new_perm.deny.all()
-            for i, x in enumerate(range(1, 9)):
-                if p[i] == 0:
-                    # delete the entry if it exists
-                    if models.Permission.get_by_pk(x) in denies:
-                        new_perm.deny.remove(models.Permission.get_by_pk(x))
+            all_group_perms = models.GroupPermission.objects.filter(entry = entry).prefetch_related("group")
+            for permission in all_group_perms:
+                if not permission.group in new_permissions_group_allow and not permission.group in new_permissions_group_deny:
+                    permission.delete()
                 else:
-                    # add the entry if missing
-                    if not models.Permission.get_by_pk(x) in denies:
-                        new_perm.deny.add(models.Permission.get_by_pk(x))
-            
-            new_perm.save()
+                    if not permission.group in new_permissions_group_allow:
+                        permission.allow.clear()
+                    if not permission.group in new_permissions_group_deny:
+                        permission.deny.clear()
+    
+            # Create or alter the permission object associated to entry+user/group depending on the
+            # new permission settings
+            for u, p in new_permissions_user_allow.iteritems():
+                new_perm, _ = models.UserPermission.objects.get_or_create(entry = entry, user = u)
+                allows = new_perm.allow.all()
+                for i, x in enumerate(range(1, 9)):
+                    if p[i] == 0:
+                        # delete the entry if it exists
+                        if models.Permission.get_by_pk(x) in allows:
+                            new_perm.allow.remove(models.Permission.get_by_pk(x))
+                    else:
+                        # add the entry if missing
+                        if not models.Permission.get_by_pk(x) in allows:
+                            new_perm.allow.add(models.Permission.get_by_pk(x))
+    
+            for u, p in new_permissions_user_deny.iteritems():
+                new_perm, _ = models.UserPermission.objects.get_or_create(entry = entry, user = u)
+                denies = new_perm.deny.all()
+                for i, x in enumerate(range(1, 9)):
+                    if p[i] == 0:
+                        # delete the entry if it exists
+                        if models.Permission.get_by_pk(x) in denies:
+                            new_perm.deny.remove(models.Permission.get_by_pk(x))
+                    else:
+                        # add the entry if missing
+                        if not models.Permission.get_by_pk(x) in denies:
+                            new_perm.deny.add(models.Permission.get_by_pk(x))
+    
+                new_perm.save()
+                        
+            for g, p in new_permissions_group_allow.iteritems():
+                new_perm, _ = models.GroupPermission.objects.get_or_create(entry = entry, group = g)
+                allows = new_perm.allow.all()
+                for i, x in enumerate(range(1, 9)):
+                    if p[i] == 0:
+                        # delete the entry if it exists
+                        if models.Permission.get_by_pk(x) in allows:
+                            new_perm.allow.remove(models.Permission.get_by_pk(x))
+                    else:
+                        # add the entry if missing
+                        if not models.Permission.get_by_pk(x) in allows:
+                            new_perm.allow.add(models.Permission.get_by_pk(x))
+                
+            for g, p in new_permissions_group_deny.iteritems():     
+                new_perm, _ = models.GroupPermission.objects.get_or_create(entry = entry, group = g)    
+                denies = new_perm.deny.all()
+                for i, x in enumerate(range(1, 9)):
+                    if p[i] == 0:
+                        # delete the entry if it exists
+                        if models.Permission.get_by_pk(x) in denies:
+                            new_perm.deny.remove(models.Permission.get_by_pk(x))
+                    else:
+                        # add the entry if missing
+                        if not models.Permission.get_by_pk(x) in denies:
+                            new_perm.deny.add(models.Permission.get_by_pk(x))
+                
+                new_perm.save()
 
     # Rendering of the permission page
     user_permissions_db = models.UserPermission.objects.filter(entry = entry).prefetch_related("allow", "deny", "user", "user__user")
@@ -1147,13 +1157,15 @@ def permission(request, species, model = None, item = None):
         group_permissions_allow.append(group_perm_allow)
         group_permissions_deny.append(group_perm_deny)
 
-    queryset = objectToQuerySet(entry)
+    
+    queryset = objectToQuerySet(item) if item else None
 
     return render_queryset_to_response(
                 request,
                 species = species,
+                models = [model],
                 queryset = queryset,
-                template = "cyano/permission.html",
+                template = "cyano/permission_edit.html" if edit else "cyano/permission.html",
                 data = {
                     'users': users,
                     'groups': groups,

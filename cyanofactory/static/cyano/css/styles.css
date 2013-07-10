@@ -324,7 +324,6 @@ select.select{
 }
 #content table th:last-child, #content table td:last-child{
 	padding-right:0px;
-	border-right:1px solid #3d80b3;
 }
 
 /* index content */

@@ -542,8 +542,8 @@ class UserProfile(ProfileBase):
         deny = None
         try:
             user_perm = entry.user_permissions.get(user = self)
-            allow = user_perm.allow.all()
-            deny = user_perm.deny.all()
+            allow = list(user_perm.allow.all())
+            deny = list(user_perm.deny.all())
         except ObjectDoesNotExist:
             pass
         
@@ -554,8 +554,8 @@ class UserProfile(ProfileBase):
                 if allow == None:
                     allow = []
                     deny = []
-                allow += group_perm.allow.all()
-                deny += group_perm.deny.all()
+                allow += list(group_perm.allow.all())
+                deny += list(group_perm.deny.all())
             except ObjectDoesNotExist:
                 pass
         
@@ -579,13 +579,15 @@ class UserProfile(ProfileBase):
          permission for the bitmask specified (same for deny). (None, None)
          if no permission object was found.
         """
+        
+        
         if isinstance(entry, Entry): 
             allow, deny = self.get_permissions(entry)
             if allow == None:
                 return None, None
-    
-            allow = all(perm in permissions for perm in allow)
-            deny = all(perm in permissions for perm in deny)
+
+            allow = permissions in allow
+            deny = permissions in deny
             
             return allow, deny
         elif isinstance(entry, list):
@@ -593,6 +595,13 @@ class UserProfile(ProfileBase):
             return 0
         
         return 0, 0
+    
+    def is_admin(self):
+        """
+        Checks if the user is in the administrator group
+        """
+        admin = Group.objects.get(name = "Administrator")
+        return self.user.groups.filter(pk = admin.pk).exists()
     
     def __unicode__(self):
         return self.user.username
@@ -793,16 +802,7 @@ class CoenzymeParticipant(EvidencedEntryData):
         ordering = []
         verbose_name='Coenzyme participant'
         verbose_name_plural = 'Coenzyme participants'
-            
-class CrossReference(EntryData):
-    xid = CharField(max_length=255, verbose_name='External ID')
-    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source')
-    
-    class Meta:
-        ordering = ['xid']
-        verbose_name='Cross reference'
-        verbose_name_plural = 'Cross references'
-            
+
 class DisulfideBond(EvidencedEntryData):
     protein_monomer = ForeignKey('ProteinMonomer', related_name = 'disulfide_bonds', verbose_name='Protein monomer')
     residue_1 = PositiveIntegerField(verbose_name='Residue-1')
@@ -963,7 +963,6 @@ class Entry(Model):
         * ``wid``: Warehouse Identifier. Unique identifier in the warehouse, used in the URLs e.g.
         * ``name``: Short, human readable name of that entry
         * ``synonyms``: Other names for that entry
-        * ``references``: Publications and Databases referencing that entry
         * ``comments``: Detailed notes about this entry
         * ``permissions``: Reference to the permissions for this entry
     """
@@ -971,8 +970,6 @@ class Entry(Model):
     wid = SlugField(max_length=150, unique = True, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
-    cross_references = ManyToManyField(CrossReference, blank=True, null=True, related_name='cross_referenced_entries', verbose_name='Cross references')
-    publication_references = ManyToManyField('PublicationReference', blank=True, null=True, related_name='publication_referenced_entries', verbose_name='Publication references')
     comments = TextField(blank=True, default='', verbose_name='Comments')
     detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry')
     
@@ -1032,12 +1029,26 @@ class Entry(Model):
     
     def save(self, *args, **kwargs):
         from itertools import ifilter
+        from cyano.helpers import slugify
+
         #TODO:
         #Der erste Load ohne Edit braucht eigentlich keinen kompletten Revision History Eintrag.
         ##Einer muss aber dennoch erstellt werden, damit man den Editgrund und Zeit speichern kann...
         #
         #Kompletter History-Eintrag msus erst bei Aenderung geschrieben werden
         
+        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
+        # Slugify the WID
+        self.wid = slugify(self.wid)
+        
+        # Debug code to remove rev control (speedup)
+        rev_detail = kwargs["revision_detail"]
+        rev_detail.save()
+        self.detail = rev_detail
+        del kwargs["revision_detail"]
+        super(Entry, self).save(*args, **kwargs)
+        return
+        # end of debug code
         if "no_revision" in kwargs:
             del kwargs["no_revision"]
             super(Entry, self).save(*args, **kwargs)
@@ -1054,8 +1065,7 @@ class Entry(Model):
         
         rev_detail = kwargs["revision_detail"]
         rev_detail.save()
-        
-        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
+
         self.detail = rev_detail
         
         # Prevent error on save later
@@ -1092,7 +1102,7 @@ class Entry(Model):
     def get_as_html_cross_references(self, species, is_user_anonymous):
         results = []
         for cr in self.cross_references.all():
-            results.append('%s: <a href="%s">%s</a>' % (cr.source, CROSS_REFERENCE_SOURCE_URLS[cr.source] % cr.xid, cr.xid))
+            results.append('%s: <a href="%s">%s</a>' % (cr.source, reverse("db_xref.views.dbxref", kwargs={"source" : cr.source, "xid" : cr.xid}), cr.xid ))
         return format_list_html(results, separator=', ')
     
     def get_as_html_created_user(self, species, is_user_anonymous):
@@ -1128,198 +1138,6 @@ class Entry(Model):
         verbose_name = 'Entry'
         verbose_name_plural = 'Entries'
 
-class PublicationReference(Entry):
-    authors = TextField(blank=True, default='', verbose_name='Author(s)')
-    editors = TextField(blank=True, default='', verbose_name='Editor(s)')
-    year = PositiveIntegerField(blank=True, null=True, verbose_name='Year')
-    title = TextField(blank=True, default='', verbose_name='Title')
-    publication = CharField(max_length=255, blank=True, default='', verbose_name='Publication')
-    publisher = CharField(max_length=255, blank=True, default='', verbose_name='Publisher')
-    volume = CharField(max_length=255, blank=True, default='', verbose_name='Volume')
-    issue = CharField(max_length=255, blank=True, default='', verbose_name='Issue')
-    pages = CharField(max_length=255, blank=True, default='', verbose_name='Page(s)')
-    
-    #getters
-    def get_citation(self, cross_references = False):
-        if self.type.all()[0].wid == 'article':
-            txt = '%s. %s. <i>%s</i> <b>%s</b>, %s (%s).' % (self.authors, self.title, self.publication, self.volume, self.pages, self.year, )
-        elif self.type.all()[0].wid == 'book':
-            authors = ''
-            editors = ''
-            if self.authors != '':
-                authors = '%s.' % self.authors 
-            if self.editors != '':
-                editors = 'Eds %s.' % self.editors
-            txt = '%s %s <i>%s</i>. %s %s (%s).' % (authors, editors, self.title, self.publisher, self.pages, self.year)
-        elif self.type.all()[0].wid == 'thesis':
-            txt = '%s. <i>%s</i>. %s (%s).' % (self.authors, self.title, self.publisher, self.year)
-        else:
-            txt = '%s. <i>%s</i>. (%s).' % (self.authors, self.title, self.year)
-            
-        cr = self.get_as_html_cross_references(True)
-        cr_spacer = ''
-        if cr != '':
-            cr_spacer = ', '        
-        return '%s WholeCell: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(species), self.wid, cr_spacer, cr, )
-            
-    def get_all_referenced_entries(self):
-        entries = []
-        for entry in self.referenced_entries.all():
-            entries.append(entry)
-        for ev in Evidence.objects.filter(references__id=self.id):
-            entries.append(ev.species_component)
-        return entries
-    
-    #html formatting    
-    def get_as_html_citation(self, species, is_user_anonymous):
-        return self.get_citation()
-        
-    def get_as_html_referenced_entries(self, species, is_user_anonymous):
-        results = []
-        for o in self.get_all_referenced_entries():
-            results.append('<a href="%s">%s</a>' % (o.get_absolute_url(species), o.wid))
-        return format_list_html(results)
-        
-    def get_as_bibtex(self):
-        type = None
-        props = []        
-        if self.type.all()[0].wid == 'article':
-            type = 'ARTICLE'            
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            if self.title != '':
-                props.append(('TITLE', self.title))
-            if self.publication != '':
-                props.append(('JOURNAL', self.publication))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            if self.volume != '':
-                props.append(('VOLUME', self.volume))
-            if self.issue != '':
-                props.append(('NUMBER', self.issue))
-            if self.pages != '':
-                props.append(('PAGES', self.pages))
-            for cr in self.cross_references.all():
-                if cr.source == 'PubMed':
-                    props.append(('eprint', cr.xid))
-                    props.append(('eprinttype', 'pubmed'))
-                    break
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-        elif self.type.all()[0].wid == 'book':
-            type = 'BOOK'
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            elif self.editors != '':
-                props.append(('EDITOR', self.format_authors_bibtex(self.editors)))
-            if self.title != '':
-                props.append(('TITLE', self.title))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            if self.volume != '':
-                props.append(('VOLUME', self.volume))
-            if self.publisher != '':
-                props.append(('PUBLISHER', self.publisher))
-            for cr in self.cross_references.all():
-                if cr.source == 'ISBN':
-                    props.append(('ISBN', cr.xid))
-                    break
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-        elif self.type.all()[0].wid == 'thesis':
-            type = 'THESIS'
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            if self.editors != '':
-                props.append(('TITLE', self.editors))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            if self.publisher is not None:
-                props.append(('SCHOOL', self.publisher))
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-        else:
-            type = 'MISC'
-            if self.authors != '':
-                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
-            if self.editors != '':
-                props.append(('TITLE', self.editors))
-            if self.year is not None:
-                props.append(('YEAR', self.year))
-            for cr in self.cross_references.all():
-                if cr.source == 'URL':
-                    props.append(('URL', cr.xid))
-                    break
-            
-        props.append(('created', set_time_zone(self.created_date).isoformat()))
-        props.append(('lastUpdated', set_time_zone(self.last_updated_date).isoformat()))
-        
-        tmp = []
-        for prop in props:
-            if prop[0] == 'TITLE':
-                tmp.append('\n\t%s = "{%s}",' % prop)
-            else:
-                tmp.append('\n\t%s = {%s},' % prop)
-        return '@%s{%s%s\n}' % (type, self.wid, ''.join(tmp))
-        
-    def format_authors_bibtex(self, authors):
-        authors = authors.split(", ")
-        for idx in range(len(authors)):
-            author = authors[idx]
-            
-            names = author.split(" ")
-            for fNameIdx in range(len(names)):
-                if names[fNameIdx].upper() == names[fNameIdx]:
-                    break    
-            
-            tmpFirstName = names[fNameIdx]
-            firstName = ""
-            for i in range(len(tmpFirstName)):
-                firstName += tmpFirstName[i] + ". "        
-            firstName = firstName.strip()
-            
-            lastName = " ".join(names[0:fNameIdx])
-
-            suffix = " ".join(names[fNameIdx + 1:len(names)])
-            
-            authors[idx] = lastName        
-            if firstName != '':
-                authors[idx] += ", " + firstName
-                if suffix != '':
-                    authors[idx] += " " + suffix
-            
-        return " and ".join(authors)
-    
-    #meta information
-    class Meta:        
-        concrete_entry_model = True
-        fieldsets = [
-            ('Type', {'fields': ['model_type']}),
-            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
-            ('Classification', {'fields': ['type']}),            
-            ('Citation', {'fields': [{'verbose_name': 'Citation', 'name': 'citation'}]}), 
-            ('Cited by', {'fields': [{'verbose_name': 'Cited by', 'name': 'referenced_entries'}]}),
-            ('Comments', {'fields': ['comments', 'publication_references']}),
-            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
-            ]            
-        field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references',
-            'type',             
-            'authors', 'editors', 'year', 'title', 'publication', 'publisher', 'volume', 'issue', 'pages', 
-            'comments',
-            'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
-            ]
-        facet_fields = ['type', 'year', 'publication']
-        verbose_name='Publication Reference'
-        verbose_name_plural = 'Publication References'
-
 class CrossReferenceMeta(Model):
     name = CharField(max_length=255, verbose_name = "Identifier for crossreference (DB name or URL)", editable = False)
 
@@ -1327,9 +1145,14 @@ class SpeciesComponent(Entry):
     '''
     Contains all components that belong to an organism.
     Improves the lookup speed and allows inheritance.
+    
+    * ``cross_references``: Databases referencing that entry
+    * ``publication_references``: Publications referencing that entry
     '''
     species = ManyToManyField("Species", verbose_name = "Organism containing that entry", related_name = "species")
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
+    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_entries', verbose_name='Cross references')
+    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_entries', verbose_name='Publication references')
 
     #getters
     @permalink
@@ -1713,9 +1536,9 @@ class Chromosome(Molecule):
 
         genes = StringIO.StringIO()
 
-        print "a"
+
         genesList = list(self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all())
-        print "b"
+
         nTus = 0
         iTUs = {}
         tus = []
@@ -2684,206 +2507,179 @@ class Pathway(SpeciesComponent):
     #parent pointer
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_pathway', parent_link=True, verbose_name='Species component')
     
-    #additional fields
+    #helpers
+    def extract_ecs(self, text):
+        """Extracts EC numbers out of a string and returns a list with all numbers"""
+        return re.findall(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+", text)
     
-    #getters
+    def uniqify(self, seq, idfun=None):
+        """Order preserving list uniqifier.
+        Source: http://www.peterbe.com/plog/uniqifiers-benchmark
+        """
+        if idfun is None:
+            def idfun(x): return x
+        seen = {}
+        result = []
+        for item in seq:
+            marker = idfun(item)
+            if marker in seen: continue
+            seen[marker] = 1
+            result.append(item)
+        return result
     
     #html formatting
     def get_as_html_reaction_map(self, species, is_user_anonymous):
+        import os
+        from PIL import Image
+        from xml.etree.ElementTree import ElementTree, Element
         W = 731
-        H = 300
+        H = 600
         
-        #mappable reactions, metabolites
-        all_rxns = ReactionMapCoordinate.objects.filter(reactions__species__id=self.species.id)
-        all_mets = MetaboliteMapCoordinate.objects.filter(metabolites__species__id=self.species.id)        
-        pway_rxns = all_rxns.filter(reactions__pathways__pk=self.pk).select_related()
-        other_rxns = all_rxns.exclude(reactions__pathways__pk=self.pk).select_related()
-        pway_mets = all_mets.filter(metabolites__reaction_stoichiometry_participants__reactions__pathways__pk=self.pk).select_related()
-        other_mets = all_mets.exclude(metabolites__reaction_stoichiometry_participants__reactions__pathways__pk=self.pk).select_related()
-        
-        #find map extent
-        min_x, max_x, min_y, max_y = self.get_map_extent(all_rxns, all_mets)
-        pway_min_x, pway_max_x, pway_min_y, pway_max_y = self.get_map_extent(pway_rxns, pway_mets)
-        
-        #build map
-        x_scale = W / (max_x - min_x)
-        y_scale = H / (max_y - min_y)
-        r = 10 * min(x_scale, y_scale)
-        
-        if pway_min_x is None:
-            selected_pathways = ''
-        else:
-            selected_pathways = ''
-            x = x_scale * (pway_min_x - min_x)
-            y = y_scale * (pway_min_y - min_y)
-            cx = x_scale * ((pway_max_x + pway_min_x) / 2 - min_x)
-            selected_pathways = '<g><rect x="%s" y="%s" width="%s" height="%s" rx="%s" ry="%s" /></g>' % (
-                x, y, 
-                x_scale * (pway_max_x - pway_min_x),  y_scale * (pway_max_y - pway_min_y),
-                4, 4,
-                )
-        
-        selected_reactions = ''
-        for map_rxn in pway_rxns:
-            path = ''
-            for match in re.finditer(r'([A-Z])( (\d+\.*\d*),(\d+\.*\d*))+', map_rxn.path, flags=re.I):
-                path += match.group(1)
-                for pts in match.group(0).split(' ')[1:]:
-                    x, y = pts.split(',')
-                    path += ' %s,%s' % (x_scale *(float(x) - min_x), y_scale * (float(y) - min_y), )
-            rxn = map_rxn.reactions.all()[0]
+        # All Pathways of the organism
+        species_ecs = CrossReference.objects.filter(species = species, source = "EC").values_list('xid', flat=True)
+
+        with open("{}/kegg/img/{}.png".format(settings.STATICFILES_DIRS[0], self.wid), "rb") as image:
+
+            im = Image.open(image)
+            iwidth = im.size[0]
+            iheight = im.size[1]
+    
+        with open("{}/kegg/maps/{}.html".format(settings.ROOT_DIR, self.wid)) as infile:
+            tree = ElementTree()
+            tree.parse(infile)
+            root = tree.getroot()
+    
+            root.tag = "svg"
+            root.set("xmlns", "http://www.w3.org/2000/svg")
+            root.set("xmlns:xlink", "http://www.w3.org/1999/xlink")
+            root.set("width", str(W))
+            root.set("height", str(min(iheight,H)))
+            root.set("viewport", "0 0 {} {}".format(str(W), str(min(iheight,H))))
+
+            script = Element("script")
+            script.set("xlink:href", "{}kegg/js/SVGPan.js".format(settings.STATIC_URL))
+            root.append(script)
             
-            if rxn.name:
-                tip_title = rxn.name
-            else:
-                tip_title = rxn.wid
-            tip_content = ''            
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
+            graphics = Element("g")
+            graphics.set("id", "viewport")
+            root.append(graphics)
             
-            selected_reactions += '\
-            <g>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><path d="%s"/></a>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><text x="%s" y="%s">%s</text></a>\
-            </g>' % (
-                rxn.get_absolute_url(species), tip_title, tip_content, path, 
-                rxn.get_absolute_url(species), tip_title, tip_content, x, y, rxn.wid)
-        
-        selected_metabolites = ''
-        for map_met in pway_mets:
-            x = x_scale * (map_met.x - min_x)
-            y = y_scale * (map_met.y - min_y)
-            met = map_met.metabolites.all()[0]
+            image = Element("image")
+            image.set("x", "0")
+            image.set("y", "0")
+            image.set("width", str(iwidth))
+            image.set("height", str(iheight))
+            image.set("xlink:href", "{}kegg/img/{}.png".format(settings.STATIC_URL, self.wid))
+            graphics.append(image)
+    
+            areas = tree.findall("area")
             
-            if met.name:
-                tip_title = met.name
-            else:
-                tip_title = met.wid
-            tip_content = met.get_as_html_empirical_formula(is_user_anonymous)
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
+            # Draw polys before the rest because they are line segments and sometimes
+            # overlap other elements
+            pending = []
             
-            selected_metabolites += '\
-            <g>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><circle cx="%s" cy="%s" r="%s" /></a>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><text x="%s" y="%s">%s</text></a>\
-            </g>' % (
-                met.get_absolute_url(species), tip_title, tip_content, x, y, r, 
-                met.get_absolute_url(species), tip_title, tip_content, x, y, met.wid)
-        
-        other_reactions = ''
-        for map_rxn in other_rxns:
-            path = ''
-            for match in re.finditer(r'([A-Z])( (\d+\.*\d*),(\d+\.*\d*))+', map_rxn.path, flags=re.I):
-                path += match.group(1)
-                for pts in match.group(0).split(' ')[1:]:
-                    x, y = pts.split(',')
-                    path += ' %s,%s' % (x_scale *(float(x) - min_x), y_scale * (float(y) - min_y), )
-            rxn = map_rxn.reactions.all()[0]
-            
-            if rxn.name:
-                tip_title = rxn.name
-            else:
-                tip_title = rxn.wid
-            tip_content = ''            
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
-            
-            other_reactions += '\
-            <g>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><path d="%s"/></a>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><text x="%s" y="%s">%s</text></a>\
-            </g>' % (
-                rxn.get_absolute_url(species), tip_title, tip_content, path, 
-                rxn.get_absolute_url(species), tip_title, tip_content, x, y, rxn.wid)
-        
-        other_metabolites = ''
-        for map_met in other_mets:
-            x = x_scale * (map_met.x - min_x)
-            y = y_scale * (map_met.y - min_y)
-            met = map_met.metabolites.all()[0]
-            
-            if met.name:
-                tip_title = met.name
-            else:
-                tip_title = met.wid
-            tip_content = met.get_as_html_empirical_formula(is_user_anonymous)
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
-            
-            other_metabolites += '\
-            <g>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><circle cx="%s" cy="%s" r="%s" /></a>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><text x="%s" y="%s">%s</text></a>\
-            </g>' % (
-                met.get_absolute_url(species), tip_title, tip_content, x, y, r, 
-                met.get_absolute_url(species), tip_title, tip_content, x, y, met.wid)
-        
-        return '\
-        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s">\
-            <style>\
-            .pathways rect {fill:#cd0a0a; fill-opacity:0.25;}\
-            .pathways text {font-size:12px; font-weight:bold; fill:#cd0a0a; text-anchor:middle; alignment-baseline:baseline;}\
-            .reactions text, .metabolites text {font-size:10px; fill:#222; text-anchor:middle; alignment-baseline:middle;}\
-            .reactions path {stroke-width:1px; stroke: #222; fill:none;}\
-            .metabolites circle {stroke-width: 0.5px; stroke:#3d80b3; fill:#C9E7FF;}\
-            .other_pathways {opacity:0.5}\
-            .selected_pathway .reactions path {stroke-width:2px; }\
-            .selected_pathway .metabolites circle {stroke-width:2px; }\
-            </style>\
-            <g class="selected_pathway">\
-                <g class="pathways">%s</g>\
-            </g>\
-            <g class="other_pathways">\
-                <g class="reactions">%s</g>\
-                <g class="metabolites">%s</g>\
-            </g>\
-            <g class="selected_pathway">\
-                <g class="reactions">%s</g>\
-                <g class="metabolites">%s</g>\
-            </g>\
-        </svg>' % (
-            W, H, W, H, selected_pathways, other_reactions, other_metabolites, selected_reactions, selected_metabolites)
-            
-    def get_map_extent(self, rxns, mets, margin = 20):
-        tmp1 = rxns.aggregate(min_x = Min('label_x'), max_x = Max('label_x'), min_y = Min('label_y'), max_y = Max('label_y'))
-        tmp2 = mets.aggregate(min_x = Min('x'), max_x = Max('x'), min_y = Min('y'), max_y = Max('y'))
-        if rxns.count() == 0 and mets.count() == 0:
-            min_x = None
-            max_x = None
-            min_y = None
-            max_y = None
-        if rxns.count() == 0:
-            min_x = tmp2['min_x']
-            max_x = tmp2['max_x']
-            min_y = tmp2['min_y']
-            max_y = tmp2['max_y']
-        elif mets.count() == 0:
-            min_x = tmp1['min_x']
-            max_x = tmp1['max_x']
-            min_y = tmp1['min_y']
-            max_y = tmp1['max_y']
-        else:
-            min_x = min(tmp1['min_x'], tmp2['min_x'])
-            max_x = max(tmp1['max_x'], tmp2['max_x'])
-            min_y = min(tmp1['min_y'], tmp2['min_y'])
-            max_y = max(tmp1['max_y'], tmp2['max_y'])
-        for rxn in rxns:
-            for match in re.finditer(r'([A-Z])( (\d+\.*\d*),(\d+\.*\d*))+', rxn.path, flags=re.I):
-                for pts in match.group(0).split(' ')[1:]:
-                    x, y = pts.split(',')
-                    min_x = min(min_x, float(x))
-                    max_x = max(max_x, float(x))
-                    min_y = min(min_y, float(y))
-                    max_y = max(max_y, float(y))
+            for area in areas:
+                shape = area.get("shape")
+                coords = area.get("coords")
+                url = area.get("href")
+                title = area.get("title")
+    
+                if shape is None:
+                    continue
                 
-        min_x = min_x - margin
-        max_x = max_x + margin
-        min_y = min_y - margin
-        max_y = max_y + margin
-        
-        return [min_x, max_x, min_y, max_y]
-        
+                if coords is None:
+                    continue
+                
+                if url is None:
+                    continue
+                
+                if shape == "poly":
+                    shape = "polygon"
+                
+                url = "http://www.kegg.jp" + url
+            
+                coords = coords.split(",")
+            
+                area.attrib.pop("shape")
+                area.attrib.pop("coords")
+                area.attrib.pop("href")
+                area.attrib.pop("title")
+            
+                area.tag = shape
+                
+                elem = Element("a")
+                
+                # Pathways are blue
+                # Something with EC numbers green
+                # Everything else red 
+                color_component = "rgb(255,0,0)"
+                fill_opacity = "0.0"
+                fill_color = "green" # not displayed with 0.0
+                
+                # Found objects in the organism show a background color
+                
+                # Repoint pathway links to our versions
+                if "show_pathway?" in url:
+                    pathway_name = url[url.index("?") + 1:]
+                    color_component = "rgb(0,0,255)"
+                    
+                    try:
+                        pw_obj = Pathway.objects.get(wid = pathway_name)
+                        elem.set("xlink:href", pw_obj.get_absolute_url(species))
+                        fill_opacity = "0.2"
+                        fill_color = "blue"
+                    except ObjectDoesNotExist:
+                        elem.set("xlink:href", url)
+                        elem.set("target", "_blank")
+                        pass
+                else:
+                    elem.set("xlink:href", url)
+                    elem.set("target", "_blank")
+    
+                elem.set("xlink:title", title)
+                root.remove(area)
+                elem.append(area)
+                
+                ecs = self.uniqify(self.extract_ecs(title))
+                
+                if len(ecs) > 0:
+                    color_component = "rgb(0,255,0)"
+                    for ec in ecs:
+                        if ec in species_ecs:
+                            fill_opacity = "0.2"
+
+                if shape == "circle":
+                    pending.append(elem)
+    
+                    area.set("cx", coords[0])
+                    area.set("cy", coords[1])
+                    area.set("r", str(int(coords[2]) + 1))
+                elif shape == "rect":
+                    pending.append(elem)
+    
+                    area.set("x", coords[0])
+                    area.set("y", coords[1])
+                    area.set("width", str(int(coords[2]) - int(coords[0])))
+                    area.set("height", str(int(coords[3]) - int(coords[1])))
+                elif shape == "polygon":
+                    graphics.append(elem)
+                       
+                    points = zip(*2*[iter(coords)])
+    
+                    area.set("points", " ".join([",".join(x) for x in points]))
+
+                area.set("style", "stroke-width:1;stroke:{};fill-opacity:{};fill:{}".format(color_component, fill_opacity, fill_color))
+            
+            for elem in pending:
+                graphics.append(elem)
+            
+            out = StringIO.StringIO()
+            out.write('<script type="text/javascript" src="' + settings.STATIC_URL + 'kegg/js/jquery-svgpan.js"></script>')
+            tree.write(out)
+            out.write('<script type="text/javascript">$("svg").svgPan("viewport");</script>')
+
+            return out.getvalue()
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -3267,13 +3063,13 @@ class ProteinMonomer(Protein):
     
     #additional fields
     gene = ForeignKey(Gene, related_name='protein_monomers', verbose_name='Gene')    
-    is_n_terminal_methionine_cleaved = ForeignKey(EntryBooleanData, verbose_name='Is N-terminal methionine cleaved', related_name='+')
-    localization = ForeignKey(Compartment, related_name='protein_monomers', verbose_name='Localization')
+    is_n_terminal_methionine_cleaved = ForeignKey(EntryBooleanData, null = True, verbose_name='Is N-terminal methionine cleaved', related_name='+')
+    localization = ForeignKey(Compartment, null = True, related_name='protein_monomers', verbose_name='Localization')
     signal_sequence = ForeignKey(SignalSequence, blank=True, null=True, related_name='protein_monomers', on_delete=SET_NULL, verbose_name='Sequence sequence')
 
     #getters
-    def get_sequence(self):
-        return unicode(Seq(self.gene.get_sequence(), IUPAC.unambiguous_dna).translate(table=self.species.genetic_code))
+    def get_sequence(self, species):
+        return unicode(Seq(self.gene.get_sequence(), IUPAC.unambiguous_dna).translate(table=species.genetic_code))
         
     def get_length(self):
         return len(self.get_sequence())
@@ -3375,10 +3171,10 @@ class ProteinMonomer(Protein):
         return 20 * 60
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_instability(self):
+    def get_instability(self, species):
         from cyano.helpers import DipeptideInstabilityWeight
         
-        seq = self.get_sequence()
+        seq = self.get_sequence(species)
         value = 0.;
         for i in range(len(seq)-1):
             if seq[i] != '*' and seq[i+1] != '*':
@@ -3386,12 +3182,12 @@ class ProteinMonomer(Protein):
         return 10. / float(len(seq)) * value;
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_is_stable(self):
-        return self.get_instability() < 40.
+    def get_is_stable(self, species):
+        return self.get_instability(species) < 40.
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_aliphatic(self):
-        seq = self.get_sequence()
+    def get_aliphatic(self, species):
+        seq = self.get_sequence(species)
         return 100. * ( \
             + 1.0 * float(seq.count('A')) \
             + 2.9 * float(seq.count('V')) \
@@ -3400,8 +3196,8 @@ class ProteinMonomer(Protein):
             ) / float(len(seq))
         
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_gravy(self):        
-        seq = self.get_sequence()
+    def get_gravy(self, species):        
+        seq = self.get_sequence(species)
         return \
             ( \
             + 1.8 * float(seq.count('A')) \
@@ -3437,7 +3233,7 @@ class ProteinMonomer(Protein):
     #html formatting
     def get_as_html_sequence(self, species, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
-        return format_sequence_as_html(self.get_sequence())
+        return format_sequence_as_html(self.get_sequence(species))
         
     def get_as_html_signal_sequence(self, species, is_user_anonymous):
         ss = self.signal_sequence
@@ -3452,16 +3248,16 @@ class ProteinMonomer(Protein):
         return format_list_html(results)
         
     def get_as_html_instability(self, species, is_user_anonymous):
-        return self.get_instability()
+        return self.get_instability(species)
         
     def get_as_html_is_stable(self, species, is_user_anonymous):
-        return self.get_is_stable()
+        return self.get_is_stable(species)
     
     def get_as_html_aliphatic(self, species, is_user_anonymous):    
-        return self.get_aliphatic()
+        return self.get_aliphatic(species)
     
     def get_as_html_gravy(self, species, is_user_anonymous):
-        return self.get_gravy()        
+        return self.get_gravy(species)        
 
     #meta information
     class Meta:    
@@ -3568,7 +3364,7 @@ class Reaction(SpeciesComponent):
                 tmp = ''
                 if s.coefficient != -1:
                     tmp += '(%d) ' % -s.coefficient
-                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.wid)
+                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.name)
                 if len(compartments) > 1:
                     tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(species), s.compartment.wid)
                 pos.append(tmp)
@@ -3576,7 +3372,7 @@ class Reaction(SpeciesComponent):
                 tmp = ''
                 if s.coefficient != 1:
                     tmp += '(%d) ' % s.coefficient
-                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.wid)
+                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.name)
                 if len(compartments) > 1:
                     tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(species), s.compartment.wid)
                 neg.append(tmp)
@@ -3792,8 +3588,10 @@ class Species(Entry):
     parent_ptr_entry = OneToOneField(Entry, related_name='child_ptr_species', parent_link=True, verbose_name='Entry')
     
     #additional fields
-    #component = ManyToManyField("SpeciesComponent", verbose_name = "Components species consists of")
     genetic_code = CharField(max_length=50, verbose_name='Genetic code', choices = CHOICES_GENETIC_CODE)
+    
+    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_species', verbose_name='Cross references')
+    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_species', verbose_name='Publication references')
     
     #getters
     @permalink
@@ -4158,14 +3956,14 @@ class Type(SpeciesComponent):
     parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
 
     #getters
-    def get_all_members(self):
+    def get_all_members(self, species):
         members = []
-        for m in self.members.all():
+        for m in self.members.filter(species = species):
             members.append(m)
-        for c in self.children.all():
+        for c in self.children.filter(species = species):
             members += c.get_all_members()
-        return members        
-    
+        return members
+
     #html formatting    
     def get_as_html_parent(self, species, is_user_anonymous):
         if self.parent is not None:
@@ -4176,13 +3974,13 @@ class Type(SpeciesComponent):
         
     def get_as_html_children(self, species, is_user_anonymous):
         results = []
-        for c in self.children.all():
+        for c in self.children.filter(species = species):
             results.append('<a href="%s">%s</a>' % (c.get_absolute_url(species), c.wid))        
         return format_list_html(results, comma_separated=True)
         
     def get_as_html_members(self, species, is_user_anonymous):
         results = []
-        for m in self.get_all_members():
+        for m in self.get_all_members(species):
             results.append('<a href="%s">%s</a>' % (m.get_absolute_url(species), m.wid))        
         return format_list_html(results, comma_separated=True)
     
@@ -4206,7 +4004,244 @@ class Type(SpeciesComponent):
         facet_fields = ['type', 'parent']
         verbose_name='Type'
         verbose_name_plural = 'Types'
+            
+class CrossReference(SpeciesComponent):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_crossreference', parent_link=True, verbose_name='Species component')
+    
+    #additional fields
+    xid = CharField(max_length=255, verbose_name='External ID', blank=True)
+    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source', blank=True)
+
+    #getters
+    def get_all_members(self, species):
+        return self.cross_referenced_entries.filter(species = species)
+    
+    def get_as_html_members(self, species, is_user_anonymous):
+        results = []
+        for m in self.get_all_members(species):
+            results.append('<a href="%s">%s</a>' % (m.get_absolute_url(species), m.wid))        
+        return format_list_html(results, comma_separated=True)
+
+    class Meta:
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': [{'verbose_name': "Referenced by", 'name': 'members'}]}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references',
+            'comments',
+            'publication_references', 
+            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            ]
+        facet_fields = ['type', 'source']
+        ordering = ['xid']
+        verbose_name='Cross reference'
+        verbose_name_plural = 'Cross references'
+
+class PublicationReference(SpeciesComponent):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_publicationreference', parent_link=True, verbose_name='Species component')
+    
+    #additional fields
+    authors = TextField(blank=True, default='', verbose_name='Author(s)')
+    editors = TextField(blank=True, default='', verbose_name='Editor(s)')
+    year = PositiveIntegerField(blank=True, null=True, verbose_name='Year')
+    title = TextField(blank=True, default='', verbose_name='Title')
+    publication = CharField(max_length=255, blank=True, default='', verbose_name='Publication')
+    publisher = CharField(max_length=255, blank=True, default='', verbose_name='Publisher')
+    volume = CharField(max_length=255, blank=True, default='', verbose_name='Volume')
+    issue = CharField(max_length=255, blank=True, default='', verbose_name='Issue')
+    pages = CharField(max_length=255, blank=True, default='', verbose_name='Page(s)')
+    
+    #getters
+    def get_citation(self, species, cross_references = False):
+        if self.type.exists():
+            if self.type.all()[0].wid == 'article':
+                txt = '%s. %s. <i>%s</i> <b>%s</b>, %s (%s).' % (self.authors, self.title, self.publication, self.volume, self.pages, self.year, )
+            elif self.type.all()[0].wid == 'book':
+                authors = ''
+                editors = ''
+                if self.authors != '':
+                    authors = '%s.' % self.authors 
+                if self.editors != '':
+                    editors = 'Eds %s.' % self.editors
+                txt = '%s %s <i>%s</i>. %s %s (%s).' % (authors, editors, self.title, self.publisher, self.pages, self.year)
+            elif self.type.all()[0].wid == 'thesis':
+                txt = '%s. <i>%s</i>. %s (%s).' % (self.authors, self.title, self.publisher, self.year)
+            else:
+                txt = '%s. <i>%s</i>. (%s).' % (self.authors, self.title, self.year)
+        else:
+            txt = '%s. <i>%s</i>. (%s) %s.' % (self.authors, self.title, self.publication, self.year)
+
+        cr = self.get_as_html_cross_references(species, True)
+        cr_spacer = ''
+        if cr != '':
+            cr_spacer = ', '
+        return '%s CyanoFactory: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(species), self.wid, cr_spacer, cr, )
+            
+    def get_all_referenced_entries(self, species):
+        entries = []
+        for entry in self.publication_referenced_entries.filter(species = species):
+            entries.append(entry)
+        for ev in Evidence.objects.filter(references__id=self.id):
+            entries.append(ev.species_component)
+        return entries
+    
+    #html formatting    
+    def get_as_html_citation(self, species, is_user_anonymous):
+        return self.get_citation(species)
         
+    def get_as_html_referenced_entries(self, species, is_user_anonymous):
+        results = []
+        for o in self.get_all_referenced_entries(species):
+            results.append('<a href="%s">%s</a>' % (o.get_absolute_url(species), o.wid))
+        return format_list_html(results)
+        
+    def get_as_bibtex(self):
+        type = None
+        props = []        
+        if self.type.all()[0].wid == 'article':
+            type = 'ARTICLE'            
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            if self.title != '':
+                props.append(('TITLE', self.title))
+            if self.publication != '':
+                props.append(('JOURNAL', self.publication))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            if self.volume != '':
+                props.append(('VOLUME', self.volume))
+            if self.issue != '':
+                props.append(('NUMBER', self.issue))
+            if self.pages != '':
+                props.append(('PAGES', self.pages))
+            for cr in self.cross_references.all():
+                if cr.source == 'PubMed':
+                    props.append(('eprint', cr.xid))
+                    props.append(('eprinttype', 'pubmed'))
+                    break
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+        elif self.type.all()[0].wid == 'book':
+            type = 'BOOK'
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            elif self.editors != '':
+                props.append(('EDITOR', self.format_authors_bibtex(self.editors)))
+            if self.title != '':
+                props.append(('TITLE', self.title))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            if self.volume != '':
+                props.append(('VOLUME', self.volume))
+            if self.publisher != '':
+                props.append(('PUBLISHER', self.publisher))
+            for cr in self.cross_references.all():
+                if cr.source == 'ISBN':
+                    props.append(('ISBN', cr.xid))
+                    break
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+        elif self.type.all()[0].wid == 'thesis':
+            type = 'THESIS'
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            if self.editors != '':
+                props.append(('TITLE', self.editors))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            if self.publisher is not None:
+                props.append(('SCHOOL', self.publisher))
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+        else:
+            type = 'MISC'
+            if self.authors != '':
+                props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
+            if self.editors != '':
+                props.append(('TITLE', self.editors))
+            if self.year is not None:
+                props.append(('YEAR', self.year))
+            for cr in self.cross_references.all():
+                if cr.source == 'URL':
+                    props.append(('URL', cr.xid))
+                    break
+            
+        props.append(('created', set_time_zone(self.created_date).isoformat()))
+        props.append(('lastUpdated', set_time_zone(self.last_updated_date).isoformat()))
+        
+        tmp = []
+        for prop in props:
+            if prop[0] == 'TITLE':
+                tmp.append('\n\t%s = "{%s}",' % prop)
+            else:
+                tmp.append('\n\t%s = {%s},' % prop)
+        return '@%s{%s%s\n}' % (type, self.wid, ''.join(tmp))
+        
+    def format_authors_bibtex(self, authors):
+        authors = authors.split(", ")
+        for idx in range(len(authors)):
+            author = authors[idx]
+            
+            names = author.split(" ")
+            for fNameIdx in range(len(names)):
+                if names[fNameIdx].upper() == names[fNameIdx]:
+                    break    
+            
+            tmpFirstName = names[fNameIdx]
+            firstName = ""
+            for i in range(len(tmpFirstName)):
+                firstName += tmpFirstName[i] + ". "        
+            firstName = firstName.strip()
+            
+            lastName = " ".join(names[0:fNameIdx])
+
+            suffix = " ".join(names[fNameIdx + 1:len(names)])
+            
+            authors[idx] = lastName        
+            if firstName != '':
+                authors[idx] += ", " + firstName
+                if suffix != '':
+                    authors[idx] += " " + suffix
+            
+        return " and ".join(authors)
+    
+    #meta information
+    class Meta:        
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
+            ('Classification', {'fields': ['type']}),            
+            ('Citation', {'fields': [{'verbose_name': 'Citation', 'name': 'citation'}]}), 
+            ('Cited by', {'fields': [{'verbose_name': 'Cited by', 'name': 'referenced_entries'}]}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]            
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references',
+            'type',             
+            'authors', 'editors', 'year', 'title', 'publication', 'publisher', 'volume', 'issue', 'pages', 
+            'comments',
+            'publication_references', 
+            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            ]
+        facet_fields = ['type', 'year', 'publication']
+        verbose_name='Publication Reference'
+        verbose_name_plural = 'Publication References'
+
 ''' END: specific data types'''
 
 #http://isoelectric.ovh.org/files/practise-isoelectric-point.html
@@ -4259,7 +4294,7 @@ def calculate_nucleic_acid_pi(seq):
 
     return pH
 
-def format_list_html(val, comma_separated=False, numbered=False, separator=None, force_list=False, vertical_spacing=False, default_items=5):
+def format_list_html(val, comma_separated=False, numbered=False, separator=None, force_list=False, vertical_spacing=False, default_items=50):
     if val is None or len(val) == 0:
         return
     if len(val) == 1 and not force_list:

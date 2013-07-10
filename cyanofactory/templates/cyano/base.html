@@ -164,6 +164,15 @@ Last updated: 2012-07-17
 				<li><a href="{% if species %}{% url "cyano.views.logout" species_wid=species.wid %}{% else %}{% url "cyano.views.logout" %}{% endif %}">Logout</a></li>
 				</ul>
 			</li>
+			{% if request.user.profile.is_admin %}
+			<li class="spacer"/>
+			<li><span style="font-weight: bold; color: red;">Warning! Admin Permission.</span>
+				<ul>
+				<li>All permission checks are ignored.</li>
+				<li>Login with a normal account when finished.</li>
+				</ul>
+			</li>
+			{% endif %}
 			{% else %}
 			<li class="spacer"/>
 			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% url "cyano.views.login" species_wid=species.wid %}{% else %}{% url "cyano.views.login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
