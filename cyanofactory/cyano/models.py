@@ -26,6 +26,7 @@ from datetime import datetime
 from cyano.exceptions import WidAlreadyExist
 from cyano.cache import Cache
 import StringIO
+from django.template import loader, Context
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -2507,213 +2508,222 @@ class Pathway(SpeciesComponent):
     #parent pointer
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_pathway', parent_link=True, verbose_name='Species component')
     
-    #additional fields
+    #helpers
+    def extract_ecs(self, text):
+        """Extracts EC numbers out of a string and returns a list with all numbers"""
+        return re.findall(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+", text)
     
-    #getters
+    def uniqify(self, seq, idfun=None):
+        """Order preserving list uniqifier.
+        Source: http://www.peterbe.com/plog/uniqifiers-benchmark
+        """
+        if idfun is None:
+            def idfun(x): return x
+        seen = {}
+        result = []
+        for item in seq:
+            marker = idfun(item)
+            if marker in seen: continue
+            seen[marker] = 1
+            result.append(item)
+        return result
     
+    def get_boehringer_hits(self, species):
+        import boehringer.models as bmodels
+        species_ecs = CrossReference.objects.filter(species = species, source = "EC").values_list('xid', flat=True)
+        enzymes = bmodels.Enzyme.objects.filter(ec__in = species_ecs).order_by('title')
+
+        species_metabolites = Metabolite.objects.filter(species = species).values_list('name', flat=True)
+        metabolites = bmodels.Metabolite.objects.filter(title__in = species_metabolites).order_by('title')
+        
+        return enzymes, metabolites
+    
+    # TODO: The current logic hardcodes on Boehringer and uses KEGG otherwise
+    # Not really nice solution...
+    
+    def get_as_html_navigator(self, species, is_user_anonymous):
+        if self.wid != "Boehringer":
+            return ""
+
+        enzymes, metabolites = self.get_boehringer_hits(species)
+
+        template = loader.get_template("cyano/pathway/navigator.html")
+
+        c = Context({'enzymes': enzymes, 'metabolites': metabolites})
+
+        rendered = template.render(c)
+        return rendered
+
     #html formatting
     def get_as_html_reaction_map(self, species, is_user_anonymous):
         W = 731
-        H = 300
+        H = 600
         
-        #mappable reactions, metabolites
-        all_rxns = ReactionMapCoordinate.objects.filter(reactions__species__id=self.species.id)
-        all_mets = MetaboliteMapCoordinate.objects.filter(metabolites__species__id=self.species.id)        
-        pway_rxns = all_rxns.filter(reactions__pathways__pk=self.pk).select_related()
-        other_rxns = all_rxns.exclude(reactions__pathways__pk=self.pk).select_related()
-        pway_mets = all_mets.filter(metabolites__reaction_stoichiometry_participants__reactions__pathways__pk=self.pk).select_related()
-        other_mets = all_mets.exclude(metabolites__reaction_stoichiometry_participants__reactions__pathways__pk=self.pk).select_related()
+        if self.wid == "Boehringer":
+            enzymes, metabolites = self.get_boehringer_hits(species)
+            template = loader.get_template("cyano/pathway/reaction_map_boehringer.html")
+            c = Context({'enzymes': enzymes, 'metabolites': metabolites,
+                         'width': W, 'height': H})
+            return template.render(c)
         
-        #find map extent
-        min_x, max_x, min_y, max_y = self.get_map_extent(all_rxns, all_mets)
-        pway_min_x, pway_max_x, pway_min_y, pway_max_y = self.get_map_extent(pway_rxns, pway_mets)
+        from PIL import Image
+        from xml.etree.ElementTree import ElementTree, Element
         
-        #build map
-        x_scale = W / (max_x - min_x)
-        y_scale = H / (max_y - min_y)
-        r = 10 * min(x_scale, y_scale)
-        
-        if pway_min_x is None:
-            selected_pathways = ''
-        else:
-            selected_pathways = ''
-            x = x_scale * (pway_min_x - min_x)
-            y = y_scale * (pway_min_y - min_y)
-            cx = x_scale * ((pway_max_x + pway_min_x) / 2 - min_x)
-            selected_pathways = '<g><rect x="%s" y="%s" width="%s" height="%s" rx="%s" ry="%s" /></g>' % (
-                x, y, 
-                x_scale * (pway_max_x - pway_min_x),  y_scale * (pway_max_y - pway_min_y),
-                4, 4,
-                )
-        
-        selected_reactions = ''
-        for map_rxn in pway_rxns:
-            path = ''
-            for match in re.finditer(r'([A-Z])( (\d+\.*\d*),(\d+\.*\d*))+', map_rxn.path, flags=re.I):
-                path += match.group(1)
-                for pts in match.group(0).split(' ')[1:]:
-                    x, y = pts.split(',')
-                    path += ' %s,%s' % (x_scale *(float(x) - min_x), y_scale * (float(y) - min_y), )
-            rxn = map_rxn.reactions.all()[0]
+        # All Pathways of the organism
+        species_ecs = CrossReference.objects.filter(species = species, source = "EC").values_list('xid', flat=True)
+
+        with open("{}/kegg/img/{}.png".format(settings.STATICFILES_DIRS[0], self.wid), "rb") as image:
+
+            im = Image.open(image)
+            iwidth = im.size[0]
+            iheight = im.size[1]
+    
+        with open("{}/kegg/maps/{}.html".format(settings.ROOT_DIR, self.wid)) as infile:
+            tree = ElementTree()
+            tree.parse(infile)
+            root = tree.getroot()
+    
+            root.tag = "svg"
+            root.set("xmlns", "http://www.w3.org/2000/svg")
+            root.set("xmlns:xlink", "http://www.w3.org/1999/xlink")
+            root.set("width", str(W))
+            root.set("height", str(min(iheight,H)))
+            root.set("viewport", "0 0 {} {}".format(str(W), str(min(iheight,H))))
+
+            script = Element("script")
+            script.set("xlink:href", "{}kegg/js/SVGPan.js".format(settings.STATIC_URL))
+            root.append(script)
             
-            if rxn.name:
-                tip_title = rxn.name
-            else:
-                tip_title = rxn.wid
-            tip_content = ''            
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
+            graphics = Element("g")
+            graphics.set("id", "viewport")
+            root.append(graphics)
             
-            selected_reactions += '\
-            <g>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><path d="%s"/></a>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><text x="%s" y="%s">%s</text></a>\
-            </g>' % (
-                rxn.get_absolute_url(species), tip_title, tip_content, path, 
-                rxn.get_absolute_url(species), tip_title, tip_content, x, y, rxn.wid)
-        
-        selected_metabolites = ''
-        for map_met in pway_mets:
-            x = x_scale * (map_met.x - min_x)
-            y = y_scale * (map_met.y - min_y)
-            met = map_met.metabolites.all()[0]
+            image = Element("image")
+            image.set("x", "0")
+            image.set("y", "0")
+            image.set("width", str(iwidth))
+            image.set("height", str(iheight))
+            image.set("xlink:href", "{}kegg/img/{}.png".format(settings.STATIC_URL, self.wid))
+            graphics.append(image)
+    
+            areas = tree.findall("area")
             
-            if met.name:
-                tip_title = met.name
-            else:
-                tip_title = met.wid
-            tip_content = met.get_as_html_empirical_formula(is_user_anonymous)
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
+            # Draw polys before the rest because they are line segments and sometimes
+            # overlap other elements
+            pending = []
             
-            selected_metabolites += '\
-            <g>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><circle cx="%s" cy="%s" r="%s" /></a>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><text x="%s" y="%s">%s</text></a>\
-            </g>' % (
-                met.get_absolute_url(species), tip_title, tip_content, x, y, r, 
-                met.get_absolute_url(species), tip_title, tip_content, x, y, met.wid)
-        
-        other_reactions = ''
-        for map_rxn in other_rxns:
-            path = ''
-            for match in re.finditer(r'([A-Z])( (\d+\.*\d*),(\d+\.*\d*))+', map_rxn.path, flags=re.I):
-                path += match.group(1)
-                for pts in match.group(0).split(' ')[1:]:
-                    x, y = pts.split(',')
-                    path += ' %s,%s' % (x_scale *(float(x) - min_x), y_scale * (float(y) - min_y), )
-            rxn = map_rxn.reactions.all()[0]
-            
-            if rxn.name:
-                tip_title = rxn.name
-            else:
-                tip_title = rxn.wid
-            tip_content = ''            
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
-            
-            other_reactions += '\
-            <g>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><path d="%s"/></a>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><text x="%s" y="%s">%s</text></a>\
-            </g>' % (
-                rxn.get_absolute_url(species), tip_title, tip_content, path, 
-                rxn.get_absolute_url(species), tip_title, tip_content, x, y, rxn.wid)
-        
-        other_metabolites = ''
-        for map_met in other_mets:
-            x = x_scale * (map_met.x - min_x)
-            y = y_scale * (map_met.y - min_y)
-            met = map_met.metabolites.all()[0]
-            
-            if met.name:
-                tip_title = met.name
-            else:
-                tip_title = met.wid
-            tip_content = met.get_as_html_empirical_formula(is_user_anonymous)
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
-            
-            other_metabolites += '\
-            <g>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><circle cx="%s" cy="%s" r="%s" /></a>\
-                <a xlink:href="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"><text x="%s" y="%s">%s</text></a>\
-            </g>' % (
-                met.get_absolute_url(species), tip_title, tip_content, x, y, r, 
-                met.get_absolute_url(species), tip_title, tip_content, x, y, met.wid)
-        
-        return '\
-        <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s">\
-            <style>\
-            .pathways rect {fill:#cd0a0a; fill-opacity:0.25;}\
-            .pathways text {font-size:12px; font-weight:bold; fill:#cd0a0a; text-anchor:middle; alignment-baseline:baseline;}\
-            .reactions text, .metabolites text {font-size:10px; fill:#222; text-anchor:middle; alignment-baseline:middle;}\
-            .reactions path {stroke-width:1px; stroke: #222; fill:none;}\
-            .metabolites circle {stroke-width: 0.5px; stroke:#3d80b3; fill:#C9E7FF;}\
-            .other_pathways {opacity:0.5}\
-            .selected_pathway .reactions path {stroke-width:2px; }\
-            .selected_pathway .metabolites circle {stroke-width:2px; }\
-            </style>\
-            <g class="selected_pathway">\
-                <g class="pathways">%s</g>\
-            </g>\
-            <g class="other_pathways">\
-                <g class="reactions">%s</g>\
-                <g class="metabolites">%s</g>\
-            </g>\
-            <g class="selected_pathway">\
-                <g class="reactions">%s</g>\
-                <g class="metabolites">%s</g>\
-            </g>\
-        </svg>' % (
-            W, H, W, H, selected_pathways, other_reactions, other_metabolites, selected_reactions, selected_metabolites)
-            
-    def get_map_extent(self, rxns, mets, margin = 20):
-        tmp1 = rxns.aggregate(min_x = Min('label_x'), max_x = Max('label_x'), min_y = Min('label_y'), max_y = Max('label_y'))
-        tmp2 = mets.aggregate(min_x = Min('x'), max_x = Max('x'), min_y = Min('y'), max_y = Max('y'))
-        if rxns.count() == 0 and mets.count() == 0:
-            min_x = None
-            max_x = None
-            min_y = None
-            max_y = None
-        if rxns.count() == 0:
-            min_x = tmp2['min_x']
-            max_x = tmp2['max_x']
-            min_y = tmp2['min_y']
-            max_y = tmp2['max_y']
-        elif mets.count() == 0:
-            min_x = tmp1['min_x']
-            max_x = tmp1['max_x']
-            min_y = tmp1['min_y']
-            max_y = tmp1['max_y']
-        else:
-            min_x = min(tmp1['min_x'], tmp2['min_x'])
-            max_x = max(tmp1['max_x'], tmp2['max_x'])
-            min_y = min(tmp1['min_y'], tmp2['min_y'])
-            max_y = max(tmp1['max_y'], tmp2['max_y'])
-        for rxn in rxns:
-            for match in re.finditer(r'([A-Z])( (\d+\.*\d*),(\d+\.*\d*))+', rxn.path, flags=re.I):
-                for pts in match.group(0).split(' ')[1:]:
-                    x, y = pts.split(',')
-                    min_x = min(min_x, float(x))
-                    max_x = max(max_x, float(x))
-                    min_y = min(min_y, float(y))
-                    max_y = max(max_y, float(y))
+            for area in areas:
+                shape = area.get("shape")
+                coords = area.get("coords")
+                url = area.get("href")
+                title = area.get("title")
+    
+                if shape is None:
+                    continue
                 
-        min_x = min_x - margin
-        max_x = max_x + margin
-        min_y = min_y - margin
-        max_y = max_y + margin
-        
-        return [min_x, max_x, min_y, max_y]
-        
+                if coords is None:
+                    continue
+                
+                if url is None:
+                    continue
+                
+                if shape == "poly":
+                    shape = "polygon"
+                
+                url = "http://www.kegg.jp" + url
+            
+                coords = coords.split(",")
+            
+                area.attrib.pop("shape")
+                area.attrib.pop("coords")
+                area.attrib.pop("href")
+                area.attrib.pop("title")
+            
+                area.tag = shape
+                
+                elem = Element("a")
+                
+                # Pathways are blue
+                # Something with EC numbers green
+                # Everything else red 
+                color_component = "rgb(255,0,0)"
+                fill_opacity = "0.0"
+                fill_color = "green" # not displayed with 0.0
+                
+                # Found objects in the organism show a background color
+                
+                # Repoint pathway links to our versions
+                if "show_pathway?" in url:
+                    pathway_name = url[url.index("?") + 1:]
+                    color_component = "rgb(0,0,255)"
+                    
+                    try:
+                        pw_obj = Pathway.objects.get(wid = pathway_name)
+                        elem.set("xlink:href", pw_obj.get_absolute_url(species))
+                        fill_opacity = "0.2"
+                        fill_color = "blue"
+                    except ObjectDoesNotExist:
+                        elem.set("xlink:href", url)
+                        elem.set("target", "_blank")
+                        pass
+                else:
+                    elem.set("xlink:href", url)
+                    elem.set("target", "_blank")
+    
+                elem.set("xlink:title", title)
+                root.remove(area)
+                elem.append(area)
+                
+                ecs = self.uniqify(self.extract_ecs(title))
+                
+                if len(ecs) > 0:
+                    color_component = "rgb(0,255,0)"
+                    for ec in ecs:
+                        if ec in species_ecs:
+                            fill_opacity = "0.2"
+
+                if shape == "circle":
+                    pending.append(elem)
+    
+                    area.set("cx", coords[0])
+                    area.set("cy", coords[1])
+                    area.set("r", str(int(coords[2]) + 1))
+                elif shape == "rect":
+                    pending.append(elem)
+    
+                    area.set("x", coords[0])
+                    area.set("y", coords[1])
+                    area.set("width", str(int(coords[2]) - int(coords[0])))
+                    area.set("height", str(int(coords[3]) - int(coords[1])))
+                elif shape == "polygon":
+                    graphics.append(elem)
+                       
+                    points = zip(*2*[iter(coords)])
+    
+                    area.set("points", " ".join([",".join(x) for x in points]))
+
+                area.set("style", "stroke-width:1;stroke:{};fill-opacity:{};fill:{}".format(color_component, fill_opacity, fill_color))
+            
+            for elem in pending:
+                graphics.append(elem)
+            
+            out = StringIO.StringIO()
+            out.write('<script type="text/javascript" src="' + settings.STATIC_URL + 'kegg/js/jquery-svgpan.js"></script>')
+            tree.write(out)
+            out.write('<script type="text/javascript">$("svg").svgPan("viewport");</script>')
+
+            return out.getvalue()
+
     #meta information
     class Meta:
         concrete_entry_model = True
         fieldsets = [
             ('Type', {'fields': ['model_type']}),
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
-            ('Classification', {'fields': ['type']}), 
+            ('Classification', {'fields': ['type']}),
+            ('Navigator', {'fields' : [
+                {'verbose_name': 'Navigate to', 'name': 'navigator'}
+                ]}), 
             ('Reactions', {'fields': [
                 {'verbose_name': 'Reactions', 'name': 'reaction_map'},
                 'reactions',
@@ -4037,8 +4047,8 @@ class CrossReference(SpeciesComponent):
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_crossreference', parent_link=True, verbose_name='Species component')
     
     #additional fields
-    xid = CharField(max_length=255, verbose_name='External ID')
-    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source')
+    xid = CharField(max_length=255, verbose_name='External ID', blank=True)
+    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source', blank=True)
 
     #getters
     def get_all_members(self, species):
