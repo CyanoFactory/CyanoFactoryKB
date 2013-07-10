@@ -1,24 +1,15 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import CommandError
 from Bio import SeqIO
 import cyano.models as cmodels
 from cyano.helpers import slugify
 from django.core.exceptions import ObjectDoesNotExist
-import sys
-from optparse import make_option
+from cyano_command import CyanoCommand
 
-class Command(BaseCommand):
+class Command(CyanoCommand):
     args = '<file file ...>'
     help = 'Imports NCBI GenBank Files'
-    
-    option_list = BaseCommand.option_list + (
-        make_option('--wid', '-w',
-            action='store',
-            dest='wid',
-            default=False,
-            help='WID of the target species, uses record name of GenBank File if missing'),
-        )
-    
-    def handle(self, *args, **options):
+
+    def handle_command(self, species, revdetail, *args, **options):
         for arg in args:
             self.stdout.write("Parsing %s" % (arg))
             with open(arg, "r") as handle:
@@ -28,20 +19,6 @@ class Command(BaseCommand):
                         raise CommandError("File lacks annotation block")
                     
                     anno = record.annotations
-                    
-                    revdetail = cmodels.RevisionDetail()
-                    revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "management")
-                    revdetail.reason = "Import GenBank File " + arg
-
-                    if options["wid"]:
-                        wid = slugify(options["wid"])
-                    else:
-                        wid = slugify(record.name)
-
-                    try:
-                        species = cmodels.Species.objects.get(wid = wid)
-                    except ObjectDoesNotExist:
-                        species = cmodels.Species(wid = wid)
     
                     if "organism" in anno:
                         species.name = anno["organism"]
