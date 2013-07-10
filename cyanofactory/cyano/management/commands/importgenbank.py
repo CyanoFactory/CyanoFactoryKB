@@ -203,7 +203,8 @@ class Command(CyanoCommand):
                         if loci in gene_map:
                             cds_map[loci] = c
                     
-                    for i, v in enumerate(cds_map.values()):
+                    sorted_cds_values = sorted(cds_map.values(), key = lambda x: x.qualifiers["locus_tag"])
+                    for i, v in enumerate(sorted_cds_values):
                         qualifiers = v.qualifiers
                         try:
                             g = cmodels.Gene.objects.get(wid = slugify(qualifiers["locus_tag"][0]))
