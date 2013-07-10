@@ -111,7 +111,7 @@
 			{% for enzyme in enzymes %}
 			{% with object=enzyme.0 %}
 			{% with color=enzyme.1 %}
-			<a xlink:href="http://www.brenda-enzymes.org/php/result_flat.php4?ecno={{ object.ec }}" xlink:title="{{ object.title }}">
+			<a xlink:href="http://www.brenda-enzymes.org/php/result_flat.php4?ecno={{ object.ec }}" xlink:title="{{ object.title }} target="_blank">
 			<rect id="e{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:{% if color %}{{ color }}{% else %}{{object.color.name}}{% endif %}; fill-opacity:0.2"/>
 			</a>
 			{% endwith %}

@@ -3,39 +3,17 @@
 # Taboada B., Ciria R., Martinez-Guerrer C.E., Merino E., 2012, ProOpDB:
 # Prokaryotic Operon DataBase, Nucleic Acids Research, 40(D1), D627-D631
 
-from django.core.management.base import BaseCommand, CommandError
 import cyano.models as cmodels
 from django.core.exceptions import ObjectDoesNotExist
-from optparse import make_option
+from cyano_command import CyanoCommand
     
-class Command(BaseCommand):
+class Command(CyanoCommand):
     args = '<file file ...>'
     help = 'Imports Operon Prediction Files retrieved from ProOpDB'
-    
-    option_list = BaseCommand.option_list + (
-        make_option('--wid', '-w',
-            action='store',
-            dest='wid',
-            default=False,
-            help='WID of the target species'),
-        )
-    
-    def handle(self, *args, **options):
-        if not options["wid"]:
-            raise CommandError("wid argument is mandatory")
-        
-        wid = options["wid"]
-        try:
-            species = cmodels.Species.objects.get(wid = wid)
-        except ObjectDoesNotExist:
-            raise CommandError("No species with wid {} exists".format(wid))
-        
+
+    def handle_command(self, species, revdetail, *args, **options):
         for arg in args:
-            with file(arg, "r") as f:
-                revdetail = cmodels.RevisionDetail()
-                revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "management")
-                revdetail.reason = "Import ProOpDB File " + arg
-                
+            with file(arg, "r") as f:                
                 count = 0
                 for line in f:
                     if line.count("\t") == 7:
@@ -86,5 +64,5 @@ class Command(BaseCommand):
                         tu.species.add(species)
                         tu.genes.add(gene)
                         tu.save(revision_detail = revdetail)
-                        self.stdout.write("Importing TU %s (%d/%d)" % (tu.wid, i + 1, count))
+                        self.stdout.write("Importing TU %s (%d/%d)" % (tu.wid, i, count))
 

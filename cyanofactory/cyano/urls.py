@@ -3,8 +3,8 @@ from django.conf.urls import patterns, url
 _species_wid = r'(?P<species_wid>[a-zA-Z0-9_\-]+)'
 _wid = r'(?P<wid>[a-zA-Z0-9_\-]+)'
 
-_species_wid_model_type = _species_wid + r'/(?P<model_type>\w+)'
-_species_wid_model_type_wid = _species_wid + r'/(?P<model_type>\w+)/' + _wid
+_species_wid_model_type = _species_wid + r'/(?P<model_type>[a-zA-Z0-9_\-]+)'
+_species_wid_model_type_wid = _species_wid + r'/(?P<model_type>[a-zA-Z0-9_\-]+)/' + _wid
 
 urlpatterns = patterns('cyano.views',         
                      
