@@ -2658,7 +2658,7 @@ class Pathway(SpeciesComponent):
                     color_component = "rgb(0,0,255)"
                     
                     try:
-                        pw_obj = Pathway.objects.get(wid = pathway_name)
+                        pw_obj = Pathway.objects.get(wid = pathway_name, species = species)
                         elem.set("xlink:href", pw_obj.get_absolute_url(species))
                         fill_opacity = "0.2"
                         fill_color = "blue"
