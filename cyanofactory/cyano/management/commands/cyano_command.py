@@ -33,7 +33,7 @@ class CyanoCommand(BaseCommand):
         reason = options["reason"]
         
         if options["wid"] != wid:
-            raise CommandError("Wid {} contained invalid characters. Only letters, numbers and _ are allowed".format(wid))            
+            raise CommandError("Wid {} contained invalid characters. Only letters, numbers and _ are allowed".format(options["wid"]))
         
         try:
             species_obj = Species.objects.get(wid = wid)

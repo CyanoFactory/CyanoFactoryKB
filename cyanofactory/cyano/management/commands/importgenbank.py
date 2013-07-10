@@ -1,3 +1,4 @@
+from optparse import make_option
 from django.core.management.base import CommandError
 from Bio import SeqIO
 import cyano.models as cmodels
@@ -8,8 +9,31 @@ from cyano_command import CyanoCommand
 class Command(CyanoCommand):
     args = '<file file ...>'
     help = 'Imports NCBI GenBank Files'
+    
+    option_list = CyanoCommand.option_list + (
+        make_option('--chromosome', '-c',
+                    action='store',
+                    dest='chromosome',
+                    default=False,
+                    help='Name of the Chromosome (or Plasmid) to assign the GenBank data to. Created if necessary.'),
+        make_option('--name', '-n',
+                    action='store',
+                    dest='name',
+                    default=False,
+                    help='Human readable name of the species')
+        )
 
     def handle_command(self, species, revdetail, *args, **options):
+        if not options["chromosome"]:
+            raise CommandError("chromosome argument is mandatory")
+        if not options["name"]:
+            raise CommandError("name argument is mandatory")
+        
+        chr_name = slugify(options["chromosome"])
+
+        if options["chromosome"] != chr_name:
+            raise CommandError("Chromosome {} contained invalid characters. Only letters, numbers and _ are allowed".format(options["chromosome"]))
+        
         for arg in args:
             self.stdout.write("Parsing %s" % (arg))
             with open(arg, "r") as handle:
@@ -141,13 +165,12 @@ class Command(CyanoCommand):
                         xref.save(revision_detail = revdetail)
                         species.cross_references.add(xref)
                         species.save(revision_detail = revdetail)
-                    
-                    chr_name = "CHROMOSOME-{}".format(slugify(species.wid))
+
                     try:
                         chromosome = cmodels.Chromosome.objects.get(wid = chr_name)
                     except ObjectDoesNotExist:
                         chromosome = cmodels.Chromosome(wid = chr_name)
-                    chromosome.name = "Chromosome"
+                    chromosome.name = options["name"]
                     chromosome.sequence = record.seq
                     chromosome.length = len(record.seq)
                     chromosome.save(revision_detail = revdetail)
