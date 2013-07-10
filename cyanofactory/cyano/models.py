@@ -2630,9 +2630,11 @@ class Pathway(SpeciesComponent):
                         fill_color = "blue"
                     except ObjectDoesNotExist:
                         elem.set("xlink:href", url)
+                        elem.set("target", "_blank")
                         pass
                 else:
                     elem.set("xlink:href", url)
+                    elem.set("target", "_blank")
     
                 elem.set("xlink:title", title)
                 root.remove(area)
