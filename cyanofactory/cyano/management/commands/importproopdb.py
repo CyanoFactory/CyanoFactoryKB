@@ -64,5 +64,5 @@ class Command(CyanoCommand):
                         tu.species.add(species)
                         tu.genes.add(gene)
                         tu.save(revision_detail = revdetail)
-                        self.stdout.write("Importing TU %s (%d/%d)" % (tu.wid, i + 1, count))
+                        self.stdout.write("Importing TU %s (%d/%d)" % (tu.wid, i, count))
 
