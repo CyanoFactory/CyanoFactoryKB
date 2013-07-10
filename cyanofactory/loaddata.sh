@@ -10,3 +10,5 @@ python manage.py importgenbank ../sequences/NC_000913.gb --traceback
 python manage.py import_kegg_ec --traceback
 python manage.py add_kegg_pathways --wid=NC_000913 --reason="Add Pathways for Ecoli"
 python manage.py add_kegg_pathways --wid=NC_000911 --reason="Add Pathways for Synecho"
+python manage.py add_boehringer_pathway --wid=NC_000913 --reason="Add Boehringer Pathway for Ecoli"
+python manage.py add_boehringer_pathway --wid=NC_000911 --reason="Add Boehringer Pathway for Synecho"

@@ -26,6 +26,7 @@ from datetime import datetime
 from cyano.exceptions import WidAlreadyExist
 from cyano.cache import Cache
 import StringIO
+from django.template import loader, Context
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -2527,13 +2528,46 @@ class Pathway(SpeciesComponent):
             result.append(item)
         return result
     
+    def get_boehringer_hits(self, species):
+        import boehringer.models as bmodels
+        species_ecs = CrossReference.objects.filter(species = species, source = "EC").values_list('xid', flat=True)
+        enzymes = bmodels.Enzyme.objects.filter(ec__in = species_ecs).order_by('title')
+
+        species_metabolites = Metabolite.objects.filter(species = species).values_list('name', flat=True)
+        metabolites = bmodels.Metabolite.objects.filter(title__in = species_metabolites).order_by('title')
+        
+        return enzymes, metabolites
+    
+    # TODO: The current logic hardcodes on Boehringer and uses KEGG otherwise
+    # Not really nice solution...
+    
+    def get_as_html_navigator(self, species, is_user_anonymous):
+        if self.wid != "Boehringer":
+            return ""
+
+        enzymes, metabolites = self.get_boehringer_hits(species)
+
+        template = loader.get_template("cyano/pathway/navigator.html")
+
+        c = Context({'enzymes': enzymes, 'metabolites': metabolites})
+
+        rendered = template.render(c)
+        return rendered
+
     #html formatting
     def get_as_html_reaction_map(self, species, is_user_anonymous):
-        import os
-        from PIL import Image
-        from xml.etree.ElementTree import ElementTree, Element
         W = 731
         H = 600
+        
+        if self.wid == "Boehringer":
+            enzymes, metabolites = self.get_boehringer_hits(species)
+            template = loader.get_template("cyano/pathway/reaction_map_boehringer.html")
+            c = Context({'enzymes': enzymes, 'metabolites': metabolites,
+                         'width': W, 'height': H})
+            return template.render(c)
+        
+        from PIL import Image
+        from xml.etree.ElementTree import ElementTree, Element
         
         # All Pathways of the organism
         species_ecs = CrossReference.objects.filter(species = species, source = "EC").values_list('xid', flat=True)
@@ -2686,7 +2720,10 @@ class Pathway(SpeciesComponent):
         fieldsets = [
             ('Type', {'fields': ['model_type']}),
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}), 
-            ('Classification', {'fields': ['type']}), 
+            ('Classification', {'fields': ['type']}),
+            ('Navigator', {'fields' : [
+                {'verbose_name': 'Navigate to', 'name': 'navigator'}
+                ]}), 
             ('Reactions', {'fields': [
                 {'verbose_name': 'Reactions', 'name': 'reaction_map'},
                 'reactions',
