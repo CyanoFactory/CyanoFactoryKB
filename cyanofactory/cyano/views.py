@@ -34,13 +34,11 @@ import os
 import settings
 import tempfile
 
-from cyano.helpers import render_queryset_to_response,\
-    get_verbose_name_for_field_by_name, render_queryset_to_response_error
+from cyano.helpers import render_queryset_to_response_error
 
 from cyano.decorators import resolve_to_objects
 from cyano.decorators import permission_required
 
-import cyano.models as models
 from cyano.models import PermissionEnum as perm
 
 def index(request):

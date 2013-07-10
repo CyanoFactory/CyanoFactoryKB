@@ -1,24 +1,39 @@
-from django.core.management.base import BaseCommand, CommandError
+from optparse import make_option
+from django.core.management.base import CommandError
 from Bio import SeqIO
 import cyano.models as cmodels
 from cyano.helpers import slugify
 from django.core.exceptions import ObjectDoesNotExist
-import sys
-from optparse import make_option
+from cyano_command import CyanoCommand
 
-class Command(BaseCommand):
+class Command(CyanoCommand):
     args = '<file file ...>'
     help = 'Imports NCBI GenBank Files'
     
-    option_list = BaseCommand.option_list + (
-        make_option('--wid', '-w',
-            action='store',
-            dest='wid',
-            default=False,
-            help='WID of the target species, uses record name of GenBank File if missing'),
+    option_list = CyanoCommand.option_list + (
+        make_option('--chromosome', '-c',
+                    action='store',
+                    dest='chromosome',
+                    default=False,
+                    help='Name of the Chromosome (or Plasmid) to assign the GenBank data to. Created if necessary.'),
+        make_option('--name', '-n',
+                    action='store',
+                    dest='name',
+                    default=False,
+                    help='Human readable name of the species')
         )
-    
-    def handle(self, *args, **options):
+
+    def handle_command(self, species, revdetail, *args, **options):
+        if not options["chromosome"]:
+            raise CommandError("chromosome argument is mandatory")
+        if not options["name"]:
+            raise CommandError("name argument is mandatory")
+        
+        chr_name = slugify(options["chromosome"])
+
+        if options["chromosome"] != chr_name:
+            raise CommandError("Chromosome {} contained invalid characters. Only letters, numbers and _ are allowed".format(options["chromosome"]))
+        
         for arg in args:
             self.stdout.write("Parsing %s" % (arg))
             with open(arg, "r") as handle:
@@ -28,20 +43,6 @@ class Command(BaseCommand):
                         raise CommandError("File lacks annotation block")
                     
                     anno = record.annotations
-                    
-                    revdetail = cmodels.RevisionDetail()
-                    revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "management")
-                    revdetail.reason = "Import GenBank File " + arg
-
-                    if options["wid"]:
-                        wid = slugify(options["wid"])
-                    else:
-                        wid = slugify(record.name)
-
-                    try:
-                        species = cmodels.Species.objects.get(wid = wid)
-                    except ObjectDoesNotExist:
-                        species = cmodels.Species(wid = wid)
     
                     if "organism" in anno:
                         species.name = anno["organism"]
@@ -164,13 +165,12 @@ class Command(BaseCommand):
                         xref.save(revision_detail = revdetail)
                         species.cross_references.add(xref)
                         species.save(revision_detail = revdetail)
-                    
-                    chr_name = "CHROMOSOME-{}".format(slugify(species.wid))
+
                     try:
                         chromosome = cmodels.Chromosome.objects.get(wid = chr_name)
                     except ObjectDoesNotExist:
                         chromosome = cmodels.Chromosome(wid = chr_name)
-                    chromosome.name = "Chromosome"
+                    chromosome.name = options["name"]
                     chromosome.sequence = record.seq
                     chromosome.length = len(record.seq)
                     chromosome.save(revision_detail = revdetail)
@@ -203,7 +203,8 @@ class Command(BaseCommand):
                         if loci in gene_map:
                             cds_map[loci] = c
                     
-                    for i, v in enumerate(cds_map.values()):
+                    sorted_cds_values = sorted(cds_map.values(), key = lambda x: x.qualifiers["locus_tag"])
+                    for i, v in enumerate(sorted_cds_values):
                         qualifiers = v.qualifiers
                         try:
                             g = cmodels.Gene.objects.get(wid = slugify(qualifiers["locus_tag"][0]))

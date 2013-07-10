@@ -1,28 +1,14 @@
-from django.core.management.base import BaseCommand, CommandError
 import cyano.models as cmodels
 from cyano.helpers import slugify
 from django.core.exceptions import ObjectDoesNotExist
 from libsbml import SBMLReader
-import sys
-from optparse import make_option
-#from itertools import imap
+from cyano_command import CyanoCommand
 
-class Command(BaseCommand):  
+class Command(CyanoCommand):  
     args = '<file file ...>'
     help = 'Imports SBML Files'
-    
-    option_list = BaseCommand.option_list + (
-        make_option('--wid', '-w',
-            action='store',
-            dest='wid',
-            default=False,
-            help='WID of the target species'),
-        )
-      
-    def handle(self, *args, **options):
-        if not options["wid"]:
-            raise CommandError("wid argument is mandatory")
-        
+
+    def handle_command(self, species_obj, revdetail, *args, **options):
         for arg in args:            
             reader= SBMLReader()
             document = reader.readSBMLFromFile(arg)
@@ -30,12 +16,6 @@ class Command(BaseCommand):
             compartments = map(lambda i: model.getCompartment(i), range(len(model.getListOfCompartments())))
             species = map(lambda i: model.getSpecies(i), range(len(model.getListOfSpecies())))
             reactions = map(lambda i: model.getReaction(i), range(len(model.getListOfReactions())))
-            
-            species_obj = cmodels.Species.objects.get(wid = slugify(options["wid"]))
-            
-            revdetail = cmodels.RevisionDetail()
-            revdetail.user = cmodels.UserProfile.objects.get(user__username__exact = "management")
-            revdetail.reason = "Import SBML {}".format(arg)
             
             # Compartment importer
             for i, compartment in enumerate(compartments):                

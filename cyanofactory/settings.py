@@ -56,10 +56,6 @@ MEDIA_URL = ''
 # Example: "/home/media/media.lawrence.com/static/"
 STATIC_ROOT = ''
 
-# URL prefix for static files.
-# Example: "http://media.lawrence.com/static/"
-STATIC_URL = '/static/'
-
 # Additional locations of static files, use absolute paths
 STATICFILES_DIRS = (
     ROOT_DIR + "/static",
@@ -122,6 +118,7 @@ INSTALLED_APPS = (
     #'biowarehouse',
 	'bioparser',
     'boehringer',
+	'kegg',
 	
 	#helpers
 	'haystack',
@@ -176,8 +173,6 @@ CACHE_MIDDLEWARE_SECONDS = 600
 CACHE_MIDDLEWARE_KEY_PREFIX = "cyano-pagecache"
 
 INTERNAL_IPS = ('127.0.0.1',)
-
-DATABASE_ROUTERS = ['public.router.WarehouseRouter']
 
 AUTH_PROFILE_MODULE = 'cyano.UserProfile'
 LOGIN_URL = ROOT_URL + '/login/'
