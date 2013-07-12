@@ -33,7 +33,7 @@ User list template
 	{% for object in queryset %}
 	{% with user=object.user profile=object%}
 	<tr>
-		<th><a href="{{ user.get_absolute_url }}/{{ species.wid }}">{{ user.first_name }}&nbsp;{{ user.last_name }}</a></th>
+		<th><a href="{% if species %}{% url "cyano.views.user" species_wid=species.wid username=user.username %}{% else %}{% url "cyano.views.user" username=user.username %}{% endif %}">{{ user.first_name }}&nbsp;{{ user.last_name }}</a></th>
 		<td><a href="{{ user.get_absolute_url }}/{{ species.wid }}">{{ profile.affiliation|truncatechars:80 }}</a></td>
 	</tr>
 	{% endwith %}
