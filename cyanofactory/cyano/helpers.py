@@ -578,7 +578,9 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     
     t = loader.get_template('cyano/error.html')
     data['message'] = msg
-    data['message_extra'] = msg_debug
+
+    if settings.DEBUG:
+        data['message_extra'] = msg_debug
     
     if _format == "json":
         objects = []
