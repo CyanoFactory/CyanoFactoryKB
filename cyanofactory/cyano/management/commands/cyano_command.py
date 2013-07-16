@@ -46,6 +46,7 @@ class CyanoCommand(BaseCommand):
         revdetail = RevisionDetail()
         revdetail.user = UserProfile.objects.get(user__username__exact = "management")
         revdetail.reason = reason
+        revdetail.save()
         
         self.handle_command(species_obj, revdetail, *args, **options)
         

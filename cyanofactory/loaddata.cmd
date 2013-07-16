@@ -6,6 +6,7 @@ python manage.py syncdb
 python manage.py loaddata cyano/fixtures/metadata.json
 python manage.py restoredb < boehringer/fixtures/data.dump
 python manage.py autocreateinitial
+python manage.py create_meta
 
 python manage.py create_species --wid=Synechocystis --name="Synechocystis sp. PCC 6803" --reason="Create Synechocystis"
 python manage.py create_species --wid=Ecoli --name="Escherichia coli str. K-12 substr. MG1655" --reason="Create Ecoli"

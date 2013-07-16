@@ -571,7 +571,7 @@ def history(request, species, model = None, item = None, detail_id = None):
         #tmeta = models.TableMeta.objects.get(name = model._meta.object_name)
         #objects = models.Revision.objects.filter(current__)
     else:
-        objects = models.SpeciesComponent.objects.filter(species__id=species.id).prefetch_related("detail", "detail__user", "current", "current__model_type").order_by("-detail__id").distinct("detail__id")
+        objects = models.SpeciesComponent.objects.filter(species__id=species.id).prefetch_related("detail", "detail__user").order_by("-detail__id").distinct("detail__id")
 
     #objects = objects.prefetch_related("detail", "detail__user", "current", "current__model_type").order_by("-detail__id").distinct("detail__id")
 
@@ -580,15 +580,15 @@ def history(request, species, model = None, item = None, detail_id = None):
     entry = []
     date = None
     
-    for revision in objects:
+    for obj in objects:
         last_date = date
-        wid = revision.current.wid
-        item_model = revision.current.model_type.name
-        detail_id = revision.detail.pk
-        date = revision.detail.date.date()
-        time = revision.detail.date.strftime("%H:%M")
-        reason = revision.detail.reason
-        author = revision.detail.user
+        wid = obj.wid
+        item_model = obj.model_type.name
+        detail_id = obj.detail.pk
+        date = obj.detail.date.date()
+        time = obj.detail.date.strftime("%H:%M")
+        reason = obj.detail.reason
+        author = obj.detail.user
         url = reverse("cyano.views.history", kwargs = {"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
         
         if last_date != date:

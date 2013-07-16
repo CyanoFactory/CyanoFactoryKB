@@ -28,6 +28,12 @@ from cyano.cache import Cache
 import StringIO
 from django.template import loader, Context
 
+
+from django.db.models.deletion import DO_NOTHING
+from django.db.models.fields.related import ForeignKey, ManyToOneRel
+from django.dispatch.dispatcher import receiver
+from django.db.models.signals import pre_save
+
 def enum(**enums):
     return type(str('Enum'), (), enums)
 
@@ -43,6 +49,13 @@ PermissionEnum = enum(
 )
 
 ''' BEGIN: choices '''
+
+CHOICES_DBOPERATION = (
+    ('I', 'Insert'),
+    ('U', 'Update'),
+    ('D', 'Delete'),
+    ('X', 'Unknown')
+)
 
 CHOICES_DIRECTION = (
     ('f', 'Forward'),
@@ -615,20 +628,14 @@ class UserProfile(ProfileBase):
 
 ''' BEGIN: helper models '''
 
+class TableMeta(Model):
+    table_name = CharField(max_length=255, verbose_name = "Name of the table", editable = False)
+    model_name = CharField(max_length=255, verbose_name = "Name of the model associated with the table", editable = False)
+
 class RevisionDetail(Model):
     user = ForeignKey(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
     date = DateTimeField(default=datetime.now, verbose_name = "Modificiation date")
     reason = CharField(max_length=255, blank=True, default='', verbose_name='Reason for edit')
-
-class TableMeta(Model):
-    name = CharField(max_length=255, verbose_name = "Name of the table", editable = False)
-
-#class ColumnMeta(Model):
-#    table = ForeignKey(TableMeta)
-#    name = CharField(max_length=255, verbose_name = "Name of the column in the table", editable = False)
-
-class RevisionOperation(Model):
-    name = CharField(max_length=255)
 
 class Revision(Model):
     """To allow reverting of edits all edit operations are stored in this table.
@@ -637,15 +644,16 @@ class Revision(Model):
     
     :Columns:
         * ``current``: Reference to the latest entry
-        * ``detail``: Contains additional information about the edit
+        * ``key``: Primary key of this item
+        * ``detail``: Contains additional information about the edit 
         * ``action``: Type of the operation (Create, Edit, Delete)
         * ``table``: Table where the modification occured
         * ``column``: Column in the table that was modified
         * ``new_value``: New value in the cell of the column
     """
     current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False)
-    detail = ForeignKey(RevisionDetail, verbose_name = 'Edit operation', related_name = 'revisions', editable = False)
-    action = ForeignKey(RevisionOperation, verbose_name = '', related_name = '+')
+    detail = ForeignKey(RevisionDetail, verbose_name = 'Edit operation', related_name = 'revisions', editable = False, null = True)
+    action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
     table = ForeignKey(TableMeta, verbose_name = '', related_name = '+')
     column = IntegerField(verbose_name = '')
     new_value = TextField(blank = True, null = True)
@@ -979,96 +987,52 @@ class Entry(Model):
     
     def natural_key(self):
         return self.wid
-    
-    def create_revision(self, field, old_value, new_value, detail):
-        """Creates a new revision object if the value changed.
-    
-        :param field: field to retrieve value from
-        :type field: Django Model Field
-        
-        :param old_value: old_value of the field
-        
-        :param new_value: new_value of the field
-        
-        :param detail: RevisionDetail object that will be assigned to the revision
-        :type detail: RevisionDetail
-    
-        :returns: Revision -- if changed, None otherwise
-        """
-        from cyano.helpers import get_column_index
-        revision = None
 
-        if new_value != old_value:
-            revision = Revision()
-            revision.detail = detail
-            
-            if hasattr(new_value, "id"):
-                # resolve value of foreign keys
-                real_new_value = unicode(new_value.id)
-            else:
-                real_new_value = unicode(new_value)
-            
-            if old_value == None:
-                #print u"Creating " + real_new_value[:10]
-                revision.action = RevisionOperation.objects.get(name = "Create")
-            elif new_value == None:
-                #print u"Deleting " + unicode(old_value)[:10]
-                revision.action = RevisionOperation.objects.get(name = "Delete")
-            else:
-                #print u"Updating " + unicode(old_value)[:10] + u" with " + real_new_value[:10]
-                revision.action = RevisionOperation.objects.get(name = "Edit")
-            
-            model_type_key = "model/model_type/" + str(field.model._meta.object_name)
-            cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(name = field.model._meta.object_name))
-            
-            revision.table = cache_model_type
-            revision.column = get_column_index(field)
-            
-            revision.new_value = real_new_value
-
-        return revision
-    
     def save(self, *args, **kwargs):
         from itertools import ifilter
         from cyano.helpers import slugify
+        from cyano.helpers import get_column_index
+        from datetime import datetime
 
         #TODO:
         #Der erste Load ohne Edit braucht eigentlich keinen kompletten Revision History Eintrag.
         ##Einer muss aber dennoch erstellt werden, damit man den Editgrund und Zeit speichern kann...
         #
         #Kompletter History-Eintrag msus erst bei Aenderung geschrieben werden
+        startTime = datetime.now()
         
-        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
-        # Slugify the WID
-        self.wid = slugify(self.wid)
+        if self.model_type_id is None:
+            self.model_type = TableMeta.objects.get(model_name = self.__class__.__name__)
+        
+        if self.wid != slugify(self.wid):
+            # Slugify the WID
+            self.wid = slugify(self.wid)
         
         # Debug code to remove rev control (speedup)
-        rev_detail = kwargs["revision_detail"]
-        rev_detail.save()
-        self.detail = rev_detail
-        del kwargs["revision_detail"]
-        super(Entry, self).save(*args, **kwargs)
-        return
-        # end of debug code
-        if "no_revision" in kwargs:
-            del kwargs["no_revision"]
-            super(Entry, self).save(*args, **kwargs)
-            return
+        ##rev_detail = kwargs["revision_detail"]
+        ##rev_detail.save()
+        ##self.detail = rev_detail
+        ##del kwargs["revision_detail"]
+        ##super(Entry, self).save(*args, **kwargs)
+        ##return
         
+        ###print("First half: " + str(datetime.now()-startTime))
+        startTime = datetime.now()
+        
+
         # Check if item already exists (based on WID)
-        try:
-            old_object = self._meta.concrete_model.objects.get(wid = self.wid)
-        except ObjectDoesNotExist:
-            old_object = None
+        #try:
+            # useless debug fetch
+        #    old_object = self._meta.concrete_model.objects.get(wid = self.wid)
+        #except ObjectDoesNotExist:
+        #    old_object = None
 
-        if old_object != None and old_object != self:
-            raise WidAlreadyExist("Wid already exists, if you want to update retrieve that item and save it")
+        #if old_object != None and old_object != self:
+        #    raise WidAlreadyExist("Wid already exists, if you want to update retrieve that item and save it")
         
         rev_detail = kwargs["revision_detail"]
-        rev_detail.save()
 
         self.detail = rev_detail
-        
         # Prevent error on save later
         del kwargs["revision_detail"]
 
@@ -1078,23 +1042,49 @@ class Entry(Model):
 
         old_item = None
         if self.pk != None:
+            # can this be optimized?
             old_item = self._meta.concrete_model.objects.get(pk = self.pk)
 
         super(Entry, self).save(*args, **kwargs)
+        
+        save_list = []
+        
+        ###print("Second half: " + str(datetime.now()-startTime))
+        startTime = datetime.now()
 
         for field in fields:
-            new_value = getattr(self, field.name)
+            if hasattr(self, field.name + "_id"):
+                new_value = getattr(self, field.name + "_id")
+            else:
+                new_value = getattr(self, field.name)
 
             if old_item == None:
                 old_value = None
             else:
-                old_value = getattr(old_item, field.name)
+                if hasattr(old_item, field.name + "_id"):
+                    old_value = getattr(old_item, field.name + "_id")
+                else:
+                    old_value = getattr(old_item, field.name)
 
-            revision = self.create_revision(field, old_value, new_value, rev_detail)
-        
-            if revision != None:
-                revision.current = self
-                revision.save()
+            if old_value != new_value:
+                action = "U"
+
+                if old_value == None:
+                    action = "I"
+                elif new_value == None:
+                    action = "D"
+                
+                model_type_key = "model/model_type/" + str(field.model._meta.object_name)
+                cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(model_name = field.model._meta.object_name))
+
+                # Assumption: When nothing changed saving isn't needed at all
+                save_list.append(Revision(current_id = self.pk, detail = rev_detail, action = action, table = cache_model_type, column = get_column_index(field), new_value = new_value))
+
+        if len(save_list) > 0:
+            Revision.objects.bulk_create(save_list)
+            ###print(str(len(save_list)) + " saved. Third half: " + str(datetime.now()-startTime))
+        #else:
+            ###print("Nothing saved. Third half: " + str(datetime.now()-startTime))
     
     #html formatting
     def get_as_html_synonyms(self, species, is_user_anonymous):
