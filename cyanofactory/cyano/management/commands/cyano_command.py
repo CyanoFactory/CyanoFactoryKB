@@ -2,6 +2,7 @@ from optparse import make_option
 from django.core.management.base import BaseCommand, CommandError
 from cyano.helpers import slugify
 from cyano.models import Species, RevisionDetail, UserProfile
+from django.db.transaction import commit_on_success
 
 class CyanoCommand(BaseCommand):
     """
@@ -22,6 +23,7 @@ class CyanoCommand(BaseCommand):
     
     verify_species_exists = True
     
+    @commit_on_success
     def handle(self, *args, **options):
         if not options["wid"]:
             raise CommandError("wid argument is mandatory")
