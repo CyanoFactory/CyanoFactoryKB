@@ -565,13 +565,13 @@ def detail(request, species, model, item):
 @permission_required(perm.READ_HISTORY)
 def history(request, species, model = None, item = None, detail_id = None):
     if item:    
-        objects = objectToQuerySet(item, model = model)[0].revisions.prefetch_related("detail", "detail__user", "current", "current__model_type").order_by("-detail__id").distinct("detail__id")
+        objects = objectToQuerySet(item, model = model).prefetch_related("detail", "detail__user").order_by("-detail__id")
     elif model:
-        objects = model.objects.filter(species__id=species.id)#.prefetch_related("revisions", "revisions__detail", "revisions__detail__user", "model_type").order_by("-revisions__detail__id").distinct("revisions__detail__id")
+        objects = model.objects.filter(species__id=species.id).prefetch_related("detail", "detail__user").order_by("-detail__id")
         #tmeta = models.TableMeta.objects.get(name = model._meta.object_name)
         #objects = models.Revision.objects.filter(current__)
     else:
-        objects = models.SpeciesComponent.objects.filter(species__id=species.id).prefetch_related("detail", "detail__user").order_by("-detail__id").distinct("detail__id")
+        objects = models.SpeciesComponent.objects.filter(species__id=species.id).prefetch_related("detail", "detail__user").order_by("-detail__id")#.distinct("detail__id")
 
     #objects = objects.prefetch_related("detail", "detail__user", "current", "current__model_type").order_by("-detail__id").distinct("detail__id")
 
