@@ -689,7 +689,6 @@ class Evidence(Model):
         verbose_name_plural = 'Evidence'
         
 class EntryData(Model):
-    
     def __unicode__(self):
         arr = []
         txt = unicode('')
@@ -1150,7 +1149,7 @@ class SpeciesComponent(Entry):
     def get_absolute_url(self, species):
         model_type_key = "model/model_type/" + str(self.model_type_id)
         cache_model_type = Cache.try_get(model_type_key, lambda: self.model_type)
-        return ('cyano.views.detail', (), {'species_wid':species.wid, 'model_type':cache_model_type.name, 'wid': self.wid})
+        return ('cyano.views.detail', (), {'species_wid':species.wid, 'model_type':cache_model_type.model_name, 'wid': self.wid})
         
     def get_all_references(self):
         return self.publication_references.all() | PublicationReference.objects.filter(evidence__species_component__id = self.id)

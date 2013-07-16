@@ -583,7 +583,7 @@ def history(request, species, model = None, item = None, detail_id = None):
     for obj in objects:
         last_date = date
         wid = obj.wid
-        item_model = obj.model_type.name
+        item_model = obj.model_type.model_name
         detail_id = obj.detail.pk
         date = obj.detail.date.date()
         time = obj.detail.date.strftime("%H:%M")
