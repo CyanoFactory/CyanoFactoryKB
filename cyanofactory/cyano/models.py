@@ -28,12 +28,6 @@ from cyano.cache import Cache
 import StringIO
 from django.template import loader, Context
 
-
-from django.db.models.deletion import DO_NOTHING
-from django.db.models.fields.related import ForeignKey, ManyToOneRel
-from django.dispatch.dispatcher import receiver
-from django.db.models.signals import pre_save
-
 def enum(**enums):
     return type(str('Enum'), (), enums)
 
@@ -972,13 +966,16 @@ class Entry(Model):
         * ``name``: Short, human readable name of that entry
         * ``synonyms``: Other names for that entry
         * ``comments``: Detailed notes about this entry
-        * ``permissions``: Reference to the permissions for this entry
     """
     model_type = ForeignKey(TableMeta)
     wid = SlugField(max_length=150, unique = True, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
+
+    created_user = ForeignKey(User, related_name='+', editable=False, verbose_name='Created user')
+    created_date = DateTimeField(auto_now=False, auto_now_add=True, verbose_name='Created date')
+
     detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry')
     
     def __unicode__(self):
@@ -988,68 +985,48 @@ class Entry(Model):
         return self.wid
 
     def save(self, *args, **kwargs):
+        # Optimized to reduce number of database accesses to a minimum
+        
         from itertools import ifilter
         from cyano.helpers import slugify
         from cyano.helpers import get_column_index
-        from datetime import datetime
-
-        #TODO:
-        #Der erste Load ohne Edit braucht eigentlich keinen kompletten Revision History Eintrag.
-        ##Einer muss aber dennoch erstellt werden, damit man den Editgrund und Zeit speichern kann...
-        #
-        #Kompletter History-Eintrag msus erst bei Aenderung geschrieben werden
+        
         startTime = datetime.now()
-        
-        if self.model_type_id is None:
-            self.model_type = TableMeta.objects.get(model_name = self.__class__.__name__)
-        
+
         if self.wid != slugify(self.wid):
             # Slugify the WID
             self.wid = slugify(self.wid)
-        
-        # Debug code to remove rev control (speedup)
-        ##rev_detail = kwargs["revision_detail"]
-        ##rev_detail.save()
-        ##self.detail = rev_detail
-        ##del kwargs["revision_detail"]
-        ##super(Entry, self).save(*args, **kwargs)
-        ##return
-        
-        ###print("First half: " + str(datetime.now()-startTime))
-        startTime = datetime.now()
-        
-
-        # Check if item already exists (based on WID)
-        #try:
-            # useless debug fetch
-        #    old_object = self._meta.concrete_model.objects.get(wid = self.wid)
-        #except ObjectDoesNotExist:
-        #    old_object = None
-
-        #if old_object != None and old_object != self:
-        #    raise WidAlreadyExist("Wid already exists, if you want to update retrieve that item and save it")
-        
+      
         rev_detail = kwargs["revision_detail"]
-
         self.detail = rev_detail
         # Prevent error on save later
         del kwargs["revision_detail"]
 
-        fields = self._meta.fields
-        # Remove primary keys
-        fields = ifilter(lambda x: lambda x: not x.primary_key, fields)
-
         old_item = None
         if self.pk != None:
-            # can this be optimized?
+            # can this be optimized? Probably not
+            #print "old"
             old_item = self._meta.concrete_model.objects.get(pk = self.pk)
+        else:
+            # New entry (no primary key)
+            #print "new"
+            model_type_key = "model/model_type/" + str(self._meta.object_name)
+            cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(model_name = self._meta.object_name))
+            self.model_type = cache_model_type
+            self.created_user_id = rev_detail.user_id
+            self.created_date = rev_detail.date
 
         super(Entry, self).save(*args, **kwargs)
         
         save_list = []
         
-        ###print("Second half: " + str(datetime.now()-startTime))
+        #print("Second half: " + str(datetime.now()-startTime))
         startTime = datetime.now()
+
+        fields = self._meta.fields
+        # Remove primary keys and some fields that don't need revisioning:
+        fields = ifilter(lambda x: lambda x: not x.primary_key and
+                         not x.name in ["detail", "created_user", "created_date"], fields)
 
         for field in fields:
             if hasattr(self, field.name + "_id"):
@@ -1081,9 +1058,9 @@ class Entry(Model):
 
         if len(save_list) > 0:
             Revision.objects.bulk_create(save_list)
-            ###print(str(len(save_list)) + " saved. Third half: " + str(datetime.now()-startTime))
+            #print(str(len(save_list)) + " saved. Third half: " + str(datetime.now()-startTime))
         #else:
-            ###print("Nothing saved. Third half: " + str(datetime.now()-startTime))
+        #    print("Nothing saved. Third half: " + str(datetime.now()-startTime))
     
     #html formatting
     def get_as_html_synonyms(self, species, is_user_anonymous):
