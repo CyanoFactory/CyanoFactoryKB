@@ -13,7 +13,7 @@ from django.core import validators
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db import models
-from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, ForeignKey, BooleanField, SlugField, ManyToManyField, TextField, DateTimeField, options, permalink, SET_NULL, Min, Max
+from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, ManyToManyField, TextField, DateTimeField, options, permalink, SET_NULL, Min, Max
 from django.db.models.query import EmptyQuerySet
 from django.utils.http import urlencode
 from itertools import chain
@@ -27,6 +27,7 @@ from cyano.exceptions import WidAlreadyExist
 from cyano.cache import Cache
 import StringIO
 from django.template import loader, Context
+from cyano.history import HistoryForeignKey as ForeignKey
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -625,6 +626,21 @@ class UserProfile(ProfileBase):
 class TableMeta(Model):
     table_name = CharField(max_length=255, verbose_name = "Name of the table", editable = False)
     model_name = CharField(max_length=255, verbose_name = "Name of the model associated with the table", editable = False)
+    
+    @staticmethod
+    def get_by_table_name(name):
+        return TableMeta.objects.get(table_name = name)
+        
+    @staticmethod
+    def get_by_model_name(name):
+        return TableMeta.objects.get(model_name = name)
+    
+    @staticmethod
+    def get_by_model(model):
+        return TableMeta.objects.get(model_name = model._meta.object_name)
+    
+    def __unicode__(self):
+        return self.table_name + "-" + self.model_name
 
 class RevisionDetail(Model):
     user = ForeignKey(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
@@ -1025,8 +1041,8 @@ class Entry(Model):
 
         fields = self._meta.fields
         # Remove primary keys and some fields that don't need revisioning:
-        fields = ifilter(lambda x: lambda x: not x.primary_key and
-                         not x.name in ["detail", "created_user", "created_date"], fields)
+        fields = ifilter(lambda x: (not x.primary_key) and
+                         (not x.name in ["detail", "created_user", "created_date"]), fields)
 
         for field in fields:
             if hasattr(self, field.name + "_id"):
@@ -1146,7 +1162,7 @@ class SpeciesComponent(Entry):
         return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]', 
             lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':self.species.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
-            
+    
     def get_as_html_references(self, species, is_user_anonymous):
         results = {}
         for r in self.get_all_references():

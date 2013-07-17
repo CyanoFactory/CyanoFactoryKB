@@ -25,7 +25,8 @@ from django.views.decorators.csrf import csrf_protect
 from haystack.query import SearchQuerySet
 from itertools import chain
 from cyano.forms import ExportDataForm, ImportDataForm
-from cyano.helpers import getEntry, format_field_detail_view, objectToQuerySet, render_queryset_to_response, getObjectTypes, getModel, get_invalid_objects, get_edit_form_fields, get_edit_form_data
+from cyano.helpers import getEntry, format_field_detail_view, objectToQuerySet, render_queryset_to_response, getObjectTypes, getModel, get_invalid_objects, get_edit_form_fields, get_edit_form_data,\
+    get_history
 from cyano.helpers import validate_object_fields, validate_model_objects, validate_model_unique, save_object_data, batch_import_from_excel, readFasta
 import cyano.models as models
 from urlparse import urlparse
@@ -563,17 +564,18 @@ def detail(request, species, model, item):
 
 @resolve_to_objects
 @permission_required(perm.READ_HISTORY)
-def history(request, species, model = None, item = None, detail_id = None):
-    if item:    
-        objects = objectToQuerySet(item, model = model).prefetch_related("detail", "detail__user").order_by("-detail__id")
+def history(request, species, model = None, item = None):
+    if item:
+        # Item specific
+        objects = models.Revision.objects.filter(current = item).distinct("detail").order_by("-detail")
     elif model:
-        objects = model.objects.filter(species__id=species.id).prefetch_related("detail", "detail__user").order_by("-detail__id")
-        #tmeta = models.TableMeta.objects.get(name = model._meta.object_name)
-        #objects = models.Revision.objects.filter(current__)
+        # Model specific
+        tm = models.TableMeta.get_by_model(model)
+        components = model.objects.filter(species = species)
+        objects = models.Revision.objects.filter(current__model_type = tm, current__pk__in = components).distinct("detail").order_by("-detail")
     else:
-        objects = models.SpeciesComponent.objects.filter(species__id=species.id).prefetch_related("detail", "detail__user").order_by("-detail__id")#.distinct("detail__id")
-
-    #objects = objects.prefetch_related("detail", "detail__user", "current", "current__model_type").order_by("-detail__id").distinct("detail__id")
+        # Whole species specific
+        objects = models.Revision.objects.filter(current = item, current__species = species).distinct("detail").order_by("-detail")
 
     revisions = []
     
@@ -582,14 +584,14 @@ def history(request, species, model = None, item = None, detail_id = None):
     
     for obj in objects:
         last_date = date
-        wid = obj.wid
-        item_model = obj.model_type.model_name
+        wid = obj.current.wid
+        item_model = obj.current.model_type.model_name
         detail_id = obj.detail.pk
         date = obj.detail.date.date()
         time = obj.detail.date.strftime("%H:%M")
         reason = obj.detail.reason
         author = obj.detail.user
-        url = reverse("cyano.views.history", kwargs = {"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
+        url = reverse("cyano.views.history_detail", kwargs = {"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
         
         if last_date != date:
             revisions.append(entry)
@@ -611,6 +613,62 @@ def history(request, species, model = None, item = None, detail_id = None):
         template = 'cyano/history.html',
         data = {
             'revisions': revisions[1:]
+            })
+
+@resolve_to_objects
+@permission_required(perm.READ_HISTORY)
+def history_detail(request, species, model, item, detail_id):
+    fieldsets = deepcopy(model._meta.fieldsets)
+    
+    #filter out type, metadata
+    fieldset_names = [x[0] for x in fieldsets]
+    if 'Type' in fieldset_names:
+        idx = fieldset_names.index('Type')
+        del fieldsets[idx]
+        
+    #filter out empty fields
+    item = get_history(species, item, detail_id)
+
+    rmfieldsets = []
+    for idx in range(len(fieldsets)):
+        rmfields = []
+        for idx2 in range(len(fieldsets[idx][1]['fields'])):
+            if isinstance(fieldsets[idx][1]['fields'][idx2], dict):
+                field_name = fieldsets[idx][1]['fields'][idx2]['name']
+                verbose_name = fieldsets[idx][1]['fields'][idx2]['verbose_name']
+            else:
+                field_name = fieldsets[idx][1]['fields'][idx2]
+                field = model._meta.get_field_by_name(field_name)[0]
+                if isinstance(field, RelatedObject):
+                    verbose_name = capfirst(field.get_accessor_name())
+                else:
+                    verbose_name = field.verbose_name
+                
+            data = format_field_detail_view(species, item, field_name, request.user.is_anonymous())
+            if (data is None) or (data == ''):
+                rmfields = [idx2] + rmfields
+            
+            fieldsets[idx][1]['fields'][idx2] = {'verbose_name': verbose_name.replace(" ", '&nbsp;').replace("-", "&#8209;"), 'data': data}
+        for idx2 in rmfields:
+            del fieldsets[idx][1]['fields'][idx2]
+        if len(fieldsets[idx][1]['fields']) == 0:
+            rmfieldsets = [idx] + rmfieldsets
+    for idx in rmfieldsets:
+        del fieldsets[idx]
+    
+    #form query set
+    qs = objectToQuerySet(item, model = model)
+
+    #render response
+    return render_queryset_to_response(
+        species = species,        
+        request = request, 
+        models = [model],
+        queryset = qs,
+        template = 'cyano/detail.html', 
+        data = {
+            'fieldsets': fieldsets,
+            'message': request.GET.get('message', ''),
             })
             
 @login_required        

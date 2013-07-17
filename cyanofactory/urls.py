@@ -3,7 +3,6 @@ URL patterns
 '''
 
 from django.conf.urls.defaults import patterns, include, url
-from public.views import *
 
 # enable the admin:
 #from django.contrib import admin
