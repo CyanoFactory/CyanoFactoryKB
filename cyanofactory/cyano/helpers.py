@@ -33,7 +33,8 @@ from openpyxl.shared.date_time import SharedDate, CALENDAR_WINDOWS_1900
 from openpyxl.style import NumberFormat, Border, Color, HashableObject, Protection, Alignment
 from openpyxl.writer.styles import StyleWriter
 from cyano.templatetags.templatetags import ceil
-from cyano.models import Entry, Species, SpeciesComponent, PublicationReference, Chromosome, format_list_html, format_evidence, Evidence, EvidencedEntryData
+from cyano.models import Entry, Species, SpeciesComponent, PublicationReference, Chromosome, format_list_html, format_evidence, Evidence, EvidencedEntryData,\
+    RevisionDetail, Revision, TableMeta
 from cyano.models import EntryData, EntryBooleanData, EntryCharData, EntryFloatData, EntryPositiveFloatData, EntryTextData
 from StringIO import StringIO
 from subprocess import Popen, PIPE
@@ -1389,6 +1390,44 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous):
         return value
 
     return ''
+        
+def get_history(species, obj, detail_id):
+    #return Revision.objects.filter(current = obj, detail__lte = detail_id, table = TableMeta.get_by_model(field.model), column = get_column_index(field)).order_by("-detail")[0].new_value + " (current: " + str(value) + ")"
+
+    history_obj = obj.__class__.objects.get(pk = obj.pk)
+    history_obj.detail_history = detail_id
+    
+    comments = ""
+
+    #print "=="
+    #print obj._meta.fields
+    #print history_obj._meta.fields
+    #for field in history_obj._meta.fields:
+    #    if isinstance(field, ForeignKey):
+    #        print "redi"
+    #        getattr(history_obj, field.name)
+    #print obj._meta.fields
+    #print history_obj._meta.fields
+    for field in obj._meta.fields:
+        if isinstance(field, RelatedObject):
+            #print "Rel: " + field.name
+            pass
+        elif isinstance(field, ManyToManyField):
+            #print "M2M: " + field.name
+            pass
+        elif isinstance(field, ForeignKey):
+            #print "FK:  " + field.name
+            pass
+        else:
+            #print "Non: " + field.name
+            new_value = field.to_python(Revision.objects.filter(current = obj, detail__lte = detail_id, table = TableMeta.get_by_model(field.model), column = get_column_index(field)).order_by("-detail")[0].new_value)        
+            comments += "{}: {} (cur: {})<br>".format(field.name, new_value, getattr(obj, field.name))
+            setattr(history_obj, field.name, new_value)
+    
+    history_obj.comments = comments
+    
+    # Only FK and Non yet:
+    return history_obj
 
 def diffgen(di):
     old = ""
@@ -2227,7 +2266,6 @@ def draw_molecule(smiles, format='svg', width=200, height=200):
 
 def get_column_index(column):
     """Returns the columns index by name (table name is auto detected via the field)
-    A db_xref identifier consists of two strings delimited by a **:**.
     
     :param column: Column in the table
     :type column: Django Model Field
