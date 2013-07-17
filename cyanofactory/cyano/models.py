@@ -973,7 +973,7 @@ class Entry(Model):
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
 
-    created_user = ForeignKey(User, related_name='+', editable=False, verbose_name='Created user')
+    created_user = ForeignKey(UserProfile, related_name='+', editable=False, verbose_name='Created user')
     created_date = DateTimeField(auto_now=False, auto_now_add=True, verbose_name='Created date')
 
     detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry')
@@ -1073,18 +1073,19 @@ class Entry(Model):
         return format_list_html(results, separator=', ')
     
     def get_as_html_created_user(self, species, is_user_anonymous):
-        return ""# FIXME
         if is_user_anonymous:
             return '%s' % (self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
         else:
-            return '<a href="%s">%s %s</a> on %s' % (self.created_user.get_absolute_url(), self.created_user.first_name, self.created_user.last_name, self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
+            user = self.created_user.user
+            return '<a href="%s">%s %s</a> on %s' % (user.get_absolute_url(), user.first_name, user.last_name, self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
     
     def get_as_html_last_updated_user(self, species, is_user_anonymous):
-        return ""# FIXME
         if is_user_anonymous:
             return '%s' % (self.last_updated_date.strftime("%Y-%m-%d %H:%M:%S"))
         else:
-            return '<a href="%s">%s %s</a> on %s' % (self.last_updated_user.get_absolute_url(), self.last_updated_user.first_name, self.last_updated_user.last_name, self.last_updated_date.strftime("%Y-%m-%d %H:%M:%S"))        
+            detail = self.detail
+            user = detail.user.user
+            return '<a href="%s">%s %s</a> on %s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"))        
     
     #meta information
     class Meta:
