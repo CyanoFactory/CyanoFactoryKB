@@ -28,6 +28,7 @@ from cyano.cache import Cache
 import StringIO
 from django.template import loader, Context
 from cyano.history import HistoryForeignKey as ForeignKey
+from django.db.models.loading import get_model
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -624,8 +625,8 @@ class UserProfile(ProfileBase):
 ''' BEGIN: helper models '''
 
 class TableMeta(Model):
-    table_name = CharField(max_length=255, verbose_name = "Name of the table", editable = False)
-    model_name = CharField(max_length=255, verbose_name = "Name of the model associated with the table", editable = False)
+    table_name = CharField(max_length=255, verbose_name = "Name of the table", unique=True)
+    model_name = CharField(max_length=255, verbose_name = "Name of the model associated with the table", unique=True)
     
     @staticmethod
     def get_by_table_name(name):
@@ -644,7 +645,47 @@ class TableMeta(Model):
         return TableMeta.get_by_model_name(model._meta.object_name)
     
     def __unicode__(self):
-        return self.table_name + "-" + self.model_name
+        return self.table_name + " - " + self.model_name
+
+class TableMetaColumn(Model):
+    table = ForeignKey(TableMeta, related_name = 'columns')
+    column_name = CharField(max_length=255, verbose_name = "Name of the column")
+    column_id = IntegerField(verbose_name = "Index of the column")
+    
+    @staticmethod
+    def get_by_field(field):
+        model_type_key = "column/%s/%s" % (field.model._meta.object_name, field.column)
+        
+        return Cache.try_get(model_type_key,
+                lambda: TableMetaColumn.objects.prefetch_related("table").get(table__model_name = field.model._meta.object_name, column_name = field.column))
+
+    def __unicode__(self):
+        return "{}: {} ({})".format(self.table.model_name, self.column_name, self.column_id)
+
+    class Meta:
+        unique_together = ('table', 'column_name')
+
+class TableMetaManyToMany(Model):
+    table = ForeignKey(TableMeta, related_name = 'm2ms')
+    m2m_name = CharField(max_length=255, verbose_name = "Name of the many to many field")
+    
+    @staticmethod
+    def get_by_table_name(name, m2m):
+        model_type_key = "model/model_type_m2m/tbl/" + name
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("table").get(table__table_name = name, m2m_name = m2m))
+        return cache_model_type
+        
+    @staticmethod
+    def get_by_model_name(name, m2m):
+        model_type_key = "model/model_type_m2m/" + name
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("table").get(table__model_name = name, m2m_name = m2m))
+        return cache_model_type
+
+    def __unicode__(self):
+        return "{}: {}".format(self.table.model_name, self.m2m_name)
+    
+    class Meta:
+        unique_together = ('table', 'm2m_name')
 
 class RevisionDetail(Model):
     user = ForeignKey(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
@@ -660,15 +701,13 @@ class Revision(Model):
         * ``current``: Reference to the latest entry
         * ``detail``: Contains additional information about the edit 
         * ``action``: Type of the operation (Create, Edit, Delete)
-        * ``table``: Table where the modification occured
-        * ``column``: Column in the table that was modified
+        * ``column``: Table and column where the modification occured
         * ``new_value``: New value in the cell of the column
     """
     current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False)
     detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions', editable = False, null = True)
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
-    table = ForeignKey(TableMeta, verbose_name = '', related_name = '+')
-    column = IntegerField(verbose_name = '')
+    column = ForeignKey(TableMetaColumn, verbose_name = 'Table and column where the modification occured', related_name = '+')
     new_value = TextField(blank = True, null = True)
 
     def __unicode__(self):
@@ -1006,7 +1045,6 @@ class Entry(Model):
         
         from itertools import ifilter
         from cyano.helpers import slugify
-        from cyano.helpers import get_column_index
 
         if self.wid != slugify(self.wid):
             # Slugify the WID
@@ -1039,7 +1077,7 @@ class Entry(Model):
         fields = self._meta.fields
         # Remove primary keys and some fields that don't need revisioning:
         fields = ifilter(lambda x: (not x.primary_key) and
-                         (not x.name in ["detail", "created_user", "created_date"]), fields)
+                         (not x.name in ["detail", "created_detail"]), fields)
 
         for field in fields:
             if hasattr(self, field.name + "_id"):
@@ -1056,14 +1094,13 @@ class Entry(Model):
                     old_value = getattr(old_item, field.name)
 
             if old_value != new_value:
-                tm = TableMeta.get_by_model(field.model)
-                column = get_column_index(field)
+                column = TableMetaColumn.get_by_field(field)
 
                 if new_value == None:
                     ##print "delete"
                     action = "D"
                 else:
-                    if Revision.objects.filter(current_id = self.pk, table = tm, column = column).exists():
+                    if Revision.objects.filter(current_id = self.pk, column = column).exists():
                         ##print "update", self.wid, tm.model_name, column
                         action = "U"
                     else:
@@ -1071,7 +1108,7 @@ class Entry(Model):
                         action = "I"
 
                 # Assumption: When nothing changed saving isn't needed at all
-                save_list.append(Revision(current_id = self.pk, detail_id = old_item.created_detail_id if "I" else old_item.detail_id, action = action, table = tm, column = column, new_value = new_value))
+                save_list.append(Revision(current_id = self.pk, detail_id = old_item.created_detail_id if "I" else old_item.detail_id, action = action, column = column, new_value = old_value))
 
         if len(save_list) > 0:
             ##print self.wid + ": revisioning", len(save_list), "items"

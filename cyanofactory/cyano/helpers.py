@@ -34,7 +34,7 @@ from openpyxl.style import NumberFormat, Border, Color, HashableObject, Protecti
 from openpyxl.writer.styles import StyleWriter
 from cyano.templatetags.templatetags import ceil
 from cyano.models import Entry, Species, SpeciesComponent, PublicationReference, Chromosome, format_list_html, format_evidence, Evidence, EvidencedEntryData,\
-    RevisionDetail, Revision, TableMeta
+    RevisionDetail, Revision, TableMeta, TableMetaColumn
 from cyano.models import EntryData, EntryBooleanData, EntryCharData, EntryFloatData, EntryPositiveFloatData, EntryTextData
 from StringIO import StringIO
 from subprocess import Popen, PIPE
@@ -1420,7 +1420,7 @@ def get_history(species, obj, detail_id):
             pass
         else:
             #print "Non: " + field.name
-            new_value = field.to_python(Revision.objects.filter(current = obj, detail__lte = detail_id, table = TableMeta.get_by_model(field.model), column = get_column_index(field)).order_by("-detail")[0].new_value)        
+            new_value = field.to_python(Revision.objects.filter(current = obj, detail__lte = detail_id, column = TableMetaColumn.get_by_field(field)).order_by("-detail")[0].new_value)        
             comments += "{}: {} (cur: {})<br>".format(field.name, new_value, getattr(obj, field.name))
             setattr(history_obj, field.name, new_value)
     
@@ -2262,29 +2262,6 @@ def draw_molecule(smiles, format='svg', width=200, height=200):
     os.remove(filename)
     
     return img
-
-
-def get_column_index(column):
-    """Returns the columns index by name (table name is auto detected via the field)
-    
-    :param column: Column in the table
-    :type column: Django Model Field
-
-    :returns: int -- Column index
-    """
-    
-    model_type_key = "column/%s/%s" % (column.model._meta.db_table, column.column)
-    col_index = Cache.get(model_type_key)
-    
-    if col_index == None:
-        from django.db import connection
-        cursor = connection.cursor()
-        cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [column.model._meta.db_table, column.column])
-        row = cursor.fetchone()
-        Cache.set(model_type_key, row[0])
-        col_index = row[0]
-    
-    return col_index
 
 def get_verbose_name_for_field_by_name(model, field_name):
     return model._meta.get_field_by_name(field_name)[0].verbose_name

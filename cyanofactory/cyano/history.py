@@ -5,8 +5,7 @@ from django.db.models.related import RelatedObject
 
 class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDescriptor):
     def __get__(self, instance, instance_type=None):
-        from cyano.helpers import get_column_index
-        from cyano.models import Revision, TableMeta
+        from cyano.models import Revision, TableMetaColumn
         if instance is None:
             return self
         try:
@@ -36,7 +35,7 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
                         elif isinstance(field, ForeignKey):
                             pass
                         else:
-                            history_obj = Revision.objects.filter(current = rel_obj, detail__lte = instance.detail_history, table = TableMeta.get_by_model(field.model), column = get_column_index(field)).order_by("-detail")
+                            history_obj = Revision.objects.filter(current = rel_obj, detail__lte = instance.detail_history, column = TableMetaColumn.get_by_field(field)).order_by("-detail")
                             if history_obj.exists():
                                 print "revisioning: " + str(rel_obj) + " - " + field.name
                                 new_value = field.to_python(history_obj[0].new_value)        
