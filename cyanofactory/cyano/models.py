@@ -665,7 +665,7 @@ class Revision(Model):
         * ``new_value``: New value in the cell of the column
     """
     current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False)
-    detail = ForeignKey(RevisionDetail, verbose_name = 'Edit operation', related_name = 'revisions', editable = False, null = True)
+    detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions', editable = False, null = True)
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
     table = ForeignKey(TableMeta, verbose_name = '', related_name = '+')
     column = IntegerField(verbose_name = '')
@@ -992,10 +992,8 @@ class Entry(Model):
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
 
-    created_user = ForeignKey(UserProfile, related_name='+', editable=False, verbose_name='Created user')
-    created_date = DateTimeField(auto_now=False, auto_now_add=True, verbose_name='Created date')
-
-    detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry')
+    created_detail = ForeignKey(RevisionDetail, verbose_name='Entry created revision', related_name='entry_created_detail')
+    detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry', related_name='entry_detail')
     
     def __unicode__(self):
         return self.wid
@@ -1028,10 +1026,9 @@ class Entry(Model):
             # The latest entry is not revisioned to save space (and time)
             model_type_key = "model/model_type/" + str(self._meta.object_name)
             cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(model_name = self._meta.object_name))
+            self.created_detail = rev_detail
             self.detail = rev_detail
             self.model_type = cache_model_type
-            self.created_user_id = rev_detail.user_id
-            self.created_date = rev_detail.date
 
             ##print "CREATE: No revision needed for", str(self.wid)
             super(Entry, self).save(*args, **kwargs)
@@ -1074,7 +1071,7 @@ class Entry(Model):
                         action = "I"
 
                 # Assumption: When nothing changed saving isn't needed at all
-                save_list.append(Revision(current_id = self.pk, detail_id = old_item.detail_id, action = action, table = tm, column = column, new_value = new_value))
+                save_list.append(Revision(current_id = self.pk, detail_id = old_item.created_detail_id if "I" else old_item.detail_id, action = action, table = tm, column = column, new_value = new_value))
 
         if len(save_list) > 0:
             ##print self.wid + ": revisioning", len(save_list), "items"
@@ -1096,8 +1093,9 @@ class Entry(Model):
         if is_user_anonymous:
             return '%s' % (self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
         else:
-            user = self.created_user.user
-            return '<a href="%s">%s %s</a> on %s' % (user.get_absolute_url(), user.first_name, user.last_name, self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
+            detail = self.created_detail
+            user = detail.user.user
+            return '<a href="%s">%s %s</a> on %s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"))
     
     def get_as_html_last_updated_user(self, species, is_user_anonymous):
         if is_user_anonymous:
