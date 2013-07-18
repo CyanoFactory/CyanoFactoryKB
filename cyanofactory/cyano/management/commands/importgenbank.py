@@ -171,7 +171,7 @@ class Command(CyanoCommand):
                     except ObjectDoesNotExist:
                         chromosome = cmodels.Chromosome(wid = chr_name)
                     chromosome.name = options["name"]
-                    chromosome.sequence = record.seq
+                    chromosome.sequence = str(record.seq) # Cast needed, otherwise revision-compare fails!
                     chromosome.length = len(record.seq)
                     chromosome.save(revision_detail = revdetail)
                     chromosome.species.add(species)
