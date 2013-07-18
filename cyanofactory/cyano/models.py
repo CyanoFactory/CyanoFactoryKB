@@ -629,15 +629,19 @@ class TableMeta(Model):
     
     @staticmethod
     def get_by_table_name(name):
-        return TableMeta.objects.get(table_name = name)
+        model_type_key = "model/model_type/tbl/" + name
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(table_name = name))
+        return cache_model_type
         
     @staticmethod
     def get_by_model_name(name):
-        return TableMeta.objects.get(model_name = name)
+        model_type_key = "model/model_type/" + name
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(model_name = name))
+        return cache_model_type
     
     @staticmethod
     def get_by_model(model):
-        return TableMeta.objects.get(model_name = model._meta.object_name)
+        return TableMeta.get_by_model_name(model._meta.object_name)
     
     def __unicode__(self):
         return self.table_name + "-" + self.model_name
@@ -654,7 +658,6 @@ class Revision(Model):
     
     :Columns:
         * ``current``: Reference to the latest entry
-        * ``key``: Primary key of this item
         * ``detail``: Contains additional information about the edit 
         * ``action``: Type of the operation (Create, Edit, Delete)
         * ``table``: Table where the modification occured
@@ -1006,38 +1009,35 @@ class Entry(Model):
         from itertools import ifilter
         from cyano.helpers import slugify
         from cyano.helpers import get_column_index
-        
-        startTime = datetime.now()
 
         if self.wid != slugify(self.wid):
             # Slugify the WID
             self.wid = slugify(self.wid)
-      
+
         rev_detail = kwargs["revision_detail"]
-        self.detail = rev_detail
         # Prevent error on save later
         del kwargs["revision_detail"]
 
         old_item = None
         if self.pk != None:
             # can this be optimized? Probably not
-            #print "old"
             old_item = self._meta.concrete_model.objects.get(pk = self.pk)
+            super(Entry, self).save(*args, **kwargs)
         else:
             # New entry (no primary key)
-            #print "new"
+            # The latest entry is not revisioned to save space (and time)
             model_type_key = "model/model_type/" + str(self._meta.object_name)
             cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(model_name = self._meta.object_name))
+            self.detail = rev_detail
             self.model_type = cache_model_type
             self.created_user_id = rev_detail.user_id
             self.created_date = rev_detail.date
 
-        super(Entry, self).save(*args, **kwargs)
-        
+            ##print "CREATE: No revision needed for", str(self.wid)
+            super(Entry, self).save(*args, **kwargs)
+            return
+
         save_list = []
-        
-        #print("Second half: " + str(datetime.now()-startTime))
-        startTime = datetime.now()
 
         fields = self._meta.fields
         # Remove primary keys and some fields that don't need revisioning:
@@ -1059,24 +1059,28 @@ class Entry(Model):
                     old_value = getattr(old_item, field.name)
 
             if old_value != new_value:
-                action = "U"
+                tm = TableMeta.get_by_model(field.model)
+                column = get_column_index(field)
 
-                if old_value == None:
-                    action = "I"
-                elif new_value == None:
+                if new_value == None:
+                    ##print "delete"
                     action = "D"
-                
-                model_type_key = "model/model_type/" + str(field.model._meta.object_name)
-                cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(model_name = field.model._meta.object_name))
+                else:
+                    if Revision.objects.filter(current_id = self.pk, table = tm, column = column).exists():
+                        ##print "update", self.wid, tm.model_name, column
+                        action = "U"
+                    else:
+                        ##print "insert", self.wid, tm.model_name, column
+                        action = "I"
 
                 # Assumption: When nothing changed saving isn't needed at all
-                save_list.append(Revision(current_id = self.pk, detail = rev_detail, action = action, table = cache_model_type, column = get_column_index(field), new_value = new_value))
+                save_list.append(Revision(current_id = self.pk, detail_id = old_item.detail_id, action = action, table = tm, column = column, new_value = new_value))
 
         if len(save_list) > 0:
+            ##print self.wid + ": revisioning", len(save_list), "items"
+            # Don't update the detail when actually nothing changed for that entry
+            self.detail = rev_detail
             Revision.objects.bulk_create(save_list)
-            #print(str(len(save_list)) + " saved. Third half: " + str(datetime.now()-startTime))
-        #else:
-        #    print("Nothing saved. Third half: " + str(datetime.now()-startTime))
     
     #html formatting
     def get_as_html_synonyms(self, species, is_user_anonymous):
