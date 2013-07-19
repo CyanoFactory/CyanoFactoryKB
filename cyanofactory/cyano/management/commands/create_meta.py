@@ -11,7 +11,7 @@ class Command(BaseCommand):
             
             table_name = obj._meta.db_table
             
-            table, _ = TableMeta.objects.get_or_create(table_name = table_name, model_name = obj._meta.object_name)
+            table = TableMeta.objects.get_or_create(table_name = table_name, model_name = obj._meta.object_name)[0]
 
             for field in obj._meta.local_fields:                
                 column_name = field.column
@@ -21,4 +21,7 @@ class Command(BaseCommand):
                 TableMetaColumn.objects.get_or_create(table = table, column_name = column_name, column_id = column_id)
             
             for m2m in obj._meta.local_many_to_many:
-                TableMetaManyToMany.objects.get_or_create(table = table, m2m_name = m2m.name)
+                through = getattr(obj.__class__, m2m.name).field.rel.through
+                
+                m2m_table = TableMeta.objects.get_or_create(table_name = through._meta.db_table, model_name = through._meta.object_name)[0]                
+                TableMetaManyToMany.objects.get_or_create(m2m_table = m2m_table, source_table = table)

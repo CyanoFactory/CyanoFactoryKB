@@ -29,6 +29,8 @@ import StringIO
 from django.template import loader, Context
 from cyano.history import HistoryForeignKey as ForeignKey
 from django.db.models.loading import get_model
+from django.dispatch.dispatcher import receiver
+from django.db.models.signals import m2m_changed
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -666,26 +668,27 @@ class TableMetaColumn(Model):
         unique_together = ('table', 'column_name')
 
 class TableMetaManyToMany(Model):
-    table = ForeignKey(TableMeta, related_name = 'm2ms')
-    m2m_name = CharField(max_length=255, verbose_name = "Name of the many to many field")
+    m2m_table = ForeignKey(TableMeta, related_name = '+', verbose_name = "Data about the M2M-Table", unique = True)
+    source_table = ForeignKey(TableMeta, related_name = 'm2ms', verbose_name = "The table the m2m references from")
+    #target_table = ForeignKey(TableMeta, related_name = 'm2ms', verbose_name = "The table the m2m references to")
     
     @staticmethod
-    def get_by_table_name(name, m2m):
+    def get_by_m2m_table_name(name):
         model_type_key = "model/model_type_m2m/tbl/" + name
-        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("table").get(table__table_name = name, m2m_name = m2m))
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("m2m_table", "source_table").get(m2m_table__table_name = name))
         return cache_model_type
         
     @staticmethod
-    def get_by_model_name(name, m2m):
+    def get_by_m2m_model_name(name):
         model_type_key = "model/model_type_m2m/" + name
-        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("table").get(table__model_name = name, m2m_name = m2m))
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("m2m_table", "source_table").get(m2m_table__model_name = name))
         return cache_model_type
 
     def __unicode__(self):
-        return "{}: {}".format(self.table.model_name, self.m2m_name)
+        return self.m2m_table.table_name + " - " + self.m2m_table.model_name
     
     class Meta:
-        unique_together = ('table', 'm2m_name')
+        unique_together = ('m2m_table', 'source_table')
 
 class RevisionDetail(Model):
     user = ForeignKey(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
@@ -700,7 +703,7 @@ class Revision(Model):
     :Columns:
         * ``current``: Reference to the latest entry
         * ``detail``: Contains additional information about the edit 
-        * ``action``: Type of the operation (Create, Edit, Delete)
+        * ``action``: Type of the operation (Update, Insert, Delete)
         * ``column``: Table and column where the modification occured
         * ``new_value``: New value in the cell of the column
     """
@@ -709,6 +712,27 @@ class Revision(Model):
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
     column = ForeignKey(TableMetaColumn, verbose_name = 'Table and column where the modification occured', related_name = '+')
     new_value = TextField(blank = True, null = True)
+
+    def __unicode__(self):
+        return str(self.current)
+    
+class RevisionManyToMany(Model):
+    """To allow reverting of edits all edit operations are stored in this table.
+    
+    Always only the new value of a single cell is stored to save memory.
+    
+    :Columns:
+        * ``current``: Reference to the latest entry
+        * ``detail``: Contains additional information about the edit 
+        * ``action``: Type of the operation (Only insert and delete)
+        * ``table``: Table where the modification occured
+        * ``new_value``: New value in the cell of the column
+    """
+    current = ForeignKey("Entry", verbose_name = "Current version of entry points to source of m2m", related_name = 'revisions_m2m', editable = False)
+    detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions_m2m', editable = False, null = True)
+    action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
+    table = ForeignKey(TableMetaManyToMany, verbose_name = 'M2M Table where the modification occured', related_name = '+')
+    new_value = IntegerField(blank = True, null = True)
 
     def __unicode__(self):
         return str(self.current)
@@ -1015,6 +1039,42 @@ class Synonym(EntryData):
 ''' END: helper models '''
 
 ''' BEGIN: Base classes for all knowledge base objects '''
+@receiver(m2m_changed)
+def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs):
+    if reverse:
+        print "WARN: Reverse support not implemented:",sender,instance,pk_set
+        return
+    
+    if len(pk_set) > 0 and isinstance(instance, Entry):
+        print "m2m-log:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
+        if action == "post_add":
+            table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
+    
+            save_list = []
+    
+            for pk in pk_set:
+                # FIXME: detail_id is the current one
+                save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "I", table = table_meta, new_value = pk))
+    
+            if len(save_list) > 0:
+                print instance.wid + ": revisioning", len(save_list), "items"
+                # Don't update the detail when actually nothing changed for that entry
+                RevisionManyToMany.objects.bulk_create(save_list)
+        elif action == "post_delete":
+            table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
+    
+            save_list = []
+    
+            for pk in pk_set:
+                # FIXME: detail_id is the current one
+                save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "D", table = table_meta, new_value = pk))
+    
+            if len(save_list) > 0:
+                print instance.wid + ": deleting", len(save_list), "items"
+                # Don't update the detail when actually nothing changed for that entry
+                RevisionManyToMany.objects.bulk_create(save_list)
+            pass
+
 class Entry(Model):
     """Base class for all knowledge base objects.
     
