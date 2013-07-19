@@ -565,9 +565,25 @@ def detail(request, species, model, item):
 @resolve_to_objects
 @permission_required(perm.READ_HISTORY)
 def history(request, species, model = None, item = None):
+    revisions = []
+    entry = []
+    date = None
+
     if item:
         # Item specific
+        obj = item
         objects = models.Revision.objects.filter(current = item).distinct("detail").order_by("-detail")
+        wid = obj.wid
+        detail_id = obj.detail.pk
+        date = obj.detail.date.date()
+        time = obj.detail.date.strftime("%H:%M")
+        reason = obj.detail.reason
+        author = obj.detail.user
+        url = reverse("cyano.views.detail", kwargs = {"species_wid": species.wid, "model_type": obj.model_type.model_name, "wid": wid})
+        
+        entry = [date, []]
+        entry[1].append({'id': detail_id, 'time': time, 'wid': wid, 'reason': reason, 'author': author, 'url': url})
+        
     elif model:
         # Model specific
         tm = models.TableMeta.get_by_model(model)
@@ -576,11 +592,6 @@ def history(request, species, model = None, item = None):
     else:
         # Whole species specific
         objects = models.Revision.objects.filter(current = item, current__species = species).distinct("detail").order_by("-detail")
-
-    revisions = []
-    
-    entry = []
-    date = None
     
     for obj in objects:
         last_date = date
@@ -612,7 +623,7 @@ def history(request, species, model = None, item = None):
         queryset = qs,
         template = 'cyano/history.html',
         data = {
-            'revisions': revisions[1:]
+            'revisions': revisions
             })
 
 @resolve_to_objects
@@ -644,7 +655,7 @@ def history_detail(request, species, model, item, detail_id):
                 else:
                     verbose_name = field.verbose_name
                 
-            data = format_field_detail_view(species, item, field_name, request.user.is_anonymous())
+            data = format_field_detail_view(species, item, field_name, request.user.is_anonymous(), detail_id)
             if (data is None) or (data == ''):
                 rmfields = [idx2] + rmfields
             
@@ -665,7 +676,7 @@ def history_detail(request, species, model, item, detail_id):
         request = request, 
         models = [model],
         queryset = qs,
-        template = 'cyano/detail.html', 
+        template = 'cyano/history_detail.html', 
         data = {
             'fieldsets': fieldsets,
             'message': request.GET.get('message', ''),

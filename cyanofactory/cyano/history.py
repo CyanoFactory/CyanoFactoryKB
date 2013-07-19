@@ -35,7 +35,8 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
                         elif isinstance(field, ForeignKey):
                             pass
                         else:
-                            history_obj = Revision.objects.filter(current = rel_obj, detail__lte = instance.detail_history, column = TableMetaColumn.get_by_field(field)).order_by("-detail")
+                            column = TableMetaColumn.get_by_field(field)
+                            history_obj = Revision.objects.filter(current = rel_obj, detail__lte = instance.detail_history, column = column).order_by("-detail")
                             if history_obj.exists():
                                 print "revisioning: " + str(rel_obj) + " - " + field.name
                                 new_value = field.to_python(history_obj[0].new_value)        

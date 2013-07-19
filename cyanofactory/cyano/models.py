@@ -1046,8 +1046,9 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
         return
     
     if len(pk_set) > 0 and isinstance(instance, Entry):
-        print "m2m-log:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
         if action == "post_add":
+            print "m2m-add:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
+
             table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
     
             save_list = []
@@ -1061,6 +1062,8 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
                 # Don't update the detail when actually nothing changed for that entry
                 RevisionManyToMany.objects.bulk_create(save_list)
         elif action == "post_delete":
+            print "m2m-del:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
+
             table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
     
             save_list = []
@@ -1168,7 +1171,7 @@ class Entry(Model):
                         action = "I"
 
                 # Assumption: When nothing changed saving isn't needed at all
-                save_list.append(Revision(current_id = self.pk, detail_id = old_item.created_detail_id if "I" else old_item.detail_id, action = action, column = column, new_value = old_value))
+                save_list.append(Revision(current_id = self.pk, detail_id = old_item.created_detail_id if action == "I" else old_item.detail_id, action = action, column = column, new_value = old_value))
 
         if len(save_list) > 0:
             ##print self.wid + ": revisioning", len(save_list), "items"
@@ -1239,10 +1242,19 @@ class SpeciesComponent(Entry):
 
     #getters
     @permalink
-    def get_absolute_url(self, species):
+    def get_absolute_url(self, species, history_id = None):
         model_type_key = "model/model_type/" + str(self.model_type_id)
         cache_model_type = Cache.try_get(model_type_key, lambda: self.model_type)
-        return ('cyano.views.detail', (), {'species_wid':species.wid, 'model_type':cache_model_type.model_name, 'wid': self.wid})
+        
+        dic = {'species_wid':species.wid, 'model_type':cache_model_type.model_name, 'wid': self.wid}
+        
+        if history_id is None:
+            view = 'cyano.views.detail'
+        else:
+            view = 'cyano.views.history_detail'
+            dic['detail_id'] = history_id
+
+        return (view, (), dic)
         
     def get_all_references(self):
         return self.publication_references.all() | PublicationReference.objects.filter(evidence__species_component__id = self.id)

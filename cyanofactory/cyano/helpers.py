@@ -1287,7 +1287,7 @@ def objectToQuerySet(obj, model = None):
     #qs._result_cache.append(obj)
     return qs
 
-def format_field_detail_view(species, obj, field_name, is_user_anonymous):
+def format_field_detail_view(species, obj, field_name, is_user_anonymous, history_id = None):
     if hasattr(obj, 'get_as_html_%s' % field_name):
         val = getattr(obj, 'get_as_html_%s' % field_name)(species, is_user_anonymous)
         if isinstance(val, float) and val != 0. and val is not None:        
@@ -1310,7 +1310,7 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous):
         if issubclass(field_model, Entry):
             results = []
             for subvalue in value:
-                results.append('<a href="%s">%s</a>' % (subvalue.get_absolute_url(species), subvalue.wid))
+                results.append('<a href="%s">%s</a>' % (subvalue.get_absolute_url(species, history_id), subvalue.wid))
             return format_list_html(results)        
             
         results = []
@@ -1344,7 +1344,7 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous):
     elif isinstance(field, ForeignKey):
         if issubclass(field_model, Entry):
             if value is not None:
-                return '<a href="%s">%s</a>' % (value.get_absolute_url(species), value.wid)
+                return '<a href="%s">%s</a>' % (value.get_absolute_url(species, history_id), value.wid)
             else:
                 return ''
         
@@ -1399,6 +1399,10 @@ def get_history(species, obj, detail_id):
     
     comments = ""
 
+    rev_query = Revision.objects.filter(current = obj, detail__lte = detail_id).order_by("-detail")
+
+    used_columns = []
+
     #print "=="
     #print obj._meta.fields
     #print history_obj._meta.fields
@@ -1420,9 +1424,14 @@ def get_history(species, obj, detail_id):
             pass
         else:
             #print "Non: " + field.name
-            new_value = field.to_python(Revision.objects.filter(current = obj, detail__lte = detail_id, column = TableMetaColumn.get_by_field(field)).order_by("-detail")[0].new_value)        
-            comments += "{}: {} (cur: {})<br>".format(field.name, new_value, getattr(obj, field.name))
-            setattr(history_obj, field.name, new_value)
+            column = TableMetaColumn.get_by_field(field)
+            
+            for query in rev_query:
+                if query.column_id == column.pk and not query.column_id in used_columns:
+                    used_columns.append(query.column_id)
+                    new_value = field.to_python(query.new_value)     
+                    comments += "{}: {} (cur: {})<br>".format(field.name, new_value, getattr(obj, field.name))
+                    setattr(history_obj, field.name, new_value)
     
     history_obj.comments = comments
     
