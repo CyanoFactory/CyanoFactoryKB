@@ -29,10 +29,15 @@ urlpatterns = patterns('cyano.views',
 	url(r'^search/?$', 'search'),
 	url(r'^' + _species_wid + '/search/?$', 'search'),	
 
-	url(r'^' + _species_wid + '/' + _wid + '/delete/?$', 'delete'),
+    url(r'^' + _species_wid + r'/delete/?$', 'delete'),
+	url(r'^' + _species_wid_model_type_wid + '/delete/?$', 'delete'),
 
+    url(r'^(?P<model_type>Species)/?', 'add'), # Special case to create new species
+    url(r'^' + _species_wid + r'/add/?$', 'add'),
 	url(r'^' + _species_wid_model_type + r'/add/?$', 'add'),
-	url(r'^(?P<model_type>\w+)/add/?$', 'add'),
+
+    url(r'^' + _species_wid + r'/edit/?$', 'edit'),
+    url(r'^' + _species_wid_model_type_wid + '/edit/?$', 'edit'),
 	
 	url(r'^search/?$', 'search'),
 	url(r'^' + _species_wid + '/search/?$', 'search'),
@@ -72,8 +77,6 @@ urlpatterns = patterns('cyano.views',
 
     url(r'^' + _species_wid_model_type + r'/?$', 'list'),
     url(r'^' + _species_wid_model_type_wid + r'/?$', 'detail'),
-    
-    url(r'^' + _species_wid + '/' + _wid + '/edit/?$', 'edit'),
 
 	url(r'^$', 'index'),
 )

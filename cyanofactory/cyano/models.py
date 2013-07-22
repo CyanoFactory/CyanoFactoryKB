@@ -1216,7 +1216,7 @@ class Entry(Model):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'comments', 'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'comments', 
             ]
         listing = ['wid', 'name']
         facet_fields = []
@@ -2376,7 +2376,7 @@ class Gene(Molecule):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'symbol', 'synonyms', 'cross_references', 'homologs', 'type', 'chromosome', 'coordinate', 'length', 'direction',  'is_essential', 'expression', 'half_life', 'codons', 'amino_acid', 'comments', 'publication_references', 'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'symbol', 'synonyms', 'cross_references', 'homologs', 'type', 'chromosome', 'coordinate', 'length', 'direction',  'is_essential', 'expression', 'half_life', 'codons', 'amino_acid', 'comments', 'publication_references', 
             ]
         listing = ['wid', 'symbol']
         facet_fields = ['type', 'chromosome', 'direction', 'is_essential', 'amino_acid']
@@ -3754,8 +3754,7 @@ class Species(Entry):
             ]        
         field_list = [
             'id', 'wid', 'name', 'synonyms', 'cross_references', 'genetic_code',
-            'comments',
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'comments'
             ]
         facet_fields = []
         verbose_name='Species'

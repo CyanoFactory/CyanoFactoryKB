@@ -682,21 +682,25 @@ def history_detail(request, species, model, item, detail_id):
             'message': request.GET.get('message', ''),
             })
             
-@login_required        
-def add(request, model_type, species_wid=None):
-    return edit(request, model_type=model_type, species=species, action='add')
-        
-@login_required
-def edit(request, wid=None, model_type=None, species_wid=None, action='edit'):
+@resolve_to_objects
+@permission_required(perm.WRITE_NORMAL)
+def add(request, species=None, model=None):
+    return edit(request, species=species, model=model, action='add')
+    
+@resolve_to_objects 
+@permission_required(perm.WRITE_NORMAL)
+def edit(request, species, model = None, item = None, action='edit'):
     #retrieve object
-    if action == 'edit':
-        obj = getEntry(species = species, wid = wid)
-        if obj is None:
-            raise Http404
-        model = obj.__class__ 
-    else:        
-        model = getModel(model_type)
+    if action == 'add':
         obj = model()
+    else:
+        if item is None:
+            obj = species
+        else:
+            obj = item
+        
+        if model is None:
+            model = obj.__class__
     
     #save object
     error_messages = {}
@@ -705,13 +709,13 @@ def edit(request, wid=None, model_type=None, species_wid=None, action='edit'):
         
         data = submitted_data
         data['id'] = obj.id
-        data['species'] = species_wid
+        data['species'] = species.wid
         data['model_type'] = model.__name__
         
         try:
             #validate is WID unique
             if issubclass(model, models.SpeciesComponent):
-                qs = models.SpeciesComponent.objects.values('wid', 'model_type').filter(species__wid=species_wid)
+                qs = models.SpeciesComponent.objects.values('wid', 'model_type').filter(species__wid=species.wid)
             else:
                 qs = model.objects.values('wid', 'model_type').all()
                 
@@ -728,14 +732,14 @@ def edit(request, wid=None, model_type=None, species_wid=None, action='edit'):
             wids[data['wid']] = model.__name__
         
             #validate
-            data = validate_object_fields(model, data, wids, species_wid, data['wid'])
+            data = validate_object_fields(model, data, wids, species.wid, data['wid'])
             validate_model_objects(model, data)
             validate_model_unique(model, [data])
             
             #save
-            obj = save_object_data(species_wid, obj, data, {}, request.user, save=False, save_m2m=False)
-            obj = save_object_data(species_wid, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=False)
-            obj = save_object_data(species_wid, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=True)
+            obj = save_object_data(species.wid, obj, data, {}, request.user, save=False, save_m2m=False)
+            obj = save_object_data(species.wid, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=False)
+            obj = save_object_data(species.wid, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=True)
             
             #redirect to details page
             return HttpResponseRedirect(obj.get_absolute_url())
@@ -744,16 +748,13 @@ def edit(request, wid=None, model_type=None, species_wid=None, action='edit'):
     
     #form query set
     if action == 'edit':
-        obj = getEntry(species = species, wid = wid)
-        if obj is None:
-            raise Http404
         qs = objectToQuerySet(obj, model = model)
     else:
         obj = None
         qs = model.objects.none()
         
     #display form
-    fields, initial_values = get_edit_form_fields(species_wid, model, obj=obj)
+    fields, initial_values = get_edit_form_fields(None if species is None else species.wid, model, obj=obj)
     
     if request.method == 'POST':
         initial_values = submitted_data
@@ -764,28 +765,24 @@ def edit(request, wid=None, model_type=None, species_wid=None, action='edit'):
         queryset = qs,
         template = 'cyano/edit.html', 
         data = {
-            'model_verbose_name': model._meta.verbose_name,
             'action': action,
             'fields': fields,
-            'references_choices': models.PublicationReference.objects.filter(species__wid = species_wid).values_list('wid'),
+            #'references_choices': models.PublicationReference.objects.filter(species__wid = species.wid).values_list('wid'),
             'initial_values': initial_values,
             'error_messages': error_messages,
             }
         )
             
-@login_required        
-def delete(request, species_wid, wid):
-    #retrieve object
-    obj = getEntry(species = species, wid = wid)
-    if obj is None:
-        raise Http404    
-    model = obj.__class__ 
-    qs = objectToQuerySet(obj, model = model)
+@resolve_to_objects 
+@permission_required(perm.WRITE_DELETE)      
+def delete(request, species, model, item):
+    qs = objectToQuerySet(item, model = model)
     
     #delete
     if request.method == 'POST':
-        obj.delete()
-        return HttpResponseRedirect(reverse('cyano.views.list', kwargs={'species_wid':species_wid, 'model_type': model.__name__}))
+        # Todo: Should be revisioned
+        item.delete()
+        return HttpResponseRedirect(reverse('cyano.views.list', kwargs={'species_wid':species.wid, 'model_type': model.__name__}))
         
     #confirmation message
     return render_queryset_to_response(
@@ -794,9 +791,6 @@ def delete(request, species_wid, wid):
         models = [model],
         queryset = qs,
         template = 'cyano/delete.html', 
-        data = {
-            'model_verbose_name': model._meta.verbose_name
-            }
         )
 
 def exportData(request, species_wid=None):

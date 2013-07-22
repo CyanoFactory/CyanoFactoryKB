@@ -18,8 +18,8 @@ Last updated: 2012-07-17
 	{% endif %}
 {% else %}
 	{% if species %}
-<a href="{% url "cyano.views.edit" species_wid=species.wid wid=species.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
-<a href="{% url "cyano.views.delete" species_wid=species.wid wid=species.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
+<a href="{% url "cyano.views.edit" species_wid=species.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+<a href="{% url "cyano.views.delete" species_wid=species.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
 	{% endif %}
 <a href="{% if species %}{% url "cyano.views.add" species_wid=species.wid model_type='Species' %}{% else %}{% url "cyano.views.add" model_type='Species' %}{% endif %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
 {% endif %}
