@@ -13,7 +13,7 @@ from django.core import validators
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db import models
-from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, ManyToManyField, TextField, DateTimeField, options, permalink, SET_NULL, Min, Max
+from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min, Max
 from django.db.models.query import EmptyQuerySet
 from django.utils.http import urlencode
 from itertools import chain
@@ -28,6 +28,7 @@ from cyano.cache import Cache
 import StringIO
 from django.template import loader, Context
 from cyano.history import HistoryForeignKey as ForeignKey
+from cyano.history import HistoryManyToManyField as ManyToManyField
 from django.db.models.loading import get_model
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import m2m_changed
@@ -669,26 +670,26 @@ class TableMetaColumn(Model):
 
 class TableMetaManyToMany(Model):
     m2m_table = ForeignKey(TableMeta, related_name = '+', verbose_name = "Data about the M2M-Table", unique = True)
-    source_table = ForeignKey(TableMeta, related_name = 'm2ms', verbose_name = "The table the m2m references from")
-    #target_table = ForeignKey(TableMeta, related_name = 'm2ms', verbose_name = "The table the m2m references to")
+    source_table = ForeignKey(TableMeta, related_name = 'm2ms_source', verbose_name = "The table the m2m references from")
+    target_table = ForeignKey(TableMeta, related_name = 'm2ms_target', verbose_name = "The table the m2m references to")
     
     @staticmethod
     def get_by_m2m_table_name(name):
         model_type_key = "model/model_type_m2m/tbl/" + name
-        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("m2m_table", "source_table").get(m2m_table__table_name = name))
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("m2m_table", "source_table", "target_table").get(m2m_table__table_name = name))
         return cache_model_type
         
     @staticmethod
     def get_by_m2m_model_name(name):
         model_type_key = "model/model_type_m2m/" + name
-        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("m2m_table", "source_table").get(m2m_table__model_name = name))
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("m2m_table", "source_table", "target_table").get(m2m_table__model_name = name))
         return cache_model_type
 
     def __unicode__(self):
         return self.m2m_table.table_name + " - " + self.m2m_table.model_name
     
     class Meta:
-        unique_together = ('m2m_table', 'source_table')
+        unique_together = ('m2m_table', 'source_table', 'target_table')
 
 class RevisionDetail(Model):
     user = ForeignKey(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
@@ -1045,7 +1046,7 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
         print "WARN: Reverse support not implemented:",sender,instance,pk_set
         return
     
-    if len(pk_set) > 0 and isinstance(instance, Entry):
+    if not pk_set is None and len(pk_set) > 0 and isinstance(instance, Entry):
         if action == "post_add":
             print "m2m-add:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
 
