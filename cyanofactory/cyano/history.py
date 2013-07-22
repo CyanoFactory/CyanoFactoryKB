@@ -1,7 +1,10 @@
 from django.db.models.fields.related import ForeignKey, ReverseSingleRelatedObjectDescriptor,\
-    ManyToManyField
+    ManyToManyField, ReverseManyRelatedObjectsDescriptor,\
+    create_many_related_manager
 from django.utils import six
 from django.db.models.related import RelatedObject
+from django.db import router
+from django.db.models.manager import Manager
 
 class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDescriptor):
     def __get__(self, instance, instance_type=None):
@@ -50,12 +53,54 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
         else:
             return rel_obj
 
+"""Creates a manager that subclasses 'superclass' (which is a Manager)
+and adds behavior for many-to-many related objects."""
+
+def create_history_many_related_manager(superclass):
+    class HistoryManyRelatedManager(superclass):             
+        def get_query_set(self):
+            from cyano.models import RevisionManyToMany, TableMetaManyToMany
+            if hasattr(self.instance, "detail_history"):
+                print "m2m history"
+
+                try:
+                    return self.instance._prefetched_objects_cache[self.prefetch_cache_name]
+                except (AttributeError, KeyError):
+                    db = self._db or router.db_for_read(self.instance.__class__, instance=self.instance)
+                    
+                    table = TableMetaManyToMany.get_by_m2m_model_name(self.through._meta.object_name)
+                    
+                    vals = RevisionManyToMany.objects.filter(current = self.instance.pk, detail__lte = self.instance.detail_history, table = table).values_list('new_value', flat = True)
+
+                    queryset = Manager.get_query_set(self).using(db)._next_is_sticky().filter(**self.core_filters)
+                    queryset = queryset.filter(pk__in = vals)
+                    
+                    print queryset, self.core_filters, self.target_field_name, self.source_field_name, self._fk_val
+                    
+                    return queryset
+            else:
+                queryset = super(HistoryManyRelatedManager, self).get_query_set()
+            
+            print queryset
+            return queryset
+
+    return HistoryManyRelatedManager
+
+class HistoryReverseManyRelatedObjectsDescriptor(ReverseManyRelatedObjectsDescriptor):
+    def __get__(self, instance, instance_type=None):        
+        manager = super(HistoryReverseManyRelatedObjectsDescriptor, self).__get__(instance, instance_type=None)
+        
+        manager.__class__ = create_history_many_related_manager(manager.__class__)
+
+        return manager
+
 class HistoryForeignKey(ForeignKey):
     def contribute_to_class(self, cls, name):
-        super(ForeignKey, self).contribute_to_class(cls, name)
+        super(HistoryForeignKey, self).contribute_to_class(cls, name)
         setattr(cls, self.name, HistoryReverseSingleRelatedObjectDescriptor(self))
-        if isinstance(self.rel.to, six.string_types):
-            target = self.rel.to
-        else:
-            target = self.rel.to._meta.db_table
-        cls._meta.duplicate_targets[self.column] = (target, "o2m")
+
+class HistoryManyToManyField(ManyToManyField):
+    def contribute_to_class(self, cls, name):
+        super(HistoryManyToManyField, self).contribute_to_class(cls, name)
+        setattr(cls, self.name, HistoryReverseManyRelatedObjectsDescriptor(self))
+
