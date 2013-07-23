@@ -2136,7 +2136,7 @@ def get_invalid_objects(species_id, validate_fields=False, validate_objects=True
                 errors.append({
                     'type': 'model',
                     'name': model_name,
-                    'url': reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': model_name}),
+                    'url': reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': model_name}),
                     'message': format_error_as_html_list(error),
                     })
         

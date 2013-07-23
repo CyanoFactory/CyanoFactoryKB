@@ -47,14 +47,14 @@ def species(request, species):
     content = []
     if species is not None:
         content.append([
-            [0, 'Compartments', cmodels.Compartment.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
+            [0, 'Compartments', cmodels.Compartment.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
         ])
         
         chrs = cmodels.Chromosome.objects.filter(species__id = species.id)
         chrcontent = chrs.aggregate(length=Sum('length'));
         gc_content = 0 if len(chrs) == 0 else sum([chro.get_gc_content() * chro.length for chro in chrs]) / chrcontent['length']        
         content.append([
-            [0, 'Chromosomes', chrs.count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Chromosome'})],
+            [0, 'Chromosomes', chrs.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Chromosome'})],
             [1, 'Length', chrcontent['length'], 'nt'],
             [1, 'GC-content', ('%0.1f' % (gc_content * 100)), '%'],
         ])
@@ -63,24 +63,24 @@ def species(request, species):
         mons = tus.filter(num_genes__lte = 1)
         nPolys = tus.filter(num_genes__gt = 1).count()
         content.append([
-            [0, 'Transcription units', tus.count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionUnit'})],            
+            [0, 'Transcription units', tus.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionUnit'})],            
             [1, 'Monocistrons', tus.count() - nPolys],
             [1, 'Polycistrons', nPolys],
         ])
         
         content.append([
-            [0, 'Genes', cmodels.Gene.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
-            [1, 'mRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='mRNA').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=mRNA'],
-            [1, 'rRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='rRNA').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=rRNA'],
-            [1, 'sRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='sRNA').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=sRNA'],
-            [1, 'tRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='tRNA').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=tRNA'],
+            [0, 'Genes', cmodels.Gene.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
+            [1, 'mRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='mRNA').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=mRNA'],
+            [1, 'rRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='rRNA').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=rRNA'],
+            [1, 'sRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='sRNA').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=sRNA'],
+            [1, 'tRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='tRNA').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=tRNA'],
         ])
         
         content.append([
             [0, 'Chromosome features', 
                 cmodels.ChromosomeFeature.objects.filter(species__id = species.id).count(),
                 None,
-                reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'ChromosomeFeature'}),
+                reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ChromosomeFeature'}),
                 ],
             [1, 'DnaA boxes', 
                 cmodels.ChromosomeFeature.objects.filter(species__id = species.id, type__parent__wid='ChromosomeFeature-DnaA_box').count(),
@@ -93,7 +93,7 @@ def species(request, species):
         ])
         
         content.append([
-            [0, 'Metabolites', cmodels.Metabolite.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Metabolite'})],
+            [0, 'Metabolites', cmodels.Metabolite.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Metabolite'})],
             [1, 'Amino acids', 
                 cmodels.Metabolite.objects.filter(species__id = species.id, type__wid='amino_acid').count() + 
                 cmodels.Metabolite.objects.filter(species__id = species.id, type__wid='modified_amino_acid').count() +
@@ -133,31 +133,31 @@ def species(request, species):
         cpxDNABind = cpxs.filter(dna_footprint__length__gt=0).count()
         content.append([
             [0, 'Proteins', mons.count() + cpxs.count()],
-                [1, 'Monomers', mons.count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'})],            
+                [1, 'Monomers', mons.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'})],            
                     [2, 'DNA-binding', monDNABind],
                     [2, 'Integral membrane', monIntMem],
-                    [2, 'Lipoprotein', monLipo, None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'}) + '?signal_sequence__type=lipoprotein'],            
-                    [2, 'Secreted', monSecreted, None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'}) + '?signal_sequence__type=secretory'],
+                    [2, 'Lipoprotein', monLipo, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'}) + '?signal_sequence__type=lipoprotein'],            
+                    [2, 'Secreted', monSecreted, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'}) + '?signal_sequence__type=secretory'],
                     [2, 'Terminal organelle', monTermOrg],                    
-                [1, 'Complexes', cpxs.count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'ProteinComplex'})],
+                [1, 'Complexes', cpxs.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinComplex'})],
                     [2, 'DNA-binding', cpxDNABind],
         ])
 
         rxns = cmodels.Reaction.objects.filter(species__id = species.id)
         content.append([
-            [0, 'Reactions', rxns.count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'})],
-            [1, 'DNA damage', rxns.filter(processes__wid='Process_DNADamage').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNADamage'],
-            [1, 'DNA repair', rxns.filter(processes__wid='Process_DNARepair').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNARepair'],
-            [1, 'Metabolic', rxns.filter(processes__wid='Process_Metabolism').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Metabolism'],            
-            [1, 'Protein decay', rxns.filter(processes__wid='Process_ProteinDecay').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ProteinDecay'],
-            [1, 'Protein modification', rxns.filter(processes__wid='Process_ProteinModification').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ProteinModification'],            
-            [1, 'Replication Initiation', rxns.filter(processes__wid='Process_ReplicationInitiation').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ReplicationInitiation'],
-            [1, 'RNA decay', rxns.filter(processes__wid='Process_RNADecay').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNADecay'],
-            [1, 'RNA modification', rxns.filter(processes__wid='Process_RNAModification').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNAModification'],            
-            [1, 'RNA processing', rxns.filter(processes__wid='Process_RNAProcessing').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNAProcessing'],            
-            [1, 'Transcription', rxns.filter(processes__wid='Process_Transcription').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Transcription'],            
-            [1, 'Translation', rxns.filter(processes__wid='Process_Translation').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Translation'],            
-            [1, 'tRNA aminoacylation', rxns.filter(processes__wid='Process_tRNAAminoacylation').count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_tRNAAminoacylation'],
+            [0, 'Reactions', rxns.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'})],
+            [1, 'DNA damage', rxns.filter(processes__wid='Process_DNADamage').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNADamage'],
+            [1, 'DNA repair', rxns.filter(processes__wid='Process_DNARepair').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNARepair'],
+            [1, 'Metabolic', rxns.filter(processes__wid='Process_Metabolism').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Metabolism'],            
+            [1, 'Protein decay', rxns.filter(processes__wid='Process_ProteinDecay').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ProteinDecay'],
+            [1, 'Protein modification', rxns.filter(processes__wid='Process_ProteinModification').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ProteinModification'],            
+            [1, 'Replication Initiation', rxns.filter(processes__wid='Process_ReplicationInitiation').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ReplicationInitiation'],
+            [1, 'RNA decay', rxns.filter(processes__wid='Process_RNADecay').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNADecay'],
+            [1, 'RNA modification', rxns.filter(processes__wid='Process_RNAModification').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNAModification'],            
+            [1, 'RNA processing', rxns.filter(processes__wid='Process_RNAProcessing').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNAProcessing'],            
+            [1, 'Transcription', rxns.filter(processes__wid='Process_Transcription').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Transcription'],            
+            [1, 'Translation', rxns.filter(processes__wid='Process_Translation').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Translation'],            
+            [1, 'tRNA aminoacylation', rxns.filter(processes__wid='Process_tRNAAminoacylation').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_tRNAAminoacylation'],
             [1, 'Other', rxns.exclude(processes__wid='Process_DNADamage')
                 .exclude(processes__wid='Process_DNARepair')
                 .exclude(processes__wid='Process_Metabolism')
@@ -178,16 +178,16 @@ def species(request, species):
         nTfs = len(set([x[0] for x in tr.values_list('transcription_factor')]))
         content.append([
             [0, 'Transcriptional regulation'],
-            [1, 'Interactions', tr.count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionalRegulation'})],
+            [1, 'Interactions', tr.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionalRegulation'})],
             [1, 'Transcriptional regulators', nTfs],
             [1, 'Regulated promoters', nTus],
         ])        
 
         content.append([
-            [0, 'Pathways', cmodels.Pathway.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Pathway'})],
+            [0, 'Pathways', cmodels.Pathway.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Pathway'})],
         ])
         content.append([
-            [0, 'Stimuli', cmodels.Stimulus.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Stimulus'})],
+            [0, 'Stimuli', cmodels.Stimulus.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Stimulus'})],
         ])
         
         
@@ -220,15 +220,15 @@ def species(request, species):
             [1, 'Stimulus values', nStimuli],            
             [1, 'Transcr. reg. activity', nTrAffinity],
             [1, 'Transcr. reg. affinity', nTrActivity],
-            [1, 'Other', nOther, None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Parameter'})],            
+            [1, 'Other', nOther, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Parameter'})],            
         ])
         
         content.append([
-            [0, 'Processes', cmodels.Process.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Process'})],
+            [0, 'Processes', cmodels.Process.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Process'})],
         ])
         
         content.append([
-            [0, 'States', cmodels.State.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
+            [0, 'States', cmodels.State.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
         ])
         
     nContent = [len(x) for x in content]
@@ -775,7 +775,7 @@ def delete(request, species, model, item):
     if request.method == 'POST':
         # Todo: Should be revisioned
         item.delete()
-        return HttpResponseRedirect(reverse('cyano.views.list', kwargs={'species_wid':species.wid, 'model_type': model.__name__}))
+        return HttpResponseRedirect(reverse('cyano.views.listing', kwargs={'species_wid':species.wid, 'model_type': model.__name__}))
         
     #confirmation message
     return chelpers.render_queryset_to_response(
