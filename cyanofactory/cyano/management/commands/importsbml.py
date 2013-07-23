@@ -1,8 +1,10 @@
+from django.core.exceptions import ObjectDoesNotExist
+
+from cyano_command import CyanoCommand
 import cyano.models as cmodels
 from cyano.helpers import slugify
-from django.core.exceptions import ObjectDoesNotExist
+
 from libsbml import SBMLReader
-from cyano_command import CyanoCommand
 
 class Command(CyanoCommand):  
     args = '<file file ...>'

@@ -1,7 +1,8 @@
 from django.core.management.base import BaseCommand
 from django.db.models import get_app, get_models
-from cyano.models import TableMeta, TableMetaColumn, TableMetaManyToMany
 from django.db import connection
+
+from cyano.models import TableMeta, TableMetaColumn, TableMetaManyToMany
 
 class Command(BaseCommand):
     def handle(self, *args, **options):

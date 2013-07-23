@@ -6,22 +6,18 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
 '''
 
-from copy import copy
 from dateutil.tz import tzlocal
+from itertools import groupby
+from math import ceil
+import datetime
+import os
+import re
+
 from django import template
-from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.db.models.related import RelatedObject
 from django.template import TemplateSyntaxError
 from django.utils.text import capfirst
-from itertools import groupby
-from math import ceil
-import datetime
-import inspect
-import os
-import re
-import sys
-import settings
 
 numeric_test = re.compile("^\d+$")
 register = template.Library()
@@ -52,9 +48,9 @@ def cammelCaseToUnderscores(value):
 	return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1)
 	
 @register.filter
-def append(list, item):
-	return list.append(item)
-		
+def append(li, item):
+	return li.append(item)
+
 @register.filter
 def firsthalf(thelist):
 	try:
@@ -229,7 +225,7 @@ class MakeUrlNode(template.Node):
 
 @register.tag
 def makeurl(parser, token):
-	tag_name, queryargs, newarg, newval = token.split_contents()	
+	queryargs, newarg, newval = token.split_contents()[:1]
 	return MakeUrlNode(queryargs, newarg, newval)
 	
 @register.simple_tag
@@ -249,8 +245,8 @@ def get_field_verbose_name(model, field_name):
 	return verbose_name.replace(' ', '&nbsp;')
 
 @register.simple_tag
-def stringreplace(str, old, new):
-	return str.replace(old, new)
+def stringreplace(s, old, new):
+	return s.replace(old, new)
 
 @register.filter
 def is_concrete_entry(model_verbose_name_plural, app_name):	
@@ -288,7 +284,8 @@ def multiply(val1, val2):
 	return val1 * val2;
 	
 @register.filter
-def get_template_last_updated(templateFile):		
+def get_template_last_updated(templateFile):
+	import settings
 	return datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + templateFile), tzlocal())
 
 @register.filter	

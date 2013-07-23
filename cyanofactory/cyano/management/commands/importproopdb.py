@@ -3,8 +3,9 @@
 # Taboada B., Ciria R., Martinez-Guerrer C.E., Merino E., 2012, ProOpDB:
 # Prokaryotic Operon DataBase, Nucleic Acids Research, 40(D1), D627-D631
 
-import cyano.models as cmodels
 from django.core.exceptions import ObjectDoesNotExist
+
+import cyano.models as cmodels
 from cyano_command import CyanoCommand
     
 class Command(CyanoCommand):

@@ -1,5 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
+
 import kegg.models as kmodels
+
 import cyano.models as cmodels
 from cyano_command import CyanoCommand
 

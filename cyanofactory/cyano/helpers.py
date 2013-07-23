@@ -7,9 +7,23 @@ Last updated: 2012-07-17
 '''
 
 from __future__ import unicode_literals
-from BeautifulSoup import BeautifulStoneSoup
+
+import datetime
+import inspect
+import math
+import os
+import re
+import settings
+import sys
+import tempfile
 from copy import deepcopy
 from dateutil.tz import tzlocal
+from StringIO import StringIO
+from xml.dom.minidom import Document
+
+from BeautifulSoup import BeautifulStoneSoup
+from odict import odict
+
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
@@ -23,25 +37,15 @@ from django.template import Context, RequestContext, loader
 from django.template.loader import get_template
 from django.utils import simplejson
 from django.utils.html import strip_tags
-from odict import odict
+
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell import Cell, get_column_letter
 from openpyxl.shared.date_time import SharedDate, CALENDAR_WINDOWS_1900
 from openpyxl.style import NumberFormat, Border, Color, HashableObject, Alignment
+
 from cyano.templatetags.templatetags import ceil
-from cyano.models import Entry, Species, SpeciesComponent, PublicationReference, Chromosome, format_list_html, format_evidence, Evidence, EvidencedEntryData,\
-    Revision, TableMetaColumn
-from cyano.models import EntryData, EntryBooleanData, EntryCharData, EntryFloatData, EntryPositiveFloatData, EntryTextData
-from StringIO import StringIO
-from xml.dom.minidom import Document
-import datetime
-import inspect
-import math
-import os
-import re
-import settings
-import sys
-import tempfile
+import cyano.models as cmodels
+
 import xhtml2pdf.pisa as pisa
 
 class ELEMENT_MWS:
@@ -232,7 +236,7 @@ class Colors(HashableObject):
         super(Color, self).__init__()
         self.index = index
 
-def getModels(superclass=Entry):
+def getModels(superclass=cmodels.Entry):
     tmp = get_models(get_app('cyano'))
     tmp2 = {}
     for model in tmp:
@@ -240,7 +244,7 @@ def getModels(superclass=Entry):
             tmp2[model.__name__] = model
     return tmp2
 
-def get_models_in_saving_order(superclass=Entry):
+def get_models_in_saving_order(superclass=cmodels.Entry):
     all_models = get_models(get_app('cyano'))
     entry_models = []
     for model in all_models:
@@ -260,17 +264,17 @@ def model_save_order_comparator(x, y):
     
 def is_model_referenced(model, referenced_model, checked_models=[]):
     for field in model._meta.fields + model._meta.many_to_many:
-        if isinstance(field, (ForeignKey, ManyToManyField)) and not (isinstance(field, OneToOneField) and field.rel.parent_link) and issubclass(field.rel.to, Entry):
+        if isinstance(field, (ForeignKey, ManyToManyField)) and not (isinstance(field, OneToOneField) and field.rel.parent_link) and issubclass(field.rel.to, cmodels.Entry):
             if issubclass(referenced_model, field.rel.to):
                 return True
 
     for field in model._meta.fields + model._meta.many_to_many:
-        if isinstance(field, (ForeignKey, ManyToManyField)) and not (isinstance(field, OneToOneField) and field.rel.parent_link) and issubclass(field.rel.to, Entry):
+        if isinstance(field, (ForeignKey, ManyToManyField)) and not (isinstance(field, OneToOneField) and field.rel.parent_link) and issubclass(field.rel.to, cmodels.Entry):
             if (field.rel.to not in checked_models) and is_model_referenced(field.rel.to, referenced_model, checked_models + [model]):
                 return True
     return False
 
-def getModelsMetadata(superclass=Entry):
+def getModelsMetadata(superclass=cmodels.Entry):
     tmp = get_models(get_app('cyano'))
     tmp2 = {}
     for model in tmp:
@@ -278,7 +282,7 @@ def getModelsMetadata(superclass=Entry):
             tmp2[model.__name__] = model._meta
     return tmp2
 
-def getObjectTypes(superclass=Entry):
+def getObjectTypes(superclass=cmodels.Entry):
     tmp = get_models(get_app('cyano'))
     tmp2 = []
     for model in tmp:
@@ -290,21 +294,21 @@ def getObjectTypes(superclass=Entry):
 def getModel(s):
     tmp = get_models(get_app('cyano'))
     for model in tmp:
-        if issubclass(model, Entry) and model._meta.concrete_entry_model and model.__name__ == s:
+        if issubclass(model, cmodels.Entry) and model._meta.concrete_entry_model and model.__name__ == s:
             return model
     return
 
 def getModelByVerboseName(s):
     tmp = get_models(get_app('cyano'))
     for model in tmp:
-        if issubclass(model, Entry) and model._meta.concrete_entry_model and model.verbose_name == s:
+        if issubclass(model, cmodels.Entry) and model._meta.concrete_entry_model and model.verbose_name == s:
             return model
     return
 
 def getModelByVerboseNamePlural(s):
     tmp = get_models(get_app('cyano'))
     for model in tmp:
-        if issubclass(model, Entry) and model._meta.concrete_entry_model and model._meta.verbose_name_plural == s:
+        if issubclass(model, cmodels.Entry) and model._meta.concrete_entry_model and model._meta.verbose_name_plural == s:
             return model
     return
 
@@ -350,22 +354,22 @@ def getModelDataFieldNames(model):
     return fields
 
 def is_entrydata_model(cls):
-    return inspect.isclass(cls) and issubclass(cls, EntryData)
+    return inspect.isclass(cls) and issubclass(cls, cmodels.EntryData)
 
 def getEntryDatas():
     return inspect.getmembers(sys.modules['cyano.models'], is_entrydata_model)
 
 def getEntry(species_wid = None, wid = None):
     try:
-        species_id = Species.objects.values('id').get(wid = species_wid)['id']
+        species_id = cmodels.Species.objects.values('id').get(wid = species_wid)['id']
     except ObjectDoesNotExist:
         return None    
     
     try:
         if species_wid == wid:
-            return Species.objects.get(wid=wid)
+            return cmodels.Species.objects.get(wid=wid)
         else:
-            tmp = SpeciesComponent.objects.get(species__id = species_id, wid=wid)
+            tmp = cmodels.SpeciesComponent.objects.get(species__id = species_id, wid=wid)
             return getModel(tmp.model_type).objects.select_related(depth=2).get(id=tmp.id)
     except ObjectDoesNotExist:
         return None
@@ -406,7 +410,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['model'] = models[0]
         
         if queryset != None and len(queryset) > 0:
-            if len(queryset) == 1 and isinstance(queryset[0], Entry):
+            if len(queryset) == 1 and isinstance(queryset[0], cmodels.Entry):
                 social_text += data['model_verbose_name'][0] + " "
                 social_text += queryset[0].name
             else:
@@ -426,9 +430,9 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
     if outformat == 'html':
         data['is_pdf'] = False
         data['pdfstyles'] = ''
-        data['species_list'] = Species.objects.all()
-        data['modelmetadatas'] = getModelsMetadata(SpeciesComponent)
-        data['modelnames'] = getObjectTypes(SpeciesComponent)
+        data['species_list'] = cmodels.Species.objects.all()
+        data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
+        data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
         
         if queryset != None and data['queryset'].model is None:
@@ -464,9 +468,9 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
     elif outformat == 'pdf':
         data['is_pdf'] = True
         data['pdfstyles'] = ''
-        data['species_list'] = Species.objects.all()
-        data['modelmetadatas'] = getModelsMetadata(SpeciesComponent)
-        data['modelnames'] = getObjectTypes(SpeciesComponent)
+        data['species_list'] = cmodels.Species.objects.all()
+        data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
+        data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
 
         for fileName in ['styles', 'styles.print', 'styles.pdf']:
             f = open(settings.STATICFILES_DIRS[0] + '/public/css/' + fileName + '.css', 'r')
@@ -550,7 +554,7 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
 
     data['is_pdf'] = False
     data['pdfstyles'] = ''
-    data['species_list'] = Species.objects.all()
+    data['species_list'] = cmodels.Species.objects.all()
     data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/cyano/error.html'))
 
     if queryset != None and data['queryset'].model is None:
@@ -840,7 +844,7 @@ def get_excel_headers(model, is_user_anonymous=False):
     headers = []
     for field in fields:
         subheaders = []
-        if (field.rel is not None) and isinstance(field, ForeignKey) and (not issubclass(field.rel.to, (Entry, User, ))):
+        if (field.rel is not None) and isinstance(field, ForeignKey) and (not issubclass(field.rel.to, (cmodels.Entry, User, ))):
             for subfield in field.rel.to._meta.fields + field.rel.to._meta.many_to_many:
                 if not subfield.auto_created:
                     subheaders.append(html_to_ascii(subfield.verbose_name))
@@ -885,7 +889,7 @@ def format_value_excel(obj, field, depth = 0):
         format_code = NumberFormat.FORMAT_DATE_TIME4
     elif field.__class__ is ForeignKey:
         subobj = value        
-        if issubclass(field.rel.to, (Entry, User)):
+        if issubclass(field.rel.to, (cmodels.Entry, User)):
             value = None
             if subobj is not None:
                 value = unicode(subobj)
@@ -918,7 +922,7 @@ def format_value_excel(obj, field, depth = 0):
 
         if value is None:
             pass
-        elif issubclass(field.rel.to, Entry):
+        elif issubclass(field.rel.to, cmodels.Entry):
             subobjs = value.all()
             value = []
             for subobj in subobjs:
@@ -960,18 +964,18 @@ def batch_import_from_excel(species_wid, fileName, user):
         species_wid = species['wid']
     else:
         try:
-            species = Species.objects.get(wid=species_wid)
+            species = cmodels.Species.objects.get(wid=species_wid)
             species_id = species.id
         except ObjectDoesNotExist:
             raise ValidationError('Please edit an editing PGDB')
         
-    if len(Species.objects.exclude(id=species_id).filter(wid=species_wid)) > 0:
+    if len(cmodels.Species.objects.exclude(id=species_id).filter(wid=species_wid)) > 0:
         raise ValidationError('Species WID must be unique.')
         
     #check object WIDs unique
     old_wids_list = []
     if species_id is not None:
-        qs = SpeciesComponent.objects.values('wid', 'model_type').filter(species__id=species_id)
+        qs = cmodels.SpeciesComponent.objects.values('wid', 'model_type').filter(species__id=species_id)
         for model in models:
             for obj_data in data[model.__name__]:
                 if obj_data['id'] is not None:
@@ -997,7 +1001,7 @@ def batch_import_from_excel(species_wid, fileName, user):
     all_obj_data = {species_wid: species}
     all_obj_data_by_model = {'Species': [species]}
     for model_name, model in getModels().iteritems():
-        if not issubclass(model, SpeciesComponent):
+        if not issubclass(model, cmodels.SpeciesComponent):
             continue
         all_obj_data_by_model[model_name] = []
         for obj in data[model_name]:
@@ -1026,7 +1030,7 @@ def batch_import_from_excel(species_wid, fileName, user):
             except ValidationError as error:
                 errors.append('%s %s invalid: %s' % (model.__name__, obj_data['wid'], format_error_as_html_list(error)))
     if len(errors) > 0:
-        raise ValidationError(format_list_html(errors))    
+        raise ValidationError(cmodels.format_list_html(errors))    
     
     #objects
     errors = []
@@ -1040,7 +1044,7 @@ def batch_import_from_excel(species_wid, fileName, user):
             except ValidationError as error:
                 errors.append('%s %s invalid: %s' % (model.__name__, obj_data['wid'], format_error_as_html_list(error)))
     if len(errors) > 0:
-        raise ValidationError(format_list_html(errors))
+        raise ValidationError(cmodels.format_list_html(errors))
     
     #uniqueness
     for model in models:
@@ -1052,7 +1056,7 @@ def batch_import_from_excel(species_wid, fileName, user):
         except ValidationError as error:
             errors.append('%s invalid: %s' % (model.__name__, format_error_as_html_list(error)))
     if len(errors) > 0:
-        raise ValidationError(format_list_html(errors))    
+        raise ValidationError(cmodels.format_list_html(errors))    
     
     ''' save '''
     #commit
@@ -1116,7 +1120,7 @@ def read_excel_data(filename):
             errors.append('Expecting worksheet "%s" to have exactly %s columns' % (ws.title, iCol + 1))
 
     if len(errors) > 0:
-        raise ValidationError(format_list_html(errors))
+        raise ValidationError(cmodels.format_list_html(errors))
 
     #get data
     newobjects = {}
@@ -1163,7 +1167,7 @@ def read_excel_data(filename):
                         value = None
                     obj[field.name] = value
                 elif isinstance(field, ForeignKey):
-                    if issubclass(field.rel.to, Entry):
+                    if issubclass(field.rel.to, cmodels.Entry):
                         value = ws.cell(row=iRow, column=iCol).value
                         if value == '':
                             value = None
@@ -1185,11 +1189,11 @@ def read_excel_data(filename):
                                 value = ws.cell(row=iRow, column=iCol2).value
                                 if value == '':
                                     value = None
-                            elif isinstance(subfield, ForeignKey) and issubclass(subfield.rel.to, Entry):
+                            elif isinstance(subfield, ForeignKey) and issubclass(subfield.rel.to, cmodels.Entry):
                                 value = ws.cell(row=iRow, column=iCol2).value
                                 if value == '':
                                     value = None
-                            elif isinstance(subfield, ManyToManyField) and issubclass(subfield.rel.to, Entry):
+                            elif isinstance(subfield, ManyToManyField) and issubclass(subfield.rel.to, cmodels.Entry):
                                 value = ws.cell(row=iRow, column=iCol2).value
                                 if value is None or value == '':
                                     value = []
@@ -1216,7 +1220,7 @@ def read_excel_data(filename):
                         if is_blank:
                             obj[field.name] = None
                 elif isinstance(field, ManyToManyField):
-                    if issubclass(field.rel.to, Entry):
+                    if issubclass(field.rel.to, cmodels.Entry):
                         value = ws.cell(row=iRow, column=iCol).value
                         if value is None or value == '':
                             obj[field.name] = []
@@ -1235,7 +1239,7 @@ def read_excel_data(filename):
             newobjects[modelname].append(obj)
     
     if len(errors) > 0:
-        raise ValidationError(format_list_html(errors))
+        raise ValidationError(cmodels.format_list_html(errors))
     
     return newobjects
 
@@ -1293,20 +1297,20 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
         field_model = field.rel.to
         
     if isinstance(field, (ManyToManyField, RelatedObject)):        
-        if issubclass(field_model, Entry):
+        if issubclass(field_model, cmodels.Entry):
             results = []
             for subvalue in value:
                 results.append('<a href="%s">%s</a>' % (subvalue.get_absolute_url(species, history_id), subvalue.wid))
-            return format_list_html(results)        
+            return cmodels.format_list_html(results)        
             
         results = []
         for subvalue in value:
-            if issubclass(field_model, (EntryBooleanData, )):
+            if issubclass(field_model, (cmodels.EntryBooleanData, )):
                 if subvalue.value:
                     txt = 'Yes'
                 else:
                     txt = 'No'
-            elif issubclass(field_model, (EntryCharData, EntryFloatData, EntryPositiveFloatData, EntryTextData, )):
+            elif issubclass(field_model, (cmodels.EntryCharData, cmodels.EntryFloatData, cmodels.EntryPositiveFloatData, cmodels.EntryTextData, )):
                 if subvalue.units is None:
                     txt = '%s' % (subvalue.value, )
                 else:
@@ -1316,19 +1320,19 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
                 for subfield in field_model._meta.fields + field_model._meta.many_to_many:
                     if subfield.auto_created:
                         pass
-                    elif isinstance(subfield, ManyToManyField) and issubclass(subfield.rel.to, Evidence):
+                    elif isinstance(subfield, ManyToManyField) and issubclass(subfield.rel.to, cmodels.Evidence):
                         pass
                     else:
                         subresults.append('%s: %s' % (subfield.verbose_name, format_field_detail_view(subvalue, subfield.name, is_user_anonymous), ))
                 txt = ', '.join(subresults)
                         
-            if issubclass(field_model, EvidencedEntryData) and len(subvalue.evidence.all()) > 0:            
-                txt = txt + (' <a href="javascript:void(0)" onclick="toggleEvidence(this);">(Show evidence)</a><div class="evidence" style="display:none;">%s</div>' % format_evidence(subvalue.evidence.all()))
+            if issubclass(field_model, cmodels.EvidencedEntryData) and len(subvalue.evidence.all()) > 0:            
+                txt = txt + (' <a href="javascript:void(0)" onclick="toggleEvidence(this);">(Show evidence)</a><div class="evidence" style="display:none;">%s</div>' % cmodels.format_evidence(subvalue.evidence.all()))
             results.append('<div>%s</div>' % txt)
-        return format_list_html(results)
+        return cmodels.format_list_html(results)
             
     elif isinstance(field, ForeignKey):
-        if issubclass(field_model, Entry):
+        if issubclass(field_model, cmodels.Entry):
             if value is not None:
                 return '<a href="%s">%s</a>' % (value.get_absolute_url(species, history_id), value.wid)
             else:
@@ -1337,12 +1341,12 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
         if value is None:
             return ''
         
-        if issubclass(field_model, (EntryBooleanData, )):
+        if issubclass(field_model, (cmodels.EntryBooleanData, )):
             if value.value:
                 txt = 'Yes'
             else:
                 txt = 'No'
-        elif issubclass(field_model, (EntryCharData, EntryFloatData, EntryPositiveFloatData, EntryTextData, )):
+        elif issubclass(field_model, (cmodels.EntryCharData, cmodels.EntryFloatData, cmodels.EntryPositiveFloatData, cmodels.EntryTextData, )):
             if value.units is None:
                 txt = '%s' % (value.value, )
             else:
@@ -1352,14 +1356,14 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
             for subfield in field_model._meta.fields + field_model._meta.many_to_many:
                 if subfield.auto_created:
                     pass
-                elif isinstance(subfield, ManyToManyField) and issubclass(subfield.rel.to, Evidence):
+                elif isinstance(subfield, ManyToManyField) and issubclass(subfield.rel.to, cmodels.Evidence):
                     pass
                 else:
                     results.append('%s: %s' % (subfield.verbose_name, format_field_detail_view(value, subfield.name, is_user_anonymous), ))
             txt = ', '.join(results)
             
-        if issubclass(field_model, EvidencedEntryData) and len(value.evidence.all()) > 0:            
-            txt = txt + (' <a href="javascript:void(0)" onclick="toggleEvidence(this);">(Show evidence)</a><div class="evidence" style="display:none;">%s</div>' % format_evidence(value.evidence.all()))    
+        if issubclass(field_model, cmodels.EvidencedEntryData) and len(value.evidence.all()) > 0:            
+            txt = txt + (' <a href="javascript:void(0)" onclick="toggleEvidence(this);">(Show evidence)</a><div class="evidence" style="display:none;">%s</div>' % cmodels.format_evidence(value.evidence.all()))    
             
         return '<div>%s</div>' % txt
             
@@ -1378,14 +1382,14 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
     return ''
         
 def get_history(species, obj, detail_id):
-    #return Revision.objects.filter(current = obj, detail__lte = detail_id, table = TableMeta.get_by_model(field.model), column = get_column_index(field)).order_by("-detail")[0].new_value + " (current: " + str(value) + ")"
+    #return cmodels.Revision.objects.filter(current = obj, detail__lte = detail_id, table = TableMeta.get_by_model(field.model), column = get_column_index(field)).order_by("-detail")[0].new_value + " (current: " + str(value) + ")"
 
     history_obj = obj.__class__.objects.get(pk = obj.pk)
     history_obj.detail_history = detail_id
     
     comments = ""
 
-    rev_query = Revision.objects.filter(current = obj, detail__lte = detail_id).order_by("-detail")
+    rev_query = cmodels.Revision.objects.filter(current = obj, detail__lte = detail_id).order_by("-detail")
 
     used_columns = []
 
@@ -1410,7 +1414,7 @@ def get_history(species, obj, detail_id):
             pass
         else:
             #print "Non: " + field.name
-            column = TableMetaColumn.get_by_field(field)
+            column = cmodels.TableMetaColumn.get_by_field(field)
             
             for query in rev_query:
                 if query.column_id == column.pk and not query.column_id in used_columns:
@@ -1472,11 +1476,11 @@ def format_field_detail_view_helper():
 def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = []):
     model = obj.__class__
     
-    if issubclass(model, Entry) and len(ancestors) > 0:
+    if issubclass(model, cmodels.Entry) and len(ancestors) > 0:
         return obj.wid
     
     objDict = {}
-    if issubclass(model, Entry):
+    if issubclass(model, cmodels.Entry):
         fields = getModelDataFields(model, metadata=not is_user_anonymous)
     else:
         fields = model._meta.fields + model._meta.many_to_many
@@ -1490,7 +1494,7 @@ def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = [
             if model_val is None:
                 stdobj_val = None
             else:
-                if issubclass(field.rel.to, Entry):
+                if issubclass(field.rel.to, cmodels.Entry):
                     stdobj_val = model_val.wid
                 elif issubclass(field.rel.to, User):
                     stdobj_val = model_val.username
@@ -1498,7 +1502,7 @@ def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = [
                     stdobj_val = convert_modelobject_to_stdobject(model_val, is_user_anonymous, ancestors + [obj])
         elif isinstance(field, ManyToManyField):
             stdobj_val = []
-            if issubclass(field.rel.to, Entry):
+            if issubclass(field.rel.to, cmodels.Entry):
                 for model_subval in model_val.all():
                     stdobj_val.append(model_subval.wid)
             elif issubclass(field.rel.to, User):
@@ -1534,7 +1538,7 @@ def convert_modelobject_to_xml(obj, xml_doc, is_user_anonymous, ancestors = []):
     model = obj.__class__
     xml_obj = xml_doc.createElement('object')
     
-    if issubclass(model, Entry) and len(ancestors) > 0:
+    if issubclass(model, cmodels.Entry) and len(ancestors) > 0:
         xml_obj.appendChild(xml_doc.createTextNode(unicode(obj.wid)))
         return xml_obj
     
@@ -1543,7 +1547,7 @@ def convert_modelobject_to_xml(obj, xml_doc, is_user_anonymous, ancestors = []):
     xml_field.appendChild(xml_doc.createTextNode(unicode(model.__name__)))
     xml_obj.appendChild(xml_field)
     
-    if issubclass(model, Entry):
+    if issubclass(model, cmodels.Entry):
         fields = getModelDataFields(model, metadata=not is_user_anonymous)
     else:
         fields = model._meta.fields + model._meta.many_to_many
@@ -1561,14 +1565,14 @@ def convert_modelobject_to_xml(obj, xml_doc, is_user_anonymous, ancestors = []):
             if model_val is None:
                 pass
             else:
-                if issubclass(field.rel.to, Entry):
+                if issubclass(field.rel.to, cmodels.Entry):
                     xml_field.appendChild(xml_doc.createTextNode(unicode(model_val.wid)))
                 elif issubclass(field.rel.to, User):
                     xml_field.appendChild(xml_doc.createTextNode(unicode(model_val.username)))
                 else:
                     xml_field.appendChild(convert_modelobject_to_xml(model_val, xml_doc, is_user_anonymous, ancestors + [obj]))
         elif isinstance(field, ManyToManyField):
-            if issubclass(field.rel.to, Entry):
+            if issubclass(field.rel.to, cmodels.Entry):
                 for model_subval in model_val.all():
                     doc = xml_doc.createElement('object')
                     doc.appendChild(xml_doc.createTextNode(unicode(model_subval.wid)))
@@ -1608,7 +1612,7 @@ def get_edit_form_fields(species_wid, model, obj=None):
     form_fields = []
     initial_values = {}
     
-    if issubclass(model, Entry):
+    if issubclass(model, cmodels.Entry):
         fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
     else:
         fields = model._meta.fields + model._meta.many_to_many
@@ -1623,9 +1627,9 @@ def get_edit_form_fields(species_wid, model, obj=None):
         choices = None
         
         if isinstance(model_field, ForeignKey):
-            if issubclass(model_field.rel.to, Entry):
+            if issubclass(model_field.rel.to, cmodels.Entry):
                 fieldtype = 'select'
-                if issubclass(model_field.rel.to, SpeciesComponent):
+                if issubclass(model_field.rel.to, cmodels.SpeciesComponent):
                     choices = tuple([(x.wid, x.wid) for x in model_field.rel.to.objects.filter(species__wid=species_wid)])
                 else:
                     choices = tuple([(x.wid, x.wid) for x in model_field.rel.to.objects.all()])
@@ -1641,9 +1645,9 @@ def get_edit_form_fields(species_wid, model, obj=None):
                 if obj is not None and subobj is None:
                     value = None
         elif isinstance(model_field, ManyToManyField):
-            if issubclass(model_field.rel.to, Entry):
+            if issubclass(model_field.rel.to, cmodels.Entry):
                 fieldtype = 'multiselect'                
-                if issubclass(model_field.rel.to, SpeciesComponent):
+                if issubclass(model_field.rel.to, cmodels.SpeciesComponent):
                     choices = tuple([(x.wid, x.wid) for x in model_field.rel.to.objects.filter(species__wid=species_wid)])
                 else:
                     choices = tuple([(x.wid, x.wid) for x in model_field.rel.to.objects.all()])
@@ -1694,7 +1698,7 @@ def get_edit_form_fields(species_wid, model, obj=None):
 
 def get_edit_form_data(model, POST, field_prefix=''):
     #get fields
-    if issubclass(model, Entry):
+    if issubclass(model, cmodels.Entry):
         fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
     else:
         fields = model._meta.fields    + model._meta.many_to_many
@@ -1707,7 +1711,7 @@ def get_edit_form_data(model, POST, field_prefix=''):
             continue
             
         if isinstance(field, ForeignKey):
-            if issubclass(field.rel.to, Entry):
+            if issubclass(field.rel.to, cmodels.Entry):
                 val = POST.get('%s%s' % (field_prefix, field.name, ), None)
                 if val == '':
                     val = None
@@ -1715,7 +1719,7 @@ def get_edit_form_data(model, POST, field_prefix=''):
                 val = get_edit_form_data(field.rel.to, POST, field_prefix='%s%s_' % (field_prefix, field.name, ))
         elif isinstance(field, ManyToManyField):
             val = []
-            if issubclass(field.rel.to, Entry):
+            if issubclass(field.rel.to, cmodels.Entry):
                 wids = POST.getlist('%s%s' % (field_prefix, field.name, ), [])                
                 for wid in wids:
                     if wid is not None and wid != '':
@@ -1748,12 +1752,12 @@ def get_edit_form_data(model, POST, field_prefix=''):
     return data    
     
 def validate_object_fields(model, data, wids, species_wid, entry_wid):
-    if issubclass(model, Entry):
+    if issubclass(model, cmodels.Entry):
         fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
     else:
         fields = model._meta.fields    + model._meta.many_to_many
         
-    if issubclass(model, Entry):
+    if issubclass(model, cmodels.Entry):
         data['species'] = species_wid
         
     errors = {}
@@ -1763,7 +1767,7 @@ def validate_object_fields(model, data, wids, species_wid, entry_wid):
             
         try:            
             if isinstance(field, ForeignKey):
-                if issubclass(model, Evidence) and issubclass(field.rel.to, SpeciesComponent):
+                if issubclass(model, cmodels.Evidence) and issubclass(field.rel.to, cmodels.SpeciesComponent):
                     data[field.name] = entry_wid
                             
                 if not data.has_key(field.name):
@@ -1773,7 +1777,7 @@ def validate_object_fields(model, data, wids, species_wid, entry_wid):
                     if not field.null:
                         raise ValidationError('Undefined WID %s' % data[field.name])
                 else:
-                    if issubclass(field.rel.to, Entry):    
+                    if issubclass(field.rel.to, cmodels.Entry):    
                         if not wids.has_key(data[field.name]):
                             raise ValidationError('Undefined WID %s' % data[field.name])
                         if not issubclass(getModel(wids[data[field.name]]), field.rel.to):
@@ -1789,7 +1793,7 @@ def validate_object_fields(model, data, wids, species_wid, entry_wid):
                 if not data.has_key(field.name):
                     data[field.name] = []
                     
-                if issubclass(field.rel.to, Entry):
+                if issubclass(field.rel.to, cmodels.Entry):
                     for wid in data[field.name]:
                         if not wids.has_key(wid):
                             raise ValidationError('Undefined WID %s' % wid)
@@ -1827,20 +1831,20 @@ def validate_model_objects(model, obj_data, all_obj_data=None, all_obj_data_by_m
             parent_model._meta.clean(parent_model, obj_data, all_obj_data=all_obj_data, all_obj_data_by_model=all_obj_data_by_model)
 
 def validate_model_unique(model, model_objects_data, all_obj_data=None, all_obj_data_by_model=None):
-    if not issubclass(model, SpeciesComponent):
+    if not issubclass(model, cmodels.SpeciesComponent):
         return
         
     parent_list = list(model._meta.get_parent_list())
     parent_list.reverse()
     
     if all_obj_data is None:
-        if model_objects_data[0] is Entry:
+        if model_objects_data[0] is cmodels.Entry:
             species_wid = model_objects_data[0].species.wid
         else:
             species_wid = model_objects_data[0]['species']
         
-        if issubclass(model, SpeciesComponent):
-            species_id = Species.objects.values('id').get(wid=species_wid)['id']        
+        if issubclass(model, cmodels.SpeciesComponent):
+            species_id = cmodels.Species.objects.values('id').get(wid=species_wid)['id']        
             qs = model.objects.filter(species__id=species_id)
         else:
             qs = model.objects.all()
@@ -1857,11 +1861,11 @@ def validate_model_unique(model, model_objects_data, all_obj_data=None, all_obj_
     
 def save_object_data(species_wid, obj, obj_data, obj_list, user, save=False, save_m2m=False):
     model = obj.__class__
-    if isinstance(obj, Entry) and obj.pk is None:
+    if isinstance(obj, cmodels.Entry) and obj.pk is None:
         obj.created_user = user
     obj.last_updated_user = user
     
-    if issubclass(model, Entry):
+    if issubclass(model, cmodels.Entry):
         fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
     else:
         fields = model._meta.fields    + model._meta.many_to_many
@@ -1873,11 +1877,11 @@ def save_object_data(species_wid, obj, obj_data, obj_list, user, save=False, sav
             
         if isinstance(field, ForeignKey):
             if save:
-                if issubclass(field.rel.to, Entry):
+                if issubclass(field.rel.to, cmodels.Entry):
                     if obj_data[field.name] is not None:
                         if obj_list.has_key(obj_data[field.name]):
                             tmp = obj_list[obj_data[field.name]]
-                        elif issubclass(field.rel.to, SpeciesComponent):
+                        elif issubclass(field.rel.to, cmodels.SpeciesComponent):
                             tmp = field.rel.to.objects.get(species__wid=species_wid, wid=obj_data[field.name])
                         else:
                             tmp = field.rel.to.objects.get(wid=obj_data[field.name])
@@ -1896,8 +1900,8 @@ def save_object_data(species_wid, obj, obj_data, obj_list, user, save=False, sav
     
     #save
     if save:
-        if isinstance(obj, SpeciesComponent):
-            obj.species = Species.objects.get(wid=species_wid)
+        if isinstance(obj, cmodels.SpeciesComponent):
+            obj.species = cmodels.Species.objects.get(wid=species_wid)
         obj.full_clean()
         obj.save()
     
@@ -1909,11 +1913,11 @@ def save_object_data(species_wid, obj, obj_data, obj_list, user, save=False, sav
         if isinstance(field, ManyToManyField):
             if save_m2m:
                 getattr(obj, field.name).clear()
-                if issubclass(field.rel.to, Entry):
+                if issubclass(field.rel.to, cmodels.Entry):
                     for wid in obj_data[field.name]:
                         if obj_list.has_key(wid):
                             tmp = obj_list[wid]
-                        elif issubclass(field.rel.to, SpeciesComponent):
+                        elif issubclass(field.rel.to, cmodels.SpeciesComponent):
                             tmp = field.rel.to.objects.get(species__wid=species_wid, wid=wid)
                         else:
                             tmp = field.rel.to.objects.get(wid=wid)
@@ -1963,16 +1967,16 @@ def readFasta(species_wid, filename, user):
     #retrieve chromosomes
     for wid, sequence in sequences.iteritems():
         try:
-            chro = Chromosome.objects.get(species__wid=species_wid, wid=wid)
+            chro = cmodels.Chromosome.objects.get(species__wid=species_wid, wid=wid)
         except ObjectDoesNotExist as error:
             error_messages.append(error.message)            
             continue        
     if len(error_messages) > 0:
-        return (False, format_list_html(error_messages))
+        return (False, cmodels.format_list_html(error_messages))
     
     #validate
     for wid, sequence in sequences.iteritems():
-        chro = Chromosome.objects.get(species__wid=species_wid, wid=wid)
+        chro = cmodels.Chromosome.objects.get(species__wid=species_wid, wid=wid)
         chro.sequence = sequence
         try:
             chro.full_clean()
@@ -1980,12 +1984,12 @@ def readFasta(species_wid, filename, user):
             error_messages.append(format_error_as_html_list(error))
             continue
     if len(error_messages) > 0:
-        return (False, format_list_html(error_messages))
+        return (False, cmodels.format_list_html(error_messages))
 
         
     #save
     for wid, sequence in sequences.iteritems():    
-        chro = Chromosome.objects.get(species__wid=species_wid, wid=wid)
+        chro = cmodels.Chromosome.objects.get(species__wid=species_wid, wid=wid)
         chro.sequence = sequence
         chro.full_clean()
         try:
@@ -1994,26 +1998,26 @@ def readFasta(species_wid, filename, user):
             error_messages.append(error.message)
             continue
     if len(error_messages) > 0:
-        return (False, format_list_html(error_messages))
+        return (False, cmodels.format_list_html(error_messages))
                 
     return (True, 'Sequences successfully saved!')
     
 def write_bibtex(species, qs):
     refs = {}
     for obj in qs:
-        if not isinstance(obj, SpeciesComponent):
+        if not isinstance(obj, cmodels.SpeciesComponent):
             continue
             
-        if isinstance(obj, PublicationReference):
+        if isinstance(obj, cmodels.PublicationReference):
             refs[obj.wid] = obj
         for sub_obj in obj.references.all():
             refs[sub_obj.wid] = sub_obj
         for field in obj.__class__._meta.fields + obj.__class__._meta.many_to_many:
-            if isinstance(field, ForeignKey) and issubclass(field.rel.to, EvidencedEntryData) and getattr(obj, field.name) is not None:
+            if isinstance(field, ForeignKey) and issubclass(field.rel.to, cmodels.EvidencedEntryData) and getattr(obj, field.name) is not None:
                 for evidence in getattr(obj, field.name).evidence.all():
                     for ref in evidence.references.all():
                         refs[ref.wid] = ref
-            if isinstance(field, ManyToManyField) and issubclass(field.rel.to, EvidencedEntryData):
+            if isinstance(field, ManyToManyField) and issubclass(field.rel.to, cmodels.EvidencedEntryData):
                 for sub_obj in getattr(obj, field.name).all():
                     for evidence in sub_obj.evidence.all():
                         for ref in evidence.references.all():
@@ -2040,7 +2044,7 @@ def write_bibtex(species, qs):
 def get_invalid_objects(species_id, validate_fields=False, validate_objects=True, full_clean=False, validate_unique=False):
     #check that species WIDs unique
     wids = []
-    for species in Species.objects.values('wid').all():
+    for species in cmodels.Species.objects.values('wid').all():
         wids.append(species['wid'])
     if len(set(wids)) < len(wids):
         for wid in set(wids):
@@ -2057,14 +2061,14 @@ def get_invalid_objects(species_id, validate_fields=False, validate_objects=True
     all_obj_data = {}
     all_obj_data_by_model = {}
     
-    species = Species.objects.select_related().get(id=species_id)
+    species = cmodels.Species.objects.select_related().get(id=species_id)
     species_wid = species.wid
     all_obj_wids[species.wid] = 'Species'
     all_obj_data[species.wid] = species
     all_obj_data_by_model['Species'] = [species]
     
     wids = []
-    for model_name, model in getModels(SpeciesComponent).iteritems():
+    for model_name, model in getModels(cmodels.SpeciesComponent).iteritems():
         all_obj_data_by_model[model_name] = []
         for obj in model.objects.select_related().filter(species__id=species_id):
             wids.append(obj.wid)

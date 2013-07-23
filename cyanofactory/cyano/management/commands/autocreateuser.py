@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
-from cyano.models import UserProfile
 from django.contrib.auth.models import User
+
+from cyano.models import UserProfile
 
 class Command(BaseCommand):
     def handle(self, *args, **options):

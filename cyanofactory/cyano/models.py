@@ -5,8 +5,18 @@ Based on Wholecell KB.
 '''
 
 from __future__ import unicode_literals
+
+import math
+import re
+import settings
+import subprocess
+import sys
+from datetime import datetime
+import StringIO
+
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
+
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
 from django.core import validators
@@ -14,20 +24,15 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min
 from django.db.models.query import EmptyQuerySet
-from cyano.templatetags.templatetags import set_time_zone
-import math
-import re
-import settings
-import subprocess
-from datetime import datetime
-from cyano.cache import Cache
-import StringIO
 from django.template import loader, Context
-from cyano.history import HistoryForeignKey as ForeignKey
-from cyano.history import HistoryManyToManyField as ManyToManyField
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import m2m_changed
-import sys
+
+from cyano.templatetags.templatetags import set_time_zone
+from cyano.cache import Cache
+from cyano.history import HistoryForeignKey as ForeignKey
+from cyano.history import HistoryManyToManyField as ManyToManyField
+
 
 def enum(**enums):
     return type(str('Enum'), (), enums)

@@ -1,8 +1,10 @@
 from optparse import make_option
+
 from django.core.management.base import BaseCommand, CommandError
+from django.db.transaction import commit_on_success
+
 from cyano.helpers import slugify
 from cyano.models import Species, RevisionDetail, UserProfile
-from django.db.transaction import commit_on_success
 
 class CyanoCommand(BaseCommand):
     """

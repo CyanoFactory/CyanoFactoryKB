@@ -1,13 +1,15 @@
-from importer import Importer
-from importer import ParserError
-from django.core.exceptions import ObjectDoesNotExist
-import cyano.models as models
-from cyano.helpers import format_field_detail_view, render_queryset_to_response,\
-    objectToQuerySet, format_field_detail_view_diff
-from django.db.models.related import RelatedObject
-from django.template.defaultfilters import capfirst
 import re
 import StringIO
+
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models.related import RelatedObject
+from django.template.defaultfilters import capfirst
+
+from importer import Importer
+from importer import ParserError
+import cyano.models as models
+from cyano.helpers import render_queryset_to_response,\
+    objectToQuerySet, format_field_detail_view_diff
 
 def diffgen(di):
     old = ""
@@ -156,8 +158,6 @@ class FastaImporter(Importer):
     
     def preview(self, request, species_wid):
         #super(Importer, self).preview(request, species_wid)
-        import diff_match_patch as diff
-        d = diff.diff_match_patch()
         
         try:
             species = models.Chromosome.objects.get(wid = species_wid)
@@ -170,13 +170,13 @@ class FastaImporter(Importer):
             seq = sequence["sequence"]
             try:
                 old_chr = models.Chromosome.objects.get(species__wid = species_wid, wid = wid)
-                chr = models.Chromosome.objects.get(species__wid = species_wid, wid = wid)
+                chro = models.Chromosome.objects.get(species__wid = species_wid, wid = wid)
             except ObjectDoesNotExist:
                 old_chr = None
-                chr = models.Chromosome(wid = wid)     
+                chro = models.Chromosome(wid = wid)     
             
-            chr.name = name
-            chr.sequence = seq
+            chro.name = name
+            chro.sequence = seq
 
         fieldsets = [
             ("Update " + species.wid, {'fields': [
@@ -187,7 +187,7 @@ class FastaImporter(Importer):
         
         #filter out type, metadata
         fieldset_names = [x[0] for x in fieldsets]
-        chr.model_type = models.TableMeta.objects.get(name = "Chromosome")
+        chro.model_type = models.TableMeta.objects.get(name = "Chromosome")
         if 'Type' in fieldset_names:
             idx = fieldset_names.index('Type')
             del fieldsets[idx]
@@ -210,7 +210,7 @@ class FastaImporter(Importer):
                     else:
                         verbose_name = field.verbose_name
                     
-                old_data, new_data = format_field_detail_view_diff(species, old_chr, chr, field_name, request.user.is_anonymous())
+                old_data, new_data = format_field_detail_view_diff(species, old_chr, chro, field_name, request.user.is_anonymous())
                 
                 if not old_data and not new_data:
                     rmfields = [idx2] + rmfields
@@ -227,7 +227,7 @@ class FastaImporter(Importer):
             species = species,        
             request = request, 
             models = [model],
-            queryset = objectToQuerySet(chr),
+            queryset = objectToQuerySet(chro),
             template = 'cyano/preview.html', 
             data = {
                 'model_type': "Chromosome",
