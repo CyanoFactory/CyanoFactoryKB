@@ -68,7 +68,6 @@ class Command(CyanoCommand):
             chromosome.length = len(seq)
             chromosome.save(revision_detail = revdetail)
             chromosome.species.add(species)
-            chromosome.save(revision_detail = revdetail)
  
             for gene in genes:
                 if gene_to_replicon(int(gene.genomeid.split("-")[1])) != chro:
@@ -103,11 +102,8 @@ class Command(CyanoCommand):
  
                 t.save(revision_detail = revdetail)
                 t.species.add(species)
-                t.save(revision_detail = revdetail)
  
                 g.type.add(t)
- 
-                g.save(revision_detail = revdetail)
  
             f.close()
  
@@ -129,8 +125,6 @@ class Command(CyanoCommand):
             gene = bmodels.Gene.objects.get(Wid = t.otherWid)
             cgene = cmodels.Gene.objects.get(wid = gene.genomeid)
             tu.genes.add(cgene)
-            
-            tu.save(revision_detail = revdetail)
 
         for pathway in pathways:
             wid = "P_" + str(pathway.Wid)
@@ -143,5 +137,3 @@ class Command(CyanoCommand):
             p.name = pathway.name
             p.save(revision_detail = revdetail)
             p.species.add(species)
-            p.save(revision_detail = revdetail)
-            

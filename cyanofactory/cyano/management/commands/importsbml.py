@@ -39,7 +39,6 @@ class Command(CyanoCommand):
                 cobj.name = name
                 cobj.save(revision_detail = revdetail)
                 cobj.species.add(species_obj)
-                cobj.save(revision_detail = revdetail)
 
             # Species (= Metabolites) importer
             for i, specie in enumerate(species):
@@ -66,7 +65,6 @@ class Command(CyanoCommand):
                 sobj.is_hydrophobic = False # TODO
                 sobj.save(revision_detail = revdetail)
                 sobj.species.add(species_obj)
-                sobj.save(revision_detail = revdetail)
             
             for i, reaction in enumerate(reactions):
                 wid = slugify(reaction.id)
@@ -141,4 +139,4 @@ class Command(CyanoCommand):
                     
                     reaction_obj.save(revision_detail = revdetail)
                     reaction_obj.species.add(species_obj)
-                    reaction_obj.save(revision_detail = revdetail)
+

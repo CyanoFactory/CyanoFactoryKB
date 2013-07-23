@@ -21,4 +21,3 @@ class Command(CyanoCommand):
             x.name = map_.title
             x.save(revision_detail = revdetail)
             x.species.add(species)
-            x.save(revision_detail = revdetail)

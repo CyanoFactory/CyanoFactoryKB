@@ -77,10 +77,7 @@ class Command(CyanoCommand):
                                     x.source = source
                                     x.save(revision_detail = revdetail)
                                     x.species.add(species)
-                                    x.save(revision_detail = revdetail)
                                     species.cross_references.add(x)
-                        
-                        species.save(revision_detail = revdetail)
     
                     if "references" in anno:
                         for ref in anno["references"]:
@@ -131,7 +128,6 @@ class Command(CyanoCommand):
                                 xref.source = "PUBMED"
                                 xref.save(revision_detail = revdetail)
                                 xref.species.add(species)
-                                xref.save(revision_detail = revdetail)
                                 pubref.cross_references.add(xref)
     
                             if ref.medline_id:
@@ -145,14 +141,10 @@ class Command(CyanoCommand):
                                 xref.source = "MEDLINE"
                                 xref.save(revision_detail = revdetail)
                                 xref.species.add(species)
-                                xref.save(revision_detail = revdetail)
                                 pubref.cross_references.add(xref)
                                 
                             pubref.species.add(species)
-                            pubref.save(revision_detail = revdetail)
                             species.publication_references.add(pubref)
-    
-                        species.save(revision_detail = revdetail)
     
                     if "gi" in anno:
                         wid = "GI" + ":" + anno["gi"]
@@ -165,9 +157,7 @@ class Command(CyanoCommand):
                         xref.source = "GI"
                         xref.save(revision_detail = revdetail)
                         xref.species.add(species)
-                        xref.save(revision_detail = revdetail)
                         species.cross_references.add(xref)
-                        species.save(revision_detail = revdetail)
 
                     try:
                         chromosome = cmodels.Chromosome.objects.get(wid = chr_name)
@@ -178,7 +168,6 @@ class Command(CyanoCommand):
                     chromosome.length = len(record.seq)
                     chromosome.save(revision_detail = revdetail)
                     chromosome.species.add(species)
-                    chromosome.save(revision_detail = revdetail)
                     
                     features = record.features
                     
@@ -252,7 +241,6 @@ class Command(CyanoCommand):
                                     xref.save(revision_detail = revdetail)
                                     xref.species.add(species)
                                     g.cross_references.add(xref)
-                                    xref.save(revision_detail = revdetail)
                         
                         if "EC_number" in qualifiers:
                             for ec in qualifiers["EC_number"]:
@@ -267,7 +255,6 @@ class Command(CyanoCommand):
                                 xref.save(revision_detail = revdetail)
                                 xref.species.add(species)
                                 g.cross_references.add(xref)
-                                xref.save(revision_detail = revdetail)
                         
                         if "gene_synonym" in qualifiers:
                             for synonym in qualifiers["gene_synonym"]:
@@ -307,11 +294,8 @@ class Command(CyanoCommand):
                             xref.source = "RefSeq"
                             xref.save(revision_detail = revdetail)
                             xref.species.add(species)
-                            xref.save(revision_detail = revdetail)
                             protein.cross_references.add(xref)
-                            protein.save(revision_detail = revdetail)
 
-                        g.save(revision_detail = revdetail)
                         g.species.add(species)
                         
                         if v.type == "CDS":
@@ -324,10 +308,8 @@ class Command(CyanoCommand):
     
                         t.save(revision_detail = revdetail)
                         t.species.add(species)
-                        t.save(revision_detail = revdetail)
     
                         g.type.add(t)
-                        
-                        g.save(revision_detail = revdetail)
+
                         self.stdout.write("Importing Gene %s (%d/%d)%10s\r" % (g.wid, i + 1, len(cds_map.values()), " "))
-    
+

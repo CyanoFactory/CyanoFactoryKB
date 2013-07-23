@@ -23,6 +23,5 @@ class Command(CyanoCommand):
         x.name = "Biochemical Pathways"
         x.save(revision_detail = revdetail)
         x.species.add(species)
-        x.save(revision_detail = revdetail)
 
         self.stdout.write("Boehringer Pathway assigned")
