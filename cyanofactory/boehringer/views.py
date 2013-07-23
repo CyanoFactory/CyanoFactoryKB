@@ -51,7 +51,7 @@ def index(request, legacy = None):
     enzymes = []
     metabolites_hits = 0
     for metabolite in metabolite_items:
-        hits = models.Metabolite.objects.filter(title__contains = metabolite[0]).prefetch_related("color")
+        hits = models.Metabolite.objects.filter(title__icontains = metabolite[0]).prefetch_related("color")
         if hits.count() > 0:
             metabolites_hits += 1
             for x in hits:
