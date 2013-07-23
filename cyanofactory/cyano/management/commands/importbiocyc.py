@@ -1,8 +1,10 @@
 # BioCyc importer, not intended for general use
 
-import cyano.models as cmodels
-import biowarehouse.models as bmodels
 from django.core.exceptions import ObjectDoesNotExist
+
+import biowarehouse.models as bmodels
+
+import cyano.models as cmodels
 from cyano_command import CyanoCommand
 
 class Command(CyanoCommand):
@@ -16,7 +18,7 @@ class Command(CyanoCommand):
                  "NC_005231.1_Plasmid-4.fasta"]
         chr_list = ["CHROMOSOME-1"] + list("PLASMID-" + str(x) for x in range(1,5))
         
-        proteins = bmodels.Protein.objects.all()
+        ##proteins = bmodels.Protein.objects.all()
         genes = bmodels.Gene.objects.all()
         tuc = bmodels.Transcriptionunitcomponent.objects.all()
         pathways = bmodels.Pathway.objects.all()
@@ -48,7 +50,7 @@ class Command(CyanoCommand):
         
         #proteins = cmodels.Protein.objects.filter(species = species)
         
-        for fil, chr in zip(files, chr_list):
+        for fil, chro in zip(files, chr_list):
             f = open("../sequences/" + fil)
             
             # header
@@ -57,11 +59,11 @@ class Command(CyanoCommand):
             seq = ''.join(line.strip() for line in f)
             
             try:
-                chromosome = cmodels.Chromosome.objects.get(wid = chr)
+                chromosome = cmodels.Chromosome.objects.get(wid = chro)
             except ObjectDoesNotExist:
-                chromosome = cmodels.Chromosome(wid = chr)
+                chromosome = cmodels.Chromosome(wid = chro)
  
-            chromosome.name = chr
+            chromosome.name = chro
             chromosome.sequence = seq
             chromosome.length = len(seq)
             chromosome.save(revision_detail = revdetail)
@@ -69,7 +71,7 @@ class Command(CyanoCommand):
             chromosome.save(revision_detail = revdetail)
  
             for gene in genes:
-                if gene_to_replicon(int(gene.genomeid.split("-")[1])) != chr:
+                if gene_to_replicon(int(gene.genomeid.split("-")[1])) != chro:
                     continue
                 
                 try:

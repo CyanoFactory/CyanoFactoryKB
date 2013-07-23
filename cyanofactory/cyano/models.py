@@ -5,28 +5,34 @@ Based on Wholecell KB.
 '''
 
 from __future__ import unicode_literals
+
+import math
+import re
+import settings
+import subprocess
+import sys
+from datetime import datetime
+import StringIO
+
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
+
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
 from django.core import validators
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
-from django.db import models
-from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, ForeignKey, BooleanField, SlugField, ManyToManyField, TextField, DateTimeField, options, permalink, SET_NULL, Min, Max
+from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min
 from django.db.models.query import EmptyQuerySet
-from django.utils.http import urlencode
-from itertools import chain
-from cyano.templatetags.templatetags import set_time_zone
-import math
-import re
-import settings
-import subprocess
-from datetime import datetime
-from cyano.exceptions import WidAlreadyExist
-from cyano.cache import Cache
-import StringIO
 from django.template import loader, Context
+from django.dispatch.dispatcher import receiver
+from django.db.models.signals import m2m_changed
+
+from cyano.templatetags.templatetags import set_time_zone
+from cyano.cache import Cache
+from cyano.history import HistoryForeignKey as ForeignKey
+from cyano.history import HistoryManyToManyField as ManyToManyField
+
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -43,6 +49,13 @@ PermissionEnum = enum(
 )
 
 ''' BEGIN: choices '''
+
+CHOICES_DBOPERATION = (
+    ('I', 'Insert'),
+    ('U', 'Update'),
+    ('D', 'Delete'),
+    ('X', 'Unknown')
+)
 
 CHOICES_DIRECTION = (
     ('f', 'Forward'),
@@ -250,14 +263,12 @@ for test in tests:
 '''
 def parse_regulatory_rule(equation, all_obj_data, species_wid):
     from cyano.helpers import getModel, getEntry
-    import settings
     
     pre = ''
     blocks = []
     posts = []
     pattern = '%s'
     begin = 0
-    end = 0
     sense = 0
             
     equation = equation or ''
@@ -615,20 +626,74 @@ class UserProfile(ProfileBase):
 
 ''' BEGIN: helper models '''
 
+class TableMeta(Model):
+    table_name = CharField(max_length=255, verbose_name = "Name of the table", unique=True)
+    model_name = CharField(max_length=255, verbose_name = "Name of the model associated with the table", unique=True)
+    
+    @staticmethod
+    def get_by_table_name(name):
+        model_type_key = "model/model_type/tbl/" + name
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(table_name = name))
+        return cache_model_type
+        
+    @staticmethod
+    def get_by_model_name(name):
+        model_type_key = "model/model_type/" + name
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(model_name = name))
+        return cache_model_type
+    
+    @staticmethod
+    def get_by_model(model):
+        return TableMeta.get_by_model_name(model._meta.object_name)
+    
+    def __unicode__(self):
+        return self.table_name + " - " + self.model_name
+
+class TableMetaColumn(Model):
+    table = ForeignKey(TableMeta, related_name = 'columns')
+    column_name = CharField(max_length=255, verbose_name = "Name of the column")
+    column_id = IntegerField(verbose_name = "Index of the column")
+    
+    @staticmethod
+    def get_by_field(field):
+        model_type_key = "column/%s/%s" % (field.model._meta.object_name, field.column)
+        
+        return Cache.try_get(model_type_key,
+                lambda: TableMetaColumn.objects.prefetch_related("table").get(table__model_name = field.model._meta.object_name, column_name = field.column))
+
+    def __unicode__(self):
+        return "{}: {} ({})".format(self.table.model_name, self.column_name, self.column_id)
+
+    class Meta:
+        unique_together = ('table', 'column_name')
+
+class TableMetaManyToMany(Model):
+    m2m_table = ForeignKey(TableMeta, related_name = '+', verbose_name = "Data about the M2M-Table", unique = True)
+    source_table = ForeignKey(TableMeta, related_name = 'm2ms_source', verbose_name = "The table the m2m references from")
+    target_table = ForeignKey(TableMeta, related_name = 'm2ms_target', verbose_name = "The table the m2m references to")
+    
+    @staticmethod
+    def get_by_m2m_table_name(name):
+        model_type_key = "model/model_type_m2m/tbl/" + name
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("m2m_table", "source_table", "target_table").get(m2m_table__table_name = name))
+        return cache_model_type
+        
+    @staticmethod
+    def get_by_m2m_model_name(name):
+        model_type_key = "model/model_type_m2m/" + name
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("m2m_table", "source_table", "target_table").get(m2m_table__model_name = name))
+        return cache_model_type
+
+    def __unicode__(self):
+        return self.m2m_table.table_name + " - " + self.m2m_table.model_name
+    
+    class Meta:
+        unique_together = ('m2m_table', 'source_table', 'target_table')
+
 class RevisionDetail(Model):
     user = ForeignKey(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
     date = DateTimeField(default=datetime.now, verbose_name = "Modificiation date")
     reason = CharField(max_length=255, blank=True, default='', verbose_name='Reason for edit')
-
-class TableMeta(Model):
-    name = CharField(max_length=255, verbose_name = "Name of the table", editable = False)
-
-#class ColumnMeta(Model):
-#    table = ForeignKey(TableMeta)
-#    name = CharField(max_length=255, verbose_name = "Name of the column in the table", editable = False)
-
-class RevisionOperation(Model):
-    name = CharField(max_length=255)
 
 class Revision(Model):
     """To allow reverting of edits all edit operations are stored in this table.
@@ -637,18 +702,37 @@ class Revision(Model):
     
     :Columns:
         * ``current``: Reference to the latest entry
-        * ``detail``: Contains additional information about the edit
-        * ``action``: Type of the operation (Create, Edit, Delete)
-        * ``table``: Table where the modification occured
-        * ``column``: Column in the table that was modified
+        * ``detail``: Contains additional information about the edit 
+        * ``action``: Type of the operation (Update, Insert, Delete)
+        * ``column``: Table and column where the modification occured
         * ``new_value``: New value in the cell of the column
     """
     current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False)
-    detail = ForeignKey(RevisionDetail, verbose_name = 'Edit operation', related_name = 'revisions', editable = False)
-    action = ForeignKey(RevisionOperation, verbose_name = '', related_name = '+')
-    table = ForeignKey(TableMeta, verbose_name = '', related_name = '+')
-    column = IntegerField(verbose_name = '')
+    detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions', editable = False, null = True)
+    action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
+    column = ForeignKey(TableMetaColumn, verbose_name = 'Table and column where the modification occured', related_name = '+')
     new_value = TextField(blank = True, null = True)
+
+    def __unicode__(self):
+        return str(self.current)
+    
+class RevisionManyToMany(Model):
+    """To allow reverting of edits all edit operations are stored in this table.
+    
+    Always only the new value of a single cell is stored to save memory.
+    
+    :Columns:
+        * ``current``: Reference to the latest entry
+        * ``detail``: Contains additional information about the edit 
+        * ``action``: Type of the operation (Only insert and delete)
+        * ``table``: Table where the modification occured
+        * ``new_value``: New value in the cell of the column
+    """
+    current = ForeignKey("Entry", verbose_name = "Current version of entry points to source of m2m", related_name = 'revisions_m2m', editable = False)
+    detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions_m2m', editable = False, null = True)
+    action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
+    table = ForeignKey(TableMetaManyToMany, verbose_name = 'M2M Table where the modification occured', related_name = '+')
+    new_value = IntegerField(blank = True, null = True)
 
     def __unicode__(self):
         return str(self.current)
@@ -681,7 +765,6 @@ class Evidence(Model):
         verbose_name_plural = 'Evidence'
         
 class EntryData(Model):
-    
     def __unicode__(self):
         arr = []
         txt = unicode('')
@@ -851,7 +934,7 @@ class Kinetics(EvidencedEntryData):
     def get_vmax_normalized(self):
         from cyano.helpers import getModel
         
-        if vmax_unit.name  == 'U/mg':
+        if self.vmax_unit.name  == 'U/mg':
             enz = self.reactions.all()[0].enzyme
             enz = getModel(enz.model_type).objects.get(id=enz.id)            
             return self.vmax * enz.get_molecular_weight() * 1e-3
@@ -956,6 +1039,45 @@ class Synonym(EntryData):
 ''' END: helper models '''
 
 ''' BEGIN: Base classes for all knowledge base objects '''
+@receiver(m2m_changed)
+def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs):
+    if reverse:
+        print "WARN: Reverse support not implemented:",sender,instance,pk_set
+        return
+    
+    if not pk_set is None and len(pk_set) > 0 and isinstance(instance, Entry):
+        if action == "post_add":
+            print "m2m-add:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
+
+            table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
+    
+            save_list = []
+    
+            for pk in pk_set:
+                # FIXME: detail_id is the current one
+                save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "I", table = table_meta, new_value = pk))
+    
+            if len(save_list) > 0:
+                print instance.wid + ": revisioning", len(save_list), "items"
+                # Don't update the detail when actually nothing changed for that entry
+                RevisionManyToMany.objects.bulk_create(save_list)
+        elif action == "post_delete":
+            print "m2m-del:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
+
+            table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
+    
+            save_list = []
+    
+            for pk in pk_set:
+                # FIXME: detail_id is the current one
+                save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "D", table = table_meta, new_value = pk))
+    
+            if len(save_list) > 0:
+                print instance.wid + ": deleting", len(save_list), "items"
+                # Don't update the detail when actually nothing changed for that entry
+                RevisionManyToMany.objects.bulk_create(save_list)
+            pass
+
 class Entry(Model):
     """Base class for all knowledge base objects.
     
@@ -965,136 +1087,97 @@ class Entry(Model):
         * ``name``: Short, human readable name of that entry
         * ``synonyms``: Other names for that entry
         * ``comments``: Detailed notes about this entry
-        * ``permissions``: Reference to the permissions for this entry
     """
     model_type = ForeignKey(TableMeta)
     wid = SlugField(max_length=150, unique = True, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
-    detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry')
+
+    created_detail = ForeignKey(RevisionDetail, verbose_name='Entry created revision', related_name='entry_created_detail', editable = False)
+    detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry', related_name='entry_detail', editable = False)
     
     def __unicode__(self):
         return self.wid
     
     def natural_key(self):
         return self.wid
-    
-    def create_revision(self, field, old_value, new_value, detail):
-        """Creates a new revision object if the value changed.
-    
-        :param field: field to retrieve value from
-        :type field: Django Model Field
-        
-        :param old_value: old_value of the field
-        
-        :param new_value: new_value of the field
-        
-        :param detail: RevisionDetail object that will be assigned to the revision
-        :type detail: RevisionDetail
-    
-        :returns: Revision -- if changed, None otherwise
-        """
-        from cyano.helpers import get_column_index
-        revision = None
 
-        if new_value != old_value:
-            revision = Revision()
-            revision.detail = detail
-            
-            if hasattr(new_value, "id"):
-                # resolve value of foreign keys
-                real_new_value = unicode(new_value.id)
-            else:
-                real_new_value = unicode(new_value)
-            
-            if old_value == None:
-                #print u"Creating " + real_new_value[:10]
-                revision.action = RevisionOperation.objects.get(name = "Create")
-            elif new_value == None:
-                #print u"Deleting " + unicode(old_value)[:10]
-                revision.action = RevisionOperation.objects.get(name = "Delete")
-            else:
-                #print u"Updating " + unicode(old_value)[:10] + u" with " + real_new_value[:10]
-                revision.action = RevisionOperation.objects.get(name = "Edit")
-            
-            model_type_key = "model/model_type/" + str(field.model._meta.object_name)
-            cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(name = field.model._meta.object_name))
-            
-            revision.table = cache_model_type
-            revision.column = get_column_index(field)
-            
-            revision.new_value = real_new_value
-
-        return revision
-    
     def save(self, *args, **kwargs):
+        # Optimized to reduce number of database accesses to a minimum
+        
         from itertools import ifilter
         from cyano.helpers import slugify
 
-        #TODO:
-        #Der erste Load ohne Edit braucht eigentlich keinen kompletten Revision History Eintrag.
-        ##Einer muss aber dennoch erstellt werden, damit man den Editgrund und Zeit speichern kann...
-        #
-        #Kompletter History-Eintrag msus erst bei Aenderung geschrieben werden
-        
-        self.model_type = TableMeta.objects.get(name = self.__class__.__name__)
-        # Slugify the WID
-        self.wid = slugify(self.wid)
-        
-        # Debug code to remove rev control (speedup)
-        rev_detail = kwargs["revision_detail"]
-        rev_detail.save()
-        self.detail = rev_detail
-        del kwargs["revision_detail"]
-        super(Entry, self).save(*args, **kwargs)
-        return
-        # end of debug code
-        if "no_revision" in kwargs:
-            del kwargs["no_revision"]
-            super(Entry, self).save(*args, **kwargs)
-            return
-        
-        # Check if item already exists (based on WID)
-        try:
-            old_object = self._meta.concrete_model.objects.get(wid = self.wid)
-        except ObjectDoesNotExist:
-            old_object = None
+        if self.wid != slugify(self.wid):
+            # Slugify the WID
+            self.wid = slugify(self.wid)
 
-        if old_object != None and old_object != self:
-            raise WidAlreadyExist("Wid already exists, if you want to update retrieve that item and save it")
-        
         rev_detail = kwargs["revision_detail"]
-        rev_detail.save()
-
-        self.detail = rev_detail
-        
         # Prevent error on save later
         del kwargs["revision_detail"]
 
-        fields = self._meta.fields
-        # Remove primary keys
-        fields = ifilter(lambda x: lambda x: not x.primary_key, fields)
-
         old_item = None
         if self.pk != None:
+            # can this be optimized? Probably not
             old_item = self._meta.concrete_model.objects.get(pk = self.pk)
+            super(Entry, self).save(*args, **kwargs)
+        else:
+            # New entry (no primary key)
+            # The latest entry is not revisioned to save space (and time)
+            model_type_key = "model/model_type/" + str(self._meta.object_name)
+            cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(model_name = self._meta.object_name))
+            self.created_detail = rev_detail
+            self.detail = rev_detail
+            self.model_type = cache_model_type
 
-        super(Entry, self).save(*args, **kwargs)
+            ##print "CREATE: No revision needed for", str(self.wid)
+            super(Entry, self).save(*args, **kwargs)
+            return
+
+        save_list = []
+
+        fields = self._meta.fields
+        # Remove primary keys and some fields that don't need revisioning:
+        fields = ifilter(lambda x: (not x.primary_key) and
+                         (not x.name in ["detail", "created_detail"]), fields)
 
         for field in fields:
-            new_value = getattr(self, field.name)
+            if hasattr(self, field.name + "_id"):
+                new_value = getattr(self, field.name + "_id")
+            else:
+                new_value = getattr(self, field.name)
 
             if old_item == None:
                 old_value = None
             else:
-                old_value = getattr(old_item, field.name)
+                if hasattr(old_item, field.name + "_id"):
+                    old_value = getattr(old_item, field.name + "_id")
+                else:
+                    old_value = getattr(old_item, field.name)
 
-            revision = self.create_revision(field, old_value, new_value, rev_detail)
-        
-            if revision != None:
-                revision.current = self
-                revision.save()
+            if old_value != new_value:
+                column = TableMetaColumn.get_by_field(field)
+
+                if new_value == None:
+                    ##print "delete"
+                    action = "D"
+                else:
+                    if Revision.objects.filter(current_id = self.pk, column = column).exists():
+                        ##print "update", self.wid, tm.model_name, column
+                        action = "U"
+                    else:
+                        ##print "insert", self.wid, tm.model_name, column
+                        action = "I"
+
+                # Assumption: When nothing changed saving isn't needed at all
+                save_list.append(Revision(current_id = self.pk, detail_id = old_item.created_detail_id if action == "I" else old_item.detail_id, action = action, column = column, new_value = old_value))
+
+        if len(save_list) > 0:
+            ##print self.wid + ": revisioning", len(save_list), "items"
+            # Don't update the detail when actually nothing changed for that entry
+            self.detail = rev_detail
+            Revision.objects.bulk_create(save_list)
     
     #html formatting
     def get_as_html_synonyms(self, species, is_user_anonymous):
@@ -1107,18 +1190,20 @@ class Entry(Model):
         return format_list_html(results, separator=', ')
     
     def get_as_html_created_user(self, species, is_user_anonymous):
-        return ""# FIXME
         if is_user_anonymous:
             return '%s' % (self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
         else:
-            return '<a href="%s">%s %s</a> on %s' % (self.created_user.get_absolute_url(), self.created_user.first_name, self.created_user.last_name, self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
+            detail = self.created_detail
+            user = detail.user.user
+            return '<a href="%s">%s %s</a> on %s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"))
     
     def get_as_html_last_updated_user(self, species, is_user_anonymous):
-        return ""# FIXME
         if is_user_anonymous:
             return '%s' % (self.last_updated_date.strftime("%Y-%m-%d %H:%M:%S"))
         else:
-            return '<a href="%s">%s %s</a> on %s' % (self.last_updated_user.get_absolute_url(), self.last_updated_user.first_name, self.last_updated_user.last_name, self.last_updated_date.strftime("%Y-%m-%d %H:%M:%S"))        
+            detail = self.detail
+            user = detail.user.user
+            return '<a href="%s">%s %s</a> on %s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"))        
     
     #meta information
     class Meta:
@@ -1130,7 +1215,7 @@ class Entry(Model):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'comments', 'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'comments', 
             ]
         listing = ['wid', 'name']
         facet_fields = []
@@ -1157,10 +1242,19 @@ class SpeciesComponent(Entry):
 
     #getters
     @permalink
-    def get_absolute_url(self, species):
+    def get_absolute_url(self, species, history_id = None):
         model_type_key = "model/model_type/" + str(self.model_type_id)
         cache_model_type = Cache.try_get(model_type_key, lambda: self.model_type)
-        return ('cyano.views.detail', (), {'species_wid':species.wid, 'model_type':cache_model_type.name, 'wid': self.wid})
+        
+        dic = {'species_wid':species.wid, 'model_type':cache_model_type.model_name, 'wid': self.wid}
+        
+        if history_id is None:
+            view = 'cyano.views.detail'
+        else:
+            view = 'cyano.views.history_detail'
+            dic['detail_id'] = history_id
+
+        return (view, (), dic)
         
     def get_all_references(self):
         return self.publication_references.all() | PublicationReference.objects.filter(evidence__species_component__id = self.id)
@@ -1179,7 +1273,7 @@ class SpeciesComponent(Entry):
         return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]', 
             lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':self.species.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
-            
+    
     def get_as_html_references(self, species, is_user_anonymous):
         results = {}
         for r in self.get_all_references():
@@ -1391,6 +1485,7 @@ class Protein(Molecule):
         verbose_name='Protein'
         verbose_name_plural = 'Proteins'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #regulatory rule
             if obj_data['regulatory_rule'] is not None and obj_data['regulatory_rule']['value'] is not None and obj_data['regulatory_rule']['value'] != '':
@@ -1521,13 +1616,13 @@ class Chromosome(Molecule):
             .chr line{stroke:#666; stroke-width:0.5px;}\
         '
         
-        chr = StringIO.StringIO()
+        chro = StringIO.StringIO()
         for i in range(nSegments):
             x1 = segmentLeft
             x2 = segmentLeft + ((min(self.length, (i+1) * ntPerSegment) - 1) % ntPerSegment) / ntPerSegment * segmentW
             y = chrTop + (i + 1) * segmentHeight
-            chr.write('<text x="%s" y="%s">%d</text>' % (segmentLeft - 2, y, i * ntPerSegment + 1))
-            chr.write('<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y))
+            chro.write('<text x="%s" y="%s">%d</text>' % (segmentLeft - 2, y, i * ntPerSegment + 1))
+            chro.write('<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y))
         
         #genes
         geneStyle = '\
@@ -1698,7 +1793,7 @@ class Chromosome(Molecule):
                 feature.get_absolute_url(species), x, y, w, featureHeight, tip_title, type_, ))
     
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
-            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chr.getvalue(), genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
+            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro.getvalue(), genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
             
     def get_as_html_structure_local(self, species, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None):
         length = end_coordinate - start_coordinate + 1
@@ -1729,7 +1824,7 @@ class Chromosome(Molecule):
         .chr line{stroke:#666; stroke-width:0.5px;}\
         '
         
-        chr = '<text x="%s" y="%s" style="text-anchor:end;">%s</text><line x1="%s" x2="%s" y1="%s" y2="%s" /><text x="%s" y="%s" style="text-anchor:start;">%s</text>' % (
+        chro = '<text x="%s" y="%s" style="text-anchor:end;">%s</text><line x1="%s" x2="%s" y1="%s" y2="%s" /><text x="%s" y="%s" style="text-anchor:start;">%s</text>' % (
             chrL - 4, chrY, start_coordinate,
             chrL, chrR, chrY, chrY,
             chrR + 2, chrY, end_coordinate)
@@ -1934,7 +2029,7 @@ class Chromosome(Molecule):
                 feature.get_absolute_url(species), x1, featureY, x2 - x1, featureHeight, tip_title, type_, opacity))
         
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
-            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chr, genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
+            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro, genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
         
     def get_as_html_genes(self, species, is_user_anonymous):
         return ""
@@ -1978,6 +2073,7 @@ class Chromosome(Molecule):
         verbose_name='Chromosome'
         verbose_name_plural = 'Chromosomes'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['sequence'] is not None and obj_data['sequence'] != '' and len(obj_data['sequence']) != obj_data['length']:
                 raise ValidationError({'length': 'Length of sequence property must match length property'})
@@ -2080,16 +2176,17 @@ class ChromosomeFeature(SpeciesComponent):
         verbose_name='Chromosome feature'
         verbose_name_plural = 'Chromosome features'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
-                chr = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
+                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
-                chr = all_obj_data[obj_data['chromosome']]
+                chro = all_obj_data[obj_data['chromosome']]
                 
-            if isinstance(chr, Entry):
-                chr_len = chr.length
+            if isinstance(chro, Entry):
+                chr_len = chro.length
             else:
-                chr_len = chr['length']
+                chr_len = chro['length']
             
             if obj_data['coordinate'] > chr_len:
                 raise ValidationError({'coordinate': 'Coordinate must be less then chromosome length.'})
@@ -2281,7 +2378,7 @@ class Gene(Molecule):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'symbol', 'synonyms', 'cross_references', 'homologs', 'type', 'chromosome', 'coordinate', 'length', 'direction',  'is_essential', 'expression', 'half_life', 'codons', 'amino_acid', 'comments', 'publication_references', 'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'symbol', 'synonyms', 'cross_references', 'homologs', 'type', 'chromosome', 'coordinate', 'length', 'direction',  'is_essential', 'expression', 'half_life', 'codons', 'amino_acid', 'comments', 'publication_references', 
             ]
         listing = ['wid', 'symbol']
         facet_fields = ['type', 'chromosome', 'direction', 'is_essential', 'amino_acid']
@@ -2289,16 +2386,17 @@ class Gene(Molecule):
         verbose_name_plural = 'Genes'
         
         #chromosome coordinate, length
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
-                chr = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
+                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
-                chr = all_obj_data[obj_data['chromosome']]
+                chro = all_obj_data[obj_data['chromosome']]
 
-            if isinstance(chr, Entry):
-                chr_len = chr.length
+            if isinstance(chro, Entry):
+                chr_len = chro.length
             else:
-                chr_len = chr['length']
+                chr_len = chro['length']
             
             if obj_data['coordinate'] > chr_len:
                 raise ValidationError({'coordinate': 'Coordinate must be less then chromosome length.'})
@@ -2336,7 +2434,7 @@ class Metabolite(Molecule):
     #calculations
     def calculate_properties(self):        
         subprocess.call('cxcalc name -t preferred name -t traditional logP logD -H 7.5 formalcharge -H 7.5 isoelectricpoint volume "%s"' % (settings.ROOT_DIR, self.smiles, ))
-        junk, iupac_name, traditional_name, log_p, log_d, charge, pi, volume = sys.stdout[1]('\t')
+        iupac_name, traditional_name, log_p, log_d, charge, pi, volume = sys.stdout[1]('\t')[1:]
         self.iupac_name = iupac_name
         self.traditional_name = traditional_name
         self.log_p = log_p
@@ -2566,7 +2664,13 @@ class Pathway(SpeciesComponent):
                          'width': W, 'height': H})
             return template.render(c)
         
-        from PIL import Image
+        # Wordaround broken PIL installation
+        # see: https://code.djangoproject.com/ticket/6054
+        try:
+            from PIL import Image
+        except ImportError:
+            import Image
+
         from xml.etree.ElementTree import ElementTree, Element
         
         # All Pathways of the organism
@@ -2760,8 +2864,8 @@ class Process(SpeciesComponent):
         
     def get_as_html_formed_complexes(self, species, is_user_anonymous):
         results = []
-        for complex in self.formed_complexes.all():
-            results.append('<a href="%s">%s</a><br/>%s' % (complex.get_absolute_url(species), complex.name, complex.get_as_html_biosynthesis(is_user_anonymous)))
+        for complexe in self.formed_complexes.all():
+            results.append('<a href="%s">%s</a><br/>%s' % (complexe.get_absolute_url(species), complexe.name, complexe.get_as_html_biosynthesis(is_user_anonymous)))
         return format_list_html(results, vertical_spacing=True)
     
     #meta information
@@ -2789,6 +2893,7 @@ class Process(SpeciesComponent):
         verbose_name='Process'
         verbose_name_plural = 'Processes'
         
+        @staticmethod
         def validate_unique(model, model_objects_data, all_obj_data=None, all_obj_data_by_model=None):
             order = []
             for obj in model_objects_data:
@@ -2811,6 +2916,7 @@ class ProteinComplex(Protein):
     
     #getters
     def get_num_subunits(self):
+        from cyano.helpers import getEntry
         n = 0
         for subunit in self.biosynthesis.all():
             if subunit.coefficient < 0:
@@ -3019,6 +3125,7 @@ class ProteinComplex(Protein):
         verbose_name='Protein complex'
         verbose_name_plural = 'Protein complexes'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getModel, getEntry
 
@@ -3202,7 +3309,8 @@ class ProteinMonomer(Protein):
             if (pH - pHprev < E) and (pHnext - pH < E):
                 break
 
-        value = pH            
+        value = pH     
+        return value       
         
     def get_half_life(self):    
         return 20 * 60
@@ -3349,6 +3457,7 @@ class ProteinMonomer(Protein):
         verbose_name='Protein monomer'
         verbose_name_plural = 'Protein monomers'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['signal_sequence'] is not None:
                 if all_obj_data is None:
@@ -3469,7 +3578,7 @@ class Reaction(SpeciesComponent):
                 .replace('+', ' + ') \
                 .replace('-', ' - ') \
                 .replace('/', ' / ')
-            law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species.wid), law, flags=re.I)            
+            law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species), law, flags=re.I)            
         if k.km != '':
             kms = k.km.split(', ')
             if len(kms) == 1:
@@ -3497,7 +3606,7 @@ class Reaction(SpeciesComponent):
                 .replace('+', ' + ') \
                 .replace('-', ' - ') \
                 .replace('/', ' / ')
-            law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species.wid), law, flags=re.I)
+            law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species), law, flags=re.I)
         if k.km != '':
             kms = k.km.split(', ')            
             if len(kms) == 1:
@@ -3543,6 +3652,7 @@ class Reaction(SpeciesComponent):
         verbose_name='Reaction'
         verbose_name_plural = 'Reactions'    
 
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getEntry, getModel, EmpiricalFormula
             
@@ -3659,8 +3769,7 @@ class Species(Entry):
             ]        
         field_list = [
             'id', 'wid', 'name', 'synonyms', 'cross_references', 'genetic_code',
-            'comments',
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'comments'
             ]
         facet_fields = []
         verbose_name='Species'
@@ -3750,10 +3859,10 @@ class TranscriptionUnit(Molecule):
     
     #getters
     def get_chromosome(self):
-        chr = list(set([g.chromosome for g in self.genes.all()]))
-        if len(chr) != 1:
+        chro = list(set([g.chromosome for g in self.genes.all()]))
+        if len(chro) != 1:
             raise        
-        return chr[0]
+        return chro[0]
         
     def get_coordinate(self):
         return self.genes.all().aggregate(Min('coordinate'))['coordinate__min']
@@ -3762,10 +3871,10 @@ class TranscriptionUnit(Molecule):
         return max(self.genes.extra(select={"end_coordinate": "(coordinate + length - 1)"}).values('end_coordinate'))['end_coordinate'] - self.get_coordinate() + 1
         
     def get_direction(self):
-        dir = list(set([g[0] for g in self.genes.values_list('direction').all()]))
-        if len(dir) != 1:
+        direction = list(set([g[0] for g in self.genes.values_list('direction').all()]))
+        if len(direction) != 1:
             raise        
-        return dir[0]
+        return direction[0]
         
     def get_sequence(self):
         seq = self.get_chromosome().sequence[self.get_coordinate() - 1:self.get_coordinate() - 1 + self.get_length()]
@@ -3845,6 +3954,7 @@ class TranscriptionUnit(Molecule):
         verbose_name='Transcription unit'
         verbose_name_plural = 'Transcription units'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if len(obj_data['genes']) == 1:
                 return
@@ -3903,16 +4013,16 @@ class TranscriptionalRegulation(SpeciesComponent):
         
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(bs.direction)][1]
         
-        chr = self.transcription_unit.get_chromosome()
+        chro = self.transcription_unit.get_chromosome()
         
-        map = chr.get_as_html_structure(is_user_anonymous,
+        structure = chr.get_as_html_structure(is_user_anonymous,
                 zoom = 1, 
                 start_coordinate = bs.coordinate - 500, 
                 end_coordinate = bs.coordinate + bs.length + 500, 
                 highlight_wid = [self.wid])
             
         txt = '%s<br/>Chromosome: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
-            map, chr.get_absolute_url(species), chr.wid, 
+            structure, chro.get_absolute_url(species), chro.wid, 
             bs.coordinate, bs.length, direction, 
             format_sequence_as_html(self.get_binding_site_sequence()))
             
@@ -3947,6 +4057,7 @@ class TranscriptionalRegulation(SpeciesComponent):
         verbose_name='Transcriptional regulation'
         verbose_name_plural = 'Transcriptional regulation'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #gene wid
             if all_obj_data is None:                
@@ -3970,13 +4081,13 @@ class TranscriptionalRegulation(SpeciesComponent):
                 
             #chr length
             if all_obj_data is None:
-                chr = Chromosome.objects.get(species__wid=obj_data['species'], wid=chr_wid)
+                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=chr_wid)
             else:
-                chr = all_obj_data[chr_wid]
-            if isinstance(chr, Entry):
-                chr_len = chr.length
+                chro = all_obj_data[chr_wid]
+            if isinstance(chro, Entry):
+                chr_len = chro.length
             else:
-                chr_len = chr['length']
+                chr_len = chro['length']
             
             #error check binding site coordinate, length
             if obj_data['binding_site'] is not None:
@@ -4073,7 +4184,7 @@ class CrossReference(SpeciesComponent):
             'id', 'wid', 'name', 'synonyms', 'cross_references',
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail', 
             ]
         facet_fields = ['type', 'source']
         ordering = ['xid']
@@ -4140,10 +4251,10 @@ class PublicationReference(SpeciesComponent):
         return format_list_html(results)
         
     def get_as_bibtex(self):
-        type = None
+        cite_type = None
         props = []        
         if self.type.all()[0].wid == 'article':
-            type = 'ARTICLE'            
+            cite_type = 'ARTICLE'            
             if self.authors != '':
                 props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
             if self.title != '':
@@ -4168,7 +4279,7 @@ class PublicationReference(SpeciesComponent):
                     props.append(('URL', cr.xid))
                     break
         elif self.type.all()[0].wid == 'book':
-            type = 'BOOK'
+            cite_type = 'BOOK'
             if self.authors != '':
                 props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
             elif self.editors != '':
@@ -4190,7 +4301,7 @@ class PublicationReference(SpeciesComponent):
                     props.append(('URL', cr.xid))
                     break
         elif self.type.all()[0].wid == 'thesis':
-            type = 'THESIS'
+            cite_type = 'THESIS'
             if self.authors != '':
                 props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
             if self.editors != '':
@@ -4204,7 +4315,7 @@ class PublicationReference(SpeciesComponent):
                     props.append(('URL', cr.xid))
                     break
         else:
-            type = 'MISC'
+            cite_type = 'MISC'
             if self.authors != '':
                 props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
             if self.editors != '':
@@ -4225,7 +4336,7 @@ class PublicationReference(SpeciesComponent):
                 tmp.append('\n\t%s = "{%s}",' % prop)
             else:
                 tmp.append('\n\t%s = {%s},' % prop)
-        return '@%s{%s%s\n}' % (type, self.wid, ''.join(tmp))
+        return '@%s{%s%s\n}' % (cite_type, self.wid, ''.join(tmp))
         
     def format_authors_bibtex(self, authors):
         authors = authors.split(", ")
@@ -4424,14 +4535,14 @@ def format_evidence(evidence):
         
     return '<ul style="margin-top:4px;"><li style="margin-top:4px;">%s</li></ul>' % '</li><li style="margin-top:4px;">'.join(txt)
             
-def sub_rate_law(species_wid):
+def sub_rate_law(species):
     def inner_method(match):
         if match.group(0) == 'Vmax':
             return '<i>V</i><sub>max</sub>'
         if match.group(0)[0:2] == 'Km':
             return '<i>K</i><sub>m%s</sub>' % match.group(0)[2:]
         try:
-            obj = SpeciesComponent.objects.get(species__wid=species_wid, wid=match.group(0))
+            obj = SpeciesComponent.objects.get(species__wid=species.wid, wid=match.group(0))
             return '[<a href="%s">%s</a>]' % (obj.get_absolute_url(species), obj.wid)
         except:
             return match.group(0)

@@ -15,7 +15,7 @@ class WarehouseRouter(object):
         """
         if obj1._meta.app_label == 'biowarehouse' or \
            obj2._meta.app_label == 'biowarehouse':
-           return True
+            return True
         return None
 
     def allow_syncdb(self, db, model):

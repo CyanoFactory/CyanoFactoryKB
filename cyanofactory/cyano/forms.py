@@ -7,8 +7,8 @@ Last updated: 2012-07-17
 '''
 
 from django import forms
-from cyano.helpers import getObjectTypes, getModels
-from cyano.models import Species, SpeciesComponent
+import cyano.helpers as chelpers
+import cyano.models as cmodels
 
 class SearchForm(forms.Form):
 	q = forms.CharField(
@@ -63,12 +63,12 @@ class ExportDataForm(forms.Form):
 		super(ExportDataForm, self).__init__(*args, **kwargs)
 		
 		choices = []
-		for species in Species.objects.values('wid', 'name').all():
+		for species in cmodels.Species.objects.values('wid', 'name').all():
 			choices.append((species['wid'], species['name'], ))
 		self.fields['species'].choices = choices
 		
-		model_types = getObjectTypes()
-		models = getModels()
+		model_types = chelpers.getObjectTypes()
+		models = chelpers.getModels()
 		choices = []
 		for model_type in model_types:
 			choices.append((model_type, models[model_type]._meta.verbose_name_plural, ))
@@ -122,7 +122,7 @@ class ImportDataForm(forms.Form):
 		super(ImportDataForm, self).__init__(*args, **kwargs)
 		
 		choices = []
-		for species in Species.objects.values('wid', 'name').all():
+		for species in cmodels.Species.objects.values('wid', 'name').all():
 			choices.append((species['wid'], species['name'], ))
 		self.fields['species'].choices = choices
 		#self.fields['data_type'].choices = ImportDataForm.data_type.choices

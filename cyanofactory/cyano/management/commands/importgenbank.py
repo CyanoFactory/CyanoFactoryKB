@@ -1,10 +1,13 @@
 from optparse import make_option
-from django.core.management.base import CommandError
+
 from Bio import SeqIO
+
+from django.core.management.base import CommandError
+from django.core.exceptions import ObjectDoesNotExist
+
+from cyano_command import CyanoCommand
 import cyano.models as cmodels
 from cyano.helpers import slugify
-from django.core.exceptions import ObjectDoesNotExist
-from cyano_command import CyanoCommand
 
 class Command(CyanoCommand):
     args = '<file file ...>'
@@ -171,7 +174,7 @@ class Command(CyanoCommand):
                     except ObjectDoesNotExist:
                         chromosome = cmodels.Chromosome(wid = chr_name)
                     chromosome.name = options["name"]
-                    chromosome.sequence = record.seq
+                    chromosome.sequence = str(record.seq) # Cast needed, otherwise revision-compare fails!
                     chromosome.length = len(record.seq)
                     chromosome.save(revision_detail = revdetail)
                     chromosome.species.add(species)

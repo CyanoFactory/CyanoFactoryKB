@@ -1,5 +1,8 @@
 from optparse import make_option
+
 from django.core.management.base import BaseCommand, CommandError
+from django.db.transaction import commit_on_success
+
 from cyano.helpers import slugify
 from cyano.models import Species, RevisionDetail, UserProfile
 
@@ -22,6 +25,7 @@ class CyanoCommand(BaseCommand):
     
     verify_species_exists = True
     
+    @commit_on_success
     def handle(self, *args, **options):
         if not options["wid"]:
             raise CommandError("wid argument is mandatory")
@@ -46,6 +50,7 @@ class CyanoCommand(BaseCommand):
         revdetail = RevisionDetail()
         revdetail.user = UserProfile.objects.get(user__username__exact = "management")
         revdetail.reason = reason
+        revdetail.save()
         
         self.handle_command(species_obj, revdetail, *args, **options)
         

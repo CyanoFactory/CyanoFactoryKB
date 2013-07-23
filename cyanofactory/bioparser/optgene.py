@@ -69,6 +69,7 @@ class OptGeneParser:
 		self.parse()
 		
 	# via http://stackoverflow.com/questions/36932/how-can-i-represent-an-enum-in-python
+	@staticmethod
 	def _enum(*sequential, **named):
 		enums = dict(zip(sequential, range(len(sequential))), **named)
 		return type('Enum', (), enums)

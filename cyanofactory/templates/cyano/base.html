@@ -107,7 +107,7 @@ Last updated: 2012-07-17
 				{% for key1 in modelnames %}
 					{% for key2, modelmetadata in modelmetadatas.iteritems %}
 						{% if key1 == key2 %}
-					<li><a href="{% url "cyano.views.list" species_wid=species.wid model_type=key2 %}">{{ modelmetadata.verbose_name_plural }}</a></li>
+					<li><a href="{% url "cyano.views.listing" species_wid=species.wid model_type=key2 %}">{{ modelmetadata.verbose_name_plural }}</a></li>
 						{% endif %}
 					{% endfor %}
 				{% endfor %}

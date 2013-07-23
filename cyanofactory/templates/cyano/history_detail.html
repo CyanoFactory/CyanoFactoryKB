@@ -1,0 +1,11 @@
+{% extends "cyano/detail.html" %}
+
+{% load static %}
+{% load templatetags %}
+
+{% block head_title %}{{ block.super }} (History){% endblock %}
+{% block page_title %}History of {% with object=queryset.0 %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}{% endblock %}
+
+{% block content %}
+{{ block.super}}
+{% endblock %}
