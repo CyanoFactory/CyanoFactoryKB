@@ -33,7 +33,6 @@ urlpatterns = patterns('cyano.views',
 	url(r'^' + _species_wid_model_type_wid + '/delete/?$', 'delete'),
 
     url(r'^(?P<model_type>Species)/?', 'add'), # Special case to create new species
-    url(r'^' + _species_wid + r'/add/?$', 'add'),
 	url(r'^' + _species_wid_model_type + r'/add/?$', 'add'),
 
     url(r'^' + _species_wid + r'/edit/?$', 'edit'),

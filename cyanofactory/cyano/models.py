@@ -1094,8 +1094,8 @@ class Entry(Model):
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
 
-    created_detail = ForeignKey(RevisionDetail, verbose_name='Entry created revision', related_name='entry_created_detail')
-    detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry', related_name='entry_detail')
+    created_detail = ForeignKey(RevisionDetail, verbose_name='Entry created revision', related_name='entry_created_detail', editable = False)
+    detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry', related_name='entry_detail', editable = False)
     
     def __unicode__(self):
         return self.wid
@@ -4184,7 +4184,7 @@ class CrossReference(SpeciesComponent):
             'id', 'wid', 'name', 'synonyms', 'cross_references',
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail', 
             ]
         facet_fields = ['type', 'source']
         ordering = ['xid']
