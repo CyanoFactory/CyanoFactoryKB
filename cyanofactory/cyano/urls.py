@@ -75,7 +75,7 @@ urlpatterns = patterns('cyano.views',
     #url(r'^' + _species_wid_model_type + r'/permission/edit/?$', 'permission_edit'),
     url(r'^' + _species_wid_model_type_wid + r'/permission/edit/?$', 'permission_edit'),
 
-    url(r'^' + _species_wid_model_type + r'/?$', 'list'),
+    url(r'^' + _species_wid_model_type + r'/?$', 'listing'),
     url(r'^' + _species_wid_model_type_wid + r'/?$', 'detail'),
 
 	url(r'^$', 'index'),

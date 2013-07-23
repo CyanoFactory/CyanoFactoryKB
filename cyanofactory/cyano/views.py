@@ -5,18 +5,20 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
 '''
 
+import os
+import settings
+import tempfile
 from copy import deepcopy
 from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
-from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
-from django.db.models import Count, Sum, Avg
+from django.db.models import Count, Sum
 from django.db.models.fields import BooleanField, NullBooleanField, AutoField, BigIntegerField, DecimalField, FloatField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField
-from django.db.models.fields.related import OneToOneField, RelatedObject, ManyToManyField, ForeignKey
+from django.db.models.fields.related import RelatedObject, ManyToManyField, ForeignKey
 from django.db.models.query import EmptyQuerySet
-from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils.text import capfirst
 from django.views.decorators.debug import sensitive_post_parameters
@@ -25,21 +27,11 @@ from django.views.decorators.csrf import csrf_protect
 from haystack.query import SearchQuerySet
 from itertools import chain
 from cyano.forms import ExportDataForm, ImportDataForm
-from cyano.helpers import getEntry, format_field_detail_view, objectToQuerySet, render_queryset_to_response, getObjectTypes, getModel, get_invalid_objects, get_edit_form_fields, get_edit_form_data,\
+from cyano.helpers import format_field_detail_view, objectToQuerySet, render_queryset_to_response, getObjectTypes, getModel, get_invalid_objects, get_edit_form_fields, get_edit_form_data,\
     get_history
-from cyano.helpers import validate_object_fields, validate_model_objects, validate_model_unique, save_object_data, batch_import_from_excel, readFasta
+from cyano.helpers import validate_object_fields, validate_model_objects, validate_model_unique, save_object_data, render_queryset_to_response_error
 import cyano.models as models
-from urlparse import urlparse
-import numpy
-import os
-import settings
-import tempfile
-
-from cyano.helpers import render_queryset_to_response_error
-
-from cyano.decorators import resolve_to_objects
-from cyano.decorators import permission_required
-
+from cyano.decorators import resolve_to_objects, permission_required
 from cyano.models import PermissionEnum as perm
 
 def index(request):
@@ -59,7 +51,7 @@ def species(request, species):
         
         chrs = models.Chromosome.objects.filter(species__id = species.id)
         chrcontent = chrs.aggregate(length=Sum('length'));
-        gc_content = 0 if len(chrs) == 0 else sum([chr.get_gc_content() * chr.length for chr in chrs]) / chrcontent['length']        
+        gc_content = 0 if len(chrs) == 0 else sum([chro.get_gc_content() * chro.length for chro in chrs]) / chrcontent['length']        
         content.append([
             [0, 'Chromosomes', chrs.count(), None, reverse('cyano.views.list', kwargs={'species_wid': species.wid, 'model_type': 'Chromosome'})],
             [1, 'Length', chrcontent['length'], 'nt'],
@@ -394,9 +386,9 @@ def search_haystack(request, species_wid, query):
     
     #convert results to query set
     queryset = EmptyQuerySet()
-    for object in results:
-        tmp = object.model.objects.none()
-        tmp._result_cache.append(object.object)
+    for obj in results:
+        tmp = obj.model.objects.none()
+        tmp._result_cache.append(obj.object)
         queryset = chain(queryset, tmp)
     
     #form response
@@ -425,7 +417,7 @@ def search_google(request, species_wid, query):
 
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
-def list(request, species, model):
+def listing(request, species, model):
     #try:
     #    getObjectTypes().index(model_type)
     #except ValueError:
@@ -461,21 +453,21 @@ def list(request, species, model):
             
             if isinstance(field, (ForeignKey, ManyToManyField)):
                 tmp2 = tmp_model.objects.values('wid', 'name').get(id=value)
-                id = tmp2['wid']
+                id_ = tmp2['wid']
                 name = capfirst(tmp2['name'])
             elif (field.choices is not None) and (len(field.choices) > 0) and (not isinstance(field, (BooleanField, NullBooleanField))):    
-                id = value
+                id_ = value
                 choices = [x[0] for x in field.choices]
-                if id in choices:
-                    name = field.choices[choices.index(id)][1]
+                if id_ in choices:
+                    name = field.choices[choices.index(id_)][1]
                 else:
                     name = capfirst(value)
             else:
-                id = value
+                id_ = value
                 name = capfirst(value)
             if value is not None and unicode(value) != '':
                 facets.append({
-                    'id': unicode(id), 
+                    'id': unicode(id_), 
                     'name': unicode(name),
                     'count': facet['count']})
         if len(facets) > 1:
@@ -846,7 +838,8 @@ def importData(request, species=None):
                 form.errors["new_wid"] = ['The identifier specified is already in use']
             else:
                 #save to temporary file
-                originalFileName, originalFileExtension = os.path.splitext(request.FILES['file'].name)
+                #originalFileName, originalFileExtension = os.path.splitext(request.FILES['file'].name)[1]
+                originalFileExtension = os.path.splitext(request.FILES['file'].name)[1]
                 fid = tempfile.NamedTemporaryFile(suffix = originalFileExtension, delete = False)
                 filename = fid.name
                 for chunk in request.FILES['file'].chunks():
@@ -902,7 +895,7 @@ def importData(request, species=None):
 @login_required
 @resolve_to_objects
 def importSubmitData(request, species=None):
-    from cyano.importer.genbank import Genbank as GenbankImporter
+    from cyano.importer.genbank import GenbankImporter
     if request.method == 'POST':
         data_type = request.POST["data_type"]
         filename = request.POST['filename']
@@ -935,7 +928,7 @@ def validate(request, species_wid):
 @never_cache
 @resolve_to_objects
 def login(request, species=None):
-    next = request.REQUEST.get('next', '')
+    next_url = request.REQUEST.get('next', '')
     
     if request.method == "POST":
         form = AuthenticationForm(data=request.POST)
@@ -945,7 +938,7 @@ def login(request, species=None):
             if request.session.test_cookie_worked():
                 request.session.delete_test_cookie()
 
-            return HttpResponseRedirect(next)
+            return HttpResponseRedirect(next_url)
     else:
         form = AuthenticationForm(request)
 
@@ -957,7 +950,7 @@ def login(request, species=None):
         template = 'cyano/login.html', 
         data = {
             'form': form,
-            'next': next,
+            'next': next_url,
         })
 
 @resolve_to_objects        
