@@ -11,36 +11,30 @@ from BeautifulSoup import BeautifulStoneSoup
 from copy import deepcopy
 from dateutil.tz import tzlocal
 from django.contrib.auth.models import User
-from django.core import serializers
-from django.core.exceptions import ValidationError, ObjectDoesNotExist, MultipleObjectsReturned
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
-from django.db import IntegrityError
-from django.db.models import get_app, get_models, get_model
+from django.db.models import get_app, get_models
 from django.db.models.fields import AutoField, BigIntegerField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField, BooleanField, NullBooleanField, DecimalField, FloatField, CharField, CommaSeparatedIntegerField, EmailField, FilePathField, GenericIPAddressField, IPAddressField, SlugField, URLField, TextField, DateField, DateTimeField, TimeField, NOT_PROVIDED
 from django.db.models.fields.related import OneToOneField, RelatedObject, ManyToManyField, ForeignKey
 from django.db.models.query import EmptyQuerySet
-from django.http import Http404, HttpResponse, HttpResponseBadRequest
-from django.shortcuts import render_to_response, get_object_or_404
+from django.http import Http404, HttpResponse
+from django.shortcuts import render_to_response
 from django.template import Context, RequestContext, loader
 from django.template.loader import get_template
 from django.utils import simplejson
 from django.utils.html import strip_tags
-from django.utils.text import capfirst
 from odict import odict
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell import Cell, get_column_letter
 from openpyxl.shared.date_time import SharedDate, CALENDAR_WINDOWS_1900
-from openpyxl.style import NumberFormat, Border, Color, HashableObject, Protection, Alignment
-from openpyxl.writer.styles import StyleWriter
+from openpyxl.style import NumberFormat, Border, Color, HashableObject, Alignment
 from cyano.templatetags.templatetags import ceil
 from cyano.models import Entry, Species, SpeciesComponent, PublicationReference, Chromosome, format_list_html, format_evidence, Evidence, EvidencedEntryData,\
-    RevisionDetail, Revision, TableMeta, TableMetaColumn
+    Revision, TableMetaColumn
 from cyano.models import EntryData, EntryBooleanData, EntryCharData, EntryFloatData, EntryPositiveFloatData, EntryTextData
 from StringIO import StringIO
-from subprocess import Popen, PIPE
 from xml.dom.minidom import Document
 import datetime
-import htmlentitydefs
 import inspect
 import math
 import os
@@ -48,9 +42,7 @@ import re
 import settings
 import sys
 import tempfile
-import time
 import xhtml2pdf.pisa as pisa
-from cyano.cache import Cache
 
 class ELEMENT_MWS:
     H = 1.0079
@@ -295,35 +287,32 @@ def getObjectTypes(superclass=Entry):
     tmp2.sort()
     return tmp2
 
-def getModel(str):
+def getModel(s):
     tmp = get_models(get_app('cyano'))
-    tmp2 = []
     for model in tmp:
-        if issubclass(model, Entry) and model._meta.concrete_entry_model and model.__name__ == str:
+        if issubclass(model, Entry) and model._meta.concrete_entry_model and model.__name__ == s:
             return model
     return
 
-def getModelByVerboseName(str):
+def getModelByVerboseName(s):
     tmp = get_models(get_app('cyano'))
-    tmp2 = []
     for model in tmp:
-        if issubclass(model, Entry) and model._meta.concrete_entry_model and model.verbose_name == str:
+        if issubclass(model, Entry) and model._meta.concrete_entry_model and model.verbose_name == s:
             return model
     return
 
-def getModelByVerboseNamePlural(str):
+def getModelByVerboseNamePlural(s):
     tmp = get_models(get_app('cyano'))
-    tmp2 = []
     for model in tmp:
-        if issubclass(model, Entry) and model._meta.concrete_entry_model and model._meta.verbose_name_plural == str:
+        if issubclass(model, Entry) and model._meta.concrete_entry_model and model._meta.verbose_name_plural == s:
             return model
     return
 
-def getModelAdmin(str):
+def getModelAdmin(s):
     app_ = __import__('public')
     admins_ = getattr(app_, 'admin')
-    if hasattr(admins_, str + 'Admin'):
-        return getattr(admins_, str + 'Admin')
+    if hasattr(admins_, s + 'Admin'):
+        return getattr(admins_, s + 'Admin')
     return None
 
 def getModelDataFields(model, auto_created=True, metadata=True):
@@ -400,7 +389,7 @@ def uniqueSorted(seq):
     return {}.fromkeys(seq).keys()
 
 def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):    
-    format = request.GET.get('format', 'html')
+    outformat = request.GET.get('format', 'html')
 
     data['species'] = species
     data['queryset'] = queryset
@@ -434,7 +423,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
     for key, val in request.GET.iterlists():
         data['queryargs'][key] = val
 
-    if format == 'html':
+    if outformat == 'html':
         data['is_pdf'] = False
         data['pdfstyles'] = ''
         data['species_list'] = Species.objects.all()
@@ -445,13 +434,13 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         if queryset != None and data['queryset'].model is None:
             del data['queryset'] 
         return render_to_response(template, data, context_instance = RequestContext(request))
-    elif format == 'bib':
+    elif outformat == 'bib':
         response = HttpResponse(
             write_bibtex(species, queryset),
             mimetype = "application/x-bibtex; charset=UTF-8",
             content_type = "application/x-bibtex; charset=UTF-8")
         response['Content-Disposition'] = "attachment; filename=data.bib"
-    elif format == 'json':
+    elif outformat == 'json':
         objects = []
         for obj in queryset:
             objDict = convert_modelobject_to_stdobject(obj, request.user.is_anonymous())
@@ -472,7 +461,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
             simplejson.dumps(json, indent=2, ensure_ascii=False, encoding='utf-8'),
             mimetype = "application/json; charset=UTF-8",
             content_type = "application/json; charset=UTF-8")
-    elif format == 'pdf':
+    elif outformat == 'pdf':
         data['is_pdf'] = True
         data['pdfstyles'] = ''
         data['species_list'] = Species.objects.all()
@@ -498,7 +487,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         if not pdf.err:
             return response
         return Http404
-    elif format == 'xlsx':
+    elif outformat == 'xlsx':
         #write work book
         wb = writeExcel(species, queryset, models, request.user.is_anonymous())
 
@@ -512,7 +501,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
             mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         response['Content-Disposition'] = "attachment; filename=data.xlsx"
-    elif format == 'xml':
+    elif outformat == 'xml':
         doc = Document()
         
         now = datetime.datetime.now(tzlocal())
@@ -543,7 +532,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
                                                  data,
                                                  species,
                                                  400,
-                                                 '"%s" is not a supported export format.' % format)
+                                                 '"%s" is not a supported export format.' % outformat)
 
     return response
 
@@ -724,12 +713,9 @@ def writeExcel(species, queryset, modelArr, is_user_anonymous):
         fields = getModelDataFields(model, metadata=not is_user_anonymous)
         
         iCol = -1
-        iCol_id = None
         iCol_wid = None
         for header, subheaders in get_excel_headers(model, is_user_anonymous=is_user_anonymous):
-            if header == 'ID':
-                iCol_id = iCol + 1
-            elif header == 'WID':
+            if header == 'WID':
                 iCol_wid = iCol + 1
             iCol += max(1, len(subheaders))
 
@@ -768,14 +754,14 @@ def writeExcel(species, queryset, modelArr, is_user_anonymous):
                     data_type = [data_type, ]
                     format_code = [format_code, ]
 
-                for iter in range(len(value)):
+                for it in range(len(value)):
                     iCol += 1
                     cell = ws.cell(row=iRow, column=iCol)
-                    if value[iter] is None:
+                    if value[it] is None:
                         cell.set_value_explicit(b'', data_type = Cell.TYPE_NULL)
                     else:                    
-                        cell.set_value_explicit(value = value[iter], data_type = data_type[iter])
-                    cell.style.number_format.format_code = format_code[iter]
+                        cell.set_value_explicit(value = value[it], data_type = data_type[it])
+                    cell.style.number_format.format_code = format_code[it]
                     cell.style.font.name = 'Arial'
                     cell.style.font.size = 10
                     cell.style.alignment.wrap_text = True
@@ -909,7 +895,7 @@ def format_value_excel(obj, field, depth = 0):
             value = {}
             for subfield in field.rel.to._meta.fields + field.rel.to._meta.many_to_many:
                 if not subfield.auto_created and getattr(subobj, subfield.name) is not None:
-                    value[subfield.name], junk1, junk2 = format_value_excel(subobj, subfield, depth = depth + 1)            
+                    value[subfield.name] = format_value_excel(subobj, subfield, depth = depth + 1)[0]        
             data_type = Cell.TYPE_STRING
             format_code = NumberFormat.FORMAT_TEXT
         else:
@@ -946,7 +932,7 @@ def format_value_excel(obj, field, depth = 0):
                 subvalue = {}
                 for subfield in field.rel.to._meta.fields + field.rel.to._meta.many_to_many:
                     if not subfield.auto_created and getattr(subobj, subfield.name) is not None:
-                        subvalue[subfield.name], junk1, junk2  = format_value_excel(subobj, subfield, depth = depth + 1)
+                        subvalue[subfield.name] = format_value_excel(subobj, subfield, depth = depth + 1)[0]
                 value.append(subvalue)
                 
             if depth == 0:
@@ -1151,10 +1137,10 @@ def read_excel_data(filename):
         #data
         newobjects[modelname] = []        
         for iRow in range(2, ws.get_highest_row()):
-            id = ws.cell(row=iRow, column=iCol_id).value
-            if id == '':
-                id is None
-            obj = {'id': id, 'model_type': modelname}
+            id_ = ws.cell(row=iRow, column=iCol_id).value
+            if id_ == '':
+                id_ = None
+            obj = {'id': id_, 'model_type': modelname}
 
             iField = -1
             iCol = -1
@@ -1619,7 +1605,6 @@ def convert_modelobject_to_xml(obj, xml_doc, is_user_anonymous, ancestors = []):
     return xml_obj
     
 def get_edit_form_fields(species_wid, model, obj=None):
-    model_type = model.__name__
     form_fields = []
     initial_values = {}
     
@@ -1632,14 +1617,14 @@ def get_edit_form_fields(species_wid, model, obj=None):
         if not model_field.editable or model_field.auto_created:
             continue
         
-        type = None
+        fieldtype = None
         value = None
         fields = None
         choices = None
         
         if isinstance(model_field, ForeignKey):
             if issubclass(model_field.rel.to, Entry):
-                type = 'select'
+                fieldtype = 'select'
                 if issubclass(model_field.rel.to, SpeciesComponent):
                     choices = tuple([(x.wid, x.wid) for x in model_field.rel.to.objects.filter(species__wid=species_wid)])
                 else:
@@ -1647,7 +1632,7 @@ def get_edit_form_fields(species_wid, model, obj=None):
                 if obj is not None and getattr(obj, model_field.name) is not None:
                     value = getattr(obj, model_field.name).wid
             else:
-                type = 'ForeignKey'
+                fieldtype = 'ForeignKey'
                 if obj is not None:
                     subobj = getattr(obj, model_field.name)
                 else:
@@ -1657,7 +1642,7 @@ def get_edit_form_fields(species_wid, model, obj=None):
                     value = None
         elif isinstance(model_field, ManyToManyField):
             if issubclass(model_field.rel.to, Entry):
-                type = 'multiselect'                
+                fieldtype = 'multiselect'                
                 if issubclass(model_field.rel.to, SpeciesComponent):
                     choices = tuple([(x.wid, x.wid) for x in model_field.rel.to.objects.filter(species__wid=species_wid)])
                 else:
@@ -1667,19 +1652,19 @@ def get_edit_form_fields(species_wid, model, obj=None):
                 else:
                     value = []
             else:
-                type = 'ManyToManyField'
+                fieldtype = 'ManyToManyField'
                 fields, tmp = get_edit_form_fields(species_wid, model_field.rel.to)
                 value = []                
                 if obj is not None:            
                     for subobj in getattr(obj, model_field.name).all():
-                        junk, tmp = get_edit_form_fields(species_wid, model_field.rel.to, subobj)
+                        tmp = get_edit_form_fields(species_wid, model_field.rel.to, subobj)[1]
                         value.append(tmp)                
         elif isinstance(model_field, TextField):
-            type = 'textarea'
+            fieldtype = 'textarea'
             if obj is not None:
                 value = getattr(obj, model_field.name)
         elif isinstance(model_field, (BooleanField, NullBooleanField, )):
-            type = 'select'
+            fieldtype = 'select'
             choices = [
                 (True, 'True'),
                 (False, 'False'),
@@ -1687,17 +1672,17 @@ def get_edit_form_fields(species_wid, model, obj=None):
             if obj is not None:
                 value = getattr(obj, model_field.name)
         elif model_field.choices is not None and len(model_field.choices) >= 1:
-            type = 'select'
+            fieldtype = 'select'
             choices = model_field.choices
             if obj is not None:
                 value = getattr(obj, model_field.name)
         else:
-            type = 'text'
+            fieldtype = 'text'
             if obj is not None:
                 value = getattr(obj, model_field.name)
             
         form_fields.append({
-            'type': type, 
+            'type': fieldtype, 
             'choices': choices,    
             'fields': fields,
             'verbose_name': model_field.verbose_name, 
@@ -1725,7 +1710,7 @@ def get_edit_form_data(model, POST, field_prefix=''):
             if issubclass(field.rel.to, Entry):
                 val = POST.get('%s%s' % (field_prefix, field.name, ), None)
                 if val == '':
-                    val is None
+                    val = None
             else:
                 val = get_edit_form_data(field.rel.to, POST, field_prefix='%s%s_' % (field_prefix, field.name, ))
         elif isinstance(field, ManyToManyField):
@@ -1978,7 +1963,7 @@ def readFasta(species_wid, filename, user):
     #retrieve chromosomes
     for wid, sequence in sequences.iteritems():
         try:
-            chr = Chromosome.objects.get(species__wid=species_wid, wid=wid)
+            chro = Chromosome.objects.get(species__wid=species_wid, wid=wid)
         except ObjectDoesNotExist as error:
             error_messages.append(error.message)            
             continue        
@@ -1987,10 +1972,10 @@ def readFasta(species_wid, filename, user):
     
     #validate
     for wid, sequence in sequences.iteritems():
-        chr = Chromosome.objects.get(species__wid=species_wid, wid=wid)
-        chr.sequence = sequence
+        chro = Chromosome.objects.get(species__wid=species_wid, wid=wid)
+        chro.sequence = sequence
         try:
-            chr.full_clean()
+            chro.full_clean()
         except ValidationError as error:
             error_messages.append(format_error_as_html_list(error))
             continue
@@ -2000,11 +1985,11 @@ def readFasta(species_wid, filename, user):
         
     #save
     for wid, sequence in sequences.iteritems():    
-        chr = Chromosome.objects.get(species__wid=species_wid, wid=wid)
-        chr.sequence = sequence
-        chr.full_clean()
+        chro = Chromosome.objects.get(species__wid=species_wid, wid=wid)
+        chro.sequence = sequence
+        chro.full_clean()
         try:
-            chr.save()
+            chro.save()
         except ValueError as error:
             error_messages.append(error.message)
             continue
@@ -2062,7 +2047,7 @@ def get_invalid_objects(species_id, validate_fields=False, validate_objects=True
             del wids[wids.index(wid)]
         return [{
             'type': 'model',
-            'name': model_name,
+            ##'name': model_name,
             'url': None,
             'message': 'The following species WIDs are not unique:<ul><li>%s</li></ul>' % '</li></li>'.join(wids),
             }]    
@@ -2102,7 +2087,7 @@ def get_invalid_objects(species_id, validate_fields=False, validate_objects=True
     errors = []
     for model_name, model in getModels().iteritems():
         for obj in all_obj_data_by_model[model_name]:
-            junk, obj_data = get_edit_form_fields(species_wid, model, obj=obj)
+            obj_data = get_edit_form_fields(species_wid, model, obj=obj)[1]
             obj_data['species'] = species_wid
             try:
                 if validate_fields:
@@ -2175,9 +2160,9 @@ class EmpiricalFormula(dict):
             if val != 0:
                 self[key] = val
         
-    def __add__(a, b):
-        c = deepcopy(a)
-        for key, val in b.iteritems():
+    def __add__(self, other):
+        c = deepcopy(self)
+        for key, val in other.iteritems():
             if c.has_key(key):
                 c[key] += val
             else:
@@ -2187,25 +2172,25 @@ class EmpiricalFormula(dict):
                 del c[key]
         return c
         
-    def __sub__(a, b):
-        return a + b.__neg__()
+    def __sub__(self, other):
+        return self + other.__neg__()
         
-    def __pos__(a):
-        return deepcopy(a)
+    def __pos__(self):
+        return deepcopy(self)
         
-    def __neg__(a):
+    def __neg__(self):
         b = EmpiricalFormula()
-        for key, val in a.iteritems():
+        for key, val in self.iteritems():
             b[key] = -val
         return b
         
-    def __mul__(a, b):
-        b = float(b)
+    def __mul__(self, other):
+        other = float(other)
             
         c = EmpiricalFormula()
-        if b != 0:
-            for key, val in a.iteritems():
-                c[key] = val * b
+        if other != 0:
+            for key, val in self.iteritems():
+                c[key] = val * other
         return c
         
     def get_molecular_weight(self):
@@ -2249,12 +2234,12 @@ def compare_molecular_weight(x, y):
     else:
         return 0
         
-def draw_molecule(smiles, format='svg', width=200, height=200):
+def draw_molecule(smiles, imgformat='svg', width=200, height=200):
     fid = tempfile.NamedTemporaryFile(suffix = '.svg', delete = False)
     filename = fid.name
     fid.close()
     
-    if format == 'svg':
+    if imgformat == 'svg':
         cmd = '/usr/local/bin/molconvert --smiles "%s" -o "%s" svg:w%s,h%s,transbg' % (smiles, filename, width, height)
         os.system(cmd)
     else:

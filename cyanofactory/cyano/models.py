@@ -12,26 +12,22 @@ from django.contrib.auth.models import Group
 from django.core import validators
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
-from django.db import models
-from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min, Max
+from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min
 from django.db.models.query import EmptyQuerySet
-from django.utils.http import urlencode
-from itertools import chain
 from cyano.templatetags.templatetags import set_time_zone
 import math
 import re
 import settings
 import subprocess
 from datetime import datetime
-from cyano.exceptions import WidAlreadyExist
 from cyano.cache import Cache
 import StringIO
 from django.template import loader, Context
 from cyano.history import HistoryForeignKey as ForeignKey
 from cyano.history import HistoryManyToManyField as ManyToManyField
-from django.db.models.loading import get_model
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import m2m_changed
+import sys
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -262,14 +258,12 @@ for test in tests:
 '''
 def parse_regulatory_rule(equation, all_obj_data, species_wid):
     from cyano.helpers import getModel, getEntry
-    import settings
     
     pre = ''
     blocks = []
     posts = []
     pattern = '%s'
     begin = 0
-    end = 0
     sense = 0
             
     equation = equation or ''
@@ -935,7 +929,7 @@ class Kinetics(EvidencedEntryData):
     def get_vmax_normalized(self):
         from cyano.helpers import getModel
         
-        if vmax_unit.name  == 'U/mg':
+        if self.vmax_unit.name  == 'U/mg':
             enz = self.reactions.all()[0].enzyme
             enz = getModel(enz.model_type).objects.get(id=enz.id)            
             return self.vmax * enz.get_molecular_weight() * 1e-3
@@ -1486,6 +1480,7 @@ class Protein(Molecule):
         verbose_name='Protein'
         verbose_name_plural = 'Proteins'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #regulatory rule
             if obj_data['regulatory_rule'] is not None and obj_data['regulatory_rule']['value'] is not None and obj_data['regulatory_rule']['value'] != '':
@@ -1616,13 +1611,13 @@ class Chromosome(Molecule):
             .chr line{stroke:#666; stroke-width:0.5px;}\
         '
         
-        chr = StringIO.StringIO()
+        chro = StringIO.StringIO()
         for i in range(nSegments):
             x1 = segmentLeft
             x2 = segmentLeft + ((min(self.length, (i+1) * ntPerSegment) - 1) % ntPerSegment) / ntPerSegment * segmentW
             y = chrTop + (i + 1) * segmentHeight
-            chr.write('<text x="%s" y="%s">%d</text>' % (segmentLeft - 2, y, i * ntPerSegment + 1))
-            chr.write('<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y))
+            chro.write('<text x="%s" y="%s">%d</text>' % (segmentLeft - 2, y, i * ntPerSegment + 1))
+            chro.write('<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y))
         
         #genes
         geneStyle = '\
@@ -1793,7 +1788,7 @@ class Chromosome(Molecule):
                 feature.get_absolute_url(species), x, y, w, featureHeight, tip_title, type_, ))
     
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
-            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chr.getvalue(), genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
+            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro.getvalue(), genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
             
     def get_as_html_structure_local(self, species, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None):
         length = end_coordinate - start_coordinate + 1
@@ -1824,7 +1819,7 @@ class Chromosome(Molecule):
         .chr line{stroke:#666; stroke-width:0.5px;}\
         '
         
-        chr = '<text x="%s" y="%s" style="text-anchor:end;">%s</text><line x1="%s" x2="%s" y1="%s" y2="%s" /><text x="%s" y="%s" style="text-anchor:start;">%s</text>' % (
+        chro = '<text x="%s" y="%s" style="text-anchor:end;">%s</text><line x1="%s" x2="%s" y1="%s" y2="%s" /><text x="%s" y="%s" style="text-anchor:start;">%s</text>' % (
             chrL - 4, chrY, start_coordinate,
             chrL, chrR, chrY, chrY,
             chrR + 2, chrY, end_coordinate)
@@ -2029,7 +2024,7 @@ class Chromosome(Molecule):
                 feature.get_absolute_url(species), x1, featureY, x2 - x1, featureHeight, tip_title, type_, opacity))
         
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
-            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chr, genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
+            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro, genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
         
     def get_as_html_genes(self, species, is_user_anonymous):
         return ""
@@ -2073,6 +2068,7 @@ class Chromosome(Molecule):
         verbose_name='Chromosome'
         verbose_name_plural = 'Chromosomes'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['sequence'] is not None and obj_data['sequence'] != '' and len(obj_data['sequence']) != obj_data['length']:
                 raise ValidationError({'length': 'Length of sequence property must match length property'})
@@ -2175,16 +2171,17 @@ class ChromosomeFeature(SpeciesComponent):
         verbose_name='Chromosome feature'
         verbose_name_plural = 'Chromosome features'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
-                chr = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
+                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
-                chr = all_obj_data[obj_data['chromosome']]
+                chro = all_obj_data[obj_data['chromosome']]
                 
-            if isinstance(chr, Entry):
-                chr_len = chr.length
+            if isinstance(chro, Entry):
+                chr_len = chro.length
             else:
-                chr_len = chr['length']
+                chr_len = chro['length']
             
             if obj_data['coordinate'] > chr_len:
                 raise ValidationError({'coordinate': 'Coordinate must be less then chromosome length.'})
@@ -2384,16 +2381,17 @@ class Gene(Molecule):
         verbose_name_plural = 'Genes'
         
         #chromosome coordinate, length
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
-                chr = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
+                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
-                chr = all_obj_data[obj_data['chromosome']]
+                chro = all_obj_data[obj_data['chromosome']]
 
-            if isinstance(chr, Entry):
-                chr_len = chr.length
+            if isinstance(chro, Entry):
+                chr_len = chro.length
             else:
-                chr_len = chr['length']
+                chr_len = chro['length']
             
             if obj_data['coordinate'] > chr_len:
                 raise ValidationError({'coordinate': 'Coordinate must be less then chromosome length.'})
@@ -2431,7 +2429,7 @@ class Metabolite(Molecule):
     #calculations
     def calculate_properties(self):        
         subprocess.call('cxcalc name -t preferred name -t traditional logP logD -H 7.5 formalcharge -H 7.5 isoelectricpoint volume "%s"' % (settings.ROOT_DIR, self.smiles, ))
-        junk, iupac_name, traditional_name, log_p, log_d, charge, pi, volume = sys.stdout[1]('\t')
+        iupac_name, traditional_name, log_p, log_d, charge, pi, volume = sys.stdout[1]('\t')[1:]
         self.iupac_name = iupac_name
         self.traditional_name = traditional_name
         self.log_p = log_p
@@ -2661,7 +2659,13 @@ class Pathway(SpeciesComponent):
                          'width': W, 'height': H})
             return template.render(c)
         
-        from PIL import Image
+        # Wordaround broken PIL installation
+        # see: https://code.djangoproject.com/ticket/6054
+        try:
+            from PIL import Image
+        except ImportError:
+            import Image
+
         from xml.etree.ElementTree import ElementTree, Element
         
         # All Pathways of the organism
@@ -2855,8 +2859,8 @@ class Process(SpeciesComponent):
         
     def get_as_html_formed_complexes(self, species, is_user_anonymous):
         results = []
-        for complex in self.formed_complexes.all():
-            results.append('<a href="%s">%s</a><br/>%s' % (complex.get_absolute_url(species), complex.name, complex.get_as_html_biosynthesis(is_user_anonymous)))
+        for complexe in self.formed_complexes.all():
+            results.append('<a href="%s">%s</a><br/>%s' % (complexe.get_absolute_url(species), complexe.name, complexe.get_as_html_biosynthesis(is_user_anonymous)))
         return format_list_html(results, vertical_spacing=True)
     
     #meta information
@@ -2884,6 +2888,7 @@ class Process(SpeciesComponent):
         verbose_name='Process'
         verbose_name_plural = 'Processes'
         
+        @staticmethod
         def validate_unique(model, model_objects_data, all_obj_data=None, all_obj_data_by_model=None):
             order = []
             for obj in model_objects_data:
@@ -2906,6 +2911,7 @@ class ProteinComplex(Protein):
     
     #getters
     def get_num_subunits(self):
+        from cyano.helpers import getEntry
         n = 0
         for subunit in self.biosynthesis.all():
             if subunit.coefficient < 0:
@@ -3114,6 +3120,7 @@ class ProteinComplex(Protein):
         verbose_name='Protein complex'
         verbose_name_plural = 'Protein complexes'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getModel, getEntry
 
@@ -3297,7 +3304,8 @@ class ProteinMonomer(Protein):
             if (pH - pHprev < E) and (pHnext - pH < E):
                 break
 
-        value = pH            
+        value = pH     
+        return value       
         
     def get_half_life(self):    
         return 20 * 60
@@ -3444,6 +3452,7 @@ class ProteinMonomer(Protein):
         verbose_name='Protein monomer'
         verbose_name_plural = 'Protein monomers'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['signal_sequence'] is not None:
                 if all_obj_data is None:
@@ -3564,7 +3573,7 @@ class Reaction(SpeciesComponent):
                 .replace('+', ' + ') \
                 .replace('-', ' - ') \
                 .replace('/', ' / ')
-            law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species.wid), law, flags=re.I)            
+            law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species), law, flags=re.I)            
         if k.km != '':
             kms = k.km.split(', ')
             if len(kms) == 1:
@@ -3592,7 +3601,7 @@ class Reaction(SpeciesComponent):
                 .replace('+', ' + ') \
                 .replace('-', ' - ') \
                 .replace('/', ' / ')
-            law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species.wid), law, flags=re.I)
+            law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species), law, flags=re.I)
         if k.km != '':
             kms = k.km.split(', ')            
             if len(kms) == 1:
@@ -3638,6 +3647,7 @@ class Reaction(SpeciesComponent):
         verbose_name='Reaction'
         verbose_name_plural = 'Reactions'    
 
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getEntry, getModel, EmpiricalFormula
             
@@ -3844,10 +3854,10 @@ class TranscriptionUnit(Molecule):
     
     #getters
     def get_chromosome(self):
-        chr = list(set([g.chromosome for g in self.genes.all()]))
-        if len(chr) != 1:
+        chro = list(set([g.chromosome for g in self.genes.all()]))
+        if len(chro) != 1:
             raise        
-        return chr[0]
+        return chro[0]
         
     def get_coordinate(self):
         return self.genes.all().aggregate(Min('coordinate'))['coordinate__min']
@@ -3856,10 +3866,10 @@ class TranscriptionUnit(Molecule):
         return max(self.genes.extra(select={"end_coordinate": "(coordinate + length - 1)"}).values('end_coordinate'))['end_coordinate'] - self.get_coordinate() + 1
         
     def get_direction(self):
-        dir = list(set([g[0] for g in self.genes.values_list('direction').all()]))
-        if len(dir) != 1:
+        direction = list(set([g[0] for g in self.genes.values_list('direction').all()]))
+        if len(direction) != 1:
             raise        
-        return dir[0]
+        return direction[0]
         
     def get_sequence(self):
         seq = self.get_chromosome().sequence[self.get_coordinate() - 1:self.get_coordinate() - 1 + self.get_length()]
@@ -3939,6 +3949,7 @@ class TranscriptionUnit(Molecule):
         verbose_name='Transcription unit'
         verbose_name_plural = 'Transcription units'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if len(obj_data['genes']) == 1:
                 return
@@ -3997,16 +4008,16 @@ class TranscriptionalRegulation(SpeciesComponent):
         
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(bs.direction)][1]
         
-        chr = self.transcription_unit.get_chromosome()
+        chro = self.transcription_unit.get_chromosome()
         
-        map = chr.get_as_html_structure(is_user_anonymous,
+        structure = chr.get_as_html_structure(is_user_anonymous,
                 zoom = 1, 
                 start_coordinate = bs.coordinate - 500, 
                 end_coordinate = bs.coordinate + bs.length + 500, 
                 highlight_wid = [self.wid])
             
         txt = '%s<br/>Chromosome: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
-            map, chr.get_absolute_url(species), chr.wid, 
+            structure, chro.get_absolute_url(species), chro.wid, 
             bs.coordinate, bs.length, direction, 
             format_sequence_as_html(self.get_binding_site_sequence()))
             
@@ -4041,6 +4052,7 @@ class TranscriptionalRegulation(SpeciesComponent):
         verbose_name='Transcriptional regulation'
         verbose_name_plural = 'Transcriptional regulation'
         
+        @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #gene wid
             if all_obj_data is None:                
@@ -4064,13 +4076,13 @@ class TranscriptionalRegulation(SpeciesComponent):
                 
             #chr length
             if all_obj_data is None:
-                chr = Chromosome.objects.get(species__wid=obj_data['species'], wid=chr_wid)
+                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=chr_wid)
             else:
-                chr = all_obj_data[chr_wid]
-            if isinstance(chr, Entry):
-                chr_len = chr.length
+                chro = all_obj_data[chr_wid]
+            if isinstance(chro, Entry):
+                chr_len = chro.length
             else:
-                chr_len = chr['length']
+                chr_len = chro['length']
             
             #error check binding site coordinate, length
             if obj_data['binding_site'] is not None:
@@ -4234,10 +4246,10 @@ class PublicationReference(SpeciesComponent):
         return format_list_html(results)
         
     def get_as_bibtex(self):
-        type = None
+        cite_type = None
         props = []        
         if self.type.all()[0].wid == 'article':
-            type = 'ARTICLE'            
+            cite_type = 'ARTICLE'            
             if self.authors != '':
                 props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
             if self.title != '':
@@ -4262,7 +4274,7 @@ class PublicationReference(SpeciesComponent):
                     props.append(('URL', cr.xid))
                     break
         elif self.type.all()[0].wid == 'book':
-            type = 'BOOK'
+            cite_type = 'BOOK'
             if self.authors != '':
                 props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
             elif self.editors != '':
@@ -4284,7 +4296,7 @@ class PublicationReference(SpeciesComponent):
                     props.append(('URL', cr.xid))
                     break
         elif self.type.all()[0].wid == 'thesis':
-            type = 'THESIS'
+            cite_type = 'THESIS'
             if self.authors != '':
                 props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
             if self.editors != '':
@@ -4298,7 +4310,7 @@ class PublicationReference(SpeciesComponent):
                     props.append(('URL', cr.xid))
                     break
         else:
-            type = 'MISC'
+            cite_type = 'MISC'
             if self.authors != '':
                 props.append(('AUTHOR', self.format_authors_bibtex(self.authors)))
             if self.editors != '':
@@ -4319,7 +4331,7 @@ class PublicationReference(SpeciesComponent):
                 tmp.append('\n\t%s = "{%s}",' % prop)
             else:
                 tmp.append('\n\t%s = {%s},' % prop)
-        return '@%s{%s%s\n}' % (type, self.wid, ''.join(tmp))
+        return '@%s{%s%s\n}' % (cite_type, self.wid, ''.join(tmp))
         
     def format_authors_bibtex(self, authors):
         authors = authors.split(", ")
@@ -4518,14 +4530,14 @@ def format_evidence(evidence):
         
     return '<ul style="margin-top:4px;"><li style="margin-top:4px;">%s</li></ul>' % '</li><li style="margin-top:4px;">'.join(txt)
             
-def sub_rate_law(species_wid):
+def sub_rate_law(species):
     def inner_method(match):
         if match.group(0) == 'Vmax':
             return '<i>V</i><sub>max</sub>'
         if match.group(0)[0:2] == 'Km':
             return '<i>K</i><sub>m%s</sub>' % match.group(0)[2:]
         try:
-            obj = SpeciesComponent.objects.get(species__wid=species_wid, wid=match.group(0))
+            obj = SpeciesComponent.objects.get(species__wid=species.wid, wid=match.group(0))
             return '[<a href="%s">%s</a>]' % (obj.get_absolute_url(species), obj.wid)
         except:
             return match.group(0)

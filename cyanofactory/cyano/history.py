@@ -1,7 +1,5 @@
 from django.db.models.fields.related import ForeignKey, ReverseSingleRelatedObjectDescriptor,\
-    ManyToManyField, ReverseManyRelatedObjectsDescriptor,\
-    create_many_related_manager
-from django.utils import six
+    ManyToManyField, ReverseManyRelatedObjectsDescriptor
 from django.db.models.related import RelatedObject
 from django.db import router
 from django.db.models.manager import Manager
