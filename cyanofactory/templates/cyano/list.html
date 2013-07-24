@@ -18,6 +18,10 @@ Last updated: 2012-07-17
 {% block head %}
 {{ block.super }}
 <meta name="entry_type" content="{{ model_verbose_name }}" />
+
+<script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless.js"></script>
+<script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless_on_scroll.js"></script>
+<script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
 {% endblock %}
 
 {% block action_icons %}
@@ -48,6 +52,7 @@ Last updated: 2012-07-17
 {% endblock %}
 
 {% block content %}
+
 <table id="list">
 <thead>
 	<tr>
@@ -59,18 +64,7 @@ Last updated: 2012-07-17
 	</tr>
 </thead>
 <tbody>
-	{% for object in queryset %}
-	<tr>
-		<th><a href="{{ object|get_absolute_url:species }}">{{ object.wid }}</a></th>
-		<td><a href="{{ object|get_absolute_url:species }}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>		
-		{% if not request.user.is_anonymous %}
-		<td>
-			<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>
-			<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" /></a>
-		</td>
-		{% endif %}
-	</tr>
-	{% endfor %}
+{% include "cyano/list_page.html" %}
 </tbody>
 </table>
 

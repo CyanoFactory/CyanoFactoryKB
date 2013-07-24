@@ -109,6 +109,7 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.admindocs',
 	'django_extensions',
+    'endless_pagination',
 	
 	#apps
 	'public',
@@ -182,3 +183,9 @@ LOGIN_REDIRECT_URL = ROOT_URL + '/'
 ABSOLUTE_URL_OVERRIDES = {
     'auth.user': lambda o: ROOT_URL + '/user/' +  o.username,
 }
+
+from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
+TEMPLATE_CONTEXT_PROCESSORS += (
+    'django.core.context_processors.request',
+)
+

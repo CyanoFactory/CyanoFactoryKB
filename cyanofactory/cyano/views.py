@@ -419,13 +419,8 @@ def search_google(request, species_wid, query):
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def listing(request, species, model):
-    #try:
-    #    chelpers.getObjectTypes().index(model_type)
-    #except ValueError:
-    #    raise Http404
-
     objects = model.objects.all().filter(species__id=species.id)
-    
+
     facet_fields = []    
     for field_full_name in model._meta.facet_fields:
         #facet
@@ -491,15 +486,18 @@ def listing(request, species, model):
                 kwargs = {field_full_name: val}
             objects = objects.filter(**kwargs)
 
+    if request.is_ajax():
+        template = "cyano/list_page.html"
+    else:
+        template = "cyano/list.html"
+
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
         models = [model], 
         queryset = objects, 
-        template = 'cyano/list.html', 
-        data = {
-            'facet_fields': facet_fields,
-            })
+        template = template,
+        data = {'facet_fields': facet_fields})
 
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)

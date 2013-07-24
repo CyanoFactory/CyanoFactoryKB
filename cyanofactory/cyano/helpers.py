@@ -392,14 +392,14 @@ From http://www.peterbe.com/plog/uniqifiers-benchmark
 def uniqueSorted(seq):
     return {}.fromkeys(seq).keys()
 
-def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):    
+def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):
     outformat = request.GET.get('format', 'html')
 
     data['species'] = species
     data['queryset'] = queryset
     data['request'] = request
     data['queryargs'] = {}
-    data['email'] = "wuenschi@hs-mittweida.de"   
+    data['email'] = "wuenschi@hs-mittweida.de"
     
     social_text = ""
     
@@ -409,6 +409,10 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['model_type'] = models[0].__name__
         data['model'] = models[0]
         
+        # Speedup ajax calls
+        if outformat == 'html' and request.is_ajax():
+            return render_to_response(template, data, context_instance = RequestContext(request))
+
         if queryset != None and len(queryset) > 0:
             if len(queryset) == 1 and isinstance(queryset[0], cmodels.Entry):
                 social_text += data['model_verbose_name'][0] + " "
@@ -437,6 +441,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         
         if queryset != None and data['queryset'].model is None:
             del data['queryset'] 
+
         return render_to_response(template, data, context_instance = RequestContext(request))
     elif outformat == 'bib':
         response = HttpResponse(
