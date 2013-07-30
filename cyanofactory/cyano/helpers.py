@@ -1696,7 +1696,7 @@ def get_edit_form_fields(species_wid, model, obj=None):
             
     return (form_fields, initial_values)
 
-def get_edit_form_data(model, POST, field_prefix=''):
+def get_edit_form_data(model, POST, field_prefix='', user = None):
     #get fields
     if issubclass(model, cmodels.Entry):
         fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
@@ -1716,7 +1716,7 @@ def get_edit_form_data(model, POST, field_prefix=''):
                 if val == '':
                     val = None
             else:
-                val = get_edit_form_data(field.rel.to, POST, field_prefix='%s%s_' % (field_prefix, field.name, ))
+                val = get_edit_form_data(field.rel.to, POST, field_prefix='%s%s_' % (field_prefix, field.name, ), user = user)
         elif isinstance(field, ManyToManyField):
             val = []
             if issubclass(field.rel.to, cmodels.Entry):
@@ -1734,7 +1734,7 @@ def get_edit_form_data(model, POST, field_prefix=''):
                 idxs = set(idxs)
                     
                 for idx in idxs:                
-                    tmp = get_edit_form_data(field.rel.to, POST, field_prefix='%s%s_%s_' % (field_prefix, field.name, idx, ))
+                    tmp = get_edit_form_data(field.rel.to, POST, field_prefix='%s%s_%s_' % (field_prefix, field.name, idx, ), user = user)
                     if tmp is not None:
                         val.append(tmp)
         else:
@@ -1749,6 +1749,13 @@ def get_edit_form_data(model, POST, field_prefix=''):
     #return
     if is_blank:
         return None
+    
+    reason = POST.get("edit_reason", None)
+    if reason is not None and len(reason) > 0:
+        rev_detail = cmodels.RevisionDetail(user = user, reason = reason)
+        rev_detail.save()
+        data["revision_detail"] = rev_detail
+
     return data    
     
 def validate_object_fields(model, data, wids, species_wid, entry_wid):
@@ -1822,7 +1829,11 @@ def validate_object_fields(model, data, wids, species_wid, entry_wid):
         raise ValidationError(errors)
         
     return data
-    
+
+def validate_revision_detail(obj_data):
+    if obj_data.get("revision_detail", None) is None:
+        raise ValidationError({'edit_reason': "Please provide a summary"})
+
 def validate_model_objects(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
     parent_list = list(model._meta.get_parent_list())
     parent_list.reverse()
@@ -1859,7 +1870,7 @@ def validate_model_unique(model, model_objects_data, all_obj_data=None, all_obj_
             ancestor_model._meta.validate_unique(ancestor_model, model_objects_data, 
                 all_obj_data=all_obj_data, all_obj_data_by_model=all_obj_data_by_model)
     
-def save_object_data(species_wid, obj, obj_data, obj_list, user, save=False, save_m2m=False):
+def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2m=False):
     model = obj.__class__
     if isinstance(obj, cmodels.Entry) and obj.pk is None:
         obj.created_user = user
@@ -1882,7 +1893,7 @@ def save_object_data(species_wid, obj, obj_data, obj_list, user, save=False, sav
                         if obj_list.has_key(obj_data[field.name]):
                             tmp = obj_list[obj_data[field.name]]
                         elif issubclass(field.rel.to, cmodels.SpeciesComponent):
-                            tmp = field.rel.to.objects.get(species__wid=species_wid, wid=obj_data[field.name])
+                            tmp = field.rel.to.objects.get(species__wid=species.wid, wid=obj_data[field.name])
                         else:
                             tmp = field.rel.to.objects.get(wid=obj_data[field.name])
                         setattr(obj, field.name, tmp)
@@ -1890,7 +1901,7 @@ def save_object_data(species_wid, obj, obj_data, obj_list, user, save=False, sav
                         setattr(obj, field.name, None)
                 else:
                     if obj_data[field.name] is not None:
-                        setattr(obj, field.name, save_object_data(species_wid, field.rel.to(), obj_data[field.name], obj_list, user, save=save, save_m2m=save_m2m))
+                        setattr(obj, field.name, save_object_data(species.wid, field.rel.to(), obj_data[field.name], obj_list, user, save=save, save_m2m=save_m2m))
                     else:
                         setattr(obj, field.name, None)
         elif isinstance(field, ManyToManyField):
@@ -1901,9 +1912,12 @@ def save_object_data(species_wid, obj, obj_data, obj_list, user, save=False, sav
     #save
     if save:
         if isinstance(obj, cmodels.SpeciesComponent):
-            obj.species = cmodels.Species.objects.get(wid=species_wid)
+            obj.species.add(cmodels.Species.objects.get(wid=species.wid))
         obj.full_clean()
-        obj.save()
+        if isinstance(obj, cmodels.Entry):
+            obj.save(revision_detail = obj_data["revision_detail"])
+        else:
+            obj.save()
     
     #many-to-many fields
     for field in fields:
@@ -1918,18 +1932,21 @@ def save_object_data(species_wid, obj, obj_data, obj_list, user, save=False, sav
                         if obj_list.has_key(wid):
                             tmp = obj_list[wid]
                         elif issubclass(field.rel.to, cmodels.SpeciesComponent):
-                            tmp = field.rel.to.objects.get(species__wid=species_wid, wid=wid)
+                            tmp = field.rel.to.objects.get(species__wid=species.wid, wid=wid)
                         else:
                             tmp = field.rel.to.objects.get(wid=wid)
                         getattr(obj, field.name).add(tmp)
                 else:
                     for sub_obj_data in obj_data[field.name]:
-                        getattr(obj, field.name).add(save_object_data(species_wid, field.rel.to(), sub_obj_data, obj_list, user, save=save, save_m2m=save_m2m))
+                        getattr(obj, field.name).add(save_object_data(species.wid, field.rel.to(), sub_obj_data, obj_list, user, save=save, save_m2m=save_m2m))
     
     #save
     if save:
         obj.full_clean()
-        obj.save()
+        if isinstance(obj, cmodels.Entry):
+            obj.save(revision_detail = obj_data["revision_detail"])
+        else:
+            obj.save()
         
     #return obj
     return obj

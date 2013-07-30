@@ -3768,7 +3768,7 @@ class Species(Entry):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]        
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'genetic_code',
+            'id', 'wid', 'name', 'synonyms', 'publication_references', 'cross_references', 'genetic_code',
             'comments'
             ]
         facet_fields = []
