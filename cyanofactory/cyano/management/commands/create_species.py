@@ -25,4 +25,4 @@ class Command(CyanoCommand):
             raise CommandError("name argument is mandatory")
  
         species_obj.name = options["name"]
-        species_obj.save(revision_detail = revdetail)
+        species_obj.save(revdetail)

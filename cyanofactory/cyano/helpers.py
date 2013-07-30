@@ -1915,7 +1915,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
             obj.species.add(cmodels.Species.objects.get(wid=species.wid))
         obj.full_clean()
         if isinstance(obj, cmodels.Entry):
-            obj.save(revision_detail = obj_data["revision_detail"])
+            obj.save(obj_data["revision_detail"])
         else:
             obj.save()
     
@@ -1944,7 +1944,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
     if save:
         obj.full_clean()
         if isinstance(obj, cmodels.Entry):
-            obj.save(revision_detail = obj_data["revision_detail"])
+            obj.save(obj_data["revision_detail"])
         else:
             obj.save()
         

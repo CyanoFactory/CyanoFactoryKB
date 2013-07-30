@@ -19,6 +19,6 @@ class Command(CyanoCommand):
                 x = cmodels.Pathway(wid = map_.name)
             
             x.name = map_.title
-            x.save(revision_detail = revdetail)
+            x.save(revdetail)
             x.species.add(species)
-            x.save(revision_detail = revdetail)
+            x.save(revdetail)

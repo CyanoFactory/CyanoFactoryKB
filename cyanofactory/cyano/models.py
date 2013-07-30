@@ -1103,7 +1103,7 @@ class Entry(Model):
     def natural_key(self):
         return self.wid
 
-    def save(self, *args, **kwargs):
+    def save(self, revision_detail, *args, **kwargs):
         # Optimized to reduce number of database accesses to a minimum
         
         from itertools import ifilter
@@ -1112,10 +1112,6 @@ class Entry(Model):
         if self.wid != slugify(self.wid):
             # Slugify the WID
             self.wid = slugify(self.wid)
-
-        rev_detail = kwargs["revision_detail"]
-        # Prevent error on save later
-        del kwargs["revision_detail"]
 
         old_item = None
         if self.pk != None:
@@ -1127,8 +1123,8 @@ class Entry(Model):
             # The latest entry is not revisioned to save space (and time)
             model_type_key = "model/model_type/" + str(self._meta.object_name)
             cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(model_name = self._meta.object_name))
-            self.created_detail = rev_detail
-            self.detail = rev_detail
+            self.created_detail = revision_detail
+            self.detail = revision_detail
             self.model_type = cache_model_type
 
             ##print "CREATE: No revision needed for", str(self.wid)
@@ -1176,7 +1172,7 @@ class Entry(Model):
         if len(save_list) > 0:
             ##print self.wid + ": revisioning", len(save_list), "items"
             # Don't update the detail when actually nothing changed for that entry
-            self.detail = rev_detail
+            self.detail = revision_detail
             Revision.objects.bulk_create(save_list)
     
     #html formatting

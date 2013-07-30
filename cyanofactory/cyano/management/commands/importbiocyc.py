@@ -36,7 +36,7 @@ class Command(CyanoCommand):
         species.name = "Synechocystis PCC6803 BioCyc"
         species.comments = ""
         species.genetic_code = '11'
-        species.save(revision_detail = revdetail)
+        species.save(revdetail)
         
         #for protein in proteins:
         #    try:
@@ -44,9 +44,9 @@ class Command(CyanoCommand):
         #    except ObjectDoesNotExist:
         #        p = cmodels.Protein(wid = protein.wid)
         #    p.name = protein.name
-        #    p.save(revision_detail = revdetail)
+        #    p.save(revdetail)
         #    p.species.add(species)
-        #    p.save(revision_detail = revdetail)
+        #    p.save(revdetail)
         
         #proteins = cmodels.Protein.objects.filter(species = species)
         
@@ -66,9 +66,9 @@ class Command(CyanoCommand):
             chromosome.name = chro
             chromosome.sequence = seq
             chromosome.length = len(seq)
-            chromosome.save(revision_detail = revdetail)
+            chromosome.save(revdetail)
             chromosome.species.add(species)
-            chromosome.save(revision_detail = revdetail)
+            chromosome.save(revdetail)
  
             for gene in genes:
                 if gene_to_replicon(int(gene.genomeid.split("-")[1])) != chro:
@@ -84,7 +84,7 @@ class Command(CyanoCommand):
                 g.direction = gene.direction.lower()
                 g.coordinate = gene.codingregionstart if g.direction == 'f' else gene.codingregionend
                 g.length = abs(gene.codingregionstart - gene.codingregionend) # FIXME Not for joins
-                g.save(revision_detail = revdetail)
+                g.save(revdetail)
                 g.species.add(species)
  
                 typ = gene.name.split("-")
@@ -101,13 +101,13 @@ class Command(CyanoCommand):
                 except ObjectDoesNotExist:
                     t = cmodels.Type(wid = typ, name = typ)
  
-                t.save(revision_detail = revdetail)
+                t.save(revdetail)
                 t.species.add(species)
-                t.save(revision_detail = revdetail)
+                t.save(revdetail)
  
                 g.type.add(t)
  
-                g.save(revision_detail = revdetail)
+                g.save(revdetail)
  
             f.close()
  
@@ -123,14 +123,14 @@ class Command(CyanoCommand):
                 tu = cmodels.TranscriptionUnit(wid = name)
  
             tu.name = name
-            tu.save(revision_detail = revdetail)
+            tu.save(revdetail)
             tu.species.add(species)
             
             gene = bmodels.Gene.objects.get(Wid = t.otherWid)
             cgene = cmodels.Gene.objects.get(wid = gene.genomeid)
             tu.genes.add(cgene)
             
-            tu.save(revision_detail = revdetail)
+            tu.save(revdetail)
 
         for pathway in pathways:
             wid = "P_" + str(pathway.Wid)
@@ -141,7 +141,7 @@ class Command(CyanoCommand):
                 p = cmodels.Pathway(wid = wid)
             
             p.name = pathway.name
-            p.save(revision_detail = revdetail)
+            p.save(revdetail)
             p.species.add(species)
-            p.save(revision_detail = revdetail)
+            p.save(revdetail)
             
