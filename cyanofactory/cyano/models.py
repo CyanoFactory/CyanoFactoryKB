@@ -1121,8 +1121,7 @@ class Entry(Model):
         else:
             # New entry (no primary key)
             # The latest entry is not revisioned to save space (and time)
-            model_type_key = "model/model_type/" + str(self._meta.object_name)
-            cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(model_name = self._meta.object_name))
+            cache_model_type = TableMeta.get_by_model_name(self._meta.object_name)
             self.created_detail = revision_detail
             self.detail = revision_detail
             self.model_type = cache_model_type
@@ -1211,7 +1210,7 @@ class Entry(Model):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'comments', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'comments', 'created_detail', 'detail'
             ]
         listing = ['wid', 'name']
         facet_fields = []
@@ -1294,7 +1293,7 @@ class SpeciesComponent(Entry):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references',  'created_detail', 'detail', 
             ]
         facet_fields = ['type']
         verbose_name = 'Species component'
@@ -1391,7 +1390,7 @@ class Molecule(SpeciesComponent):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references', 'created_detail', 'detail' 
             ]
         facet_fields = ['type']
         verbose_name = 'Molecule'
@@ -1475,7 +1474,7 @@ class Protein(Molecule):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]            
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references', 'created_detail', 'detail' 
             ]
         facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
         verbose_name='Protein'
@@ -2063,7 +2062,7 @@ class Chromosome(Molecule):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'sequence', 'length', 'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'sequence', 'length', 'comments', 'publication_references', 'created_detail', 'detail' 
             ]
         facet_fields = ['type']
         verbose_name='Chromosome'
@@ -2166,7 +2165,7 @@ class ChromosomeFeature(SpeciesComponent):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'chromosome', 'coordinate', 'length', 'direction', 'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'chromosome', 'coordinate', 'length', 'direction', 'comments', 'publication_references', 'created_detail', 'detail' 
             ]
         facet_fields = ['type', 'chromosome', 'direction']
         verbose_name='Chromosome feature'
@@ -2239,7 +2238,7 @@ class Compartment(SpeciesComponent):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'comments', 'publication_references',  'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'comments', 'publication_references', 'created_detail', 'detail' 
             ]
         facet_fields = ['type']
         verbose_name='Compartment'
@@ -2523,7 +2522,7 @@ class Metabolite(Molecule):
             'map_coordinates',
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type', 'charge', 'is_hydrophobic']
         verbose_name='Metabolite'
@@ -2552,7 +2551,7 @@ class Note(SpeciesComponent):
             'type', 
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type']
         verbose_name='Note'
@@ -2592,7 +2591,7 @@ class Parameter(SpeciesComponent):
             'reactions', 'molecules', 'state', 'process', 
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type', 'reactions', 'molecules', 'state', 'process']
         verbose_name='Misc. parameter'
@@ -2836,7 +2835,7 @@ class Pathway(SpeciesComponent):
             'type', 
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type']
         verbose_name='Pathway'
@@ -2883,7 +2882,7 @@ class Process(SpeciesComponent):
             'initialization_order', 
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type']
         verbose_name='Process'
@@ -3115,7 +3114,7 @@ class ProteinComplex(Protein):
             'regulatory_rule',
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type', 'dna_footprint__binding', 'dna_footprint__region', 'formation_process', 'chaperones']
         verbose_name='Protein complex'
@@ -3447,7 +3446,7 @@ class ProteinMonomer(Protein):
             'regulatory_rule', 
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type', 'is_n_terminal_methionine_cleaved__value', 'signal_sequence__type', 'signal_sequence__location', 'dna_footprint__binding', 'dna_footprint__region', 'localization', 'chaperones']
         verbose_name='Protein monomer'
@@ -3642,7 +3641,7 @@ class Reaction(SpeciesComponent):
             'map_coordinates',
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type', 'direction', 'enzyme__protein', 'coenzymes__metabolite', 'is_spontaneous', 'pathways', 'processes', 'states']
         verbose_name='Reaction'
@@ -3796,7 +3795,7 @@ class State(SpeciesComponent):
             'type', 
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type']
         verbose_name='State'
@@ -3835,7 +3834,7 @@ class Stimulus(Molecule):
             'value', 
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type', 'value__units']
         verbose_name='Stimulus'
@@ -3944,7 +3943,7 @@ class TranscriptionUnit(Molecule):
             'genes', 'promoter_35_coordinate', 'promoter_35_length', 'promoter_10_coordinate', 'promoter_10_length', 'tss_coordinate',    
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type']
         verbose_name='Transcription unit'
@@ -4047,7 +4046,7 @@ class TranscriptionalRegulation(SpeciesComponent):
             'transcription_unit', 'transcription_factor', 'binding_site', 'affinity', 'activity', 
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type', 'transcription_unit', 'transcription_factor']
         verbose_name='Transcriptional regulation'
@@ -4143,7 +4142,7 @@ class Type(SpeciesComponent):
             'type', 'parent',
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type', 'parent']
         verbose_name='Type'
@@ -4380,7 +4379,7 @@ class PublicationReference(SpeciesComponent):
             'authors', 'editors', 'year', 'title', 'publication', 'publisher', 'volume', 'issue', 'pages', 
             'comments',
             'publication_references', 
-            'created_user', 'created_date', 'last_updated_user', 'last_updated_date', 
+            'created_detail', 'detail' 
             ]
         facet_fields = ['type', 'year', 'publication']
         verbose_name='Publication Reference'
