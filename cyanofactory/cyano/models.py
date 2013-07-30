@@ -1266,7 +1266,7 @@ class SpeciesComponent(Entry):
         
         #provide links to references
         return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]', 
-            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':self.species.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
+            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':species.wid, 'model_type': 'PublicationReference', 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
     
     def get_as_html_references(self, species, is_user_anonymous):
