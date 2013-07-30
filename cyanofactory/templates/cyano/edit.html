@@ -81,8 +81,8 @@ Last updated: 2012-07-17
 				input.appendChild(option)
 			{% endfor %}
 
-			input.setAttribute('name')
-			input.setAttribute('id')
+			input.setAttribute('name', '{{ field.name }}')
+			input.setAttribute('id', '{{ field.name }}')
 			
 			td.appendChild(input)
 			tr.appendChild(td)
@@ -237,7 +237,7 @@ Last updated: 2012-07-17
 					<table class="ManyToManyField">
 						<tbody id="{{ field.name }}">
 						{% for child_initial_values in initial_value %}
-							<tr id="{{ field.name }}">
+							<tr id="{{ field.name }}_{{ forloop.counter }}">
 								<td>
 								<select name="{{ field.name }}" id="{{ field.name }}">
 								<option disabled="true">Select {{ field.verbose_name|lower }}</option>
@@ -433,7 +433,7 @@ Last updated: 2012-07-17
 						{% endwith %}
 						{% endfor %}
 								<td><a href="javascript:delete_{{ field.name }}({{ forloop.counter }})"><img src="{% get_static_prefix %}public/img/delete.png" /></a></td>
-							</tr>						
+							</tr>
 					{% endfor %}
 						</tbody>
 						<tbody>
