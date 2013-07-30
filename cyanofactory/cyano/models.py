@@ -1190,7 +1190,7 @@ class Entry(Model):
         else:
             detail = self.created_detail
             user = detail.user.user
-            return '<a href="%s">%s %s</a> on %s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"))
+            return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
     
     def get_as_html_last_updated_user(self, species, is_user_anonymous):
         if is_user_anonymous:
@@ -1198,7 +1198,7 @@ class Entry(Model):
         else:
             detail = self.detail
             user = detail.user.user
-            return '<a href="%s">%s %s</a> on %s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"))        
+            return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)        
     
     #meta information
     class Meta:
