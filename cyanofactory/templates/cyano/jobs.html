@@ -21,21 +21,69 @@ User list template
 {% endblock %}
 
 {% block content %}
-<table id="list">
-<thead>
+<table id="detail">
+
+{% if running|length > 0 %}
+<tbody class="data">
 	<tr>
-		<th>Status</th>
-		<th>Description</th>
+		<th colspan="2">Running jobs</th>
 	</tr>
-</thead>
-<tbody>
-	{% for object in items %}
-	<tr>
-		<th>{{ object.status }}</th>
-		<td>{{ object.description }}</td>
-	</tr>
-	{% endfor %}
+{% endif %}
+
+{% for object in running %}
+<tr>
+	<th><progress max="{{ object.total }}" value="{{ object.current }}">
+				<strong>Progress: {{ object.current }} of {{ object.total }} done.</strong>
+		</progress>
+	</th>
+	<td>{{ object.description }}</td>
+</tr>
+{% endfor %}
+
+{% if running|length > 0 %}
 </tbody>
+<tbody class="spacing">
+	<tr><td colspan="2">&nbsp;</td></tr>
+</tbody>
+{% endif %}
+
+{% if pending|length > 0 %}
+<tbody class="data">
+	<tr>
+		<th colspan="2">Pending jobs</th>
+	</tr>
+{% endif %}
+
+{% for object in pending %}
+<tr>
+	<td colspan="2">{{ object.description }}</td>
+</tr>
+{% endfor %}
+
+{% if pending|length > 0 %}
+</tbody>
+<tbody class="spacing">
+	<tr><td colspan="2">&nbsp;</td></tr>
+</tbody>
+{% endif %}
+
+{% if finished|length > 0 %}
+<tbody class="data">
+	<tr>
+		<th colspan="2">Finished jobs</th>
+	</tr>
+{% endif %}
+
+{% for object in finished %}
+	<tr>
+		<th>{{ object.status|title }}</td>
+		<td colspan="2">{{ object.description }}</td>
+	</tr>
+{% endfor %}
+
+{% if finished|length > 0 %}
+</tbody>
+{% endif %}
 </table>
 
 <div style="clear:both;"></div>

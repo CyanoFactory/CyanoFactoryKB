@@ -1238,22 +1238,36 @@ def permission(request, species, model = None, item = None, edit = False):
 @resolve_to_objects
 def jobs(request, species = None):
     from djcelery.models import TaskMeta
+    from celery.task.control import inspect
+    from ast import literal_eval # safer than eval
     
-    pks = []
-    items = []
+    pending = []
+    finished = []
+    running = []
+    # Fetch pending tasks
+    insp = inspect()
+    res = insp.reserved()
+    for v in res.values():
+        for job in v:
+            kwargs = literal_eval(job["kwargs"])
+            if kwargs["user"] == request.user.pk:
+                pending.append(kwargs)
+
     obj = TaskMeta.objects.all()
     for o in obj:
         if o.result["user"] == request.user.pk:
-            pks.append(o.pk)
-            items.append({ "status": o.status, "description": o.result["description"]})
-    
-    queryset = TaskMeta.objects.filter(pk__in = pks)
+            if o.status == "SUCCESS" or o.status == "FAILURE":
+                o.result["status"] = o.status
+                finished.append(o.result)
+            elif o.status == "PROGRESS":
+                running.append(o.result)
 
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
         models = [cmodels.UserProfile],
-        queryset = queryset,
         template = 'cyano/jobs.html',
-            data = {'items': items})
+            data = {'pending': pending,
+                    'finished': finished,
+                    'running': running})
 
