@@ -57,7 +57,7 @@ class Command(CyanoCommand):
                         species.comments += "\n" + anno["comment"]
     
                     species.genetic_code = '11'
-                    species.save(revision_detail = revdetail)
+                    species.save(revdetail)
                     
                     if record.dbxrefs:
                         for xref in record.dbxrefs:
@@ -75,7 +75,7 @@ class Command(CyanoCommand):
                                     x.name = wid
                                     x.xid = xid
                                     x.source = source
-                                    x.save(revision_detail = revdetail)
+                                    x.save(revdetail)
                                     x.species.add(species)
                                     species.cross_references.add(x)
     
@@ -115,7 +115,7 @@ class Command(CyanoCommand):
                             pubref.authors = ref.authors
                             pubref.title = ref.title
                             pubref.publication = ref.journal
-                            pubref.save(revision_detail = revdetail)
+                            pubref.save(revdetail)
     
                             if ref.pubmed_id:
                                 wid = "PUBMED" + ":" + ref.pubmed_id
@@ -126,7 +126,7 @@ class Command(CyanoCommand):
                                 xref.name = wid
                                 xref.xid = ref.pubmed_id
                                 xref.source = "PUBMED"
-                                xref.save(revision_detail = revdetail)
+                                xref.save(revdetail)
                                 xref.species.add(species)
                                 pubref.cross_references.add(xref)
     
@@ -139,7 +139,7 @@ class Command(CyanoCommand):
                                 xref.name = wid
                                 xref.xid = ref.medline_id
                                 xref.source = "MEDLINE"
-                                xref.save(revision_detail = revdetail)
+                                xref.save(revdetail)
                                 xref.species.add(species)
                                 pubref.cross_references.add(xref)
                                 
@@ -155,7 +155,7 @@ class Command(CyanoCommand):
                         xref.name = wid
                         xref.xid = anno["gi"]
                         xref.source = "GI"
-                        xref.save(revision_detail = revdetail)
+                        xref.save(revdetail)
                         xref.species.add(species)
                         species.cross_references.add(xref)
 
@@ -166,7 +166,7 @@ class Command(CyanoCommand):
                     chromosome.name = options["name"]
                     chromosome.sequence = str(record.seq) # Cast needed, otherwise revision-compare fails!
                     chromosome.length = len(record.seq)
-                    chromosome.save(revision_detail = revdetail)
+                    chromosome.save(revdetail)
                     chromosome.species.add(species)
                     
                     features = record.features
@@ -223,7 +223,7 @@ class Command(CyanoCommand):
                         if "note" in qualifiers:
                             g.comments = "\n".join(qualifiers["note"])
                         
-                        g.save(revision_detail = revdetail)
+                        g.save(revdetail)
                         
                         if "db_xref" in qualifiers:
                             for xref in qualifiers["db_xref"]:
@@ -238,7 +238,7 @@ class Command(CyanoCommand):
                                     xref.xid = xid
                                     xref.source = source
                                                                     
-                                    xref.save(revision_detail = revdetail)
+                                    xref.save(revdetail)
                                     xref.species.add(species)
                                     g.cross_references.add(xref)
                         
@@ -252,7 +252,7 @@ class Command(CyanoCommand):
                                 xref.name = wid
                                 xref.source = "EC"
                                 xref.xid = ec
-                                xref.save(revision_detail = revdetail)
+                                xref.save(revdetail)
                                 xref.species.add(species)
                                 g.cross_references.add(xref)
                         
@@ -286,13 +286,13 @@ class Command(CyanoCommand):
                                 xref = cmodels.CrossReference(wid = slugify(protxref_wid))
                             
                             protein.gene = g
-                            protein.save(revision_detail = revdetail)
+                            protein.save(revdetail)
 
                             protein.species.add(species)
                         
                             xref.xid = protxref
                             xref.source = "RefSeq"
-                            xref.save(revision_detail = revdetail)
+                            xref.save(revdetail)
                             xref.species.add(species)
                             protein.cross_references.add(xref)
 
@@ -306,7 +306,7 @@ class Command(CyanoCommand):
                         except ObjectDoesNotExist:
                             t = cmodels.Type(wid = slugify(v.type), name = v.type)
     
-                        t.save(revision_detail = revdetail)
+                        t.save(revdetail)
                         t.species.add(species)
     
                         g.type.add(t)

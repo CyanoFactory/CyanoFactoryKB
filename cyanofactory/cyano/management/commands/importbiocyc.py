@@ -36,7 +36,7 @@ class Command(CyanoCommand):
         species.name = "Synechocystis PCC6803 BioCyc"
         species.comments = ""
         species.genetic_code = '11'
-        species.save(revision_detail = revdetail)
+        species.save(revdetail)
         
         #for protein in proteins:
         #    try:
@@ -44,9 +44,9 @@ class Command(CyanoCommand):
         #    except ObjectDoesNotExist:
         #        p = cmodels.Protein(wid = protein.wid)
         #    p.name = protein.name
-        #    p.save(revision_detail = revdetail)
+        #    p.save(revdetail)
         #    p.species.add(species)
-        #    p.save(revision_detail = revdetail)
+        #    p.save(revdetail)
         
         #proteins = cmodels.Protein.objects.filter(species = species)
         
@@ -66,7 +66,7 @@ class Command(CyanoCommand):
             chromosome.name = chro
             chromosome.sequence = seq
             chromosome.length = len(seq)
-            chromosome.save(revision_detail = revdetail)
+            chromosome.save(revdetail)
             chromosome.species.add(species)
  
             for gene in genes:
@@ -83,7 +83,7 @@ class Command(CyanoCommand):
                 g.direction = gene.direction.lower()
                 g.coordinate = gene.codingregionstart if g.direction == 'f' else gene.codingregionend
                 g.length = abs(gene.codingregionstart - gene.codingregionend) # FIXME Not for joins
-                g.save(revision_detail = revdetail)
+                g.save(revdetail)
                 g.species.add(species)
  
                 typ = gene.name.split("-")
@@ -100,7 +100,7 @@ class Command(CyanoCommand):
                 except ObjectDoesNotExist:
                     t = cmodels.Type(wid = typ, name = typ)
  
-                t.save(revision_detail = revdetail)
+                t.save(revdetail)
                 t.species.add(species)
  
                 g.type.add(t)
@@ -119,7 +119,7 @@ class Command(CyanoCommand):
                 tu = cmodels.TranscriptionUnit(wid = name)
  
             tu.name = name
-            tu.save(revision_detail = revdetail)
+            tu.save(revdetail)
             tu.species.add(species)
             
             gene = bmodels.Gene.objects.get(Wid = t.otherWid)
@@ -135,5 +135,6 @@ class Command(CyanoCommand):
                 p = cmodels.Pathway(wid = wid)
             
             p.name = pathway.name
-            p.save(revision_detail = revdetail)
+            p.save(revdetail)
             p.species.add(species)
+

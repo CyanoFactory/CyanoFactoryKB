@@ -120,16 +120,16 @@ class GenbankImporter(Importer):
             species = models.Species.objects.get(wid = species_wid)
         except ObjectDoesNotExist:
             species = models.Species(wid = species_wid, name = request.POST["new_species"])
-            species.save(revision_detail = revdetail)
+            species.save(revdetail)
             
         try:
             chromosome = models.Chromosome.objects.get(wid = "CHROMOSOME-1")
         except ObjectDoesNotExist:
             chromosome = models.Chromosome(wid = "CHROMOSOME-1")
-            chromosome.save(revision_detail = revdetail)
+            chromosome.save(revdetail)
         
         chromosome.species.add(species)
-        chromosome.save(revision_detail = revdetail)
+        chromosome.save(revdetail)
         
         for feature in self.data.features:
             qualifiers = feature.qualifiers
@@ -150,9 +150,9 @@ class GenbankImporter(Importer):
             gene.comments = comments
             gene.wid = wid
             
-            gene.save(revision_detail = revdetail)
+            gene.save(revdetail)
             gene.species.add(species)
-            gene.save(revision_detail = revdetail)
+            gene.save(revdetail)
         
         return render_queryset_to_response(
             species = species,

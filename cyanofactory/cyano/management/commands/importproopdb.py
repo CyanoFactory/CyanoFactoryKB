@@ -61,8 +61,9 @@ class Command(CyanoCommand):
                             continue
                         
                         tu.name = operon_str
-                        tu.save(revision_detail = revdetail)
+                        tu.save(revdetail)
                         tu.species.add(species)
                         tu.genes.add(gene)
+
                         self.stdout.write("Importing TU %s (%d/%d)" % (tu.wid, i, count))
 

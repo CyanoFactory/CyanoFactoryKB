@@ -37,7 +37,7 @@ class Command(CyanoCommand):
                     cobj = cmodels.Compartment(wid = wid)
                 
                 cobj.name = name
-                cobj.save(revision_detail = revdetail)
+                cobj.save(revdetail)
                 cobj.species.add(species_obj)
 
             # Species (= Metabolites) importer
@@ -63,7 +63,7 @@ class Command(CyanoCommand):
                 sobj.name = name
                 sobj.charge = 0 # TODO
                 sobj.is_hydrophobic = False # TODO
-                sobj.save(revision_detail = revdetail)
+                sobj.save(revdetail)
                 sobj.species.add(species_obj)
             
             for i, reaction in enumerate(reactions):
@@ -103,7 +103,7 @@ class Command(CyanoCommand):
                     
                     reaction_obj.name = name
                     reaction_obj.direction = 'r' if reaction.reversible else 'f'
-                    reaction_obj.save(revision_detail = revdetail)
+                    reaction_obj.save(revdetail)
                     
                     for reactant in reactants:
                         #try:
@@ -137,6 +137,5 @@ class Command(CyanoCommand):
                 
                         reaction_obj.stoichiometry.add(participant_obj)
                     
-                    reaction_obj.save(revision_detail = revdetail)
+                    reaction_obj.save(revdetail)
                     reaction_obj.species.add(species_obj)
-
