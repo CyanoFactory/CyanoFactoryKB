@@ -6,8 +6,7 @@ _wid = r'(?P<wid>[a-zA-Z0-9_\-]+)'
 _species_wid_model_type = _species_wid + r'/(?P<model_type>[a-zA-Z0-9_\-]+)'
 _species_wid_model_type_wid = _species_wid + r'/(?P<model_type>[a-zA-Z0-9_\-]+)/' + _wid
 
-urlpatterns = patterns('cyano.views',         
-                     
+urlpatterns = patterns('cyano.views',
     url(r'^login/?$', 'login'),
     url(r'^' + _species_wid + r'/login/?$', 'login'),
 
@@ -25,6 +24,9 @@ urlpatterns = patterns('cyano.views',
 	
 	url(r'^user/(?P<username>[\w\d]+)/?$', 'user'),
 	url(r'^' + _species_wid + '/user/(?P<username>[\w\d]+)/?$', 'user'),
+    
+    url(r'^jobs/?$', 'jobs'),
+    url(r'^' + _species_wid + '/jobs/?$', 'jobs'),
 	
 	url(r'^search/?$', 'search'),
 	url(r'^' + _species_wid + '/search/?$', 'search'),	

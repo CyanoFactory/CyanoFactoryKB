@@ -334,7 +334,7 @@ def users(request, species = None):
         request = request, 
         models = [cmodels.UserProfile],
         queryset = queryset,
-        template = 'cyano/users.html')    
+        template = 'cyano/users.html')
         
 @login_required   
 @resolve_to_objects
@@ -1233,3 +1233,27 @@ def permission(request, species, model = None, item = None, edit = False):
                     'group_permissions_deny': group_permissions_deny,
                     'permission_types': cmodels.Permission.permission_types
                 })
+
+@login_required
+@resolve_to_objects
+def jobs(request, species = None):
+    from djcelery.models import TaskMeta
+    
+    pks = []
+    items = []
+    obj = TaskMeta.objects.all()
+    for o in obj:
+        if o.result["user"] == request.user.pk:
+            pks.append(o.pk)
+            items.append({ "status": o.status, "description": o.result["description"]})
+    
+    queryset = TaskMeta.objects.filter(pk__in = pks)
+
+    return chelpers.render_queryset_to_response(
+        species = species,
+        request = request, 
+        models = [cmodels.UserProfile],
+        queryset = queryset,
+        template = 'cyano/jobs.html',
+            data = {'items': items})
+

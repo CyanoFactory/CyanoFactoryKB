@@ -1,0 +1,42 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+User list template
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+
+{% block head_title %}{{ block.super }} :: Jobs{% endblock %}
+{% block page_title %}Jobs{% endblock %}
+
+{% block action_icons %}
+{{ block.super }}
+{% endblock %}
+
+{% block extrastyles %}
+#list{
+	width:100%;
+}
+{% endblock %}
+
+{% block content %}
+<table id="list">
+<thead>
+	<tr>
+		<th>Status</th>
+		<th>Description</th>
+	</tr>
+</thead>
+<tbody>
+	{% for object in items %}
+	<tr>
+		<th>{{ object.status }}</th>
+		<td>{{ object.description }}</td>
+	</tr>
+	{% endfor %}
+</tbody>
+</table>
+
+<div style="clear:both;"></div>
+{% endblock %}
