@@ -10,8 +10,12 @@ User list template
 {% block head_title %}{{ block.super }} :: Jobs{% endblock %}
 {% block page_title %}Jobs{% endblock %}
 
-{% block action_icons %}
+{% block head %}
 {{ block.super }}
+<meta http-equiv="refresh" content="5">
+{% endblock %}
+
+{% block action_icons %}
 {% endblock %}
 
 {% block extrastyles %}
@@ -77,7 +81,7 @@ User list template
 {% for object in finished %}
 	<tr>
 		<th>{{ object.status|title }}</td>
-		<td colspan="2">{{ object.description }}</td>
+		<td colspan="2">{{ object.result.description }}{% if object.status == "FAILURE" %} ({{ object.result.result }}){% endif %}</td>
 	</tr>
 {% endfor %}
 

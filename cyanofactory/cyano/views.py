@@ -1257,8 +1257,7 @@ def jobs(request, species = None):
     for o in obj:
         if o.result["user"] == request.user.pk:
             if o.status == "SUCCESS" or o.status == "FAILURE":
-                o.result["status"] = o.status
-                finished.append(o.result)
+                finished.append(o)
             elif o.status == "PROGRESS":
                 running.append(o.result)
 
