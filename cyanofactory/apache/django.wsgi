@@ -1,6 +1,7 @@
 import django.core.handlers.wsgi
 import os
 import sys
+import djcelery
 
 paths = [
         os.path.dirname(os.path.realpath(__file__)) + '/../..',
@@ -11,6 +12,8 @@ for path in paths:
                 sys.path.append(path)
 
 os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+
+djcelery.setup_loader()
 
 application = django.core.handlers.wsgi.WSGIHandler()
 
