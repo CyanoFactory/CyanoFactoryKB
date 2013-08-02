@@ -12,7 +12,7 @@ User list template
 
 {% block head %}
 {{ block.super }}
-<meta http-equiv="refresh" content="5">
+<meta http-equiv="refresh" content="3">
 {% endblock %}
 
 {% block action_icons %}
@@ -40,7 +40,7 @@ User list template
 				<strong>Progress: {{ object.current }} of {{ object.total }} done.</strong>
 		</progress>
 	</th>
-	<td>{{ object.description }}</td>
+	<td>{{ object.message }}</td>
 </tr>
 {% endfor %}
 
@@ -60,7 +60,7 @@ User list template
 
 {% for object in pending %}
 <tr>
-	<td colspan="2">{{ object.description }}</td>
+	<td colspan="2">{{ object.reason }}</td>
 </tr>
 {% endfor %}
 
@@ -81,7 +81,7 @@ User list template
 {% for object in finished %}
 	<tr>
 		<th>{{ object.status|title }}</td>
-		<td colspan="2">{{ object.result.description }}{% if object.status == "FAILURE" %} ({{ object.result.result }}){% endif %}</td>
+		<td colspan="2">{{ object.result.message }}{% if object.status == "FAILURE" %} ({{ object.result.result }}){% endif %}</td>
 	</tr>
 {% endfor %}
 

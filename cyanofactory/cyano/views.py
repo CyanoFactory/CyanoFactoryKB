@@ -1247,15 +1247,22 @@ def jobs(request, species = None):
     # Fetch pending tasks
     insp = inspect()
     res = insp.reserved()
+    
+    if not res:
+        return chelpers.render_queryset_to_response_error(
+            request,
+            error = 503,
+            msg = "No worker available. Please report this to an administrator!")
+    
     for v in res.values():
         for job in v:
             kwargs = literal_eval(job["kwargs"])
-            if kwargs["user"] == request.user.pk:
+            if kwargs["user"] == request.user.pk or kwargs["user"] == request.user.username:
                 pending.append(kwargs)
 
-    obj = TaskMeta.objects.all()
+    obj = TaskMeta.objects.all().order_by("pk")
     for o in obj:
-        if o.result["user"] == request.user.pk:
+        if o.result["user"] == request.user.pk or o.result["user"] == request.user.username:
             if o.status == "SUCCESS" or o.status == "FAILURE":
                 finished.append(o)
             elif o.status == "PROGRESS":

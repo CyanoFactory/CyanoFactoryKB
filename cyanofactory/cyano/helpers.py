@@ -565,15 +565,20 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     if queryset != None and data['queryset'].model is None:
             del data['queryset'] 
     
+    response = http.HttpResponse
+    
     if error == 400:
         data['type'] = "Bad request"
-        response = http.HttpResponseBadRequest
+    elif error == 403:
+        data['type'] = "Forbidden"
     elif error == 404:
         data['type'] = "Not Found"
-        response = http.HttpResponseNotFound
+    elif error == 500:
+        data['type'] = "Internal Server Error"
+    elif error == 503:
+        data['type'] = "Service Unavailable"
     else:
-        data['type'] = "Forbidden"
-        response = http.HttpResponseForbidden
+        data['type'] = "Error {}".format(error)
     
     t = loader.get_template('cyano/error.html')
     data['message'] = msg
@@ -597,14 +602,16 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
         response = response(
             simplejson.dumps(json, indent=2, ensure_ascii=False, encoding='utf-8'),
             mimetype = "application/json; charset=UTF-8",
-            content_type = "application/json; charset=UTF-8")
+            content_type = "application/json; charset=UTF-8",
+            status = error)
         return response
         
     c = Context(data)
     return response(
         t.render(c),
         mimetype = 'text/html; charset=UTF-8',
-        content_type = 'text/html; charset=UTF-8')    
+        content_type = 'text/html; charset=UTF-8',
+        status = error)    
     
 def writeExcel(species, queryset, modelArr, is_user_anonymous):
     #sort entry models by name
