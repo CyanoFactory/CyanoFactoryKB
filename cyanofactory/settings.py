@@ -1,14 +1,26 @@
 '''
-Whole-cell project settings
-
-Author: Jonathan Karr, jkarr@stanford.edu
-Affiliation: Covert Lab, Department of Bioengineering, Stanford University
-Last updated: 2012-07-17
+Cyanofactory project settings
 '''
 
 import os
 
 from settings_private import *
+
+# Special case for unit testing (SQLite DB -> faster)
+from sys import argv
+if 'test' in argv:
+    DATABASES = {}
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'cyanobase'
+    }
+    
+    DEBUG_TOOLBAR_CONFIG = {}
+    DEBUG_TOOLBAR_CONFIG["INTERCEPT_REDIRECTS"] = False
+
+# Workaround for transaction blocks (progress not visible)
+# Needs the database router
+DATABASES['djcelery'] = DATABASES['default']
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -88,7 +100,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-ROOT_URLCONF = os.path.dirname(os.path.realpath(__file__)).split(os.sep)[-1] + '.urls'
+ROOT_URLCONF = 'urls'
 
 #use absolute directories
 TEMPLATE_DIRS = (
@@ -109,7 +121,6 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.admindocs',
 	'django_extensions',
-    'endless_pagination',
 	
 	#apps
 	'public',
@@ -124,6 +135,8 @@ INSTALLED_APPS = (
 	
 	#helpers
 	'haystack',
+    'endless_pagination',
+    'django_nose',
     
     'debug_toolbar',
 )
@@ -180,6 +193,8 @@ AUTH_PROFILE_MODULE = 'cyano.UserProfile'
 LOGIN_URL = ROOT_URL + '/login/'
 LOGIN_REDIRECT_URL = ROOT_URL + '/'
 
+DATABASE_ROUTERS = ['public.router.WarehouseRouter']
+
 ABSOLUTE_URL_OVERRIDES = {
     'auth.user': lambda o: ROOT_URL + '/user/' +  o.username,
 }
@@ -188,4 +203,6 @@ from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
 TEMPLATE_CONTEXT_PROCESSORS += (
     'django.core.context_processors.request',
 )
+
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 
