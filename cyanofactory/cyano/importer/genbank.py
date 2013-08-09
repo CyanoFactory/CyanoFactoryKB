@@ -7,6 +7,7 @@ from django.template.defaultfilters import capfirst
 import cyano.models as models
 from cyano.helpers import render_queryset_to_response,\
     objectToQuerySet, format_field_detail_view_diff
+from Bio import SeqIO
 
 class GenbankImporter(Importer):
     def __init__(self):
@@ -16,7 +17,7 @@ class GenbankImporter(Importer):
     def load(self, filename):
         self.filename = filename
         with open(filename) as f:
-            self.data = list(for record in SeqIO.parse(f, "genbank"))
+            self.data = list(record for record in SeqIO.parse(f, "genbank"))
 
     def preview(self, request, species_wid):
         #super(Importer, self).preview(request, species_wid)
@@ -39,7 +40,7 @@ class GenbankImporter(Importer):
                 new_gene = models.Gene.objects.get(wid = wid)
             except ObjectDoesNotExist:
                 old_gene = None
-                new_gene = models.Gene(wid = wid)     
+                new_gene = models.Gene(wid = wid)
             
             new_gene.name = name
             new_gene.comments = comments
