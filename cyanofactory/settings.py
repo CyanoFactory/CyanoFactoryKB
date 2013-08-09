@@ -1,26 +1,29 @@
 '''
 Cyanofactory project settings
 '''
-
 import os
+from sys import argv
 
 from settings_private import *
 
+UNIT_TEST_RUNNING = 'test' in argv
+
 # Special case for unit testing (SQLite DB -> faster)
-from sys import argv
-if 'test' in argv:
+
+if UNIT_TEST_RUNNING:
     DATABASES = {}
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'cyanobase'
     }
-    
-    DEBUG_TOOLBAR_CONFIG = {}
-    DEBUG_TOOLBAR_CONFIG["INTERCEPT_REDIRECTS"] = False
 
-# Workaround for transaction blocks (progress not visible)
-# Needs the database router
-DATABASES['djcelery'] = DATABASES['default']
+    TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+    
+    DEBUG = False
+else:
+    # Workaround for transaction blocks (progress not visible)
+    # Needs the database router
+    DATABASES['djcelery'] = DATABASES['default']
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -93,12 +96,14 @@ MIDDLEWARE_CLASSES = (
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 )
+
+if DEBUG:
+    MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
 
 ROOT_URLCONF = 'urls'
 
@@ -137,9 +142,10 @@ INSTALLED_APPS = (
 	'haystack',
     'endless_pagination',
     'django_nose',
-    
-    'debug_toolbar',
 )
+
+if DEBUG:
+    INSTALLED_APPS += ('debug_toolbar',)
 
 import django.utils.log
 # A sample logging configuration. The only tangible logging
@@ -203,6 +209,3 @@ from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
 TEMPLATE_CONTEXT_PROCESSORS += (
     'django.core.context_processors.request',
 )
-
-TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-
