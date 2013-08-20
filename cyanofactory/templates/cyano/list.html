@@ -33,6 +33,8 @@ Last updated: 2012-07-17
 <a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
 <a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
 <a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" /></a>
+<a href="?{% makeurl queryargs 'format' 'fasta' %}">F</a>
+<a href="?{% makeurl queryargs 'format' 'genbank' %}">GB</a>
 {{ block.super }}
 {% endblock %}
 

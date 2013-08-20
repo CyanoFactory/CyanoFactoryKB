@@ -1519,6 +1519,9 @@ class Chromosome(Molecule):
     length = PositiveIntegerField(verbose_name='Length (nt)')
     
     #getters
+    def get_sequence(self, species=None):
+        return self.sequence
+    
     def get_length(self):
         return self.length
         
@@ -2084,7 +2087,7 @@ class ChromosomeFeature(SpeciesComponent):
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
     
     #getters
-    def get_sequence(self):
+    def get_sequence(self, species = None):
         seq = self.chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
         if self.direction == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
@@ -2262,7 +2265,7 @@ class Gene(Molecule):
     homologs = ManyToManyField(Homolog, blank=True, null=True, related_name='genes', verbose_name='Homologs')    
     
     #getters    
-    def get_sequence(self):
+    def get_sequence(self, species = None):
         seq = self.chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
         if self.direction == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())

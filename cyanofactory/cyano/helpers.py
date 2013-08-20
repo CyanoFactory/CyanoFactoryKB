@@ -526,7 +526,13 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
             mimetype = "application/xml; charset=UTF-8",
             content_type = "application/xml; charset=UTF-8")
         response['Content-Disposition'] = "attachment; filename=data.xml"
-
+    elif outformat == "fasta":
+        response = HttpResponse(write_fasta(species, queryset),
+            content_type = "application/octet-stream")
+        response['Content-Disposition'] = "attachment; filename=sequence.fasta"
+        pass
+    elif outformat == "genbank":
+        pass
     else:
         return render_queryset_to_response_error(request,
                                                  queryset, models[0] if models else None,
@@ -2068,6 +2074,19 @@ def write_bibtex(species, qs):
         + ('\t%s %s %s\n' % (html_to_ascii('&copy;'), now.year, 'Covert Lab, Department of Bioengineering, Stanford University', )) \
         + '"}\n\n' \
         + '\n\n'.join(bibs)
+
+def write_fasta(species, qs):
+    fasta = StringIO()
+    for obj in qs.iterator():
+        if isinstance(obj, cmodels.Entry):
+            if hasattr(obj, "get_sequence"):
+                get_sequence = getattr(obj, "get_sequence")
+                if hasattr(get_sequence, "__call__"):
+                    fasta.write(">{}|{}\n".format(obj.wid, obj.name))
+                    fasta.write(re.sub(r"(.{70})", r"\1\n", get_sequence(species)))
+                    fasta.write("\n")
+
+    return fasta.getvalue()
     
 def get_invalid_objects(species_id, validate_fields=False, validate_objects=True, full_clean=False, validate_unique=False):
     #check that species WIDs unique
