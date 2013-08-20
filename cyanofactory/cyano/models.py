@@ -396,7 +396,7 @@ class Permission(Model):
         return self.name
 
 class UserPermission(Model):
-    entry = ForeignKey("Entry", related_name = "user_permissions")
+    entry = ForeignKey("Entry", related_name = "user_permissions", auto_created = True)
     user = ForeignKey("UserProfile", related_name = 'permissions')
     allow = ManyToManyField(Permission, verbose_name = 'Allowed Permissions', related_name = 'user_permission_allow')
     deny = ManyToManyField(Permission, verbose_name = 'Denied Permissions', related_name = 'user_permission_deny')
@@ -410,7 +410,7 @@ class UserPermission(Model):
         )
 
 class GroupPermission(Model):
-    entry = ForeignKey("Entry", related_name = "group_permissions")
+    entry = ForeignKey("Entry", related_name = "group_permissions", auto_created = True)
     group = ForeignKey("GroupProfile", related_name = 'permissions')
     allow = ManyToManyField(Permission, verbose_name = 'Allowed Permissions', related_name = 'group_permission_allow')
     deny = ManyToManyField(Permission, verbose_name = 'Denied Permissions', related_name = 'group_permission_deny')
@@ -707,7 +707,7 @@ class Revision(Model):
         * ``column``: Table and column where the modification occured
         * ``new_value``: New value in the cell of the column
     """
-    current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False)
+    current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False, auto_created = True)
     detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions', editable = False, null = True)
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
     column = ForeignKey(TableMetaColumn, verbose_name = 'Table and column where the modification occured', related_name = '+')
@@ -728,7 +728,7 @@ class RevisionManyToMany(Model):
         * ``table``: Table where the modification occured
         * ``new_value``: New value in the cell of the column
     """
-    current = ForeignKey("Entry", verbose_name = "Current version of entry points to source of m2m", related_name = 'revisions_m2m', editable = False)
+    current = ForeignKey("Entry", verbose_name = "Current version of entry points to source of m2m", related_name = 'revisions_m2m', editable = False, auto_created = True)
     detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions_m2m', editable = False, null = True)
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
     table = ForeignKey(TableMetaManyToMany, verbose_name = 'M2M Table where the modification occured', related_name = '+')
