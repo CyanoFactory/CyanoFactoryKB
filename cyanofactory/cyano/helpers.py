@@ -2077,7 +2077,14 @@ def write_bibtex(species, qs):
 
 def write_fasta(species, qs):
     fasta = StringIO()
-    for obj in qs.iterator():
+    chrs = cmodels.Chromosome.objects.filter(species = species)
+    chromosomes = {}
+    for c in chrs:
+        chromosomes[c.pk] = c
+    
+    for obj in qs:
+        obj.chromosome = chromosomes[obj.chromosome_id]
+  
         if isinstance(obj, cmodels.Entry):
             if hasattr(obj, "get_sequence"):
                 get_sequence = getattr(obj, "get_sequence")
