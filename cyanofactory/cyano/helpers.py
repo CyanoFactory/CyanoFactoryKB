@@ -43,6 +43,11 @@ from cyano.templatetags.templatetags import ceil
 import cyano.models as cmodels
 
 import xhtml2pdf.pisa as pisa
+from Bio import SeqIO, Seq, SeqFeature
+from Bio.SeqRecord import SeqRecord
+from Bio.Alphabet import IUPAC
+from Bio.Alphabet.IUPAC import IUPACUnambiguousDNA
+from Bio.SeqFeature import FeatureLocation
 
 class ELEMENT_MWS:
     H = 1.0079
@@ -532,6 +537,9 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         response['Content-Disposition'] = "attachment; filename=sequence.fasta"
         pass
     elif outformat == "genbank":
+        response = HttpResponse(write_genbank(species, queryset),
+            content_type = "application/octet-stream")
+        response['Content-Disposition'] = "attachment; filename=sequence.gb"
         pass
     else:
         return render_queryset_to_response_error(request,
@@ -2079,21 +2087,56 @@ def write_fasta(species, qs):
     fasta = StringIO()
     chrs = cmodels.Chromosome.objects.filter(species = species)
     chromosomes = {}
+
     for c in chrs:
         chromosomes[c.pk] = c
     
     for obj in qs:
-        obj.chromosome = chromosomes[obj.chromosome_id]
-  
         if isinstance(obj, cmodels.Entry):
             if hasattr(obj, "get_sequence"):
                 get_sequence = getattr(obj, "get_sequence")
                 if hasattr(get_sequence, "__call__"):
-                    fasta.write(">{}|{}\n".format(obj.wid, obj.name))
-                    fasta.write(re.sub(r"(.{70})", r"\1\n", get_sequence(species)))
-                    fasta.write("\n")
+                    if hasattr(obj, "chromosome_id"):
+                        obj.chromosome = chromosomes[obj.chromosome_id]
+                    elif hasattr(obj, "genes_id"):
+                        print "todo genes"
+                    
+                    fasta.write(">{}|{}\r\n".format(obj.wid, obj.name))
+                    fasta.write(re.sub(r"(.{70})", r"\1\r\n", get_sequence(species)))
+                    fasta.write("\r\n")
 
     return fasta.getvalue()
+
+def write_genbank(species, qs):
+    genbank = StringIO()
+    
+    if len(qs) != 1:
+        # error
+        print "error"
+    elif not isinstance(qs[0], cmodels.Chromosome):
+        # error
+        print "error"
+    
+    chromosome = qs[0]
+    
+    import time
+    start = time.clock()
+    genes = cmodels.Gene.objects.filter(species = species, chromosome_id = chromosome.pk).prefetch_related("cross_references", "protein_monomers")
+    print (time.clock() - start)
+    record = SeqRecord(Seq.Seq(chromosome.sequence, IUPACUnambiguousDNA()))
+    record.annotations["organism"] = species.name
+    record.annotations["comment"] = species.comments
+    
+    features = record.features
+
+    start = time.clock()
+    for item in genes:
+        features += item.to_seqfeature(species, record.seq)
+    
+    print (time.clock() - start)
+    
+    SeqIO.write(record, genbank, "genbank")
+    return genbank.getvalue()
     
 def get_invalid_objects(species_id, validate_fields=False, validate_objects=True, full_clean=False, validate_unique=False):
     #check that species WIDs unique

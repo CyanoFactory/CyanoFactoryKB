@@ -32,6 +32,9 @@ from cyano.templatetags.templatetags import set_time_zone
 from cyano.cache import Cache
 from cyano.history import HistoryForeignKey as ForeignKey
 from cyano.history import HistoryManyToManyField as ManyToManyField
+from Bio.SeqFeature import SeqFeature, FeatureLocation
+from copy import deepcopy
+from Bio.Alphabet.IUPAC import IUPACUnambiguousDNA
 
 
 def enum(**enums):
@@ -1630,8 +1633,7 @@ class Chromosome(Molecule):
 
         genes = StringIO.StringIO()
 
-
-        genesList = list(self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all())
+        genesList = self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all()
 
         nTus = 0
         iTUs = {}
@@ -2343,6 +2345,49 @@ class Gene(Molecule):
             self.coordinate, self.length, direction, 
             self.get_gc_content() * 100,
             format_sequence_as_html(self.get_sequence()))
+    
+    def to_seqfeature(self, species, sequence):
+        gene = SeqFeature(FeatureLocation(self.coordinate - 1,
+                                             self.coordinate + self.length,
+                                             strand=1 if self.direction == "f" else -1), type="gene")
+        gene.qualifiers["locus_tag"] = [self.wid]
+        if self.name:
+            gene.qualifiers["gene"] = [self.name]
+
+        db_xref = []
+        EC_number = []
+        for reference in self.cross_references.all():
+            if reference.source == "EC":
+                EC_number.append(reference.xid)
+            db_xref.append(":".join([reference.source, reference.xid]))
+        
+        if len(db_xref) > 0:
+            gene.qualifiers["db_xref"] = db_xref
+            
+        cds = deepcopy(gene)
+        if self.comments:
+            cds.qualifiers["note"] = [self.comments]
+        if len(EC_number) > 0:
+            gene.qualifiers["EC_number"] = EC_number
+        cds.qualifiers["transl_table"] = [species.genetic_code]
+        cds.qualifiers["codon_start"] = [1]
+
+        typ = list(self.type.all()[:1])       
+        cds.type = typ[0].wid
+        if cds.type == "mRNA":
+            cds.type = "CDS"
+            s = gene.extract(sequence)
+            if self.direction == "r":
+                s = s.reverse_complement()
+            cds.qualifiers["translation"] = [s.translate(table=species.genetic_code)]
+
+        #monomer = ProteinMonomer.objects.values_list('wid', 'name').filter(species = species).get(gene_id = self.pk)
+        monomer = list(self.protein_monomers.all()[:1])
+        if len(monomer) > 0:
+            cds.qualifiers["protein_id"] = monomer[0].wid
+            cds.qualifiers["product"] = monomer[0].name
+
+        return gene, cds
         
     #meta information
     class Meta:
@@ -3874,7 +3919,7 @@ class TranscriptionUnit(Molecule):
             raise        
         return direction[0]
         
-    def get_sequence(self):
+    def get_sequence(self, species = None):
         seq = self.get_chromosome().sequence[self.get_coordinate() - 1:self.get_coordinate() - 1 + self.get_length()]
         if self.get_direction() == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())

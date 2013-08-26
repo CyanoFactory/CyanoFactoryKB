@@ -79,7 +79,7 @@ def create_history_many_related_manager(superclass):
             else:
                 queryset = super(HistoryManyRelatedManager, self).get_query_set()
             
-            print queryset
+            #print queryset
             return queryset
 
     return HistoryManyRelatedManager
