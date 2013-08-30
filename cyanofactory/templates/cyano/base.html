@@ -131,8 +131,14 @@ Last updated: 2012-07-17
 			</li>
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
-			<li><a href="{% if species %}{% url "cyano.views.importData" species_wid=species.wid %}{% else %}{% url "cyano.views.importData" %}{% endif %}">Import</a></li>
-				{% if species %}
+			<li><a href="#">Import</a>
+				<ul>
+				<li><a href="{% if species %}{% url "cyano.views.importData" species_wid=species.wid %}{% else %}{% url "cyano.views.importData" %}{% endif %}">Import Data</a></li>
+				<li><a href="{% if species %}{% url "cyano.views.jobs" species_wid=species.wid %}{% else %}{% url "cyano.views.jobs" %}{% endif %}">View Import Jobs</a></li>
+				</ul>
+			</li>
+			</li>
+			{% if species %}
 			<li class="spacer"/>
 			<li><a href="{% url "cyano.views.validate" species_wid=species.wid %}">Validate</a></li>
 				{% endif %}
