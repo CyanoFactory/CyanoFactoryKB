@@ -16,6 +16,7 @@ import StringIO
 
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
+from Bio import SeqRecord, SeqIO
 
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
@@ -34,7 +35,6 @@ from cyano.history import HistoryForeignKey as ForeignKey
 from cyano.history import HistoryManyToManyField as ManyToManyField
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from copy import deepcopy
-from Bio.Alphabet.IUPAC import IUPACUnambiguousDNA
 
 
 def enum(**enums):
@@ -1203,6 +1203,18 @@ class Entry(Model):
             user = detail.user.user
             return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)        
     
+    def get_as_fasta(self, species):
+        raise NotImplementedError("FASTA export not supported for %s" % (self._meta.verbose_name_plural))
+
+    def get_fasta_header(self):
+        return ">" + self.wid + "|" + self.name
+
+    def get_as_genbank(self, species):
+        raise NotImplementedError("GenBank export not supported for %s" % (self._meta.verbose_name_plural))
+    
+    def get_as_sbml(self, species):
+        raise NotImplementedError("SBML export not supported for %s" % (self._meta.verbose_name_plural))
+
     #meta information
     class Meta:
         concrete_entry_model = False
@@ -1522,7 +1534,7 @@ class Chromosome(Molecule):
     length = PositiveIntegerField(verbose_name='Length (nt)')
     
     #getters
-    def get_sequence(self, species=None):
+    def get_sequence(self):
         return self.sequence
     
     def get_length(self):
@@ -2045,6 +2057,25 @@ class Chromosome(Molecule):
             results.append('<a href="%s">%s</a>' % (f.get_absolute_url(species), f.wid))
         return format_list_html(results, comma_separated=True)
         
+    def get_as_fasta(self, species):
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence()) + "\r\n"
+    
+    def get_as_genbank(self, species):
+        genbank = StringIO.StringIO()
+        genes = Gene.objects.filter(species = species, chromosome_id = self.pk).prefetch_related("cross_references", "protein_monomers")
+        record = SeqRecord.SeqRecord(Seq(self.sequence, IUPAC.IUPACUnambiguousDNA()))
+        record.annotations["organism"] = species.name
+        record.annotations["comment"] = species.comments
+        
+        features = record.features
+
+        for item in genes:
+            features += item.get_as_seqfeature(species, record.seq)
+        
+        SeqIO.write(record, genbank, "genbank")
+        
+        return genbank.getvalue()
+        
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -2089,7 +2120,7 @@ class ChromosomeFeature(SpeciesComponent):
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
     
     #getters
-    def get_sequence(self, species = None):
+    def get_sequence(self):
         seq = self.chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
         if self.direction == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
@@ -2152,7 +2183,10 @@ class ChromosomeFeature(SpeciesComponent):
         for tu in self.get_transcription_units():
             results.append('<a href="%s">%s</a>' % (tu.get_absolute_url(species), tu.wid))
         return format_list_html(results, comma_separated=True)
-        
+    
+    def get_as_fasta(self, species):
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence()) + "\r\n"
+    
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -2267,7 +2301,7 @@ class Gene(Molecule):
     homologs = ManyToManyField(Homolog, blank=True, null=True, related_name='genes', verbose_name='Homologs')    
     
     #getters    
-    def get_sequence(self, species = None):
+    def get_sequence(self):
         seq = self.chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
         if self.direction == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
@@ -2346,9 +2380,12 @@ class Gene(Molecule):
             self.get_gc_content() * 100,
             format_sequence_as_html(self.get_sequence()))
     
-    def to_seqfeature(self, species, sequence):
+    def get_as_fasta(self, species):
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence()) + "\r\n"
+    
+    def get_as_seqfeature(self, species, sequence):
         gene = SeqFeature(FeatureLocation(self.coordinate - 1,
-                                             self.coordinate + self.length,
+                                             self.coordinate + self.length - (0 if self.direction == "f" else 1),
                                              strand=1 if self.direction == "f" else -1), type="gene")
         gene.qualifiers["locus_tag"] = [self.wid]
         if self.name:
@@ -2372,14 +2409,12 @@ class Gene(Molecule):
         cds.qualifiers["transl_table"] = [species.genetic_code]
         cds.qualifiers["codon_start"] = [1]
 
-        typ = list(self.type.all()[:1])       
+        typ = list(self.type.all()[:1])
         cds.type = typ[0].wid
         if cds.type == "mRNA":
             cds.type = "CDS"
             s = gene.extract(sequence)
-            if self.direction == "r":
-                s = s.reverse_complement()
-            cds.qualifiers["translation"] = [s.translate(table=species.genetic_code)]
+            cds.qualifiers["translation"] = [s.translate(table=species.genetic_code)[:-1]]
 
         #monomer = ProteinMonomer.objects.values_list('wid', 'name').filter(species = species).get(gene_id = self.pk)
         monomer = list(self.protein_monomers.all()[:1])
@@ -3445,7 +3480,10 @@ class ProteinMonomer(Protein):
         return self.get_aliphatic(species)
     
     def get_as_html_gravy(self, species, is_user_anonymous):
-        return self.get_gravy(species)        
+        return self.get_gravy(species)
+    
+    def get_as_fasta(self, species):
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(species)) + "\r\n"      
 
     #meta information
     class Meta:    
@@ -3919,7 +3957,7 @@ class TranscriptionUnit(Molecule):
             raise        
         return direction[0]
         
-    def get_sequence(self, species = None):
+    def get_sequence(self):
         seq = self.get_chromosome().sequence[self.get_coordinate() - 1:self.get_coordinate() - 1 + self.get_length()]
         if self.get_direction() == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
@@ -3958,6 +3996,9 @@ class TranscriptionUnit(Molecule):
         for r in self.transcriptional_regulations.all():
             results.append('<a href="%s">%s</a>: <a href="%s">%s</a>' % (r.get_absolute_url(species), r.wid, r.transcription_factor.get_absolute_url(species), r.transcription_factor.wid))
         return format_list_html(results)
+    
+    def get_as_fasta(self, species):
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence()) + "\r\n"
 
     #meta information
     class Meta:
