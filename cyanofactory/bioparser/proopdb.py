@@ -37,6 +37,7 @@ class ProOpDB(BioParser):
         i = 0
         
         self.tu = []
+        tus = []
     
         for line in handle:
             if line.count("\t") == 7:
@@ -51,18 +52,25 @@ class ProOpDB(BioParser):
                 operon_str = "TU_%04d" % (operon)
                 
                 try:
-                    tu = cmodels.TranscriptionUnit.objects.get(wid = operon_str)
-                except ObjectDoesNotExist:
-                    tu = cmodels.TranscriptionUnit(wid = operon_str)
-                
-                try:
                     gene = cmodels.Gene.objects.get(wid = locus)
                 except ObjectDoesNotExist:
                     #self.stderr.write("Gene with wid {} not found".format(locus))
                     continue
                 
-                tu.name = operon_str
-                self.tu.append([tu, gene])
+                tu = operon_str
+                
+                try:
+                    tus[self.tu.index(tu)].append(gene)
+                except ValueError:
+                    tus.append([tu, [gene]])
+        
+        for tu, genes in tus:
+            wid = "TU_" + "-".join(map(lambda x: x.wid, genes))
+            try:
+                tu = cmodels.TranscriptionUnit.objects.get(wid = wid)
+            except ObjectDoesNotExist:
+                tu = cmodels.TranscriptionUnit(wid = wid)
+            self.tu.append([tu, genes])
 
     @commit_on_success
     def apply(self):
@@ -70,7 +78,7 @@ class ProOpDB(BioParser):
 
         i = 0
         
-        for tu, gene in self.tu:
+        for tu, genes in self.tu:
             i += 1
             
             if hasattr(self, "notify_progress"):
@@ -79,4 +87,6 @@ class ProOpDB(BioParser):
             
             tu.save(self.detail)
             tu.species.add(self.species)
-            tu.genes.add(gene)
+
+            for gene in genes:
+                tu.genes.add(gene)
