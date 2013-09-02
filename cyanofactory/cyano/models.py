@@ -1232,8 +1232,8 @@ class SpeciesComponent(Entry):
     '''
     species = ManyToManyField("Species", verbose_name = "Organism containing that entry", related_name = "species")
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
-    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_entries', verbose_name='Cross references')
-    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_entries', verbose_name='Publication references')
+    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
+    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publication references')
 
     #getters
     @permalink
@@ -2602,6 +2602,40 @@ class Pathway(SpeciesComponent):
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_pathway', parent_link=True, verbose_name='Species component')
     
     #helpers
+    @staticmethod
+    def add_boehringer_pathway(species, revdetail):
+        wid = "Boehringer"
+        try:
+            x = Pathway.objects.get(wid = wid, species = species)
+            return
+        except ObjectDoesNotExist:
+            # Create new boehringer (if it was never created yet) or assign to one
+            try:
+                x = Pathway.objects.get(wid = wid)
+            except ObjectDoesNotExist:
+                x = Pathway(wid = wid)
+
+        x.name = "Biochemical Pathways"
+        x.save(revdetail)
+        x.species.add(species)
+    
+    @staticmethod
+    def add_kegg_pathway(species, revdetail):
+        from kegg.models import Map
+        
+        crs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
+        maps = Map.objects.filter(ec_numbers__name__in = crs).distinct()
+        
+        for map_ in maps:
+            try:
+                x = Pathway.objects.get(wid = map_.name)
+            except ObjectDoesNotExist:
+                x = Pathway(wid = map_.name)
+            
+            x.name = map_.title
+            x.save(revdetail)
+            x.species.add(species)
+    
     def extract_ecs(self, text):
         """Extracts EC numbers out of a string and returns a list with all numbers"""
         return re.findall(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+", text)
@@ -2623,7 +2657,7 @@ class Pathway(SpeciesComponent):
     
     def get_boehringer_hits(self, species):
         import boehringer.models as bmodels
-        species_ecs = CrossReference.objects.filter(species = species, source = "EC").values_list('xid', flat=True)
+        species_ecs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
         enzymes = bmodels.Enzyme.objects.filter(ec__in = species_ecs).order_by('title')
 
         species_metabolites = Metabolite.objects.filter(species = species).values_list('name', flat=True)
@@ -2669,7 +2703,7 @@ class Pathway(SpeciesComponent):
         from xml.etree.ElementTree import ElementTree, Element
         
         # All Pathways of the organism
-        species_ecs = CrossReference.objects.filter(species = species, source = "EC").values_list('xid', flat=True)
+        species_ecs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
 
         with open("{}/kegg/img/{}.png".format(settings.STATICFILES_DIRS[0], self.wid), "rb") as image:
 

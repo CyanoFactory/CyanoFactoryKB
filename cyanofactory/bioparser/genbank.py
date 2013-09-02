@@ -251,3 +251,10 @@ class Genbank(BioParser):
             t.species.add(self.species)
     
             g.type.add(t)
+            
+        if hasattr(self, "notify_progress"):
+            outstr = "Assigning KEGG pathways"
+            self.notify_progress(current = len(cds_map.values()), total = len(cds_map.values()), message = outstr)
+        
+        cmodels.Pathway.add_kegg_pathway(self.species, self.detail)
+
