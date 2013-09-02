@@ -30,11 +30,12 @@ from django.views.decorators.csrf import csrf_protect
 
 from haystack.query import SearchQuerySet
 
-from cyano.forms import ExportDataForm, ImportDataForm
+from cyano.forms import ExportDataForm, ImportDataForm, ImportSpeciesForm
 import cyano.helpers as chelpers
 import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
 from cyano.decorators import resolve_to_objects, permission_required
+from django.db.transaction import commit_on_success
 
 def index(request):
     return chelpers.render_queryset_to_response(
@@ -912,6 +913,58 @@ def importSubmitData(request, species=None):
         os.remove(filename)
         raise Http404
     pass
+
+@login_required
+@resolve_to_objects
+@commit_on_success
+def importSpeciesData(request, species=None):
+    if request.method == 'POST':
+        form = ImportSpeciesForm(request.POST or None)
+        
+        if form.is_valid():       
+            if form.cleaned_data['new_wid'] and cmodels.Species.objects.filter(wid = form.cleaned_data['new_wid']).exists():
+                form.errors["new_wid"] = ['The identifier specified is already in use']
+            else:                
+                rev = cmodels.RevisionDetail(user = request.user.profile, reason = form.cleaned_data["reason"])
+                rev.save()
+                
+                if species: # Create mutant
+                    import itertools
+                    
+                    through = cmodels.SpeciesComponent.species.through
+                        
+                    component = cmodels.SpeciesComponent.objects.filter(species = species).values_list("pk", flat=True).order_by("pk")
+                    
+                    species.pk = None
+                    species.id = None
+                    species.wid = form.cleaned_data['new_wid']
+                    species.name = form.cleaned_data['new_species']
+                    species.save(rev)
+                    
+                    through.objects.bulk_create(map(lambda x: through(species_id = x[0], speciescomponent_id = x[1]), itertools.izip(itertools.cycle([species.pk]), component)))
+                else: # Create species
+                    species = cmodels.Species(wid = form.cleaned_data['new_wid'], name = form.cleaned_data['new_species'])
+                    species.save(rev)
+                
+                return chelpers.render_queryset_to_response(
+                    species = species,
+                    request = request,
+                    template = 'cyano/importDataResult.html', 
+                    data = {
+                            'success': 'success',
+                            'message': "New %s %s created" % ("mutant" if species else "species", species.name),
+                           })
+
+    else:
+        form = ImportSpeciesForm(None)
+
+    return chelpers.render_queryset_to_response(
+        species = species,
+        request = request, 
+        template = 'cyano/importSpeciesForm.html', 
+        data = {
+            'form': form},
+        )
     
 def validate(request, species_wid):
     errors = chelpers.get_invalid_objects(cmodels.Species.objects.values('id').get(wid=species_wid)['id'])
@@ -1248,6 +1301,9 @@ def jobs(request, species = None):
     insp = inspect()
     res = insp.reserved()
     
+    # Admins see all jobs
+    is_admin = request.user.profile.is_admin()
+    
     if not res:
         return chelpers.render_queryset_to_response_error(
             request,
@@ -1257,12 +1313,12 @@ def jobs(request, species = None):
     for v in res.values():
         for job in v:
             kwargs = literal_eval(job["kwargs"])
-            if kwargs["user"] == request.user.pk or kwargs["user"] == request.user.username:
+            if is_admin or kwargs["user"] == request.user.pk or kwargs["user"] == request.user.username:
                 pending.append(kwargs)
 
     obj = TaskMeta.objects.all().order_by("pk")
     for o in obj:
-        if o.result["user"] == request.user.pk or o.result["user"] == request.user.username:
+        if is_admin or o.result["user"] == request.user.pk or o.result["user"] == request.user.username:
             if o.status == "SUCCESS" or o.status == "FAILURE":
                 finished.append(o)
             elif o.status == "PROGRESS":

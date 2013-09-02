@@ -126,3 +126,25 @@ class ImportDataForm(forms.Form):
 			choices.append((species['wid'], species['name'], ))
 		self.fields['species'].choices = choices
 		#self.fields['data_type'].choices = ImportDataForm.data_type.choices
+
+class ImportSpeciesForm(forms.Form):
+	new_species = forms.CharField(
+		required = True,
+		widget = forms.TextInput,
+		label = "species",
+		help_text = "Provide a new name"
+		)
+	new_wid = forms.SlugField(
+		required = True,
+		widget = forms.TextInput,
+		label = "species",
+		help_text = "Enter a new unique identifier"
+	)
+	reason = forms.CharField(
+		required = True,
+		widget = forms.TextInput,
+		label = "reason",
+		help_text = "Enter a summary for this import")
+		
+	def __init__(self, *args, **kwargs):
+		super(ImportSpeciesForm, self).__init__(*args, **kwargs)

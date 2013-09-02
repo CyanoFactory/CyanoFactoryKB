@@ -46,11 +46,14 @@ urlpatterns = patterns('cyano.views',
 	url(r'^export/?$', 'exportData'),
 	url(r'^' + _species_wid + '/export/?$', 'exportData'),
 
-	url(r'^import/?$', 'importData'),
-	url(r'^' + _species_wid + '/import/?$', 'importData'),
+	url(r'^import/data/?$', 'importData'),
+	url(r'^' + _species_wid + '/import/data/?$', 'importData'),
+    
+    url(r'^import/species/?$', 'importSpeciesData'),
+    url(r'^' + _species_wid + '/import/species/?$', 'importSpeciesData'),
 	
-    url(r'^import_submit/*$', 'importSubmitData'),
-    url(_species_wid + '/import_submit/?$', 'importSubmitData'),
+    url(r'^import/submit/?.*$', 'importSubmitData'),
+    url(_species_wid + '/import/submit/?.*$', 'importSubmitData'),
     
 	url(r'^' + _species_wid + '/validate/?$', 'validate'),
 	

@@ -1,0 +1,53 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Create new species form template
+{% endcomment %}
+
+{% load templatetags %}
+
+{% block head_title %}{{ block.super }} :: {% if species %}Create Mutant{% else %}Create new species{% endif %}{% endblock %}
+{% block page_title %}{% if species %}Create mutant{% else %}Create new species{% endif %}{% endblock %}
+{% block action_icons %}{% endblock %}
+
+{% block content %}
+<form id="form" name="importData" action="{% if species %}{% url "cyano.views.importSpeciesData" species_wid=species.wid %}{% else %}{% url "cyano.views.importSpeciesData" %}{% endif %}" method="post" enctype="multipart/form-data">
+	{% csrf_token %}
+	
+	<div class="block">
+	<h1>Information</h1>
+	<div class="content">
+	{% if species %}
+	A mutant is created for <b>{{ species.name }}</b>. All components of that organism will be copied to the mutant.<br/>
+	If you want to create an empty organism you can <a href="{% url "cyano.views.importSpeciesData" %}" title="Create new species">create a new species</a> instead.
+	{% else %}
+	A new empty species is created. If you want to create a mutant select a species in the navigation menu and select "Create Mutant" from the import menu. 
+	{% endif %}
+	</div>
+	</div>
+	
+	<div class="block">
+		<h1>Provide information for {% if species %}mutant{% else %}species{% endif %}</h1>
+		<div class="content" style="width:340px;">
+			Enter name of new {% if species %}mutant{% else %}species{% endif %}:<input class="text" type="text" name="new_species" id="new_species" style="width:300px;" oninput="javascript: document.getElementById('new_wid').value = this.value.replace(/[^A-Za-z0-9_-]/g, '-');"/>
+			{% if form.new_species.errors|length > 0%}<div class="errors">{{ form.new_species.errors|join:" " }}</div>{% endif %}
+			<br/>
+			And a new identifier:<input class="text" type="text" name="new_wid" id="new_wid" style="width:300px;"/>
+			{% if form.new_wid.errors|length > 0%}<div class="errors">{{ form.new_wid.errors|join:" " }}</div>{% endif %}
+			<noscript>
+			<div class="errors">Enable javascript to autogenerate an identifier</div>
+			</noscript>
+		</div>
+	</div>
+	
+	<div class="block">
+		<h1>Enter a short summary</h1>
+		<div class="content">
+			{% if form.reason.errors|length > 0 %}<div class="errors">{{ form.reason.errors|join:" " }}</div>{% endif %}
+			<input class="text" type="text" name="reason" id="reason" style="width:600px;"/>
+		</div>
+	</div>
+	
+	<input class="button" type="submit" value="Submit" />
+</form>
+{% endblock %}
