@@ -945,6 +945,7 @@ def importSpeciesData(request, species=None):
                 else: # Create species
                     species = cmodels.Species(wid = form.cleaned_data['new_wid'], name = form.cleaned_data['new_species'])
                     species.save(rev)
+                    cmodels.Pathway.add_boehringer_pathway(species, rev)
                 
                 return chelpers.render_queryset_to_response(
                     species = species,
