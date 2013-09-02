@@ -8,6 +8,7 @@ from django.core.exceptions import ObjectDoesNotExist
 import cyano.models as cmodels
 from bioparser import BioParser
 from django.db.transaction import commit_on_success
+from collections import OrderedDict
     
 class ProOpDB(BioParser):
     def parse(self, handle):
@@ -37,7 +38,7 @@ class ProOpDB(BioParser):
         i = 0
         
         self.tu = []
-        tus = []
+        tus = OrderedDict()
     
         for line in handle:
             if line.count("\t") == 7:
@@ -59,12 +60,13 @@ class ProOpDB(BioParser):
                 
                 tu = operon_str
                 
-                try:
-                    tus[self.tu.index(tu)].append(gene)
-                except ValueError:
-                    tus.append([tu, [gene]])
+                if tu in tus:
+                    tus[operon_str].append(gene)
+                else:
+                    tus[operon_str] = [gene]
         
-        for tu, genes in tus:
+        for k in tus.keys():
+            genes = tus[k]
             wid = "TU_" + "-".join(map(lambda x: x.wid, genes))
             try:
                 tu = cmodels.TranscriptionUnit.objects.get(wid = wid)
