@@ -82,26 +82,15 @@ class ImportDataForm(forms.Form):
 		label = "species",
 		help_text = "Select species to export"
 		)
-	new_species = forms.CharField(
-		required = False,
-		widget = forms.TextInput,
-		label = "species",
-		help_text = "Choose a name for a new species"
-		)
-	new_wid = forms.SlugField(
-		required = False,
-		widget = forms.TextInput,
-		label = "species",
-		help_text = "Enter a new unique identifier"
-	)
 	data_type = forms.ChoiceField(
 		required = True,
 		choices = [
-				("fasta", "FASTA"),
-				("fastagene", "FASTA (Gene list)"),
+				#("fasta", "FASTA"),
+				#("fastagene", "FASTA (Gene list)"),
 				("genbank", "GenBank"),
-				("optgene", "OptGene / BioOpt"),
-				("sbml", "System Biology Markup Language (SBML)")
+				#("optgene", "OptGene / BioOpt"),
+				("sbml", "System Biology Markup Language (SBML)"),
+				("proopdb", "ProOpDB Operon Prediction")
 				],
 		widget = forms.RadioSelect,
 		label = 'file format'

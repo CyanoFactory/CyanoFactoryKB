@@ -833,13 +833,17 @@ def importData(request, species=None):
     if request.method == 'POST':
         form = ImportDataForm(request.POST or None, request.FILES)
         
-        if form.is_valid():       
-            selected_species_wid = form.cleaned_data['species'] or form.cleaned_data['new_wid']
-            if selected_species_wid == '' or selected_species_wid is None:
-                form.errors["species"] = ['Please select a species or create a new one']
-            elif form.cleaned_data['new_wid'] and cmodels.Species.objects.filter(wid = selected_species_wid).exists():
-                form.errors["new_wid"] = ['The identifier specified is already in use']
+        if form.is_valid():
+            selected_species_wid = None
+            
+            if form.cleaned_data['species']:
+                selected_species_wid = form.cleaned_data['species']
+                if selected_species_wid == '' or selected_species_wid is None:
+                    form.errors["species"] = ['Please select a species']
             else:
+                selected_species_wid = species.wid
+            
+            if selected_species_wid:
                 #save to temporary file
                 #originalFileName, originalFileExtension = os.path.splitext(request.FILES['file'].name)[1]
                 originalFileExtension = os.path.splitext(request.FILES['file'].name)[1]
@@ -851,38 +855,36 @@ def importData(request, species=None):
                 
                 #read file
                 data_type = form.cleaned_data["data_type"]
-                request.POST["new_species"] = form.cleaned_data["new_species"]
-                request.POST["data_type"] = data_type
-                request.POST["reason"] = form.cleaned_data["reason"]
                 
-                if data_type == "fasta":
-                    from cyano.importer.fasta import FastaImporter
-                    importer = FastaImporter()
-                elif data_type == "fastagene":
-                    from cyano.importer.fasta_to_genbank import FastaToGenbankImporter
-                    importer = FastaToGenbankImporter()
-                elif data_type == "genbank":
-                    from cyano.importer.genbank import GenbankImporter
-                    importer = GenbankImporter()
-                elif data_type == "optgene":
-                    from cyano.importer.optgene import OptGeneImporter
-                    importer = OptGeneImporter()
+                args = {"filename": filename,
+                        "wid": selected_species_wid,
+                        "user": request.user.username,
+                        "reason": form.cleaned_data['reason']}
+
+                if data_type == "genbank":
+                    #from cyano.tasks import genbank
+                    #genbank.delay(chromosome = options["chromosome"],
+                    #              name = options["name"],
+                    #              **args)
+                    pass
+                elif data_type == "sbml":
+                    from cyano.tasks import sbml
+                    sbml.delay(**args)
+                elif data_type == "proopdb":
+                    from cyano.tasks import proopdb
+                    proopdb.delay(**args)
+                else:
+                    form.errors["data_type"] = ['Invalid datatype']
                 
-                if importer:
-                    importer.load(filename)
-                    return importer.preview(request, selected_species_wid)
-                
-                os.remove(filename)
-                raise Http404
-                
-                #if originalFileExtension == '.xlsx':
-                #    try:
-                #        batch_import_from_excel(selected_species_wid, filename, request.user)
-                #        success = True
-                #        message = 'Data successfully saved!'
-                #    except ValidationError as error:
-                #        success = False
-                #        message = 'Unable to import data: ' + ' '.join(error.messages)
+                if not "data_type" in form.errors:
+                    return chelpers.render_queryset_to_response(
+                        species = species,
+                        request = request,
+                        template = 'cyano/importDataResult.html', 
+                        data = {
+                                'success': 'success',
+                                'message': "New import job created for %s" % (request.FILES['file'].name),
+                               })
 
     else:
         form = ImportDataForm(None)
@@ -921,7 +923,7 @@ def importSpeciesData(request, species=None):
     if request.method == 'POST':
         form = ImportSpeciesForm(request.POST or None)
         
-        if form.is_valid():       
+        if form.is_valid():
             if form.cleaned_data['new_wid'] and cmodels.Species.objects.filter(wid = form.cleaned_data['new_wid']).exists():
                 form.errors["new_wid"] = ['The identifier specified is already in use']
             else:                

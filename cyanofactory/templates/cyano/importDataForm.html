@@ -21,21 +21,16 @@ Last updated: 2012-07-17
 	<div class="block">
 		<h1>Select {{ form.species.label }}</h1>
 		<div class="content" style="width:340px;">
-			<ol style="margin:0px; padding:0px; padding-left:20px;">
-			<li>Edit existing:
-				<select class="select" name="species" id="species" style="width:300px;" onchange="javascript: document.getElementById('new_species').value=''; document.getElementById('new_wid').value='';"/>
-					<option disabled>(Create a new species)</option>
-					{% for choice in form.species.field.choices %}
-					<option value="{{ choice.0 }}"{% if choice.0 == species.wid %} selected{% endif %}><i>{{ choice.1 }}</i></option>
-					{% endfor %}
-				</select><br/>
-				{% if form.species.errors|length > 0 %}<div class="errors">{{ form.species.errors|join:" " }}</div>{% endif %}<center><i>or</i></center></li>
-			<li>Enter name of new species:<input class="text" type="text" name="new_species" id="new_species" style="width:300px;" onchange="javascript: document.getElementById('species').selectedIndex=0;"/>
-			{% if form.new_species.errors|length > 0%}<div class="errors">{{ form.new_species.errors|join:" " }}</div>{% endif %}
-			<br/>
-			And a new identifier:<input class="text" type="text" name="new_wid" id="new_wid" style="width:300px;" onchange="javascript: document.getElementById('species').selectedIndex=0;"/></li>
-			{% if form.new_wid.errors|length > 0%}<div class="errors">{{ form.new_wid.errors|join:" " }}</div>{% endif %}
-			</ol>
+		{% if species %}
+		<b>{{ species.name }}</b> <a href="{% url "cyano.views.importData" %}" title="Change species">(change)</a>
+		{% else %}
+		<select class="select" name="species" id="species" style="width:300px;"/>
+			{% for choice in form.species.field.choices %}
+			<option value="{{ choice.0 }}"><i>{{ choice.1 }}</i></option>
+			{% endfor %}
+		</select><br/>
+		{% if form.species.errors|length > 0 %}<div class="errors">{{ form.species.errors|join:" " }}</div>{% endif %}
+		{% endif %}
 		</div>
 	</div>
 	

@@ -24,16 +24,13 @@ class BioParser(object):
         except ObjectDoesNotExist:
             raise ValueError("Species {} not found".format(wid))
 
-        if isinstance(user, UserProfile):
-            self.user = user
-        else:
+        try:
+            self.user = UserProfile.objects.get(user__username = user)
+        except:
             try:
-                self.user = UserProfile.objects.get(user__username = user)
+                self.user = UserProfile.objects.get(user__pk = int(user))
             except:
-                try:           
-                    self.user = UserProfile.objects.get(user__pk = int(user))
-                except:
-                    raise ValueError("Invalid username " + str(user))
+                raise ValueError("Invalid username " + str(user))
 
         self.detail = RevisionDetail(user = self.user, reason = reason)
     
