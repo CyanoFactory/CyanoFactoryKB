@@ -1047,7 +1047,7 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
     
     if not pk_set is None and len(pk_set) > 0 and isinstance(instance, Entry):
         if action == "post_add":
-            print "m2m-add:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
+            #print "m2m-add:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
 
             table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
     
@@ -1058,11 +1058,11 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
                 save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "I", table = table_meta, new_value = pk))
     
             if len(save_list) > 0:
-                print instance.wid + ": revisioning", len(save_list), "items"
+                #print instance.wid + ": revisioning", len(save_list), "items"
                 # Don't update the detail when actually nothing changed for that entry
                 RevisionManyToMany.objects.bulk_create(save_list)
         elif action == "post_delete":
-            print "m2m-del:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
+            #print "m2m-del:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
 
             table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
     
@@ -1073,7 +1073,7 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
                 save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "D", table = table_meta, new_value = pk))
     
             if len(save_list) > 0:
-                print instance.wid + ": deleting", len(save_list), "items"
+                #print instance.wid + ": deleting", len(save_list), "items"
                 # Don't update the detail when actually nothing changed for that entry
                 RevisionManyToMany.objects.bulk_create(save_list)
             pass
@@ -4148,40 +4148,11 @@ class Type(SpeciesComponent):
         verbose_name='Type'
         verbose_name_plural = 'Types'
             
-class CrossReference(SpeciesComponent):
-    #parent pointer
-    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_crossreference', parent_link=True, verbose_name='Species component')
+class CrossReference(EntryData):
+    xid = CharField(max_length=255, verbose_name='External ID')
+    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source')
     
-    #additional fields
-    xid = CharField(max_length=255, verbose_name='External ID', blank=True)
-    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source', blank=True)
-
-    #getters
-    def get_all_members(self, species):
-        return self.cross_referenced_entries.filter(species = species)
-    
-    def get_as_html_members(self, species, is_user_anonymous):
-        results = []
-        for m in self.get_all_members(species):
-            results.append('<a href="%s">%s</a>' % (m.get_absolute_url(species), m.wid))        
-        return format_list_html(results, comma_separated=True)
-
     class Meta:
-        concrete_entry_model = True
-        fieldsets = [
-            ('Type', {'fields': ['model_type']}),
-            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
-            ('Classification', {'fields': [{'verbose_name': "Referenced by", 'name': 'members'}]}),
-            ('Comments', {'fields': ['comments', 'publication_references']}),
-            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
-            ]
-        field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references',
-            'comments',
-            'publication_references', 
-            'created_detail', 'detail', 
-            ]
-        facet_fields = ['type', 'source']
         ordering = ['xid']
         verbose_name='Cross reference'
         verbose_name_plural = 'Cross references'

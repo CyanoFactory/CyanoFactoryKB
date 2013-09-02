@@ -40,8 +40,7 @@ class Genbank(BioParser):
             if "comment" in self.annotation:
                 self.species.comments += "\n" + self.annotation["comment"]
 
-            # TODO
-            self.species.genetic_code = '11'
+            self.species.genetic_code = ''
 
             self.record = record
             
@@ -54,6 +53,16 @@ class Genbank(BioParser):
         
         self.species.save(self.detail)
         
+        try:
+            chromosome = cmodels.Chromosome.objects.get(wid = self.chromosome)
+        except ObjectDoesNotExist:
+            chromosome = cmodels.Chromosome(wid = self.chromosome)
+        chromosome.name = self.name
+        chromosome.sequence = str(self.record.seq) # Cast needed, otherwise revision-compare fails!
+        chromosome.length = len(self.record.seq)
+        chromosome.save(self.detail)
+        chromosome.species.add(self.species)
+        
         if self.record.dbxrefs:
             for xref in self.record.dbxrefs:
                 # BioPython doesnt always properly split the db xrefs
@@ -61,18 +70,8 @@ class Genbank(BioParser):
                 for x in xref:
                     if ":" in x:
                         source, xid = x.split(":")
-                        wid = source + ":" + xid
-                        try:
-                            x = cmodels.CrossReference.objects.get(wid = slugify(wid))
-                        except ObjectDoesNotExist:
-                            x = cmodels.CrossReference(wid = slugify(wid))
-    
-                        x.name = wid
-                        x.xid = xid
-                        x.source = source
-                        x.save(self.detail)
-                        x.species.add(self.species)
-                        self.species.cross_references.add(x)
+                        x, _ = cmodels.CrossReference.objects.get_or_create(source = source, xid = xid)
+                        chromosome.cross_references.add(x)
     
         if "references" in self.annotation:
             for ref in self.annotation["references"]:
@@ -113,56 +112,19 @@ class Genbank(BioParser):
                 pubref.save(self.detail)
     
                 if ref.pubmed_id:
-                    wid = "PUBMED" + ":" + ref.pubmed_id
-                    try:
-                        xref = cmodels.CrossReference.objects.get(wid = slugify(wid))
-                    except ObjectDoesNotExist:
-                        xref = cmodels.CrossReference(wid = slugify(wid))
-                    xref.name = wid
-                    xref.xid = ref.pubmed_id
-                    xref.source = "PUBMED"
-                    xref.save(self.detail)
-                    xref.species.add(self.species)
+                    xref, _ = cmodels.CrossReference.objects.get_or_create(source = "PUBMED", xid = ref.pubmed_id)
                     pubref.cross_references.add(xref)
     
                 if ref.medline_id:
-                    wid = "MEDLINE" + ":" + ref.medline_id
-                    try:
-                        xref = cmodels.CrossReference.objects.get(wid = slugify(wid))
-                    except ObjectDoesNotExist:
-                        xref = cmodels.CrossReference(wid = slugify(wid))
-                    xref.name = wid
-                    xref.xid = ref.medline_id
-                    xref.source = "MEDLINE"
-                    xref.save(self.detail)
-                    xref.species.add(self.species)
+                    xref, _ = cmodels.CrossReference.objects.get_or_create(source = "MEDLINE", xid = ref.medline_id)
                     pubref.cross_references.add(xref)
                     
                 pubref.species.add(self.species)
                 self.species.publication_references.add(pubref)
     
         if "gi" in self.annotation:
-            wid = "GI" + ":" + self.annotation["gi"]
-            try:
-                xref = cmodels.CrossReference.objects.get(wid = slugify(wid))
-            except ObjectDoesNotExist:
-                xref = cmodels.CrossReference(wid = slugify(wid))
-            xref.name = wid
-            xref.xid = self.annotation["gi"]
-            xref.source = "GI"
-            xref.save(self.detail)
-            xref.species.add(self.species)
-            self.species.cross_references.add(xref)
-    
-        try:
-            chromosome = cmodels.Chromosome.objects.get(wid = self.chromosome)
-        except ObjectDoesNotExist:
-            chromosome = cmodels.Chromosome(wid = self.chromosome)
-        chromosome.name = self.name
-        chromosome.sequence = str(self.record.seq) # Cast needed, otherwise revision-compare fails!
-        chromosome.length = len(self.record.seq)
-        chromosome.save(self.detail)
-        chromosome.species.add(self.species)
+            xref, _ = cmodels.CrossReference.objects.get_or_create(xid = self.annotation["gi"], source = "GI")
+            chromosome.cross_references.add(xref)
         
         features = self.record.features
         
@@ -194,6 +156,12 @@ class Genbank(BioParser):
         for i, v in enumerate(sorted_cds_values):
 
             qualifiers = v.qualifiers
+            
+            if not self.species.genetic_code:
+                if "transl_table" in qualifiers:
+                    self.species.genetic_code = qualifiers["transl_table"][0]
+                    self.species.save(self.detail)
+            
             try:
                 g = cmodels.Gene.objects.get(wid = slugify(qualifiers["locus_tag"][0]))
             except ObjectDoesNotExist:
@@ -229,31 +197,12 @@ class Genbank(BioParser):
                 for xref in qualifiers["db_xref"]:
                     if ":" in xref:
                         source, xid = xref.split(":")
-                        wid = source + ":" + xid
-                        try:
-                            xref = cmodels.CrossReference.objects.get(wid = slugify(wid))
-                        except ObjectDoesNotExist:
-                            xref = cmodels.CrossReference(wid = slugify(wid))
-                        xref.name = wid
-                        xref.xid = xid
-                        xref.source = source
-                                                        
-                        xref.save(self.detail)
-                        xref.species.add(self.species)
+                        xref, _ = cmodels.CrossReference.objects.get_or_create(source = source, xid = xid)
                         g.cross_references.add(xref)
             
             if "EC_number" in qualifiers:
                 for ec in qualifiers["EC_number"]:
-                    wid = "EC" + ":" + ec
-                    try:
-                        xref = cmodels.CrossReference.objects.get(wid = slugify(wid))
-                    except ObjectDoesNotExist:
-                        xref = cmodels.CrossReference(wid = slugify(wid))
-                    xref.name = wid
-                    xref.source = "EC"
-                    xref.xid = ec
-                    xref.save(self.detail)
-                    xref.species.add(self.species)
+                    xref, _ = cmodels.CrossReference.objects.get_or_create(source = "EC", xid = ec)
                     g.cross_references.add(xref)
             
             if "gene_synonym" in qualifiers:
@@ -270,7 +219,6 @@ class Genbank(BioParser):
             
             if "protein_id" in qualifiers:
                 protxref = qualifiers["protein_id"][0]
-                protxref_wid = "Refseq" + ":" + protxref
                 wid = slugify(g.wid + "_Monomer")
                 try:
                     protein = cmodels.ProteinMonomer.objects.get(wid = wid)
@@ -280,20 +228,13 @@ class Genbank(BioParser):
                 if "product" in qualifiers:
                     protein.name = qualifiers["product"][0]
                     
-                try:
-                    xref = cmodels.CrossReference.objects.get(wid = slugify(protxref_wid))
-                except ObjectDoesNotExist:
-                    xref = cmodels.CrossReference(wid = slugify(protxref_wid))
-                
+                xref, _ = cmodels.CrossReference.objects.get_or_create(source = "RefSeq", xid = protxref)
+
                 protein.gene = g
                 protein.save(self.detail)
     
                 protein.species.add(self.species)
-            
-                xref.xid = protxref
-                xref.source = "RefSeq"
-                xref.save(self.detail)
-                xref.species.add(self.species)
+
                 protein.cross_references.add(xref)
     
             g.species.add(self.species)
