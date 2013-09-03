@@ -889,25 +889,6 @@ def importData(request, species=None):
 
 @login_required
 @resolve_to_objects
-def importSubmitData(request, species=None):
-    from cyano.importer.genbank import GenbankImporter
-    if request.method == 'POST':
-        data_type = request.POST["data_type"]
-        filename = request.POST['filename']
-        #if data_type == "fasta":
-            
-        if data_type == "fastagene":
-            g = GenbankImporter()
-            g.load(filename)
-            os.remove(filename)
-            return g.submit(request, request.POST['species_wid'])
-
-        os.remove(filename)
-        raise Http404
-    pass
-
-@login_required
-@resolve_to_objects
 @commit_on_success
 def importSpeciesData(request, species=None):
     data = {}
