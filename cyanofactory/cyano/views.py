@@ -830,16 +830,16 @@ def exportData(request, species_wid=None):
 @login_required
 @resolve_to_objects
 def importData(request, species=None):
+    data = {}
+    
     if request.method == 'POST':
-        form = ImportDataForm(request.POST or None, request.FILES)
+        form = ImportDataForm(request.POST, request.FILES)
         
         if form.is_valid():
             selected_species_wid = None
-            
-            if form.cleaned_data['species']:
-                selected_species_wid = form.cleaned_data['species']
-                if selected_species_wid == '' or selected_species_wid is None:
-                    form.errors["species"] = ['Please select a species']
+
+            if form.cleaned_data.get('species'):
+                selected_species_wid = form.cleaned_data.get('species')
             else:
                 selected_species_wid = species.wid
             
@@ -862,39 +862,29 @@ def importData(request, species=None):
                         "reason": form.cleaned_data['reason']}
 
                 if data_type == "genbank":
-                    #from cyano.tasks import genbank
-                    #genbank.delay(chromosome = options["chromosome"],
-                    #              name = options["name"],
-                    #              **args)
-                    pass
+                    from cyano.tasks import genbank
+                    genbank.delay(chromosome = form.cleaned_data["chromosome"],
+                                  name = form.cleaned_data["chromosome_wid"],
+                                  **args)
                 elif data_type == "sbml":
                     from cyano.tasks import sbml
                     sbml.delay(**args)
                 elif data_type == "proopdb":
                     from cyano.tasks import proopdb
                     proopdb.delay(**args)
-                else:
-                    form.errors["data_type"] = ['Invalid datatype']
                 
-                if not "data_type" in form.errors:
-                    return chelpers.render_queryset_to_response(
-                        species = species,
-                        request = request,
-                        template = 'cyano/importDataResult.html', 
-                        data = {
-                                'success': 'success',
-                                'message': "New import job created for %s" % (request.FILES['file'].name),
-                               })
+                data['success'] = 'success'
+                data['message'] = "New import job created for %s" % (request.FILES['file'].name)
 
     else:
         form = ImportDataForm(None)
 
+    data["form"] = form
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
         template = 'cyano/importDataForm.html', 
-        data = {
-            'form': form},
+        data = data
         )
 
 @login_required
@@ -920,53 +910,52 @@ def importSubmitData(request, species=None):
 @resolve_to_objects
 @commit_on_success
 def importSpeciesData(request, species=None):
+    data = {}
+    
     if request.method == 'POST':
-        form = ImportSpeciesForm(request.POST or None)
+        form = ImportSpeciesForm(request.POST)
         
-        if form.is_valid():
-            if form.cleaned_data['new_wid'] and cmodels.Species.objects.filter(wid = form.cleaned_data['new_wid']).exists():
-                form.errors["new_wid"] = ['The identifier specified is already in use']
-            else:                
-                rev = cmodels.RevisionDetail(user = request.user.profile, reason = form.cleaned_data["reason"])
-                rev.save()
+        if form.is_valid():            
+            rev = cmodels.RevisionDetail(user = request.user.profile, reason = form.cleaned_data["reason"])
+            rev.save()
+            
+            mutant = False
+            if species: # Create mutant
+                import itertools
                 
-                if species: # Create mutant
-                    import itertools
-                    
-                    through = cmodels.SpeciesComponent.species.through
-                        
-                    component = cmodels.SpeciesComponent.objects.filter(species = species).values_list("pk", flat=True).order_by("pk")
-                    
-                    species.pk = None
-                    species.id = None
-                    species.wid = form.cleaned_data['new_wid']
-                    species.name = form.cleaned_data['new_species']
-                    species.save(rev)
-                    
-                    through.objects.bulk_create(map(lambda x: through(species_id = x[0], speciescomponent_id = x[1]), itertools.izip(itertools.cycle([species.pk]), component)))
-                else: # Create species
-                    species = cmodels.Species(wid = form.cleaned_data['new_wid'], name = form.cleaned_data['new_species'])
-                    species.save(rev)
-                    cmodels.Pathway.add_boehringer_pathway(species, rev)
+                mutant = True
                 
-                return chelpers.render_queryset_to_response(
-                    species = species,
-                    request = request,
-                    template = 'cyano/importDataResult.html', 
-                    data = {
-                            'success': 'success',
-                            'message': "New %s %s created" % ("mutant" if species else "species", species.name),
-                           })
+                through = cmodels.SpeciesComponent.species.through
+                    
+                component = cmodels.SpeciesComponent.objects.filter(species = species).values_list("pk", flat=True).order_by("pk")
+                
+                species.pk = None
+                species.id = None
+                species.wid = form.cleaned_data['new_wid']
+                species.name = form.cleaned_data['new_species']
+                species.save(rev)
+                
+                through.objects.bulk_create(map(lambda x: through(species_id = x[0], speciescomponent_id = x[1]), itertools.izip(itertools.cycle([species.pk]), component)))
+            else: # Create species
+                species = cmodels.Species(wid = form.cleaned_data['new_wid'], name = form.cleaned_data['new_species'])
+                species.save(rev)
+                cmodels.Pathway.add_boehringer_pathway(species, rev)
+
+            data['success'] = 'success'
+            data['message'] = "New %s %s created" % ("mutant" if mutant else "species", species.name)
+            
+            if not mutant:
+                species = None
 
     else:
         form = ImportSpeciesForm(None)
 
+    data["form"] = form
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
         template = 'cyano/importSpeciesForm.html', 
-        data = {
-            'form': form},
+        data = data,
         )
     
 def validate(request, species_wid):

@@ -12,6 +12,8 @@ import djcelery
 
 from settings_private import *
 
+DATABASES["djcelery"] = DATABASES["default"]
+
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 ADMINS = (
@@ -114,6 +116,7 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
 	'django_extensions',
     'endless_pagination',
+    'widget_tweaks',
 	
 	#apps
 	'public',
