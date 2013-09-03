@@ -30,13 +30,11 @@ class Genbank(BioParser):
 
             self.annotation = record.annotations
 
-            if "organism" in self.annotation:
-                self.species.name = self.annotation["organism"]
-
             self.species.comments = ""
     
             if record.description != None:
                 self.species.comments = record.description
+            
             if "comment" in self.annotation:
                 self.species.comments += "\n" + self.annotation["comment"]
 
