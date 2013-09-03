@@ -67,7 +67,10 @@ class ProOpDB(BioParser):
         
         for k in tus.keys():
             genes = tus[k]
-            wid = "TU_" + "-".join(map(lambda x: x.wid, genes))
+            wid = "TU_" + "-".join(map(lambda x: x.wid, genes[:5]))
+            if len(genes) > 5:
+                wid += "-et_al"
+            
             try:
                 tu = cmodels.TranscriptionUnit.objects.get(wid = wid)
             except ObjectDoesNotExist:
@@ -76,6 +79,7 @@ class ProOpDB(BioParser):
 
     @commit_on_success
     def apply(self):
+        
         self.detail.save()
 
         i = 0
@@ -86,6 +90,8 @@ class ProOpDB(BioParser):
             if hasattr(self, "notify_progress"):
                 outstr = "Importing TU %s (%d/%d)" % (tu.wid, i, self.count)
                 self.notify_progress(current = i, total = self.count, message = outstr)
+            
+            #print tu, genes
             
             tu.save(self.detail)
             tu.species.add(self.species)
