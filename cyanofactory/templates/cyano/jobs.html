@@ -19,9 +19,10 @@ User list template
 {% endblock %}
 
 {% block extrastyles %}
-#list{
-	width:100%;
+#detail tbody.data tr td:nth-child(2){
+	width:20%;
 }
+
 {% endblock %}
 
 {% block content %}
@@ -30,13 +31,13 @@ User list template
 {% if running|length > 0 %}
 <tbody class="data">
 	<tr>
-		<th colspan="2">Running jobs</th>
+		<th colspan="3">Running jobs</th>
 	</tr>
 {% endif %}
 
 {% for object in running %}
 <tr>
-	<th><progress max="{{ object.total }}" value="{{ object.current }}">
+	<th colspan="2"><progress max="{{ object.total }}" value="{{ object.current }}" style="width:99%;">
 				<strong>Progress: {{ object.current }} of {{ object.total }} done.</strong>
 		</progress>
 	</th>
@@ -47,41 +48,42 @@ User list template
 {% if running|length > 0 %}
 </tbody>
 <tbody class="spacing">
-	<tr><td colspan="2">&nbsp;</td></tr>
+	<tr><td colspan="3">&nbsp;</td></tr>
 </tbody>
 {% endif %}
 
 {% if pending|length > 0 %}
 <tbody class="data">
 	<tr>
-		<th colspan="2">Pending jobs</th>
+		<th colspan="3">Pending jobs</th>
 	</tr>
 {% endif %}
 
 {% for object in pending %}
 <tr>
-	<td colspan="2">{{ object.reason }}</td>
+	<td colspan="3">{{ object.reason }}</td>
 </tr>
 {% endfor %}
 
 {% if pending|length > 0 %}
 </tbody>
 <tbody class="spacing">
-	<tr><td colspan="2">&nbsp;</td></tr>
+	<tr><td colspan="3">&nbsp;</td></tr>
 </tbody>
 {% endif %}
 
 {% if finished|length > 0 %}
 <tbody class="data">
 	<tr>
-		<th colspan="2">Finished jobs</th>
+		<th colspan="3">Finished jobs</th>
 	</tr>
 {% endif %}
 
 {% for object in finished %}
 	<tr>
 		<th>{{ object.status|title }}</td>
-		<td colspan="2">{{ object.result.message }}{% if object.status == "FAILURE" %} ({{ object.result.result }}){% endif %}</td>
+		<td>{{ object.date_done }}</td>
+		<td>{{ object.result.message }}{% if object.status == "FAILURE" %} ({{ object.result.result }}){% endif %}</td>
 	</tr>
 {% endfor %}
 

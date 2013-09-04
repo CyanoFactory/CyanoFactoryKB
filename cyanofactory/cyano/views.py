@@ -1321,6 +1321,8 @@ def jobs(request, species = None):
             elif o.status == "PROGRESS":
                 running.append(o.result)
 
+    finished = sorted(finished, key = lambda f: f.date_done, reverse = True)
+
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
