@@ -8,7 +8,11 @@ Last updated: 2012-07-17
 
 import os
 
+import djcelery
+
 from settings_private import *
+
+DATABASES["djcelery"] = DATABASES["default"]
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -85,7 +89,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
+    #'django.contrib.messages.middleware.MessageMiddleware',
 )
 
 ROOT_URLCONF = os.path.dirname(os.path.realpath(__file__)).split(os.sep)[-1] + '.urls'
@@ -99,6 +103,8 @@ HAYSTACK_SITECONF = 'public.search_indexes'
 HAYSTACK_SEARCH_ENGINE  = 'xapian'
 HAYSTACK_XAPIAN_PATH = os.path.join(os.path.dirname(__file__), 'xapian_index')
 
+djcelery.setup_loader()
+
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -110,19 +116,21 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
 	'django_extensions',
     'endless_pagination',
+    'widget_tweaks',
 	
 	#apps
 	'public',
     #'biosql',
     'cyano',
     'db_xref',
-    'django_dumpdb',
     #'biowarehouse',
 	'bioparser',
     'boehringer',
 	'kegg',
 	
 	#helpers
+    'django_dumpdb',
+    'djcelery',
 	'haystack',
     
     'debug_toolbar',

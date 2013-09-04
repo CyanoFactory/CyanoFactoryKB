@@ -509,8 +509,14 @@ select.select{
 }
 #detail tbody.data tr td{
 	border-left:1px solid #3d80b3;
-	border-right:1px solid #3d80b3;
-	width:100%;}
+	width:100%;
+}
+#detail tbody.data tr th:first-child{
+	width:10%;
+}
+#detail tbody.data tr td:last-child{
+	border-right: 1px solid #3d80b3;
+}
 #detail tbody.spacing tr td{
 	border:none;
 	background-color:transparent;

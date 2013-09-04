@@ -1047,7 +1047,7 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
     
     if not pk_set is None and len(pk_set) > 0 and isinstance(instance, Entry):
         if action == "post_add":
-            print "m2m-add:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
+            #print "m2m-add:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
 
             table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
     
@@ -1058,11 +1058,11 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
                 save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "I", table = table_meta, new_value = pk))
     
             if len(save_list) > 0:
-                print instance.wid + ": revisioning", len(save_list), "items"
+                #print instance.wid + ": revisioning", len(save_list), "items"
                 # Don't update the detail when actually nothing changed for that entry
                 RevisionManyToMany.objects.bulk_create(save_list)
         elif action == "post_delete":
-            print "m2m-del:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
+            #print "m2m-del:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
 
             table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
     
@@ -1073,7 +1073,7 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
                 save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "D", table = table_meta, new_value = pk))
     
             if len(save_list) > 0:
-                print instance.wid + ": deleting", len(save_list), "items"
+                #print instance.wid + ": deleting", len(save_list), "items"
                 # Don't update the detail when actually nothing changed for that entry
                 RevisionManyToMany.objects.bulk_create(save_list)
             pass
@@ -1232,8 +1232,8 @@ class SpeciesComponent(Entry):
     '''
     species = ManyToManyField("Species", verbose_name = "Organism containing that entry", related_name = "species")
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
-    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_entries', verbose_name='Cross references')
-    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_entries', verbose_name='Publication references')
+    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
+    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publication references')
 
     #getters
     @permalink
@@ -2602,6 +2602,40 @@ class Pathway(SpeciesComponent):
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_pathway', parent_link=True, verbose_name='Species component')
     
     #helpers
+    @staticmethod
+    def add_boehringer_pathway(species, revdetail):
+        wid = "Boehringer"
+        try:
+            x = Pathway.objects.get(wid = wid, species = species)
+            return
+        except ObjectDoesNotExist:
+            # Create new boehringer (if it was never created yet) or assign to one
+            try:
+                x = Pathway.objects.get(wid = wid)
+            except ObjectDoesNotExist:
+                x = Pathway(wid = wid)
+
+        x.name = "Biochemical Pathways"
+        x.save(revdetail)
+        x.species.add(species)
+    
+    @staticmethod
+    def add_kegg_pathway(species, revdetail):
+        from kegg.models import Map
+        
+        crs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
+        maps = Map.objects.filter(ec_numbers__name__in = crs).distinct()
+        
+        for map_ in maps:
+            try:
+                x = Pathway.objects.get(wid = map_.name)
+            except ObjectDoesNotExist:
+                x = Pathway(wid = map_.name)
+            
+            x.name = map_.title
+            x.save(revdetail)
+            x.species.add(species)
+    
     def extract_ecs(self, text):
         """Extracts EC numbers out of a string and returns a list with all numbers"""
         return re.findall(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+", text)
@@ -2623,7 +2657,7 @@ class Pathway(SpeciesComponent):
     
     def get_boehringer_hits(self, species):
         import boehringer.models as bmodels
-        species_ecs = CrossReference.objects.filter(species = species, source = "EC").values_list('xid', flat=True)
+        species_ecs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
         enzymes = bmodels.Enzyme.objects.filter(ec__in = species_ecs).order_by('title')
 
         species_metabolites = Metabolite.objects.filter(species = species).values_list('name', flat=True)
@@ -2669,7 +2703,7 @@ class Pathway(SpeciesComponent):
         from xml.etree.ElementTree import ElementTree, Element
         
         # All Pathways of the organism
-        species_ecs = CrossReference.objects.filter(species = species, source = "EC").values_list('xid', flat=True)
+        species_ecs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
 
         with open("{}/kegg/img/{}.png".format(settings.STATICFILES_DIRS[0], self.wid), "rb") as image:
 
@@ -4148,40 +4182,11 @@ class Type(SpeciesComponent):
         verbose_name='Type'
         verbose_name_plural = 'Types'
             
-class CrossReference(SpeciesComponent):
-    #parent pointer
-    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_crossreference', parent_link=True, verbose_name='Species component')
+class CrossReference(EntryData):
+    xid = CharField(max_length=255, verbose_name='External ID')
+    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source')
     
-    #additional fields
-    xid = CharField(max_length=255, verbose_name='External ID', blank=True)
-    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source', blank=True)
-
-    #getters
-    def get_all_members(self, species):
-        return self.cross_referenced_entries.filter(species = species)
-    
-    def get_as_html_members(self, species, is_user_anonymous):
-        results = []
-        for m in self.get_all_members(species):
-            results.append('<a href="%s">%s</a>' % (m.get_absolute_url(species), m.wid))        
-        return format_list_html(results, comma_separated=True)
-
     class Meta:
-        concrete_entry_model = True
-        fieldsets = [
-            ('Type', {'fields': ['model_type']}),
-            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
-            ('Classification', {'fields': [{'verbose_name': "Referenced by", 'name': 'members'}]}),
-            ('Comments', {'fields': ['comments', 'publication_references']}),
-            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
-            ]
-        field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references',
-            'comments',
-            'publication_references', 
-            'created_detail', 'detail', 
-            ]
-        facet_fields = ['type', 'source']
         ordering = ['xid']
         verbose_name='Cross reference'
         verbose_name_plural = 'Cross references'

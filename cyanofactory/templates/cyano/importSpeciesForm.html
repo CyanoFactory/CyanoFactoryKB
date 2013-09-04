@@ -1,0 +1,115 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Create new species form template
+{% endcomment %}
+
+{% load templatetags %}
+{% load widget_tweaks %}
+
+{% block head_title %}{{ block.super }} :: {% if species %}Create Mutant{% else %}Create new species{% endif %}{% endblock %}
+{% block page_title %}{% if species %}Create mutant{% else %}Create new species{% endif %}{% endblock %}
+{% block action_icons %}{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<script language="javascript" type="text/javascript">
+$(document).on('click','.close_box',function(){
+    $(this).parent().fadeTo(300,0,function(){
+          $(this).remove();
+    });
+});
+
+$(document).on('input', '#id_new_species',function(){
+	$('#id_new_wid').val($(this).val().replace(/[^A-Za-z0-9_-]/g, '-'))
+});
+</script>
+{% endblock %}
+
+{% block extrastyles %}
+{{ block.super }}
+
+.close_box {
+    #background:blue;
+    color:#fff;
+    padding:2px 5px;
+    display:inline;
+    position:absolute;
+    right:0px;
+    border-radius:3px;
+    cursor:pointer;
+}
+
+#form .block#info {	
+	border: 1px solid #2DD02D;
+}
+#form .block#info h1{
+	border: 1px solid #2DD02D;
+	background:#2DD02D;
+}
+
+#content ul {
+	list-style: none;
+    list-style-type: none;
+	margin: 0;
+	padding-left: 0;
+}
+{% endblock %}
+
+{% block content %}
+<form id="form" name="importData" action="{% if species %}{% url "cyano.views.importSpeciesData" species_wid=species.wid %}{% else %}{% url "cyano.views.importSpeciesData" %}{% endif %}" method="post" enctype="multipart/form-data">
+	{% csrf_token %}
+	
+	{% if success %}
+	<div class="block" id="info" style="position:relative;">
+		<div class="close_box">X</div>
+		<h1>{{ success|yesno:"Success,Error,Maybe"}}</h1>
+		<div class="content" style="width:340px;">
+		{{ message }}
+		</div>
+	</div>
+	{% endif %}
+	
+	<noscript>
+	<div class="block">
+	<h1>Enable javascript</h1>
+	<div class="errors">
+	For a better experience enabling javascript is recommended
+	</div>
+	</div>
+	</noscript>
+	
+	<div class="block">
+	<h1>Information</h1>
+	<div class="content">
+	{% if species %}
+	A mutant is created for <b>{{ species.name }}</b>. All components of that organism will be copied to the mutant.<br/>
+	If you want to create an empty organism you can <a href="{% url "cyano.views.importSpeciesData" %}" title="Create new species">create a new species</a> instead.
+	{% else %}
+	A new empty species is created. If you want to create a mutant select a species in the navigation menu and select "Create Mutant" from the import menu. 
+	{% endif %}
+	</div>
+	</div>
+	
+	<div class="block">
+		<h1>Provide information for {% if species %}mutant{% else %}species{% endif %}</h1>
+		<div class="content" style="width:340px;">
+			Enter name of new {% if species %}mutant{% else %}species{% endif %}:{% render_field form.new_species class+="text" style+="width:300px" %}
+			{% if form.new_species.errors|length > 0%}<div class="errors">{{ form.new_species.errors|join:" " }}</div>{% endif %}
+			<br/>
+			{{ form.new_wid.label }}:{% render_field form.new_wid class+="text" style+="width:300px" %}
+			{% if form.new_wid.errors|length > 0%}<div class="errors">{{ form.new_wid.errors|join:" " }}</div>{% endif %}
+		</div>
+	</div>
+	
+	<div class="block">
+		<h1>{{ form.reason.label }}</h1>
+		<div class="content">
+			{% render_field form.reason class+="text" style+="width:600px" %}
+			{% if form.reason.errors|length > 0 %}<div class="errors">{{ form.reason.errors|join:" " }}</div>{% endif %}
+		</div>
+	</div>
+	
+	<input class="button" type="submit" value="Submit" />
+</form>
+{% endblock %}

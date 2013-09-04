@@ -6,6 +6,11 @@ from django.db.transaction import commit_on_success
 from cyano.helpers import slugify
 from cyano.models import Species, RevisionDetail, UserProfile
 
+    
+    ##def notify_progress(self, current, total, message):
+    ##    self.stdout.write(message)
+    
+
 class CyanoCommand(BaseCommand):
     """
     Verifies arguments of all Cyanofactory management commands
@@ -20,7 +25,12 @@ class CyanoCommand(BaseCommand):
                     action='store',
                     dest='reason',
                     default=False,
-                    help='Reason for this operation')
+                    help='Reason for this operation'),
+        make_option('--user', '-u',
+                    action='store',
+                    dest='user',
+                    default=False,
+                    help='User doing the import')
         )
     
     verify_species_exists = True
@@ -47,12 +57,15 @@ class CyanoCommand(BaseCommand):
             else:
                 species_obj = Species(wid = wid)
         
+        if not options["user"]:
+            options["user"] = "management"
+        
         revdetail = RevisionDetail()
-        revdetail.user = UserProfile.objects.get(user__username__exact = "management")
+        revdetail.user = UserProfile.objects.get(user__username = options["user"])
         revdetail.reason = reason
         revdetail.save()
         
         self.handle_command(species_obj, revdetail, *args, **options)
-        
+
     def handle_command(self, species, revision, *args, **options):
         raise CommandError("handle_command no implement")
