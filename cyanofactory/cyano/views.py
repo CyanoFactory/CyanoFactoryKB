@@ -52,11 +52,11 @@ def species(request, species):
             [0, 'Compartments', cmodels.Compartment.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
         ])
         
-        chrs = cmodels.Chromosome.objects.filter(species__id = species.id)
-        chrcontent = sum(chro.length for chro in chrs)
-        gc_content = 0 if len(chrs) == 0 else sum([chro.get_gc_content() * chro.length for chro in chrs]) / chrcontent        
+        chrs = cmodels.Chromosome.objects.filter(species__id = species.id).values_list("length", "sequence")
+        chrcontent = sum(chro[0] for chro in chrs)
+        gc_content = 0 if len(chrs) == 0 else sum([cmodels.Chromosome(sequence = chro[1]).get_gc_content() * chro[0] for chro in chrs]) / chrcontent        
         content.append([
-            [0, 'Chromosomes', chrs.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Chromosome'})],
+            [0, 'Chromosomes', len(chrs), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Chromosome'})],
             [1, 'Length', chrcontent, 'nt'],
             [1, 'GC-content', ('%0.1f' % (gc_content * 100)), '%'],
         ])
