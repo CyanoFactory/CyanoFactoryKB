@@ -8,6 +8,7 @@ Last updated: 2012-07-17
 
 from django.db import models as dj_models
 from django.test import TestCase
+
 from public import helpers, models
 
 '''
@@ -17,7 +18,7 @@ TODO
 
 class Test(TestCase):
 	def test_data_model(self):		
-		for name, model in helpers.getModels().iteritems():
+		for _, model in helpers.getModels().iteritems():
 			validate_fields(model)
 			validate_model(model)
 		for tmp in helpers.getEntryDatas():

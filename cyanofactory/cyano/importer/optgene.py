@@ -1,14 +1,5 @@
 from importer import Importer
-from importer import ParserError
-from django.core.exceptions import ObjectDoesNotExist
-import cyano.models as models
-from cyano.helpers import format_field_detail_view, render_queryset_to_response,\
-    objectToQuerySet, format_field_detail_view_diff
-from django.db.models.related import RelatedObject
-from django.template.defaultfilters import capfirst
 from bioparser.optgene import OptGeneParser
-import re
-import StringIO
 
 class OptGeneImporter(Importer):
     def __init__(self):

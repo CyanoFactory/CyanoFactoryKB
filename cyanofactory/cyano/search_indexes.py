@@ -6,15 +6,16 @@ Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
 '''
 
-from django.contrib.auth.models import User
+import settings
+
 from django.db.models.fields import BooleanField, NullBooleanField
 from django.db.models.fields.related import ForeignKey, ManyToManyField
+
 from haystack import site
-from haystack.indexes import CharField, IntegerField, SearchIndex, ModelSearchIndex
+from haystack.indexes import CharField, IntegerField, ModelSearchIndex
+
 from cyano.helpers import getModels, getModelDataFields
-from cyano.models import Entry, SpeciesComponent
-import datetime
-import settings
+import cyano.models as cmodels
 
 def truncate_fields(obj):
 	for key, val in obj.iteritems():
@@ -35,8 +36,8 @@ class EntryIndex(ModelSearchIndex):
 		
 	# Hack to avoid error: "xapian.InvalidArgumentError: Term too long (> 245)"
 	# See: https://groups.google.com/forum/?fromgroups#!topic/django-haystack/hRJKcPNPXqw
-	def prepare(self, object):
-		self.prepared_data = truncate_fields(super(EntryIndex, self).prepare(object))		
+	def prepare(self, obj):
+		self.prepared_data = truncate_fields(super(EntryIndex, self).prepare(obj))		
 		return self.prepared_data
 		
 	class Meta:
@@ -68,14 +69,14 @@ def format_field_for_indexing(field=None, related=None, depth=0):
 		return ''
 		
 	if isinstance(field, ManyToManyField) or related is not None:
-		if (depth <= 0) or (not issubclass(field_model, Entry)):
+		if (depth <= 0) or (not issubclass(field_model, cmodels.Entry)):
 			result  = '\t'*depth + '{%% for %s in %s.%s.all %%}\n' % (name_child, name_obj, field_name, )
 			for subfield in field_model._meta.fields + field_model._meta.many_to_many:
 				result += format_field_for_indexing(field=subfield, depth=depth+1)
 			result += '\t'*depth + '{% endfor %}\n'
 			return result
 	elif isinstance(field, ForeignKey):
-		if (depth <= 0) or (not issubclass(field_model, Entry)):
+		if (depth <= 0) or (not issubclass(field_model, cmodels.Entry)):
 			result  = '\t'*depth + '{%% with %s=%s.%s %%}\n' % (name_child, name_obj, field_name, )
 			for subfield in field_model._meta.fields + field_model._meta.many_to_many:
 				result += format_field_for_indexing(field=subfield, depth=depth+1)
@@ -103,7 +104,7 @@ for modelname, model in getModels().iteritems():
 	f.close()
 	
 	#create index class
-	if issubclass(model, SpeciesComponent):
+	if issubclass(model, cmodels.SpeciesComponent):
 		index = type(model.__class__.__name__ + 'Index', (SpeciesComponentIndex, ), {})
 	else:
 		index = type(model.__class__.__name__ + 'Index', (EntryIndex, ), {})

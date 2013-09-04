@@ -11,7 +11,7 @@ Last updated: 2012-07-17
 {% load static %}
 {% load templatetags %}
 
-{% block head_title %}{{ block.super }} :: Delete? {{ model_verbose_name|lower }} :: queryset.0.wid {% endblock %}
+{% block head_title %}{{ block.super }} :: Delete? {{ model_verbose_name }} :: queryset.0.wid {% endblock %}
 {% block page_title %}Delete?{% endblock %}
 
 {% block extrastyles %}
@@ -22,8 +22,8 @@ h1, #content{
 
 {% block action_icons %}
 {% if not request.user.is_anonymous and queryset|length > 0 %}
-<a href="{% url "cyano.views.detail" species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" /></a>
-<a href="{% url "cyano.views.edit" species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
+<a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" /></a>
+<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
 {% endif %}
 {{ block.super }}
 {% endblock %}

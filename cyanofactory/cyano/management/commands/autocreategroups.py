@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
-from cyano.models import GroupProfile
 from django.contrib.auth.models import Group
+
+from cyano.models import GroupProfile
 
 class Command(BaseCommand):
     """Creates general groups

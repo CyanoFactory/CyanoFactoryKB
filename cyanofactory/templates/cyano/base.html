@@ -107,7 +107,7 @@ Last updated: 2012-07-17
 				{% for key1 in modelnames %}
 					{% for key2, modelmetadata in modelmetadatas.iteritems %}
 						{% if key1 == key2 %}
-					<li><a href="{% url "cyano.views.list" species_wid=species.wid model_type=key2 %}">{{ modelmetadata.verbose_name_plural }}</a></li>
+					<li><a href="{% url "cyano.views.listing" species_wid=species.wid model_type=key2 %}">{{ modelmetadata.verbose_name_plural }}</a></li>
 						{% endif %}
 					{% endfor %}
 				{% endfor %}
@@ -131,11 +131,19 @@ Last updated: 2012-07-17
 			</li>
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
-			<li><a href="{% if species %}{% url "cyano.views.importData" species_wid=species.wid %}{% else %}{% url "cyano.views.importData" %}{% endif %}">Import</a></li>
-				{% if species %}
+			<li><a href="#">Import</a>
+				<ul>
+				<li><a href="{% if species %}{% url "cyano.views.importSpeciesData" species_wid=species.wid %}{% else %}{% url "cyano.views.importSpeciesData" %}{% endif %}">{% if species %}Create Mutant{% else %}Create New Species{% endif %}</a></li>
+				<li><a href="{% if species %}{% url "cyano.views.importData" species_wid=species.wid %}{% else %}{% url "cyano.views.importData" %}{% endif %}">Import Data</a></li>
+				<li><a href="{% if species %}{% url "cyano.views.jobs" species_wid=species.wid %}{% else %}{% url "cyano.views.jobs" %}{% endif %}">View Import Jobs</a></li>
+				</ul>
+			</li>
+			{% if species %}
+			{% comment %}
 			<li class="spacer"/>
 			<li><a href="{% url "cyano.views.validate" species_wid=species.wid %}">Validate</a></li>
-				{% endif %}
+			{% endcomment %}
+			{% endif %}
 			<li class="spacer"/>
 			<li><a href="{% if species %}{% url "cyano.views.users" species_wid=species.wid %}{% else %}{% url "cyano.views.users" %}{% endif %}">Members</a></li>
 			{% endif %}

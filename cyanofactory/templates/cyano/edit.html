@@ -11,13 +11,13 @@ Last updated: 2012-07-17
 {% load static %}
 {% load templatetags %}
 
-{% block head_title %}{{ block.super }} :: {{ action|capfirst }} {{ model_verbose_name|lower }}{% endblock %}
-{% block page_title %}{{ action|capfirst }} {{ model_verbose_name|lower }}{% endblock %}
+{% block head_title %}{{ block.super }} :: {{ action|capfirst }} {{ model_verbose_name }}{% endblock %}
+{% block page_title %}{{ action|capfirst }} {{ model_verbose_name }}{% endblock %}
 
 {% block action_icons %}
 {% if not request.user.is_anonymous and queryset|length > 0 %}
-<a href="{% url "cyano.views.detail" species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" /></a>
-<a href="{% url "cyano.views.delete" species_wid=species.wid wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
+<a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" /></a>
+<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
 {% endif %}
 {{ block.super }}
 {% endblock %}
@@ -26,7 +26,7 @@ Last updated: 2012-07-17
 {% autoescape off %}
 <script>
 	{% for field in fields %}
-	{% if field.type == "ManyToManyField" %}
+	{% if field.type == "ManyToManyField" or field.type == "multiselect" %}
 	var {{ field.name }}_counter = {{ initial_values|getattribute:field.name|length }}
 	function add_{{ field.name }}(){
 		{{ field.name }}_counter ++
@@ -36,35 +36,59 @@ Last updated: 2012-07-17
 		tr.setAttribute('id', '{{ field.name }}_' + counter)
 		document.getElementById('{{ field.name }}').appendChild(tr)
 		
-		{% for subfield in field.fields %}
-			td = document.createElement('td')
-			{% if subfield.type == "text" or subfield.type == "textarea" %}
-				input = document.createElement('input')
-				input.setAttribute('type', 'text');
-				input.setAttribute('class', 'text')
-			{% elif subfield.type == "select" or subfield.type == "multiselect" %}
-				input = document.createElement('select')		
-				{% if subfield.type == 'multiselect' %}
-				input.setAttribute('multiple', 'multiple')
-				input.setAttribute('class', 'multiple')
-				{% endif %}
-				option = document.createElement('option')
-				option.setAttribute('disabled', true)
-				option.setAttribute('selected', 'selected')
-				option.appendChild(document.createTextNode('Select {{ subfield.verbose_name|lower }}'))
-				input.appendChild(option)
-				{% for choice in subfield.choices %}
+		{% if field.type == "ManyToManyField" %}
+			{% for subfield in field.fields %}
+				td = document.createElement('td')
+				{% if subfield.type == "text" or subfield.type == "textarea" %}
+					input = document.createElement('input')
+					input.setAttribute('type', 'text');
+					input.setAttribute('class', 'text')
+				{% elif subfield.type == "select" or subfield.type == "multiselect" %}
+					input = document.createElement('select')
+					{% if subfield.type == 'multiselect' %}
+					input.setAttribute('multiple', 'multiple')
+					input.setAttribute('class', 'multiple')
+					{% endif %}
 					option = document.createElement('option')
-					option.setAttribute('value', '{{ choice.0 }}')
-					option.appendChild(document.createTextNode('{{ choice.1 }}'))
+					option.setAttribute('disabled', true)
+					option.setAttribute('selected', 'selected')
+					option.appendChild(document.createTextNode('Select {{ subfield.verbose_name|lower }}'))
 					input.appendChild(option)
-				{% endfor %}
-			{% endif %}
-			input.setAttribute('name', '{{ field.name }}_' + counter + '_{{ subfield.name }}')
-			input.setAttribute('id', '{{ field.name }}_' + counter + '_{{ subfield.name }}')
+					{% for choice in subfield.choices %}
+						option = document.createElement('option')
+						option.setAttribute('value', '{{ choice.0 }}')
+						option.appendChild(document.createTextNode('{{ choice.1 }}'))
+						input.appendChild(option)
+					{% endfor %}
+				{% endif %}
+				input.setAttribute('name', '{{ field.name }}_' + counter + '_{{ subfield.name }}')
+				input.setAttribute('id', '{{ field.name }}_' + counter + '_{{ subfield.name }}')
+				td.appendChild(input)
+				tr.appendChild(td)
+			{% endfor %}
+		{% elif field.type == "multiselect" %}
+			td = document.createElement('td')
+			input = document.createElement('select')
+
+			main_option = document.createElement('option')
+			main_option.appendChild(document.createTextNode('Select {{ field.verbose_name|lower }}'))
+			input.appendChild(main_option)
+			
+			{% for choice in field.choices %}
+				option = document.createElement('option')
+				option.setAttribute('value', '{{ choice.0 }}')
+				option.appendChild(document.createTextNode('{{ choice.1 }}'))
+				input.appendChild(option)
+			{% endfor %}
+
+			input.setAttribute('name', '{{ field.name }}')
+			input.setAttribute('id', '{{ field.name }}')
+			
 			td.appendChild(input)
 			tr.appendChild(td)
-		{% endfor %}
+			
+			main_option.setAttribute('disabled', true)
+		{% endif %}
 		
 		td = document.createElement('td')
 		a = document.createElement('a')
@@ -198,20 +222,44 @@ Last updated: 2012-07-17
 					<input type="text" class="text" name="{{ field.name }}" id="{{ field.name }}" value="{{ initial_value|default_if_none:"" }}"/>
 				{% elif field.type == "textarea" %}
 					<textarea name="{{ field.name }}" id="{{ field.name }}">{{ initial_value|default_if_none:"" }}</textarea>
-				{% elif field.type == "select" or field.type == "multiselect" %}
-					<select name="{{ field.name }}" id="{{ field.name }}"{% if field.type == "multiselect" %} multiple="multiple" class="multiple"{% endif %}>
-						{% if field.type == "select" %}
+				{% elif field.type == "select" %}
+					<select name="{{ field.name }}" id="{{ field.name }}">
 						<option disabled="true"{% if initial_value|default_if_none:"" == "" %} selected="selected"{% endif %}>Select {{ field.verbose_name|lower }}</option>
-						{% endif %}
 						{% for choice in field.choices %}
 						<option value="{{ choice.0 }}"
-							{% if field.type == "select" and choice.0 == initial_value %} selected="selected"
-							{% elif field.type == "select" and choice.0 == initial_value|stringformat:"s" %} selected="selected"
-							{% elif field.type != "select" and choice.0 in initial_value %} selected="selected"
+							{% if choice.0 == initial_value %} selected="selected"
+							{% elif choice.0 == initial_value|stringformat:"s" %} selected="selected"
 							{% endif %}
 							>{{ choice.1 }}</option>
 						{% endfor %}
 					</select>
+				{% elif field.type == "multiselect" %}
+					<table class="ManyToManyField">
+						<tbody id="{{ field.name }}">
+						{% for child_initial_values in initial_value %}
+							<tr id="{{ field.name }}_{{ forloop.counter }}">
+								<td>
+								<select name="{{ field.name }}" id="{{ field.name }}">
+								<option disabled="true">Select {{ field.verbose_name|lower }}</option>
+								{% for choice in field.choices %}
+									<option value="{{ choice.0 }}"
+									{% if choice.0 == child_initial_values %} selected="selected"
+									{% elif choice.0 == child_initial_values|stringformat:"s" %} selected="selected"
+									{% endif %}
+									>{{ choice.1 }}</option>
+								{% endfor %}
+								</select>
+								</td>
+								<td><a href="javascript:delete_{{ field.name }}({{ forloop.counter }})"><img src="{% get_static_prefix %}public/img/delete.png" /></a></td>
+							</tr>						
+						{% endfor %}
+						</tbody>
+						<tbody>
+							<tr>								
+								<td colspan="{{ field.fields|length|add:1 }}"><a href="javascript:add_{{ field.name }}()">More</a></td>
+							</tr>
+						</tbody>
+					</table>
 				{% elif field.type == "ForeignKey" %}
 					<table class="ForeignKey">
 						<tbody>
@@ -385,7 +433,7 @@ Last updated: 2012-07-17
 						{% endwith %}
 						{% endfor %}
 								<td><a href="javascript:delete_{{ field.name }}({{ forloop.counter }})"><img src="{% get_static_prefix %}public/img/delete.png" /></a></td>
-							</tr>						
+							</tr>
 					{% endfor %}
 						</tbody>
 						<tbody>
@@ -398,7 +446,24 @@ Last updated: 2012-07-17
 			</td>
 		</tr>
 		{% endwith %}
-	{% endfor %}	
+	{% endfor %}
+		<tr>
+			<th>Summary</th>
+			<td>
+				<table class="ForeignKey">
+				<tbody>
+					<tr>
+						<td>Enter a short summary that describe your changes:</td>
+					</tr>
+					<tr>
+						{% with error_message=error_messages|getattribute:"edit_reason" %}
+						<td><div class="error">{% if error_message %}{{ error_message }}{% endif %}</div><input type="text" class="text" name="edit_reason" value="" /></td>
+						{% endwith %}
+					</tr>
+				</tbody>
+				</table>
+			</td>
+		</tr>
 	</tbody>
 </table>
 	<div class="save">

@@ -1,13 +1,12 @@
 from importer import Importer
-from importer import ParserError
+
 from django.core.exceptions import ObjectDoesNotExist
-import cyano.models as models
-from cyano.helpers import format_field_detail_view, render_queryset_to_response,\
-    objectToQuerySet, format_field_detail_view_diff
 from django.db.models.related import RelatedObject
 from django.template.defaultfilters import capfirst
-import re
-import StringIO
+
+import cyano.models as models
+from cyano.helpers import render_queryset_to_response,\
+    objectToQuerySet, format_field_detail_view_diff
 
 class GenbankImporter(Importer):
     def __init__(self):
@@ -121,16 +120,16 @@ class GenbankImporter(Importer):
             species = models.Species.objects.get(wid = species_wid)
         except ObjectDoesNotExist:
             species = models.Species(wid = species_wid, name = request.POST["new_species"])
-            species.save(revision_detail = revdetail)
+            species.save(revdetail)
             
         try:
             chromosome = models.Chromosome.objects.get(wid = "CHROMOSOME-1")
         except ObjectDoesNotExist:
             chromosome = models.Chromosome(wid = "CHROMOSOME-1")
-            chromosome.save(revision_detail = revdetail)
+            chromosome.save(revdetail)
         
         chromosome.species.add(species)
-        chromosome.save(revision_detail = revdetail)
+        chromosome.save(revdetail)
         
         for feature in self.data.features:
             qualifiers = feature.qualifiers
@@ -151,9 +150,9 @@ class GenbankImporter(Importer):
             gene.comments = comments
             gene.wid = wid
             
-            gene.save(revision_detail = revdetail)
+            gene.save(revdetail)
             gene.species.add(species)
-            gene.save(revision_detail = revdetail)
+            gene.save(revdetail)
         
         return render_queryset_to_response(
             species = species,
