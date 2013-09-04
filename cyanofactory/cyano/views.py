@@ -951,9 +951,6 @@ def importSpeciesData(request, species=None):
 
             data['success'] = 'success'
             data['message'] = "New %s %s created" % ("mutant" if mutant else "species", species.name)
-            
-            if not mutant:
-                species = None
 
     else:
         form = ImportSpeciesForm(None)
