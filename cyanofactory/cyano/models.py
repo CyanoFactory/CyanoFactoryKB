@@ -3771,7 +3771,7 @@ class Species(Entry):
     
     #getters
     @permalink
-    def get_absolute_url(self):
+    def get_absolute_url(self, species = None, history_id = None):
         return ('cyano.views.species', (), {'species_wid': self.wid})
     
     #html formatting
