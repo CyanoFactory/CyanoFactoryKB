@@ -758,7 +758,7 @@ def edit(request, species, model = None, item = None, action='edit'):
                 chelpers.validate_model_objects(model, data)
                 chelpers.validate_model_unique(model, [data])
                 
-                #save
+                #save                
                 obj = chelpers.save_object_data(species, obj, data, {}, request.user, save=False, save_m2m=False)
                 obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=False)
                 obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=True)
@@ -948,6 +948,10 @@ def importSpeciesData(request, species=None):
                 species = cmodels.Species(wid = form.cleaned_data['new_wid'], name = form.cleaned_data['new_species'])
                 species.save(rev)
                 cmodels.Pathway.add_boehringer_pathway(species, rev)
+
+            # Assign permissions
+            new_perm, _ = cmodels.UserPermission.objects.get_or_create(entry = species, user = request.user.profile)
+            new_perm.allow.add(*cmodels.Permission.objects.all())
 
             data['success'] = 'success'
             data['message'] = "New %s %s created" % ("mutant" if mutant else "species", species.name)
