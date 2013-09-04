@@ -890,8 +890,8 @@ def importData(request, species=None):
 
                 if data_type == "genbank":
                     from cyano.tasks import genbank
-                    genbank.delay(chromosome = form.cleaned_data["chromosome"],
-                                  name = form.cleaned_data["chromosome_wid"],
+                    genbank.delay(name = form.cleaned_data["chromosome"],
+                                  chromosome = form.cleaned_data["chromosome_wid"],
                                   **args)
                 elif data_type == "sbml":
                     from cyano.tasks import sbml
