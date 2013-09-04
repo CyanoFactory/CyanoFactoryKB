@@ -139,9 +139,11 @@ Last updated: 2012-07-17
 				</ul>
 			</li>
 			{% if species %}
+			{% comment %}
 			<li class="spacer"/>
 			<li><a href="{% url "cyano.views.validate" species_wid=species.wid %}">Validate</a></li>
-				{% endif %}
+			{% endcomment %}
+			{% endif %}
 			<li class="spacer"/>
 			<li><a href="{% if species %}{% url "cyano.views.users" species_wid=species.wid %}{% else %}{% url "cyano.views.users" %}{% endif %}">Members</a></li>
 			{% endif %}
