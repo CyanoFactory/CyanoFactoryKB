@@ -9,59 +9,150 @@ Last updated: 2012-07-17
 {% endcomment %}
 
 {% load templatetags %}
+{% load widget_tweaks %}
 
 {% block head_title %}{{ block.super }} :: Import{% endblock %}
 {% block page_title %}Import data{% endblock %}
 {% block action_icons %}{% endblock %}
 
+{% block head %}
+{{ block.super }}
+
+<script language="javascript" type="text/javascript">
+$(document).on('click','.close_box',function(){
+    $(this).parent().fadeTo(300,0,function(){
+          $(this).remove();
+    });
+});
+</script>
+
+<script language="javascript" type="text/javascript">
+$(document).on('click','.close_box',function(){
+    $(this).parent().fadeTo(300,0,function(){
+          $(this).remove();
+    });
+});
+
+$(document).on('input', '#id_chromosome',function(){
+	$('#id_chromosome_wid').val($(this).val().replace(/[^A-Za-z0-9_-]/g, '-'))
+});
+
+$(document).ready(function() {
+	// special case for page reload
+	if (!( $('input[value="genbank"]:checked').val())) {
+		$('#genbank').hide();
+	}
+	
+	$('input[name="data_type"]').on('change', function (e) { 
+		if( $('input[value="genbank"]:checked').val()) {
+			$('#genbank').show();
+		}
+		else{
+			$('#genbank').hide();
+		}         
+	});
+});
+</script>
+{% endblock %}
+
+{% block extrastyles %}
+{{ block.super }}
+
+.close_box {
+    #background:blue;
+    color:#fff;
+    padding:2px 5px;
+    display:inline;
+    position:absolute;
+    right:0px;
+    border-radius:3px;
+    cursor:pointer;
+}
+
+#form .block#info {	
+	border: 1px solid #2DD02D;
+}
+#form .block#info h1{
+	border: 1px solid #2DD02D;
+	background:#2DD02D;
+}
+
+#content ul {
+	list-style: none;
+    list-style-type: none;
+	margin: 0;
+	padding-left: 0;
+}
+
+{% endblock %}
+
 {% block content %}
 <form id="form" name="importData" action="{% if species %}{% url "cyano.views.importData" species_wid=species.wid %}{% else %}{% url "cyano.views.importData" %}{% endif %}" method="post" enctype="multipart/form-data">
 	{% csrf_token %}
 	
+	{% if success %}
+	<div class="block" id="info" style="position:relative;">
+		<div class="close_box">X</div>
+		<h1>{{ success|yesno:"Success,Error,Maybe"}}</h1>
+		<div class="content" style="width:340px;">
+		{{ message }}
+		</div>
+	</div>
+	{% endif %}
+	
+	<noscript>
+	<div class="block">
+	<h1>Enable javascript</h1>
+	<div class="errors">
+	For a better experience enabling javascript is recommended
+	</div>
+	</div>
+	</noscript>
+	
 	<div class="block">
 		<h1>Select {{ form.species.label }}</h1>
 		<div class="content" style="width:340px;">
-			<ol style="margin:0px; padding:0px; padding-left:20px;">
-			<li>Edit existing:
-				<select class="select" name="species" id="species" style="width:300px;" onchange="javascript: document.getElementById('new_species').value=''; document.getElementById('new_wid').value='';"/>
-					<option disabled>(Create a new species)</option>
-					{% for choice in form.species.field.choices %}
-					<option value="{{ choice.0 }}"{% if choice.0 == species.wid %} selected{% endif %}><i>{{ choice.1 }}</i></option>
-					{% endfor %}
-				</select><br/>
-				{% if form.species.errors|length > 0 %}<div class="errors">{{ form.species.errors|join:" " }}</div>{% endif %}<center><i>or</i></center></li>
-			<li>Enter name of new species:<input class="text" type="text" name="new_species" id="new_species" style="width:300px;" onchange="javascript: document.getElementById('species').selectedIndex=0;"/>
-			{% if form.new_species.errors|length > 0%}<div class="errors">{{ form.new_species.errors|join:" " }}</div>{% endif %}
-			<br/>
-			And a new identifier:<input class="text" type="text" name="new_wid" id="new_wid" style="width:300px;" onchange="javascript: document.getElementById('species').selectedIndex=0;"/></li>
-			{% if form.new_wid.errors|length > 0%}<div class="errors">{{ form.new_wid.errors|join:" " }}</div>{% endif %}
-			</ol>
-		</div>
-	</div>
-	
-	<div class="block">
-		<h1>Enter a short summary</h1>
-		<div class="content">
-			{% if form.reason.errors|length > 0 %}<div class="errors">{{ form.reason.errors|join:" " }}</div>{% endif %}
-			<input class="text" type="text" name="reason" id="reason" style="width:600px;"/>
+		{% if species %}
+		<b>{{ species.name }}</b> <a href="{% url "cyano.views.importData" %}" title="Change species">(change)</a>
+		{% else %}
+		{% render_field form.species class+="select" style+="width:300px" %}
+		{% if form.species.errors|length > 0 %}<div class="errors">{{ form.species.errors|join:" " }}</div>{% endif %}
+		<br/>
+		{% endif %}
 		</div>
 	</div>
 	
 	<div class="block">
 		<h1>Select {{ form.data_type.label }}</h1>
 		<div class="content">
-			{% if form.data_type.errors|length > 0 %}<div class="errors">{{ form.file.errors|join:" " }}</div>{% endif %}
-			{% for choice in form.data_type.field.choices %}
-			<div><input type="radio" name="data_type" value="{{ choice.0 }}" />{{ choice.1 }}</label></div>
-			{% endfor %}
+			{% render_field form.data_type %}
+			{% if form.data_type.errors|length > 0 %}<div class="errors">{{ form.data_type.errors|join:" " }}</div>{% endif %}
+		</div>
+	</div>
+	
+	<div class="block" id="genbank">
+		<h1>Provide additional information for GenBank</h1>
+		<div class="content" style="width:340px;">
+			{{ form.chromosome.label_tag }}:{% render_field form.chromosome class+="text" style+="width:300px" %}<br/>
+			{% if form.chromosome.errors|length > 0 %}<div class="errors">{{ form.chromosome.errors|join:" " }}</div>{% endif %}
+			{{ form.chromosome_wid.label_tag }}:{% render_field form.chromosome_wid class+="text" style+="width:300px" %}
+			{% if form.chromosome_wid.errors|length > 0 %}<div class="errors">{{ form.chromosome_wid.errors|join:" " }}</div>{% endif %}
 		</div>
 	</div>
 	
 	<div class="block">
 		<h1>Select {{ form.file.label }}</h1>
 		<div class="content">
+			{% render_field form.file class+="file" %}
 			{% if form.file.errors|length > 0 %}<div class="errors">{{ form.file.errors|join:" " }}</div>{% endif %}
-			<input class="file" type="file" name="file" />
+		</div>
+	</div>
+	
+	<div class="block">
+		<h1>{{ form.reason.label }}</h1>		
+		<div class="content">
+			{% render_field form.reason class+="text" style+="width:600px" %}
+			{% if form.reason.errors|length > 0 %}<div class="errors">{{ form.reason.errors|join:" " }}</div>{% endif %}
 		</div>
 	</div>
 	

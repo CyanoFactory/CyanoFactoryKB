@@ -1,11 +1,12 @@
-import cyano.models as models
-from cyano.helpers import render_queryset_to_response_error
+from settings import DEBUG
+
 from django.utils.functional import wraps
 from django.contrib.auth.models import User
 from django.db.models.loading import get_model
-from settings import DEBUG
-from django.http.response import Http404
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+
+import cyano.models as models
+from cyano.helpers import render_queryset_to_response_error
 
 def __get_and_delete(kw, key):
     if not key in kw:
@@ -78,7 +79,7 @@ def permission_required(permission):
         @wraps(function)
         def wrapper(request, *args, **kw):            
             species = kw.get("species", False)
-            model = kw.get("model", False)
+            ##model = kw.get("model", False)
             item = kw.get("item", False)
             
             user = request.user

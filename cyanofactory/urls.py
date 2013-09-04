@@ -3,7 +3,6 @@ URL patterns
 '''
 
 from django.conf.urls.defaults import patterns, include, url
-from public.views import *
 
 # enable the admin:
 #from django.contrib import admin
@@ -11,7 +10,7 @@ from public.views import *
 
 # database crossreference resolver
 urlpatterns = patterns('db_xref.views',
-    url(r'dbxref/', include("db_xref.urls")),
+    url(r'^dbxref/', include("db_xref.urls")),
 )
 
 # admin interface
@@ -22,7 +21,7 @@ urlpatterns = patterns('db_xref.views',
 
 # boehringer map
 urlpatterns += patterns('boehringer.views',
-    url(r'boehringer/', include("boehringer.urls")),
+    url(r'^boehringer/', include("boehringer.urls")),
 )
 
 # cyanofactory project

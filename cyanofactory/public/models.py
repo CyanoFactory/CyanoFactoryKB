@@ -2987,7 +2987,7 @@ class Reaction(SpeciesComponent):
 				.replace('+', ' + ') \
 				.replace('-', ' - ') \
 				.replace('/', ' / ')
-			law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species.wid), law, flags=re.I)			
+			law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species), law, flags=re.I)			
 		if k.km != '':
 			kms = k.km.split(', ')
 			if len(kms) == 1:
@@ -3015,7 +3015,7 @@ class Reaction(SpeciesComponent):
 				.replace('+', ' + ') \
 				.replace('-', ' - ') \
 				.replace('/', ' / ')
-			law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species.wid), law, flags=re.I)
+			law = '<i>v</i> = %s;' % re.sub(r'([a-z0-9_]+)', sub_rate_law(self.species), law, flags=re.I)
 		if k.km != '':
 			kms = k.km.split(', ')			
 			if len(kms) == 1:
