@@ -123,15 +123,6 @@ $(document).ready(function() {
 	</div>
 	
 	<div class="block">
-		<h1>{{ form.reason.label }}</h1>		
-		<div class="content">
-			{% render_field form.reason class+="text" style+="width:600px" %}
-			{% if form.reason.errors|length > 0 %}<div class="errors">{{ form.reason.errors|join:" " }}</div>{% endif %}
-
-		</div>
-	</div>
-	
-	<div class="block">
 		<h1>Select {{ form.data_type.label }}</h1>
 		<div class="content">
 			{% render_field form.data_type %}
@@ -154,6 +145,14 @@ $(document).ready(function() {
 		<div class="content">
 			{% render_field form.file class+="file" %}
 			{% if form.file.errors|length > 0 %}<div class="errors">{{ form.file.errors|join:" " }}</div>{% endif %}
+		</div>
+	</div>
+	
+	<div class="block">
+		<h1>{{ form.reason.label }}</h1>		
+		<div class="content">
+			{% render_field form.reason class+="text" style+="width:600px" %}
+			{% if form.reason.errors|length > 0 %}<div class="errors">{{ form.reason.errors|join:" " }}</div>{% endif %}
 		</div>
 	</div>
 	
