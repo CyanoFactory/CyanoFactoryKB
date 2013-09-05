@@ -2339,13 +2339,13 @@ class Compartment(SpeciesComponent):
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_compartment', parent_link=True, verbose_name='Species component')
     
     #additional fields
-    def get_protein_complexes(self):
+    def get_protein_complexes(self, species):
         arr = []
-        for obj in ProteinComplex.objects.all():
+        for obj in ProteinComplex.objects.filter(species__pk = species.pk):
             if self.pk == obj.get_localization().pk:
                 arr.append(obj)
         return arr
-        
+
     #getters
     def get_as_html_biomass_compositions(self, species, is_user_anonymous):
         results = []
@@ -2364,7 +2364,7 @@ class Compartment(SpeciesComponent):
         
     def get_as_html_protein_complexes(self, species, is_user_anonymous):
         results = []
-        for p in self.get_protein_complexes():
+        for p in self.get_protein_complexes(species):
             results.append('<a href="%s">%s</a>' % (p.get_absolute_url(species), p.wid))
         return format_list_html(results, comma_separated=True)
     
