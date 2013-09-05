@@ -38,7 +38,7 @@ class SBML(BioParser):
             
             # TODO: compartment.getOutside() not implemented
             try:
-                cobj = cmodels.Compartment.objects.get(wid = wid)
+                cobj = cmodels.Compartment.objects.get(species__pk = self.species.pk, wid = wid)
             except ObjectDoesNotExist:
                 cobj = cmodels.Compartment(wid = wid)
             
@@ -65,7 +65,7 @@ class SBML(BioParser):
             
             # TODO: specie.getBoundaryCondition() not implemented
             try:
-                sobj = cmodels.Metabolite.objects.get(wid = wid)
+                sobj = cmodels.Metabolite.objects.get(species__pk = self.species.pk, wid = wid)
             except ObjectDoesNotExist:
                 sobj = cmodels.Metabolite(wid = wid)
             
@@ -109,7 +109,7 @@ class SBML(BioParser):
             
             if valid:
                 try:
-                    reaction_obj = cmodels.Reaction.objects.get(wid = wid)
+                    reaction_obj = cmodels.Reaction.objects.get(species__pk = self.species.pk, wid = wid)
                 except ObjectDoesNotExist:
                     reaction_obj = cmodels.Reaction(wid = wid)
                 

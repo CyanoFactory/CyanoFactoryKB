@@ -22,7 +22,8 @@ from django.contrib.auth.models import Group
 from django.core import validators
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
-from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min
+from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min,\
+    manager
 from django.db.models.query import EmptyQuerySet
 from django.template import loader, Context
 from django.dispatch.dispatcher import receiver
@@ -32,6 +33,7 @@ from cyano.templatetags.templatetags import set_time_zone
 from cyano.cache import Cache
 from cyano.history import HistoryForeignKey as ForeignKey
 from cyano.history import HistoryManyToManyField as ManyToManyField
+from django.db.models.manager import Manager
 
 
 def enum(**enums):
@@ -194,7 +196,7 @@ CHOICES_SIGNAL_SEQUENCE_TYPE = (
 ''' END: CHOICES '''
 
 # add model options
-options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('listing', 'concrete_entry_model', 'fieldsets', 'field_list', 'facet_fields', 'clean', 'validate_unique')
+options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('listing', 'concrete_entry_model', 'fieldsets', 'field_list', 'facet_fields', 'clean', 'validate_unique', 'wid_unique')
 
 ''' BEGIN: validators '''
 def validate_dna_sequence(seq):
@@ -1078,7 +1080,144 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
                 RevisionManyToMany.objects.bulk_create(save_list)
             pass
 
-class Entry(Model):
+class EntryManager(Manager):
+    def get_query_set(self):
+        return super(EntryManager, self).get_query_set()
+
+    def warn_wid_only(self, *args, **kwargs):
+        import traceback
+        #if "wid" in kwargs:
+        #    print "Note: model_type", self.model, "added"
+        #    if not "model_type" in kwargs:
+        #        kwargs["model_type"] = TableMeta.get_by_model(self.model)
+        
+        if "wid" in kwargs and issubclass(self.model, SpeciesComponent):
+            if not "species" in kwargs and not any(x.startswith("species__") for x in kwargs.keys()):
+                if not self.model._meta.wid_unique:
+                    print kwargs
+                    print kwargs["wid"], "without species"
+                    #traceback.print_stack()
+                    print "".join(traceback.format_list([traceback.extract_stack()[-3]]))
+
+    def all(self):
+        import traceback
+        if issubclass(self.model, SpeciesComponent):
+            print "all instead of species filter"
+            print "".join(traceback.format_list([traceback.extract_stack()[-2]]))
+        return self.get_query_set().all()
+
+    def distinct(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().distinct(*args, **kwargs)
+
+    def extra(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().extra(*args, **kwargs)
+
+    def get(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().get(*args, **kwargs)
+
+    def get_or_create(self, **kwargs):
+        self.warn_wid_only(**kwargs)
+        return self.get_query_set().get_or_create(**kwargs)
+
+    def create(self, **kwargs):
+        self.warn_wid_only(**kwargs)
+        return self.get_query_set().create(**kwargs)
+
+    def bulk_create(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().bulk_create(*args, **kwargs)
+
+    def filter(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().filter(*args, **kwargs)
+
+    def aggregate(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().aggregate(*args, **kwargs)
+
+    def annotate(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().annotate(*args, **kwargs)
+
+    def complex_filter(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().complex_filter(*args, **kwargs)
+
+    def exclude(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().exclude(*args, **kwargs)
+
+    def in_bulk(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().in_bulk(*args, **kwargs)
+
+    def iterator(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().iterator(*args, **kwargs)
+
+    def latest(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().latest(*args, **kwargs)
+
+    def order_by(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().order_by(*args, **kwargs)
+
+    def select_for_update(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().select_for_update(*args, **kwargs)
+
+    def select_related(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().select_related(*args, **kwargs)
+
+    def prefetch_related(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().prefetch_related(*args, **kwargs)
+
+    def values(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().values(*args, **kwargs)
+
+    def values_list(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().values_list(*args, **kwargs)
+
+    def update(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().update(*args, **kwargs)
+
+    def reverse(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().reverse(*args, **kwargs)
+
+    def defer(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().defer(*args, **kwargs)
+
+    def only(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().only(*args, **kwargs)
+
+    def using(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().using(*args, **kwargs)
+
+    def exists(self, *args, **kwargs):
+        self.warn_wid_only(*args, **kwargs)
+        return self.get_query_set().exists(*args, **kwargs)
+
+class AbstractEntry(Model):
+    objects = EntryManager()
+    
+    class Meta:
+        abstract = True
+    
+
+class Entry(AbstractEntry):
     """Base class for all knowledge base objects.
     
     :Columns:
@@ -1087,9 +1226,9 @@ class Entry(Model):
         * ``name``: Short, human readable name of that entry
         * ``synonyms``: Other names for that entry
         * ``comments``: Detailed notes about this entry
-    """
+    """    
     model_type = ForeignKey(TableMeta)
-    wid = SlugField(max_length=150, unique = True, verbose_name='WID', validators=[validators.validate_slug])
+    wid = SlugField(max_length=150, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
@@ -1111,7 +1250,7 @@ class Entry(Model):
 
         if self.wid != slugify(self.wid):
             # Slugify the WID
-            self.wid = slugify(self.wid)
+            raise ValidationError("Wid must be slug!")
 
         old_item = None
         if self.pk != None:
@@ -1121,6 +1260,7 @@ class Entry(Model):
         else:
             # New entry (no primary key)
             # The latest entry is not revisioned to save space (and time)
+
             cache_model_type = TableMeta.get_by_model_name(self._meta.object_name)
             self.created_detail = revision_detail
             self.detail = revision_detail
@@ -1218,6 +1358,7 @@ class Entry(Model):
         get_latest_by = 'createdDate'
         verbose_name = 'Entry'
         verbose_name_plural = 'Entries'
+        wid_unique = False
 
 class CrossReferenceMeta(Model):
     name = CharField(max_length=255, verbose_name = "Identifier for crossreference (DB name or URL)", editable = False)
@@ -1298,6 +1439,7 @@ class SpeciesComponent(Entry):
         facet_fields = ['type']
         verbose_name = 'Species component'
         verbose_name_plural = 'Species components'
+        wid_unique = False
 
 class Molecule(SpeciesComponent):
     #parent pointer
@@ -1395,6 +1537,7 @@ class Molecule(SpeciesComponent):
         facet_fields = ['type']
         verbose_name = 'Molecule'
         verbose_name_plural = 'Molecules'
+        wid_unique = False
         
 class Protein(Molecule):
     #parent pointer
@@ -1479,6 +1622,7 @@ class Protein(Molecule):
         facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
         verbose_name='Protein'
         verbose_name_plural = 'Proteins'
+        wid_unique = False
         
         @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
@@ -2067,6 +2211,7 @@ class Chromosome(Molecule):
         facet_fields = ['type']
         verbose_name='Chromosome'
         verbose_name_plural = 'Chromosomes'
+        wid_unique = False
         
         @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
@@ -2170,6 +2315,7 @@ class ChromosomeFeature(SpeciesComponent):
         facet_fields = ['type', 'chromosome', 'direction']
         verbose_name='Chromosome feature'
         verbose_name_plural = 'Chromosome features'
+        wid_unique = False
         
         @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
@@ -2243,6 +2389,7 @@ class Compartment(SpeciesComponent):
         facet_fields = ['type']
         verbose_name='Compartment'
         verbose_name_plural = 'Compartments'
+        wid_unique = False
         
 class Gene(Molecule):
     #parent pointer
@@ -2379,6 +2526,7 @@ class Gene(Molecule):
         facet_fields = ['type', 'chromosome', 'direction', 'is_essential', 'amino_acid']
         verbose_name='Gene'
         verbose_name_plural = 'Genes'
+        wid_unique = False
         
         #chromosome coordinate, length
         @staticmethod
@@ -2527,6 +2675,7 @@ class Metabolite(Molecule):
         facet_fields = ['type', 'charge', 'is_hydrophobic']
         verbose_name='Metabolite'
         verbose_name_plural = 'Metabolites'
+        wid_unique = False
         
 class Note(SpeciesComponent):
     #parent pointer
@@ -2556,6 +2705,7 @@ class Note(SpeciesComponent):
         facet_fields = ['type']
         verbose_name='Note'
         verbose_name_plural = 'Notes'
+        wid_unique = False
     
 class Parameter(SpeciesComponent):
     #parent pointer
@@ -2596,6 +2746,7 @@ class Parameter(SpeciesComponent):
         facet_fields = ['type', 'reactions', 'molecules', 'state', 'process']
         verbose_name='Misc. parameter'
         verbose_name_plural = 'Misc. parameters'
+        wid_unique = False
         
 class Pathway(SpeciesComponent):
     #parent pointer
@@ -2874,6 +3025,7 @@ class Pathway(SpeciesComponent):
         facet_fields = ['type']
         verbose_name='Pathway'
         verbose_name_plural = 'Pathways'
+        wid_unique = True
         
 class Process(SpeciesComponent):
     #parent pointer
@@ -2921,6 +3073,7 @@ class Process(SpeciesComponent):
         facet_fields = ['type']
         verbose_name='Process'
         verbose_name_plural = 'Processes'
+        wid_unique = False
         
         @staticmethod
         def validate_unique(model, model_objects_data, all_obj_data=None, all_obj_data_by_model=None):
@@ -3153,6 +3306,7 @@ class ProteinComplex(Protein):
         facet_fields = ['type', 'dna_footprint__binding', 'dna_footprint__region', 'formation_process', 'chaperones']
         verbose_name='Protein complex'
         verbose_name_plural = 'Protein complexes'
+        wid_unique = False
         
         @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
@@ -3485,6 +3639,7 @@ class ProteinMonomer(Protein):
         facet_fields = ['type', 'is_n_terminal_methionine_cleaved__value', 'signal_sequence__type', 'signal_sequence__location', 'dna_footprint__binding', 'dna_footprint__region', 'localization', 'chaperones']
         verbose_name='Protein monomer'
         verbose_name_plural = 'Protein monomers'
+        wid_unique = False
         
         @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
@@ -3679,7 +3834,8 @@ class Reaction(SpeciesComponent):
             ]
         facet_fields = ['type', 'direction', 'enzyme__protein', 'coenzymes__metabolite', 'is_spontaneous', 'pathways', 'processes', 'states']
         verbose_name='Reaction'
-        verbose_name_plural = 'Reactions'    
+        verbose_name_plural = 'Reactions'
+        wid_unique = False
 
         @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
@@ -3834,6 +3990,7 @@ class State(SpeciesComponent):
         facet_fields = ['type']
         verbose_name='State'
         verbose_name_plural = 'States'
+        wid_unique = False
         
 class Stimulus(Molecule):
     #parent pointer
@@ -3873,6 +4030,7 @@ class Stimulus(Molecule):
         facet_fields = ['type', 'value__units']
         verbose_name='Stimulus'
         verbose_name_plural = 'Stimuli'
+        wid_unique = False
     
 class TranscriptionUnit(Molecule):
     #parent pointer
@@ -3982,6 +4140,7 @@ class TranscriptionUnit(Molecule):
         facet_fields = ['type']
         verbose_name='Transcription unit'
         verbose_name_plural = 'Transcription units'
+        wid_unique = False
         
         @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
@@ -4085,6 +4244,7 @@ class TranscriptionalRegulation(SpeciesComponent):
         facet_fields = ['type', 'transcription_unit', 'transcription_factor']
         verbose_name='Transcriptional regulation'
         verbose_name_plural = 'Transcriptional regulation'
+        wid_unique = False
         
         @staticmethod
         def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
@@ -4181,6 +4341,7 @@ class Type(SpeciesComponent):
         facet_fields = ['type', 'parent']
         verbose_name='Type'
         verbose_name_plural = 'Types'
+        wid_unique = True
             
 class CrossReference(EntryData):
     xid = CharField(max_length=255, verbose_name='External ID')
@@ -4389,6 +4550,7 @@ class PublicationReference(SpeciesComponent):
         facet_fields = ['type', 'year', 'publication']
         verbose_name='Publication Reference'
         verbose_name_plural = 'Publication References'
+        wid_unique = True
 
 ''' END: specific data types'''
 

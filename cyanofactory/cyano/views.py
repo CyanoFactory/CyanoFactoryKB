@@ -448,7 +448,7 @@ def search_google(request, species_wid, query):
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def listing(request, species, model):
-    objects = model.objects.all().filter(species__id=species.id)
+    objects = model.objects.filter(species__pk=species.pk)
 
     facet_fields = []    
     for field_full_name in model._meta.facet_fields:
@@ -467,9 +467,9 @@ def listing(request, species, model):
             continue
         
         if isinstance(field, (ForeignKey, ManyToManyField)):
-            tmp = model.objects.filter(species__id=species.id).order_by(field_full_name + '__name').values(field_full_name).annotate(count=Count(field_full_name))
+            tmp = model.objects.filter(species__pk=species.pk).order_by(field_full_name + '__name').values(field_full_name).annotate(count=Count(field_full_name))
         else:
-            tmp = model.objects.filter(species__id=species.id).order_by(field_full_name).values(field_full_name).annotate(count=Count(field_full_name))
+            tmp = model.objects.filter(species__pk=species.pk).order_by(field_full_name).values(field_full_name).annotate(count=Count(field_full_name))
         facets = []
         for facet in tmp:
             value = facet[field_full_name]            
@@ -519,7 +519,7 @@ def listing(request, species, model):
         template = "cyano/list_page.html"
     else:
         template = "cyano/list.html"
-
+    
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
@@ -745,10 +745,11 @@ def edit(request, species, model = None, item = None, action='edit'):
                     
                 wids = {}
                 for x in qs:
-                    wids[x['wid']] = x['model_type__model_name']
+                    wids.get(x['wid'], []).append(x['model_type__model_name'])
                 
-                if data['wid'] in wids.keys():
-                    raise ValidationError({'wid': 'Value must be unique'})
+                #if data['wid'] in wids.keys():
+                #    print wids[data['wid']], model
+                #    raise ValidationError({'wid': 'Value must be unique'})
                     
                 wids[data['wid']] = model.__name__
             
@@ -766,7 +767,10 @@ def edit(request, species, model = None, item = None, action='edit'):
                 #redirect to details page
                 return HttpResponseRedirect(obj.get_absolute_url(species))
             except ValidationError as error:
-                error_messages = error.message_dict
+                if hasattr(error, "message_dict"):
+                    error_messages = error.message_dict
+                else:
+                    raise
 
     #form query set
     if action == 'edit':

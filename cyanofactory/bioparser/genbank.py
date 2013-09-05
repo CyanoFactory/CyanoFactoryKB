@@ -52,7 +52,7 @@ class Genbank(BioParser):
         self.species.save(self.detail)
         
         try:
-            chromosome = cmodels.Chromosome.objects.get(wid = self.chromosome)
+            chromosome = cmodels.Chromosome.objects.get(species__pk = self.species.pk, wid = self.chromosome)
         except ObjectDoesNotExist:
             chromosome = cmodels.Chromosome(wid = self.chromosome)
         chromosome.name = self.name
@@ -161,7 +161,7 @@ class Genbank(BioParser):
                     self.species.save(self.detail)
             
             try:
-                g = cmodels.Gene.objects.get(wid = slugify(qualifiers["locus_tag"][0]))
+                g = cmodels.Gene.objects.get(species__pk = self.species.pk, wid = slugify(qualifiers["locus_tag"][0]))
             except ObjectDoesNotExist:
                 g = cmodels.Gene(wid = slugify(qualifiers["locus_tag"][0]))
             
@@ -219,7 +219,7 @@ class Genbank(BioParser):
                 protxref = qualifiers["protein_id"][0]
                 wid = slugify(g.wid + "_Monomer")
                 try:
-                    protein = cmodels.ProteinMonomer.objects.get(wid = wid)
+                    protein = cmodels.ProteinMonomer.objects.get(species__pk = self.species.pk, wid = wid)
                 except ObjectDoesNotExist:
                     protein = cmodels.ProteinMonomer(wid = wid)
          

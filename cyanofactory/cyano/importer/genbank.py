@@ -35,8 +35,8 @@ class GenbankImporter(Importer):
             comments = qualifiers["note"]
             
             try:
-                old_gene = models.Gene.objects.get(wid = wid)
-                new_gene = models.Gene.objects.get(wid = wid)
+                old_gene = models.Gene.objects.get(species__pk = species.pk, wid = wid)
+                new_gene = models.Gene.objects.get(species__pk = species.pk, wid = wid)
             except ObjectDoesNotExist:
                 old_gene = None
                 new_gene = models.Gene(wid = wid)     
@@ -123,9 +123,9 @@ class GenbankImporter(Importer):
             species.save(revdetail)
             
         try:
-            chromosome = models.Chromosome.objects.get(wid = "CHROMOSOME-1")
+            chromosome = models.Chromosome.objects.get(species__pk = species.pk, wid = "CHROMOSOME-1")
         except ObjectDoesNotExist:
-            chromosome = models.Chromosome(wid = "CHROMOSOME-1")
+            chromosome = models.Chromosome(species__pk = species.pk, wid = "CHROMOSOME-1")
             chromosome.save(revdetail)
         
         chromosome.species.add(species)
@@ -138,7 +138,7 @@ class GenbankImporter(Importer):
             comments = qualifiers["note"]
             
             try:
-                gene = models.Gene.objects.get(wid = wid)
+                gene = models.Gene.objects.get(species__pk = species.pk, wid = wid)
             except ObjectDoesNotExist:
                 gene = models.Gene(wid = wid)
                 gene.chromosome = chromosome
