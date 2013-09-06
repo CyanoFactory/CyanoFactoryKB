@@ -1278,11 +1278,8 @@ class SpeciesComponent(AbstractSpeciesComponent):
 
     #getters
     @permalink
-    def get_absolute_url(self, species, history_id = None):
-        model_type_key = "model/model_type/" + str(self.model_type_id)
-        cache_model_type = Cache.try_get(model_type_key, lambda: self.model_type)
-        
-        dic = {'species_wid':species.wid, 'model_type':cache_model_type.model_name, 'wid': self.wid}
+    def get_absolute_url(self, species, history_id = None):        
+        dic = {'species_wid':species.wid, 'model_type':TableMeta.get_by_model(self).model_name, 'wid': self.wid}
         
         if history_id is None:
             view = 'cyano.views.detail'
