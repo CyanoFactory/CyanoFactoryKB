@@ -53,7 +53,7 @@ class ProOpDB(BioParser):
                 operon_str = "TU_%04d" % (operon)
                 
                 try:
-                    gene = cmodels.Gene.objects.get(species__pk = self.species.pk, wid = locus)
+                    gene = cmodels.Gene.objects.for_species(self.species).for_wid(locus)
                 except ObjectDoesNotExist:
                     #self.stderr.write("Gene with wid {} not found".format(locus))
                     continue
@@ -70,11 +70,8 @@ class ProOpDB(BioParser):
             wid = "TU_" + "-".join(map(lambda x: x.wid, genes[:5]))
             if len(genes) > 5:
                 wid += "-et_al"
-            
-            try:
-                tu = cmodels.TranscriptionUnit.objects.get(species__pk = self.species.pk, wid = wid)
-            except ObjectDoesNotExist:
-                tu = cmodels.TranscriptionUnit(wid = wid)
+
+            tu = cmodels.TranscriptionUnit.objects.for_species(self.species).for_wid(wid, create = True)
             self.tu.append([tu, genes])
 
     @commit_on_success

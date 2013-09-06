@@ -24,7 +24,7 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min,\
     manager
-from django.db.models.query import EmptyQuerySet
+from django.db.models.query import EmptyQuerySet, QuerySet
 from django.template import loader, Context
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import m2m_changed
@@ -35,6 +35,7 @@ from cyano.history import HistoryForeignKey as ForeignKey
 from cyano.history import HistoryManyToManyField as ManyToManyField
 from django.db.models.manager import Manager
 
+from model_utils.managers import PassThroughManager
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -592,9 +593,7 @@ class UserProfile(ProfileBase):
         :return: Tuple (allow, deny). allow is True if the user has allow
          permission for the bitmask specified (same for deny). (None, None)
          if no permission object was found.
-        """
-        
-        
+        """        
         if isinstance(entry, Entry): 
             allow, deny = self.get_permissions(entry)
             if allow == None:
@@ -1080,142 +1079,37 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
                 RevisionManyToMany.objects.bulk_create(save_list)
             pass
 
-class EntryManager(Manager):
-    def get_query_set(self):
-        return super(EntryManager, self).get_query_set()
+class EntryQuerySet(QuerySet):
+    def for_wid(self, wid, get=True, create=False, creation_status=False):
+        if get:
+            try:
+                if not creation_status:
+                    return self.get(wid = wid)
 
-    def warn_wid_only(self, *args, **kwargs):
-        import traceback
-        #if "wid" in kwargs:
-        #    print "Note: model_type", self.model, "added"
-        #    if not "model_type" in kwargs:
-        #        kwargs["model_type"] = TableMeta.get_by_model(self.model)
+                return self.get(wid = wid), False
+            except ObjectDoesNotExist:
+                if not create:
+                    raise
+                
+                if not creation_status:
+                    return self.model(wid = wid)
+
+                return self.model(wid = wid), True
         
-        if "wid" in kwargs and issubclass(self.model, SpeciesComponent):
-            if not "species" in kwargs and not any(x.startswith("species__") for x in kwargs.keys()):
-                if not self.model._meta.wid_unique:
-                    print kwargs
-                    print kwargs["wid"], "without species"
-                    #traceback.print_stack()
-                    print "".join(traceback.format_list([traceback.extract_stack()[-3]]))
+        if create:
+            raise ValueError("Create only compatible with get")
+        
+        return self.filter(wid = wid)
 
-    def all(self):
-        import traceback
-        if issubclass(self.model, SpeciesComponent):
-            print "all instead of species filter"
-            print "".join(traceback.format_list([traceback.extract_stack()[-2]]))
-        return self.get_query_set().all()
-
-    def distinct(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().distinct(*args, **kwargs)
-
-    def extra(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().extra(*args, **kwargs)
-
-    def get(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().get(*args, **kwargs)
-
-    def get_or_create(self, **kwargs):
-        self.warn_wid_only(**kwargs)
-        return self.get_query_set().get_or_create(**kwargs)
-
-    def create(self, **kwargs):
-        self.warn_wid_only(**kwargs)
-        return self.get_query_set().create(**kwargs)
-
-    def bulk_create(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().bulk_create(*args, **kwargs)
-
-    def filter(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().filter(*args, **kwargs)
-
-    def aggregate(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().aggregate(*args, **kwargs)
-
-    def annotate(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().annotate(*args, **kwargs)
-
-    def complex_filter(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().complex_filter(*args, **kwargs)
-
-    def exclude(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().exclude(*args, **kwargs)
-
-    def in_bulk(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().in_bulk(*args, **kwargs)
-
-    def iterator(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().iterator(*args, **kwargs)
-
-    def latest(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().latest(*args, **kwargs)
-
-    def order_by(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().order_by(*args, **kwargs)
-
-    def select_for_update(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().select_for_update(*args, **kwargs)
-
-    def select_related(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().select_related(*args, **kwargs)
-
-    def prefetch_related(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().prefetch_related(*args, **kwargs)
-
-    def values(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().values(*args, **kwargs)
-
-    def values_list(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().values_list(*args, **kwargs)
-
-    def update(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().update(*args, **kwargs)
-
-    def reverse(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().reverse(*args, **kwargs)
-
-    def defer(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().defer(*args, **kwargs)
-
-    def only(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().only(*args, **kwargs)
-
-    def using(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().using(*args, **kwargs)
-
-    def exists(self, *args, **kwargs):
-        self.warn_wid_only(*args, **kwargs)
-        return self.get_query_set().exists(*args, **kwargs)
+class SpeciesComponentQuerySet(EntryQuerySet):
+    def for_species(self, species):
+        return self.filter(species__pk = species.pk)
 
 class AbstractEntry(Model):
-    objects = EntryManager()
+    objects = PassThroughManager.for_queryset_class(EntryQuerySet)()
     
     class Meta:
         abstract = True
-    
 
 class Entry(AbstractEntry):
     """Base class for all knowledge base objects.
@@ -1260,7 +1154,7 @@ class Entry(AbstractEntry):
         else:
             # New entry (no primary key)
             # The latest entry is not revisioned to save space (and time)
-
+            
             cache_model_type = TableMeta.get_by_model_name(self._meta.object_name)
             self.created_detail = revision_detail
             self.detail = revision_detail
@@ -1363,14 +1257,20 @@ class Entry(AbstractEntry):
 class CrossReferenceMeta(Model):
     name = CharField(max_length=255, verbose_name = "Identifier for crossreference (DB name or URL)", editable = False)
 
-class SpeciesComponent(Entry):
+class AbstractSpeciesComponent(Entry):
+    objects = PassThroughManager.for_queryset_class(SpeciesComponentQuerySet)()
+    
+    class Meta:
+        abstract = True
+
+class SpeciesComponent(AbstractSpeciesComponent):
     '''
     Contains all components that belong to an organism.
     Improves the lookup speed and allows inheritance.
     
     * ``cross_references``: Databases referencing that entry
     * ``publication_references``: Publications referencing that entry
-    '''
+    '''    
     species = ManyToManyField("Species", verbose_name = "Organism containing that entry", related_name = "species")
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
     cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
@@ -2341,7 +2241,7 @@ class Compartment(SpeciesComponent):
     #additional fields
     def get_protein_complexes(self, species):
         arr = []
-        for obj in ProteinComplex.objects.filter(species__pk = species.pk):
+        for obj in ProteinComplex.objects.for_species(species):
             if self.pk == obj.get_localization().pk:
                 arr.append(obj)
         return arr
@@ -2429,10 +2329,10 @@ class Gene(Molecule):
         
         seq = self.get_sequence()
         return \
-            + Metabolite.objects.get(species__id=self.species.id, wid='AMP').get_empirical_formula() * seq.count('A') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='GMP').get_empirical_formula() * seq.count('C') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='GMP').get_empirical_formula() * seq.count('G') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='UMP').get_empirical_formula() * seq.count('T') \
+            + Metabolite.objects.for_species(self.species).for_wid('AMP').get_empirical_formula() * seq.count('A') \
+            + Metabolite.objects.for_species(self.species).for_wid('GMP').get_empirical_formula() * seq.count('C') \
+            + Metabolite.objects.for_species(self.species).for_wid('GMP').get_empirical_formula() * seq.count('G') \
+            + Metabolite.objects.for_species(self.species).for_wid('UMP').get_empirical_formula() * seq.count('T') \
             - EmpiricalFormula(H=1, O=1) * (len(seq)-1)        
 
     #http://www.owczarzy.net/extinct.htm
@@ -2757,14 +2657,11 @@ class Pathway(SpeciesComponent):
     def add_boehringer_pathway(species, revdetail):
         wid = "Boehringer"
         try:
-            x = Pathway.objects.get(wid = wid, species = species)
+            x = Pathway.objects.for_species(species).for_wid(wid)
             return
         except ObjectDoesNotExist:
             # Create new boehringer (if it was never created yet) or assign to one
-            try:
-                x = Pathway.objects.get(wid = wid)
-            except ObjectDoesNotExist:
-                x = Pathway(wid = wid)
+            x = Pathway.objects.for_wid(wid, create = True)
 
         x.name = "Biochemical Pathways"
         x.save(revdetail)
@@ -2778,10 +2675,7 @@ class Pathway(SpeciesComponent):
         maps = Map.objects.filter(ec_numbers__name__in = crs).distinct()
         
         for map_ in maps:
-            try:
-                x = Pathway.objects.get(wid = map_.name)
-            except ObjectDoesNotExist:
-                x = Pathway(wid = map_.name)
+            x = Pathway.objects.for_wid(map_.name, create = True)
             
             x.name = map_.title
             x.save(revdetail)
@@ -2811,7 +2705,7 @@ class Pathway(SpeciesComponent):
         species_ecs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
         enzymes = bmodels.Enzyme.objects.filter(ec__in = species_ecs).order_by('title')
 
-        species_metabolites = Metabolite.objects.filter(species = species).values_list('name', flat=True)
+        species_metabolites = Metabolite.objects.for_species(species).values_list('name', flat=True)
         metabolites = bmodels.Metabolite.objects.filter(title__in = species_metabolites).order_by('title')
         
         return enzymes, metabolites
@@ -2942,7 +2836,7 @@ class Pathway(SpeciesComponent):
                     color_component = "rgb(0,0,255)"
                     
                     try:
-                        pw_obj = Pathway.objects.get(wid = pathway_name, species = species)
+                        pw_obj = Pathway.objects.for_species(species).for_wid(pathway_name)
                         elem.set("xlink:href", pw_obj.get_absolute_url(species))
                         fill_opacity = "0.2"
                         fill_color = "blue"
@@ -3143,10 +3037,10 @@ class ProteinComplex(Protein):
             return localizations[0]
         
         if len(localizations) == 2 and len(set(['c', 'm']) & set([x.wid for x in localizations])) == 2:
-            return Compartment.objects.get(species__id=self.species.id, wid='m')
+            return Compartment.objects.for_species(self.species).for_wid('m')
         
         if len(localizations) == 3 and len(set(['c', 'm', 'e']) & set([x.wid for x in localizations])) == 3:
-            return Compartment.objects.get(species__id=self.species.id, wid='m')
+            return Compartment.objects.for_species(self.species).for_wid('m')
     
         raise TypeError(str(localizations))
         
@@ -3417,26 +3311,26 @@ class ProteinMonomer(Protein):
         
         seq = self.get_sequence()
         return \
-            + Metabolite.objects.get(species__id=self.species.id, wid='ALA').get_empirical_formula() * seq.count('A') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='ARG').get_empirical_formula() * seq.count('R') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='ASN').get_empirical_formula() * seq.count('N') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='ASP').get_empirical_formula() * seq.count('D') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='CYS').get_empirical_formula() * seq.count('C') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='GLU').get_empirical_formula() * seq.count('E') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='GLN').get_empirical_formula() * seq.count('Q') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='GLY').get_empirical_formula() * seq.count('G') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='HIS').get_empirical_formula() * seq.count('H') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='ILE').get_empirical_formula() * seq.count('I') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='LEU').get_empirical_formula() * seq.count('L') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='LYS').get_empirical_formula() * seq.count('K') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='MET').get_empirical_formula() * (seq.count('M')-1) + Metabolite.objects.get(species__id=self.species.id, wid='FMET').get_empirical_formula() * (1) \
-            + Metabolite.objects.get(species__id=self.species.id, wid='PHE').get_empirical_formula() * seq.count('F') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='PRO').get_empirical_formula() * seq.count('P') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='SER').get_empirical_formula() * seq.count('S') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='THR').get_empirical_formula() * seq.count('T') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='TRP').get_empirical_formula() * seq.count('W') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='TYR').get_empirical_formula() * seq.count('Y') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='VAL').get_empirical_formula() * seq.count('V') \
+            + Metabolite.objects.for_species(self.species).for_wid('ALA').get_empirical_formula() * seq.count('A') \
+            + Metabolite.objects.for_species(self.species).for_wid('ARG').get_empirical_formula() * seq.count('R') \
+            + Metabolite.objects.for_species(self.species).for_wid('ASN').get_empirical_formula() * seq.count('N') \
+            + Metabolite.objects.for_species(self.species).for_wid('ASP').get_empirical_formula() * seq.count('D') \
+            + Metabolite.objects.for_species(self.species).for_wid('CYS').get_empirical_formula() * seq.count('C') \
+            + Metabolite.objects.for_species(self.species).for_wid('GLU').get_empirical_formula() * seq.count('E') \
+            + Metabolite.objects.for_species(self.species).for_wid('GLN').get_empirical_formula() * seq.count('Q') \
+            + Metabolite.objects.for_species(self.species).for_wid('GLY').get_empirical_formula() * seq.count('G') \
+            + Metabolite.objects.for_species(self.species).for_wid('HIS').get_empirical_formula() * seq.count('H') \
+            + Metabolite.objects.for_species(self.species).for_wid('ILE').get_empirical_formula() * seq.count('I') \
+            + Metabolite.objects.for_species(self.species).for_wid('LEU').get_empirical_formula() * seq.count('L') \
+            + Metabolite.objects.for_species(self.species).for_wid('LYS').get_empirical_formula() * seq.count('K') \
+            + Metabolite.objects.for_species(self.species).for_wid('MET').get_empirical_formula() * (seq.count('M')-1) + Metabolite.objects.for_species(self.species).for_wid('FMET').get_empirical_formula() * (1) \
+            + Metabolite.objects.for_species(self.species).for_wid('PHE').get_empirical_formula() * seq.count('F') \
+            + Metabolite.objects.for_species(self.species).for_wid('PRO').get_empirical_formula() * seq.count('P') \
+            + Metabolite.objects.for_species(self.species).for_wid('SER').get_empirical_formula() * seq.count('S') \
+            + Metabolite.objects.for_species(self.species).for_wid('THR').get_empirical_formula() * seq.count('T') \
+            + Metabolite.objects.for_species(self.species).for_wid('TRP').get_empirical_formula() * seq.count('W') \
+            + Metabolite.objects.for_species(self.species).for_wid('TYR').get_empirical_formula() * seq.count('Y') \
+            + Metabolite.objects.for_species(self.species).for_wid('VAL').get_empirical_formula() * seq.count('V') \
             - EmpiricalFormula(H=2, O=1) * (len(seq)-1)    
         
     def get_pi(self):
@@ -4295,9 +4189,9 @@ class Type(SpeciesComponent):
     #getters
     def get_all_members(self, species):
         members = []
-        for m in self.members.filter(species = species):
+        for m in self.members.for_species(species):
             members.append(m)
-        for c in self.children.filter(species = species):
+        for c in self.children.for_species(species):
             members += c.get_all_members()
         return members
 
@@ -4311,7 +4205,7 @@ class Type(SpeciesComponent):
         
     def get_as_html_children(self, species, is_user_anonymous):
         results = []
-        for c in self.children.filter(species = species):
+        for c in self.children.for_species(species):
             results.append('<a href="%s">%s</a>' % (c.get_absolute_url(species), c.wid))        
         return format_list_html(results, comma_separated=True)
         
@@ -4704,7 +4598,7 @@ def sub_rate_law(species):
         if match.group(0)[0:2] == 'Km':
             return '<i>K</i><sub>m%s</sub>' % match.group(0)[2:]
         try:
-            obj = SpeciesComponent.objects.get(species__wid=species.wid, wid=match.group(0))
+            obj = SpeciesComponent.objects.for_species(species).for_wid(match.group(0))
             return '[<a href="%s">%s</a>]' % (obj.get_absolute_url(species), obj.wid)
         except:
             return match.group(0)

@@ -361,13 +361,13 @@ def getEntryDatas():
 
 def getEntry(species_wid = None, wid = None):
     try:
-        species_id = cmodels.Species.objects.values('id').get(wid = species_wid)['id']
+        species_id = cmodels.Species.objects.values('id').for_wid(species_wid)['id']
     except ObjectDoesNotExist:
         return None    
     
     try:
         if species_wid == wid:
-            return cmodels.Species.objects.get(wid=wid)
+            return cmodels.Species.objects.for_wid(wid)
         else:
             tmp = cmodels.SpeciesComponent.objects.get(species__id = species_id, wid=wid)
             return getModel(tmp.model_type).objects.select_related(depth=2).get(id=tmp.id)
@@ -978,7 +978,7 @@ def batch_import_from_excel(species_wid, fileName, user):
         species_wid = species['wid']
     else:
         try:
-            species = cmodels.Species.objects.get(wid=species_wid)
+            species = cmodels.Species.objects.for_wid(species_wid)
             species_id = species.id
         except ObjectDoesNotExist:
             raise ValidationError('Please edit an editing PGDB')
@@ -1907,7 +1907,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
                         if obj_list.has_key(obj_data[field.name]):
                             tmp = obj_list[obj_data[field.name]]
                         elif issubclass(field.rel.to, cmodels.SpeciesComponent):
-                            tmp = field.rel.to.objects.get(species__wid=species.wid, wid=obj_data[field.name])
+                            tmp = field.rel.to.objects.for_species(species).for_wid(obj_data[field.name])
                         else:
                             tmp = field.rel.to.objects.get(wid=obj_data[field.name])
                         setattr(obj, field.name, tmp)
@@ -1932,7 +1932,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
             obj.save()
             
         if isinstance(obj, cmodels.SpeciesComponent):
-            obj.species.add(cmodels.Species.objects.get(wid=species.wid))
+            obj.species.add(cmodels.Species.objects.for_wid(species.wid))
     
     #many-to-many fields
     for field in fields:
@@ -1947,7 +1947,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
                         if obj_list.has_key(wid):
                             tmp = obj_list[wid]
                         elif issubclass(field.rel.to, cmodels.SpeciesComponent):
-                            tmp = field.rel.to.objects.get(species__wid=species.wid, wid=wid)
+                            tmp = field.rel.to.objects.for_species(species).for_wid(wid)
                         else:
                             tmp = field.rel.to.objects.get(wid=wid)
                         getattr(obj, field.name).add(tmp)

@@ -49,10 +49,10 @@ def species(request, species):
     content = []
     if species is not None:
         content.append([
-            [0, 'Compartments', cmodels.Compartment.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
+            [0, 'Compartments', cmodels.Compartment.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
         ])
         
-        chrs = cmodels.Chromosome.objects.filter(species__id = species.id).values_list("length", "sequence")
+        chrs = cmodels.Chromosome.objects.for_species(species).values_list("length", "sequence")
         chrcontent = sum(chro[0] for chro in chrs)
         gc_content = 0 if len(chrs) == 0 else sum([cmodels.Chromosome(sequence = chro[1]).get_gc_content() * chro[0] for chro in chrs]) / chrcontent        
         content.append([
@@ -61,7 +61,7 @@ def species(request, species):
             [1, 'GC-content', ('%0.1f' % (gc_content * 100)), '%'],
         ])
                 
-        tus = cmodels.TranscriptionUnit.objects.filter(species__id = species.id).annotate(num_genes = Count('genes'))
+        tus = cmodels.TranscriptionUnit.objects.for_species(species).annotate(num_genes = Count('genes'))
         nPolys = tus.filter(num_genes__gt = 1).count()
         content.append([
             [0, 'Transcription units', tus.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionUnit'})],            
@@ -69,7 +69,7 @@ def species(request, species):
             [1, 'Polycistrons', nPolys],
         ])
         
-        genes = cmodels.Gene.objects.filter(species__id = species.id).values_list("type__wid", "expression", "half_life")
+        genes = cmodels.Gene.objects.for_species(species).values_list("type__wid", "expression", "half_life")
         
         content.append([
             [0, 'Genes', len(genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
@@ -79,7 +79,7 @@ def species(request, species):
             [1, 'tRNA', sum((lambda x: x[0] == "tRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=tRNA'],
         ])
         
-        chromosome_features = cmodels.ChromosomeFeature.objects.filter(species__id = species.id).values_list("type__parent__wid", flat = True)
+        chromosome_features = cmodels.ChromosomeFeature.objects.for_species(species).values_list("type__parent__wid", flat = True)
         chromosome_features_length = len(chromosome_features)
         chromosome_features_dnaa_box = sum((lambda x: x == "ChromosomeFeature-DnaA_box")(x) for x in chromosome_features)
         chromosome_features_str = sum((lambda x: x == "ChromosomeFeature-Short_Tandem_Repeat")(x) for x in chromosome_features)
@@ -100,7 +100,7 @@ def species(request, species):
                 chromosome_features_length - chromosome_features_dnaa_box - chromosome_features_str],
         ])
         
-        metabolites = cmodels.Metabolite.objects.filter(species__id = species.id).values_list("type__wid", "type__parent__wid", "type__parent__parent__wid", "biomass_composition", "media_composition")
+        metabolites = cmodels.Metabolite.objects.for_species(species).values_list("type__wid", "type__parent__wid", "type__parent__parent__wid", "biomass_composition", "media_composition")
         
         metabolites_aa_list = ["amino_acid", "modified_amino_acid", "non-standard_amino_acid", "vitamin_non-standard_amino_acid"]
         
@@ -132,7 +132,7 @@ def species(request, species):
                 ],
         ])
 
-        mons = cmodels.ProteinMonomer.objects.filter(species__id = species.id)
+        mons = cmodels.ProteinMonomer.objects.for_species(species)
         mons_list = mons.values_list("localization__wid", "signal_sequence__type")
         mons_list_count = len(mons_list)
         monTermOrg_list = ["tc", "tm"]
@@ -146,7 +146,7 @@ def species(request, species):
         monIntMem = sum((lambda x: x[0] == "m" and x[1] != "lipoprotein")(x) for x in mons_list) +\
                     sum((lambda x: x[0] == "tm" and x[1] != "lipoprotein")(x) for x in mons_list)
 
-        cpxs = cmodels.ProteinComplex.objects.filter(species__id = species.id)
+        cpxs = cmodels.ProteinComplex.objects.for_species(species)
         cpxDNABind = cpxs.filter(dna_footprint__length__gt=0).count()
         cpxCount = cpxs.count()
         
@@ -162,7 +162,7 @@ def species(request, species):
                     [2, 'DNA-binding', cpxDNABind],
         ])
 
-        rxns = cmodels.Reaction.objects.filter(species__id = species.id).values_list("processes__wid", flat = True)
+        rxns = cmodels.Reaction.objects.for_species(species).values_list("processes__wid", flat = True)
         rxns_count = [
             len(rxns),
             sum((lambda x: x == "Process_DNADamage")(x) for x in rxns),
@@ -196,7 +196,7 @@ def species(request, species):
             [1, 'Other', rxns_count[0] - sum(rxns_count[1:])],
         ])        
         
-        tr = cmodels.TranscriptionalRegulation.objects.filter(species__id = species.id).values_list("transcription_unit", "transcription_factor", "affinity", "activity")
+        tr = cmodels.TranscriptionalRegulation.objects.for_species(species).values_list("transcription_unit", "transcription_factor", "affinity", "activity")
         nTus = len(set([x[0] for x in tr]))
         nTfs = len(set([x[1] for x in tr]))
         content.append([
@@ -210,7 +210,7 @@ def species(request, species):
             [0, 'Pathways', cmodels.Pathway.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Pathway'})],
         ])
         
-        stimuli = cmodels.Stimulus.objects.filter(species__id = species.id).values_list("value", flat=True)
+        stimuli = cmodels.Stimulus.objects.for_species(species).values_list("value", flat=True)
         nStimuli = sum((lambda x: x[3] is not None)(x) for x in stimuli)
 
         content.append([
@@ -220,7 +220,7 @@ def species(request, species):
         nCellComp = sum((lambda x: x[3] is not None)(x) for x in metabolites)
         nMediaComp = sum((lambda x: x[4] is not None)(x) for x in metabolites)
         
-        reactions = cmodels.Reaction.objects.filter(species__id = species.id).\
+        reactions = cmodels.Reaction.objects.for_species(species).\
             values_list("keq", "kinetics_forward__km", "kinetics_backward__km", "kinetics_forward__vmax", "kinetics_backward__vmax")
        
         nKineticsKeq = sum((lambda x: x[0] is not None)(x) for x in reactions)
@@ -235,7 +235,7 @@ def species(request, species):
         nTrAffinity = sum((lambda x: x[2] is not None)(x) for x in tr)
         nTrActivity = sum((lambda x: x[3] is not None)(x) for x in tr)
        
-        nOther = cmodels.Parameter.objects.filter(species__id = species.id).count()
+        nOther = cmodels.Parameter.objects.for_species(species).count()
         nTotParameters = nCellComp + nMediaComp + nKineticsVmax + nRnaExp + nRnaHl + nStimuli + nTrAffinity + nTrActivity + nOther
 
         content.append([
@@ -258,7 +258,7 @@ def species(request, species):
         ])
         
         content.append([
-            [0, 'States', cmodels.State.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
+            [0, 'States', cmodels.State.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
         ])
         
     nContent = [len(x) for x in content]
@@ -304,18 +304,18 @@ def species(request, species):
         'evidence_temperature': [],
     }
     #if species is not None:
-        #refs = cmodels.PublicationReference.objects.filter(species__id = species.id)
+        #refs = cmodels.PublicationReference.objects.filter.for_species(species)
         #sources['total'] = refs.count()
         #sources['types'] = [
-        #        {'type': 'Articles', 'count': refs.filter(species__id = species.id, type__wid='article').count()},
-        #        {'type': 'Books', 'count': refs.filter(species__id = species.id, type__wid='book').count()},
-        #        {'type': 'Thesis', 'count': refs.filter(species__id = species.id, type__wid='thesis').count()},
-        #        {'type': 'Other', 'count': refs.filter(species__id = species.id, type__wid='misc').count()},
+        #        {'type': 'Articles', 'count': refs.filter(type__wid='article').count()},
+        #        {'type': 'Books', 'count': refs.filter(type__wid='book').count()},
+        #        {'type': 'Thesis', 'count': refs.filter(type__wid='thesis').count()},
+        #        {'type': 'Other', 'count': refs.filter(type__wid='misc').count()},
         #    ]
         #sources['dates'] = refs.filter(year__isnull=False).order_by('year').values('year').annotate(count=Count('year'))
         
             
-        #nEstimated = cmodels.Parameter.objects.filter(species__id = species.id, value__evidence__is_experimentally_constrained=False).count()
+        #nEstimated = cmodels.Parameter.objects.for_species(species).filter(value__evidence__is_experimentally_constrained=False).count()
         #nExpConstrained = nTotParameters - nEstimated
         #sources['evidence_parameters'] = [
         #     {'type': 'Experimentally constrained', 'count': nExpConstrained},
@@ -448,7 +448,7 @@ def search_google(request, species_wid, query):
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def listing(request, species, model):
-    objects = model.objects.filter(species__pk=species.pk)
+    objects = model.objects.for_species(species)
 
     facet_fields = []    
     for field_full_name in model._meta.facet_fields:
@@ -467,9 +467,9 @@ def listing(request, species, model):
             continue
         
         if isinstance(field, (ForeignKey, ManyToManyField)):
-            tmp = model.objects.filter(species__pk=species.pk).order_by(field_full_name + '__name').values(field_full_name).annotate(count=Count(field_full_name))
+            tmp = model.objects.for_species(species).order_by(field_full_name + '__name').values(field_full_name).annotate(count=Count(field_full_name))
         else:
-            tmp = model.objects.filter(species__pk=species.pk).order_by(field_full_name).values(field_full_name).annotate(count=Count(field_full_name))
+            tmp = model.objects.for_species(species).order_by(field_full_name).values(field_full_name).annotate(count=Count(field_full_name))
         facets = []
         for facet in tmp:
             value = facet[field_full_name]            
@@ -607,7 +607,7 @@ def history(request, species, model = None, item = None):
     elif model:
         # Model specific
         tm = cmodels.TableMeta.get_by_model(model)
-        components = model.objects.filter(species = species)
+        components = model.objects.for_species(species)
         objects = cmodels.Revision.objects.filter(current__model_type = tm, current__pk__in = components).distinct("detail").order_by("-detail")
     else:
         # Whole species specific
@@ -710,6 +710,8 @@ def add(request, species=None, model=None):
 @resolve_to_objects 
 @permission_required(perm.WRITE_NORMAL)
 def edit(request, species, model = None, item = None, action='edit'):
+    from collections import defaultdict
+    
     #retrieve object
     if action == 'add':
         obj = model()
@@ -743,13 +745,13 @@ def edit(request, species, model = None, item = None, action='edit'):
                 if action == 'edit':
                     qs = qs.exclude(id=obj.id)
                     
-                wids = {}
+                wids = defaultdict(list)
                 for x in qs:
-                    wids.get(x['wid'], []).append(x['model_type__model_name'])
+                    wids[x['wid']].append(x['model_type__model_name'])
                 
-                #if data['wid'] in wids.keys():
-                #    print wids[data['wid']], model
-                #    raise ValidationError({'wid': 'Value must be unique'})
+                if data['wid'] in wids.keys():
+                    if model.__name__ in wids[data['wid']]:
+                        raise ValidationError({'wid': 'Value must be unique for model'})
                     
                 wids[data['wid']] = model.__name__
             
@@ -846,9 +848,9 @@ def exportData(request, species_wid=None):
         for model_type in model_types:
             model = chelpers.getModel(model_type)
             if issubclass(model, cmodels.SpeciesComponent):
-                queryset = chain(queryset, model.objects.filter(species__id=species.id).select_related(depth=2).all())
+                queryset = chain(queryset, model.objects.for_species(species).select_related(depth=2).all())
             else:
-                queryset = chain(queryset, model.objects.select_related(depth=2).filter(id=species.id))
+                queryset = chain(queryset, model.objects.for_species(species).select_related(depth=2))
             models.append(chelpers.getModel(model_type))
         
         return chelpers.render_queryset_to_response(
@@ -939,7 +941,7 @@ def importSpeciesData(request, species=None):
                 
                 through = cmodels.SpeciesComponent.species.through
                     
-                component = cmodels.SpeciesComponent.objects.filter(species = species).values_list("pk", flat=True).order_by("pk")
+                component = cmodels.SpeciesComponent.objects.for_species(species).values_list("pk", flat=True).order_by("pk")
                 
                 species.pk = None
                 species.id = None
@@ -1048,7 +1050,7 @@ def sitemap_species(request, species):
         template = 'cyano/sitemap_species.xml', 
         data = {
             'ROOT_URL': settings.ROOT_URL,
-            'entries': cmodels.SpeciesComponent.objects.filter(species__id = species.id),
+            'entries': cmodels.SpeciesComponent.objects.for_species(species),
         }
     )
 
