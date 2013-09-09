@@ -583,13 +583,13 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     t = loader.get_template('cyano/error.html')
     data['message'] = msg
 
-    if settings.DEBUG or request.user.profile.is_admin():
+    if settings.DEBUG or (request.user.is_authenticated() and request.user.profile.is_admin()):
         data['message_extra'] = msg_debug
     
     if _format == "json":
         objects = []
         
-        now = datetime.datetime.now(tzlocal())        
+        now = datetime.datetime.now(tzlocal())
         json = odict()
         json['title'] = 'CyanoFactory KB'
         json['time'] = str(now.isoformat())
