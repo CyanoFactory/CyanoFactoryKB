@@ -583,7 +583,7 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     t = loader.get_template('cyano/error.html')
     data['message'] = msg
 
-    if settings.DEBUG:
+    if settings.DEBUG or request.user.profile.is_admin():
         data['message_extra'] = msg_debug
     
     if _format == "json":

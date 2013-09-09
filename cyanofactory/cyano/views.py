@@ -1306,17 +1306,24 @@ def jobs(request, species = None):
     running = []
     # Fetch pending tasks
     insp = inspect()
-    res = insp.reserved()
-    
+    message_debug = "No worker available"
+    try:
+        res = insp.reserved()
+    except Exception as e:
+        res = None
+        message_debug = str(e)
+
     # Admins see all jobs
     is_admin = request.user.profile.is_admin()
-    
+
     if not res:
         return chelpers.render_queryset_to_response_error(
             request,
             error = 503,
-            msg = "No worker available. Please report this to an administrator!")
-    
+            msg = "Server error or no worker available. Please report this to an administrator!",
+            msg_debug = message_debug
+        )
+
     for v in res.values():
         for job in v:
             kwargs = literal_eval(job["kwargs"])
