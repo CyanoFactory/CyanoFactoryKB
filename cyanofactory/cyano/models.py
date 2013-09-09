@@ -377,6 +377,22 @@ class Permission(Model):
                         "WRITE_PERMISSION"]
     
     @staticmethod
+    def get_instance(permission):
+        if isinstance(permission, basestring):
+            permission = Permission.get_by_name(permission)
+        elif isinstance(permission, int):
+            permission = Permission.get_by_pk(permission)
+        elif isinstance(permission, Permission):
+            permission = permission
+        else:
+            raise ValueError("Must be string, int or Permission type")
+        
+        if not isinstance(permission, Permission):
+            raise ValueError("Invalid permission argument")
+        
+        return permission
+    
+    @staticmethod
     def get_by_name(name):
         if Permission.permission_mapping == None:
             Permission.permission_mapping = {}
@@ -411,6 +427,9 @@ class UserPermission(Model):
         return "[{}, {}]".format(
             "".join(perm_allow), "".join(perm_deny)
         )
+        
+    class Meta:
+        unique_together = ('entry', 'user')
 
 class GroupPermission(Model):
     entry = ForeignKey("Entry", related_name = "group_permissions")
@@ -425,6 +444,9 @@ class GroupPermission(Model):
         return "[{}, {}]".format(
             "".join(perm_allow), "".join(perm_deny)
         )
+
+    class Meta:
+        unique_together = ('entry', 'group')
 
 class ProfileBase(Model):    
     def has_full_access(self, entry):
@@ -450,6 +472,61 @@ class ProfileBase(Model):
 
     def can_write_permission(self, species, entry):
         return self.has_permission(entry, PermissionEnum.WRITE_PERMISSION)
+    
+    def add_allow_permission(self, entry, permission):
+        self._update_permission(entry, permission, allow=True, add=True)
+    
+    def delete_allow_permission(self, entry, permission):
+        self._update_permission(entry, permission, allow=True, delete=True)
+    
+    def add_deny_permission(self, entry, permission):
+        self._update_permission(entry, permission, deny=True, add=True)
+    
+    def delete_deny_permission(self, entry, permission):
+        self._update_permission(entry, permission, deny=True, delete=True)
+    
+    def _handle_permission_list(self, entry, perm_list, allow):
+        """
+        Internal Api used by permission view
+        """
+        for i, perm in enumerate(perm_list):
+            if allow:
+                if perm == 0:
+                    self.delete_allow_permission(entry, i + 1)
+                else:
+                    self.add_allow_permission(entry, i + 1)
+            else:
+                if perm == 0:
+                    self.delete_deny_permission(entry, i + 1)
+                else:
+                    self.add_deny_permission(entry, i + 1)
+    
+    def _update_permission(self, permission, perm_get, allow=False, deny=False, add=False, delete=False):
+        permission = Permission.get_instance(permission)
+        
+        if allow ^ deny or add ^ delete:
+            ValueError("Invalid args")
+        
+        if add:
+            op = "add"
+            perm = perm_get()
+        else:
+            op = "remove"
+            try:
+                perm = perm_get()
+            except ObjectDoesNotExist:
+                return
+        
+        if allow:
+            field = perm.allow
+        else:
+            field = perm.deny
+        
+        getattr(field, op)(permission)
+        
+        # Test if both fields are empty now, in that case the permission can be deleted
+        if op == "remove" and perm.allow.count() + perm.deny.count() == 0:
+            perm.delete()
 
     class Meta:
         abstract = True
@@ -476,6 +553,17 @@ class GroupProfile(ProfileBase):
             return group_perm.allow.all(), group_perm.deny.all()
         except ObjectDoesNotExist:
             return None, None
+    
+    def _update_permission(self, entry, permission, allow=False, deny=False, add=False, delete=False):
+        if allow ^ deny or add ^ delete:
+            ValueError("Invalid args")
+        
+        if add:
+            perm_get = lambda: GroupPermission.objects.get_or_create(entry = entry, group = self)[0]
+        else:
+            perm_get = lambda: GroupPermission.objects.get(entry = entry, group = self)
+            
+        super(GroupProfile, self)._update_permission(permission, perm_get, allow, deny, add, delete)
 
     def has_permission(self, entry, permissions):
         """
@@ -575,6 +663,17 @@ class UserProfile(ProfileBase):
                 pass
         
         return allow, deny
+    
+    def _update_permission(self, entry, permission, allow=False, deny=False, add=False, delete=False):
+        if allow ^ deny or add ^ delete:
+            ValueError("Invalid args")
+        
+        if add:
+            perm_get = lambda: UserPermission.objects.get_or_create(entry = entry, user = self)[0]
+        else:
+            perm_get = lambda: UserPermission.objects.get(entry = entry, user = self)
+            
+        super(UserProfile, self)._update_permission(permission, perm_get, allow, deny, add, delete)
     
     def has_permission(self, entry, permissions):
         """

@@ -1146,7 +1146,7 @@ def permission(request, species, model = None, item = None, edit = False):
                     request,
                     species = species,
                     error = 400,
-                    msg = "Invalid POST request on permission page.",
+                    msg = "Invalid request on permission page.",
                     msg_debug = "POST was: " + str(request.POST.lists()))        
             
             # Data is valid, begin with database operations
@@ -1171,9 +1171,8 @@ def permission(request, species, model = None, item = None, edit = False):
             # Rotate array to group -> permissions
             for i, group in enumerate(new_permissions["gid_deny"], user_count_allow + group_count_allow + user_count_deny):  
                 new_permissions_group_deny[cmodels.GroupProfile.objects.get(pk = group)] = [new_permissions[x][i] for x in cmodels.Permission.permission_types]
-            
-            # Check if user or group is completly missing but had permissions before
-            # Delete if this is the case
+
+            # Test if user is missing but had permission before (Happens with "Remove this user")
             all_user_perms = cmodels.UserPermission.objects.filter(entry = entry).prefetch_related("user")
             for permission in all_user_perms:
                 if not permission.user in new_permissions_user_allow and not permission.user in new_permissions_user_deny:
@@ -1184,6 +1183,7 @@ def permission(request, species, model = None, item = None, edit = False):
                     if not permission.user in new_permissions_user_deny:
                         permission.deny.clear()
             
+            # Test if group is missing but had permission before (Happens with "Remove this group")
             all_group_perms = cmodels.GroupPermission.objects.filter(entry = entry).prefetch_related("group")
             for permission in all_group_perms:
                 if not permission.group in new_permissions_group_allow and not permission.group in new_permissions_group_deny:
@@ -1193,64 +1193,20 @@ def permission(request, species, model = None, item = None, edit = False):
                         permission.allow.clear()
                     if not permission.group in new_permissions_group_deny:
                         permission.deny.clear()
-    
+
             # Create or alter the permission object associated to entry+user/group depending on the
             # new permission settings
             for u, p in new_permissions_user_allow.iteritems():
-                new_perm, _ = cmodels.UserPermission.objects.get_or_create(entry = entry, user = u)
-                allows = new_perm.allow.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.add(cmodels.Permission.get_by_pk(x))
-    
+                u._handle_permission_list(entry, p, allow=True)
+
             for u, p in new_permissions_user_deny.iteritems():
-                new_perm, _ = cmodels.UserPermission.objects.get_or_create(entry = entry, user = u)
-                denies = new_perm.deny.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.add(cmodels.Permission.get_by_pk(x))
-    
-                new_perm.save()
+                u._handle_permission_list(entry, p, allow=False)
                         
             for g, p in new_permissions_group_allow.iteritems():
-                new_perm, _ = cmodels.GroupPermission.objects.get_or_create(entry = entry, group = g)
-                allows = new_perm.allow.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.add(cmodels.Permission.get_by_pk(x))
+                g._handle_permission_list(entry, p, allow=True)
                 
-            for g, p in new_permissions_group_deny.iteritems():     
-                new_perm, _ = cmodels.GroupPermission.objects.get_or_create(entry = entry, group = g)    
-                denies = new_perm.deny.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.add(cmodels.Permission.get_by_pk(x))
-                
-                new_perm.save()
+            for g, p in new_permissions_group_deny.iteritems():
+                g._handle_permission_list(entry, p, allow=False)
 
     # Rendering of the permission page
     user_permissions_db = cmodels.UserPermission.objects.filter(entry = entry).prefetch_related("allow", "deny", "user", "user__user")
@@ -1274,7 +1230,6 @@ def permission(request, species, model = None, item = None, edit = False):
         group_perm_deny = [permission.group.id, [1 if cmodels.Permission.get_by_pk(x) in permission.deny.all() else 0 for x in range(1, 9)]] 
         group_permissions_allow.append(group_perm_allow)
         group_permissions_deny.append(group_perm_deny)
-
     
     queryset = chelpers.objectToQuerySet(item) if item else None
 
