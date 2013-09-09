@@ -4,6 +4,7 @@ import cyano.models as cmodels
 from cyano.helpers import slugify
 from bioparser import BioParser
 from django.db.transaction import commit_on_success
+from django.core.exceptions import ObjectDoesNotExist
 
 class Genbank(BioParser):    
     def __init__(self, wid, user, reason, chromosome, name):
