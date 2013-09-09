@@ -4,15 +4,34 @@ Whole-cell project settings
 Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
+Cyanofactory project settings
 '''
 
 import os
+from sys import argv
 
 import djcelery
 
 from settings_private import *
 
-DATABASES["djcelery"] = DATABASES["default"]
+UNIT_TEST_RUNNING = 'test' in argv
+
+# Special case for unit testing (SQLite DB -> faster)
+
+if UNIT_TEST_RUNNING:
+    DATABASES = {}
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'cyanobase'
+    }
+
+    TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+    
+    DEBUG = False
+else:
+    # Workaround for transaction blocks (progress not visible)
+    # Needs the database router
+    DATABASES['djcelery'] = DATABASES['default']
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
@@ -85,14 +104,16 @@ MIDDLEWARE_CLASSES = (
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     #'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-ROOT_URLCONF = os.path.dirname(os.path.realpath(__file__)).split(os.sep)[-1] + '.urls'
+if DEBUG:
+    MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
+
+ROOT_URLCONF = 'urls'
 
 #use absolute directories
 TEMPLATE_DIRS = (
@@ -115,7 +136,6 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.admindocs',
 	'django_extensions',
-    'endless_pagination',
     'widget_tweaks',
 	
 	#apps
@@ -132,9 +152,12 @@ INSTALLED_APPS = (
     'django_dumpdb',
     'djcelery',
 	'haystack',
-    
-    'debug_toolbar',
+    'endless_pagination',
+    'django_nose',
 )
+
+if DEBUG:
+    INSTALLED_APPS += ('debug_toolbar',)
 
 import django.utils.log
 # A sample logging configuration. The only tangible logging
@@ -188,6 +211,8 @@ AUTH_PROFILE_MODULE = 'cyano.UserProfile'
 LOGIN_URL = ROOT_URL + '/login/'
 LOGIN_REDIRECT_URL = ROOT_URL + '/'
 
+DATABASE_ROUTERS = ['public.router.WarehouseRouter']
+
 ABSOLUTE_URL_OVERRIDES = {
     'auth.user': lambda o: ROOT_URL + '/user/' +  o.username,
 }
@@ -196,4 +221,3 @@ from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
 TEMPLATE_CONTEXT_PROCESSORS += (
     'django.core.context_processors.request',
 )
-

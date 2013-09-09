@@ -1,17 +1,5 @@
 from django.core.urlresolvers import reverse
 
-def get_database_url_from_organism(organism):
-    """Takes an db_xref identifier and converts it into an URL.
-    A db_xref identifier consists of two strings delimited by a **:**.
-
-    :param organism: db_xref identifier (**Must** contain a **:**)
-    :type organism: str
-
-    :returns: str -- Target URL for the given db_xref identifier.
-    """
-    stri = organism.split(':', 1)
-    return reverse("db_xref.views.dbxref", args=[stri[0], stri[1]])
-
 def get_database_url(database, organism):
     """Takes an db_xref identifier (already split in database and organism part)
     and converts it into an URL.
