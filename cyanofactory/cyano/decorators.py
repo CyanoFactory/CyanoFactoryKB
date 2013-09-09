@@ -8,14 +8,6 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 import cyano.models as models
 from cyano.helpers import render_queryset_to_response_error
 
-def __get_and_delete(kw, key):
-    if not key in kw:
-        return False
-    
-    res = kw[key]
-    del kw[key]
-    return res
-    
 def __assign_if_not_false(kw, key, obj):
     if obj != False:
         kw[key] = obj
@@ -24,23 +16,29 @@ def resolve_to_objects(function):
     @wraps(function)
     def wrapper(request, *args, **kw):
         # False instead of None, None is default value for passed but not set
-        species_wid = __get_and_delete(kw, "species_wid")
-        model_type = __get_and_delete(kw, "model_type")
-        wid = __get_and_delete(kw, "wid")
+        species_wid = kw.pop("species_wid", False)
+        model_type = kw.pop("model_type", False)
+        wid = kw.pop("wid", False)
 
         species = False
         model = False
         item = False
 
         if species_wid:
-            species = models.Species.objects.filter(wid = species_wid)
+            species = models.Species.objects.for_wid(species_wid, get=False)
             try:
                 species = species.get()
-            except (ObjectDoesNotExist, MultipleObjectsReturned) as e:
+            except ObjectDoesNotExist as e:
                 return render_queryset_to_response_error(
                     request,
                     error = 404,
                     msg = "The requested species \"{}\" was not found.".format(species_wid),
+                    msg_debug = repr(e))
+            except MultipleObjectsReturned as e:
+                return render_queryset_to_response_error(
+                    request,
+                    error = 500,
+                    msg = "Database error for species \"{}\". Please report this to an administrator!.".format(species_wid),
                     msg_debug = repr(e))
         if model_type:
             model = get_model("cyano", model_type)
@@ -51,10 +49,10 @@ def resolve_to_objects(function):
                     error = 404,
                     msg = "The requested species \"{}\" has no model \"{}\".".format(species_wid, model_type))
         if model and wid:
-            item = model.objects.filter(wid = wid, species = species)
+            item = model.objects.for_species(species).for_wid(wid, get = False)
             try:
                 item = item.get()
-            except (ObjectDoesNotExist, MultipleObjectsReturned) as e:
+            except ObjectDoesNotExist as e:
                 return render_queryset_to_response_error(
                     request,
                     error = 404,
@@ -62,6 +60,15 @@ def resolve_to_objects(function):
                     model = model,
                     msg = "The requested species \"{}\" has no item \"{}\" of type \"{}\".".format(species_wid, wid, model_type),
                     msg_debug = repr(e))
+            except MultipleObjectsReturned as e:
+                return render_queryset_to_response_error(
+                    request,
+                    error = 500,
+                    species = species,
+                    model = model,
+                    msg = "Database error for species \"{}\" accessing item \"{}\" of type \"{}\". Please report this to an administrator!.".format(species_wid, wid, model_type),
+                    msg_debug = repr(e))
+
 
         # Prepare keyword arguments
         __assign_if_not_false(kw, "species", species)

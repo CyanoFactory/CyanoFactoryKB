@@ -3,7 +3,6 @@ from django.db.transaction import commit_on_success
 from libsbml import SBMLReader
 from cyano.helpers import slugify
 import cyano.models as cmodels
-from django.core.exceptions import ObjectDoesNotExist
 
 class SBML(BioParser):
     def parse(self, handle):
@@ -37,10 +36,7 @@ class SBML(BioParser):
                 self.notify_progress(current = i+1, total = total, message = out_str)
             
             # TODO: compartment.getOutside() not implemented
-            try:
-                cobj = cmodels.Compartment.objects.get(wid = wid)
-            except ObjectDoesNotExist:
-                cobj = cmodels.Compartment(wid = wid)
+            cobj = cmodels.Compartment.objects.for_species(self.species).for_wid(wid, create = True)
             
             cobj.name = name
             cobj.save(self.detail)
@@ -64,10 +60,7 @@ class SBML(BioParser):
                 self.notify_progress(current = current, total = total, message = out_str)
             
             # TODO: specie.getBoundaryCondition() not implemented
-            try:
-                sobj = cmodels.Metabolite.objects.get(wid = wid)
-            except ObjectDoesNotExist:
-                sobj = cmodels.Metabolite(wid = wid)
+            sobj = cmodels.Metabolite.objects.for_species(self.species).for_wid(wid, create = True)
             
             sobj.name = name
             sobj.charge = 0 # TODO
@@ -108,10 +101,7 @@ class SBML(BioParser):
                     valid = True
             
             if valid:
-                try:
-                    reaction_obj = cmodels.Reaction.objects.get(wid = wid)
-                except ObjectDoesNotExist:
-                    reaction_obj = cmodels.Reaction(wid = wid)
+                reaction_obj = cmodels.Reaction.objects.for_species(self.species).for_wid(wid, create = True)
                 
                 reaction_obj.name = name
                 reaction_obj.direction = 'r' if reaction.reversible else 'f'
@@ -124,9 +114,9 @@ class SBML(BioParser):
                     #    participant_obj = cmodels.ReactionStoichiometryParticipant(wid = wid)
                 
                     participant_obj = cmodels.ReactionStoichiometryParticipant()
-                    participant_obj.molecule = cmodels.Metabolite.objects.get(wid = slugify(reactant.species))
+                    participant_obj.molecule = cmodels.Metabolite.objects.for_species(self.species).for_wid(slugify(reactant.species))
                     participant_obj.coefficient = -reactant.stoichiometry
-                    participant_obj.compartment = cmodels.Compartment.objects.get(wid = slugify(self.model.getSpecies(reactant.species).compartment))
+                    participant_obj.compartment = cmodels.Compartment.objects.for_species(self.species).for_wid(slugify(self.model.getSpecies(reactant.species).compartment))
                     # TODO: EvidencedData needs Revisioning
                     participant_obj.detail = self.detail
                     participant_obj.save()
@@ -140,9 +130,9 @@ class SBML(BioParser):
                     #    participant_obj = cmodels.ReactionStoichiometryParticipant(wid = wid)
                 
                     participant_obj = cmodels.ReactionStoichiometryParticipant()
-                    participant_obj.molecule = cmodels.Metabolite.objects.get(wid = slugify(product.species))
+                    participant_obj.molecule = cmodels.Metabolite.objects.for_species(self.species).for_wid(slugify(product.species))
                     participant_obj.coefficient = product.stoichiometry
-                    participant_obj.compartment = cmodels.Compartment.objects.get(wid = slugify(self.model.getSpecies(product.species).compartment))
+                    participant_obj.compartment = cmodels.Compartment.objects.for_species(self.species).for_wid(slugify(self.model.getSpecies(product.species).compartment))
                     # TODO: EvidencedData needs Revisioning
                     participant_obj.detail = self.detail
                     participant_obj.save()
