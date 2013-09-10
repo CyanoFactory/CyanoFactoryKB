@@ -746,6 +746,12 @@ class TableMeta(Model):
     def get_by_model(model):
         return TableMeta.get_by_model_name(model._meta.object_name)
     
+    @staticmethod
+    def get_by_id(pk):
+        model_type_key = "model/model_type/pk/" + str(pk)
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(pk = pk))
+        return cache_model_type
+    
     def __unicode__(self):
         return self.table_name + " - " + self.model_name
 
@@ -1179,6 +1185,11 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
             pass
 
 class EntryQuerySet(QuerySet):
+    def with_permission(self, permission):
+        perm = Permission.get_by_name(permission)
+        
+        # Todo
+    
     def for_wid(self, wid, get=True, create=False, creation_status=False):
         if get:
             try:
@@ -1378,7 +1389,9 @@ class SpeciesComponent(AbstractSpeciesComponent):
     #getters
     @permalink
     def get_absolute_url(self, species, history_id = None):        
-        dic = {'species_wid':species.wid, 'model_type':TableMeta.get_by_model(self).model_name, 'wid': self.wid}
+        dic = {'species_wid': species.wid,
+               'model_type': TableMeta.get_by_id(self.model_type_id).model_name,
+               'wid': self.wid}
         
         if history_id is None:
             view = 'cyano.views.detail'

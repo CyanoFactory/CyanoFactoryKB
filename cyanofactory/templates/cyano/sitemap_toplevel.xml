@@ -10,22 +10,22 @@ Top-level site map
 	<!-- top-level pages -->
 	<url>
 		<loc>{{ ROOT_URL }}{% url "cyano.views.index" %}</loc>
-		<lastmod>{{ "/cyano/index.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<lastmod>{{ "/cyano/index.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
 	</url>
-	<url>
+	{% comment %}<url>
 		<loc>{{ ROOT_URL }}{% url "cyano.views.tutorial" %}</loc>
-		<lastmod>{{ "/cyano/tutorial.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<lastmod>{{ "/cyano/tutorial.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
 	</url>
 	<url>
 		<loc>{{ ROOT_URL }}{% url "cyano.views.about" %}</loc>
-		<lastmod>{{ "/cyano/about.html"|get_template_last_updated|date:"c" }}</lastmod>
-	</url>
+		<lastmod>{{ "/cyano/about.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
+	</url>{% endcomment %}
 	<url>
 		<loc>{{ ROOT_URL }}{% url "cyano.views.login" %}</loc>
-		<lastmod>{{ "/cyano/login.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<lastmod>{{ "/cyano/login.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
 	</url>
 	<url>
 		<loc>{{ ROOT_URL }}{% url "cyano.views.exportData" %}</loc>
-		<lastmod>{{ "/cyano/exportDataForm.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<lastmod>{{ "/cyano/exportDataForm.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
 	</url>
 </urlset>

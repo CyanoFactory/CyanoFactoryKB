@@ -1023,7 +1023,7 @@ def logout(request, species=None):
         request = request, 
         template = 'cyano/logout.html', 
         )
-    
+
 def sitemap(request):
     return chelpers.render_queryset_to_response(
         request = request, 
@@ -1046,11 +1046,12 @@ def sitemap_toplevel(request):
 @resolve_to_objects
 def sitemap_species(request, species):
     return chelpers.render_queryset_to_response(
+        species = species,
         request = request, 
-        template = 'cyano/sitemap_species.xml', 
+        template = 'cyano/sitemap_species.xml',
         data = {
             'ROOT_URL': settings.ROOT_URL,
-            'entries': cmodels.SpeciesComponent.objects.for_species(species),
+            'entries': cmodels.SpeciesComponent.objects.for_species(species).select_related("detail"),
         }
     )
 

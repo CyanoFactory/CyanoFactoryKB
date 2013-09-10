@@ -95,7 +95,7 @@ def permission_required(permission):
                 # Special handling for guests
                 user = User.objects.get(username = "guest")
     
-            perm = models.Permission.objects.get(name = permission)
+            perm = models.Permission.get_by_name(permission)
             
             profile = user.profile
             
