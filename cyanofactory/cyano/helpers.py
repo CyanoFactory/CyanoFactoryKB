@@ -438,6 +438,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
         data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
+        data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
         
         if queryset != None and data['queryset'].model is None:
             del data['queryset'] 
@@ -476,6 +477,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['species_list'] = cmodels.Species.objects.all()
         data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
         data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
+        data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
 
         for fileName in ['styles', 'styles.print', 'styles.pdf']:
             f = open(settings.STATICFILES_DIRS[0] + '/public/css/' + fileName + '.css', 'r')
@@ -561,6 +563,7 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     data['pdfstyles'] = ''
     data['species_list'] = cmodels.Species.objects.all()
     data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/cyano/error.html'))
+    data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
 
     if queryset != None and data['queryset'].model is None:
             del data['queryset'] 

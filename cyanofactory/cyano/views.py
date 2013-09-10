@@ -379,7 +379,7 @@ def search(request, species_wid = None):
     query = request.GET.get('q', '')
     engine = request.GET.get('engine', 'haystack')
     
-    if engine == 'haystack':
+    if engine == 'haystack' or not getattr(settings, 'GOOGLE_SEARCH_ENABLED', False):
         return search_haystack(request, species_wid, query)
     else:
         return search_google(request, species_wid, query)
