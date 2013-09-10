@@ -32,7 +32,7 @@ def truncate_fields(obj):
 
 class EntryIndex(ModelSearchIndex):
 	def get_updated_field(self):
-		return 'last_updated_date'
+		return None
 		
 	# Hack to avoid error: "xapian.InvalidArgumentError: Term too long (> 245)"
 	# See: https://groups.google.com/forum/?fromgroups#!topic/django-haystack/hRJKcPNPXqw
@@ -44,8 +44,8 @@ class EntryIndex(ModelSearchIndex):
 		pass
 		
 class SpeciesComponentIndex(EntryIndex):
-	species_id = IntegerField(model_attr='species__id')
-	species_wid = CharField(model_attr='species__wid')
+	#species_id = IntegerField(model_attr='species__id')
+	#species_wid = CharField(model_attr='species__wid')
 			
 	class Meta:
 		pass
@@ -65,7 +65,7 @@ def format_field_for_indexing(field=None, related=None, depth=0):
 		if field.rel is not None:
 			field_model = field.rel.to
 	
-	if field_name in ['created_user', 'created_date', 'last_updated_user', 'last_updated_date']:
+	if field_name in ['created_detail', 'detail']:
 		return ''
 		
 	if isinstance(field, ManyToManyField) or related is not None:

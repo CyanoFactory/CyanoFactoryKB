@@ -9,6 +9,8 @@ import cyano.models as cmodels
 from bioparser.genbank import Genbank
 from django.core.exceptions import ObjectDoesNotExist
 
+import settings
+
 '''
 TODO
 - import/excel works correctly
@@ -47,8 +49,8 @@ class CyanoBaseTest(TestCase):
         if url[0] != "/":
             url = "/" + url
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status, "Status {} (expected: {})".format(response.status_code, status))
-        self.assertTrue(response["content-type"].startswith(mimetype), "Mimetype {} (expected: {})".format(response["content-type"], mimetype))
+        self.assertEqual(response.status_code, status, "\nURL: {}\nStatus {} (expected: {})".format(url, response.status_code, status))
+        self.assertTrue(response["content-type"].startswith(mimetype), "Mimetype {} (expected: {})".format(response["content-type"], mimetype))     
         return response
 
     def POST(self, url, params, status=200, mimetype="text/html"):
@@ -56,7 +58,7 @@ class CyanoBaseTest(TestCase):
         if url[0] != "/":
             url = "/" + url
         response = self.client.post(url, params)
-        self.assertEqual(response.status_code, status, "Status {} (expected: {})".format(response.status_code, status))
+        self.assertEqual(response.status_code, status, "\nURL: {}\nStatus {} (expected: {})".format(url, response.status_code, status))
         self.assertTrue(response["content-type"].startswith(mimetype), "Mimetype {} (expected: {})".format(response["content-type"], mimetype))
         return response
 
@@ -133,7 +135,6 @@ class CyanoBasicPageTest(CyanoBaseTest):
         #with self.assertTemplateUsed("cyano/tutorial.html"):
         #    self.assertOK("tutorial/")
 
-    
     def test_sitemap(self):
         """Tests if sitemaps works"""
         
@@ -148,6 +149,39 @@ class CyanoBasicPageTest(CyanoBaseTest):
         
         with self.assertTemplateUsed("cyano/error.html"):
             self.assertNotFound("sitemap/Wrong-Species.xml")
+    
+    def _test_search(self, google):
+        test_urls = ["%ssearch/",
+                     "%ssearch/?engine=haystack",
+                     "%ssearch/?engine=",
+                     "%ssearch/?engine=abcdef",
+                     "%ssearch/?q=query&engine=haystack",
+                     "%ssearch/?q=query"]
+    
+        test_google_urls = ["%ssearch/?engine=google",
+                            "%ssearch/?engine=google&query=test"]
+        
+        with self.assertTemplateUsed("cyano/search.html"):
+            for url in test_urls:
+                self.assertOK(url % (""))
+                self.assertOK(url % (SPECIES + "/"))
+        
+        with self.assertTemplateUsed("cyano/googleSearch.html" if google else "cyano/search.html"):
+            for url in test_google_urls:
+                self.assertOK(url % (""))
+                self.assertOK(url % (SPECIES + "/"))
+    
+    def test_search_google_on(self):
+        """Tests search functions (google search disabled)"""
+        settings.GOOGLE_SEARCH_ENABLED = True
+
+        self._test_search(google = True)
+
+    def test_search_google_off(self):
+        """Tests search functions (google search disabled)"""
+        settings.GOOGLE_SEARCH_ENABLED = False
+
+        self._test_search(google = False)
 
 class CyanoTest(CyanoBaseTest):
     def test_logic_works(self):

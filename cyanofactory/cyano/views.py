@@ -375,19 +375,17 @@ def user(request, username, species = None):
         queryset = queryset,
         template = 'cyano/user.html')    
 
-def search(request, species_wid = None):
+@resolve_to_objects
+def search(request, species = None):
     query = request.GET.get('q', '')
     engine = request.GET.get('engine', 'haystack')
     
     if engine == 'haystack' or not getattr(settings, 'GOOGLE_SEARCH_ENABLED', False):
-        return search_haystack(request, species_wid, query)
+        return search_haystack(request, species, query)
     else:
-        return search_google(request, species_wid, query)
+        return search_google(request, species, query)
                 
-def search_haystack(request, species_wid, query):
-    #search
-    if species_wid is None:
-        species_wid = cmodels.Species.objects.all()[0].wid
+def search_haystack(request, species, query):
     results = SearchQuerySet().filter(species=species).filter(content=query)
     
     #calculate facets        
@@ -435,7 +433,7 @@ def search_haystack(request, species_wid, query):
             'modelNameFacet': modelNameFacet,
             })
 
-def search_google(request, species_wid, query):
+def search_google(request, species, query):
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 

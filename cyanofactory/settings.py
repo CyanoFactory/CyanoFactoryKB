@@ -120,7 +120,7 @@ TEMPLATE_DIRS = (
 	ROOT_DIR + "/templates",
 )
 
-HAYSTACK_SITECONF = 'public.search_indexes'
+HAYSTACK_SITECONF = 'cyano.search_indexes'
 HAYSTACK_SEARCH_ENGINE  = 'xapian'
 HAYSTACK_XAPIAN_PATH = os.path.join(os.path.dirname(__file__), 'xapian_index')
 
