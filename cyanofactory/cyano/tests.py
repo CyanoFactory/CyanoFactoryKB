@@ -154,12 +154,11 @@ class CyanoBasicTest(CyanoBaseTest):
         with self.assertTemplateUsed("cyano/login.html"): 
             self.assertRedirectPermanent("login", "login/")
 
-class CyanoGuestTest(CyanoBaseTest):
-    def test_guest_index(self):
-        """Visits the main page as guest"""
+class CyanoGuestUserTestBase(CyanoBaseTest):
+    def _test_index(self):
         with self.assertTemplateUsed("cyano/index.html"): 
             self.assertOK("/")
-    
+
     def _test_loginout(self, s):        
         with self.assertTemplateUsed("cyano/%s.html" % (s)):
             self.assertOK("%s/" % (s))
@@ -168,6 +167,49 @@ class CyanoGuestTest(CyanoBaseTest):
         self.assertNotFound("%s/invalid/" % (s))
         self.assertNotFound(SPECIES + "/%s/invalid/" % (s))
         self.assertNotFound(SPECIES + "/model/%s/" % (s))
+
+    def _test_search(self, google):
+        test_urls = ["%ssearch/",
+                     "%ssearch/?engine=haystack",
+                     "%ssearch/?engine=",
+                     "%ssearch/?engine=abcdef",
+                     "%ssearch/?q=query&engine=haystack",
+                     "%ssearch/?q=query"]
+    
+        test_google_urls = ["%ssearch/?engine=google",
+                            "%ssearch/?engine=google&query=test"]
+        
+        with self.assertTemplateUsed("cyano/search.html"):
+            for url in test_urls:
+                self.assertOK(url % (""))
+                self.assertOK(url % (SPECIES + "/"))
+        
+        with self.assertTemplateUsed("cyano/googleSearch.html" if google else "cyano/search.html"):
+            for url in test_google_urls:
+                self.assertOK(url % (""))
+                self.assertOK(url % (SPECIES + "/"))
+                
+    def _test_sitemap(self):
+        self.assertNotFound("sitemap.xml/")
+        self.assertNotFound("sitemap_toplevel.xml/")
+        self.assertNotFound("sitemap/%s.xml/" % (SPECIES))
+        
+        with self.assertTemplateUsed("cyano/sitemap.xml"):
+            self.assertOK("sitemap.xml")
+        
+        with self.assertTemplateUsed("cyano/sitemap_toplevel.xml"):
+            self.assertOK("sitemap_toplevel.xml")
+        
+        with self.assertTemplateUsed("cyano/sitemap_species.xml"):
+            self.assertOK("sitemap/%s.xml" % (SPECIES))
+        
+        with self.assertTemplateUsed("cyano/error.html"):
+            self.assertNotFound("sitemap/Wrong-Species.xml")
+
+class CyanoGuestTest(CyanoGuestUserTestBase):
+    def test_guest_index(self):
+        """Visits the main page as guest"""
+        self._test_index()
 
     def test_guest_login(self):
         """Visit login page as guest"""
@@ -198,35 +240,14 @@ class CyanoGuestTest(CyanoBaseTest):
         """Visit jobs page as guest"""
         self._test_basic_uri_stuff("jobs")
     
-    def _test_search(self, google):
-        test_urls = ["%ssearch/",
-                     "%ssearch/?engine=haystack",
-                     "%ssearch/?engine=",
-                     "%ssearch/?engine=abcdef",
-                     "%ssearch/?q=query&engine=haystack",
-                     "%ssearch/?q=query"]
-    
-        test_google_urls = ["%ssearch/?engine=google",
-                            "%ssearch/?engine=google&query=test"]
-        
-        with self.assertTemplateUsed("cyano/search.html"):
-            for url in test_urls:
-                self.assertOK(url % (""))
-                self.assertOK(url % (SPECIES + "/"))
-        
-        with self.assertTemplateUsed("cyano/googleSearch.html" if google else "cyano/search.html"):
-            for url in test_google_urls:
-                self.assertOK(url % (""))
-                self.assertOK(url % (SPECIES + "/"))
-    
     def test_guest_search_google_on(self):
-        """Tests search functions (google search enabled)"""
+        """Tests search functions (google search enabled) as guest"""
         settings.GOOGLE_SEARCH_ENABLED = True
 
         self._test_search(google = True)
 
     def test_guest_search_google_off(self):
-        """Tests search functions (google search disabled)"""
+        """Tests search functions (google search disabled) as guest"""
         settings.GOOGLE_SEARCH_ENABLED = False
 
         self._test_search(google = False)
@@ -321,7 +342,7 @@ class CyanoGuestTest(CyanoBaseTest):
     
     def test_guest_delete_permission(self):
         """Visit delete page as guest with permission"""
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "WRITE_NORMAL")
+        self.doGuestLogin().add_allow_permission(self.getSpecies(), "WRITE_DELETE")
 
         self.assertLoginRequired(SPECIES + "/delete/")
 
@@ -370,6 +391,9 @@ class CyanoGuestTest(CyanoBaseTest):
     
     def test_guest_history_detail(self):
         """Visit history detail page as guest"""
+        self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/history/a/")
+        self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/a/")
+        
         self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_HISTORY")
@@ -414,22 +438,206 @@ class CyanoGuestTest(CyanoBaseTest):
 
     def test_guest_sitemap(self):
         """Visit sitemaps as guest"""
+        self._test_sitemap()
+
+class CyanoUserTest(CyanoGuestUserTestBase):
+    def setUp(self):
+        super(CyanoUserTest, self).setUp()
+        self.doLogin()
+    
+    def test_user_index(self):
+        """Visits the main page as logged in user"""
+        self._test_index()
+
+    def test_user_login(self):
+        """Visit login page as logged in user"""
+        self._test_loginout("login")
+    
+    def test_user_logout(self):
+        """Visit logout page as logged in user"""
+        self._test_loginout("logout")
+
+    def test_user_users(self):
+        """Visit users page as logged in user"""
+        with self.assertTemplateUsed("cyano/users.html"):
+            self.assertOK("users/")
+            self.assertOK(SPECIES + "/users/")
+    
+    def test_user_user(self):
+        """Visit user profile pages as logged in user"""
+        with self.assertTemplateUsed("cyano/user.html"):
+            self.assertOK("user/admin/")
+            self.assertOK(SPECIES + "/user/admin/")
+            
+        self.assertNotFound("user/invalid/")
+        self.assertNotFound(SPECIES + "/user/invalid/")
+    
+    def test_user_job(self):
+        """Visit jobs page as logged in user"""
+        with self.assertTemplateUsed("cyano/jobs.html"):
+            self.assertOK("jobs/")
+
+    def test_user_search_google_on(self):
+        """Tests search functions (google search enabled)"""
+        settings.GOOGLE_SEARCH_ENABLED = True
         
-        self.assertNotFound("sitemap.xml/")
-        self.assertNotFound("sitemap_toplevel.xml/")
-        self.assertNotFound("sitemap/%s.xml/" % (SPECIES))
+        self._test_search(google = True)
+
+    def test_user_search_google_off(self):
+        """Tests search functions (google search disabled)"""
+        settings.GOOGLE_SEARCH_ENABLED = False
         
-        with self.assertTemplateUsed("cyano/sitemap.xml"):
-            self.assertOK("sitemap.xml")
+        self._test_search(google = False)
+
+    def test_user_species(self):
+        """Visit species page as logged in user"""
+        self.assertForbidden(SPECIES + "/")
+        self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
         
-        with self.assertTemplateUsed("cyano/sitemap_toplevel.xml"):
-            self.assertOK("sitemap_toplevel.xml")
+        with self.assertTemplateUsed("cyano/species.html"):
+            self.assertOK(SPECIES + "/")
+    
+    def test_user_listing(self):
+        """Visit listing page as logged in user"""
+        url = SPECIES + "/" + MODEL + "/"
         
-        with self.assertTemplateUsed("cyano/sitemap_species.xml"):
-            self.assertOK("sitemap/%s.xml" % (SPECIES))
+        self.assertForbidden(url)
+
+        self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
         
-        with self.assertTemplateUsed("cyano/error.html"):
-            self.assertNotFound("sitemap/Wrong-Species.xml")
+        with self.assertTemplateUsed("cyano/list.html"):
+            self.assertOK(url)
+
+    def test_user_detail(self):
+        """Visit detail page as logged in user"""
+        url = SPECIES + "/" + MODEL + "/" + ITEM + "/"
+        self.assertForbidden(url)
+
+        self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
+        self.doLogin().add_allow_permission(self.getSpecies(second = True), "READ_NORMAL")
+
+        with self.assertTemplateUsed("cyano/detail.html"):
+            self.assertOK(url)
+
+    def test_user_add(self):
+        """Visit add page as logged in user"""
+        self.assertForbidden("Species/add/")
+        self.assertForbidden(SPECIES + "/" + MODEL + "/add/")
+    
+    def test_user_add_permission(self):
+        """Visit add page as logged in user with permission"""
+        self.doLogin().add_allow_permission(self.getSpecies(), "WRITE_NORMAL")
+
+        with self.assertTemplateUsed("cyano/edit.html"):
+            self.assertOK("Species/add/")
+            self.assertOK(SPECIES + "/" + MODEL + "/add/")
+    
+    def _test_editdelete_user(self, s):
+        self.assertNotFound("Species/%s/" % (s))
+
+        self.assertForbidden(SPECIES + "/%s/" % (s))
+        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/%s/" % (s))
+    
+    def test_user_edit(self):
+        """Visit edit page as logged in user"""
+        self._test_editdelete_user("edit")
+    
+    def test_user_edit_permission(self):
+        """Visit edit page as logged in user with permission"""
+        self.doLogin().add_allow_permission(self.getSpecies(), "WRITE_NORMAL")
+
+        with self.assertTemplateUsed("cyano/edit.html"):
+            self.assertOK(SPECIES + "/edit/")
+            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/edit/")
+    
+    def test_user_delete(self):
+        """Visit delete page as logged in user"""
+        self._test_editdelete_user("delete")
+    
+    def test_user_delete_permission(self):
+        """Visit delete page as logged in user with permission"""
+        self.doLogin().add_allow_permission(self.getSpecies(), "WRITE_DELETE")
+
+        with self.assertTemplateUsed("cyano/delete.html"):
+            self.assertOK(SPECIES + "/delete/")
+            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/delete/")
+
+    def test_user_exportData(self):
+        """Visit export page as logged in user"""
+        self.assertForbidden(SPECIES + "/export/")
+        
+        self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
+        
+        with self.assertTemplateUsed("cyano/exportDataForm.html"):
+            self.assertOK(SPECIES + "/export/")
+
+    def test_user_import(self):
+        """Visit import page as logged in user"""
+        with self.assertTemplateUsed("cyano/importDataForm.html"):
+            self.assertOK("/import/data/")
+            self.assertOK(SPECIES + "/import/data/")
+        
+        with self.assertTemplateUsed("cyano/importSpeciesForm.html"):
+            self.assertOK("/import/species/")
+            self.assertOK(SPECIES + "/import/species/")
+
+    def test_user_history(self):
+        """Visit history pages as logged in user"""
+        self.assertForbidden(SPECIES + "/history/")
+        self.assertForbidden(SPECIES + "/" + MODEL + "/history/")
+        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/history/")
+        
+        self.doLogin().add_allow_permission(self.getSpecies(), "READ_HISTORY")
+        
+        with self.assertTemplateUsed("cyano/history.html"):
+            self.assertOK(SPECIES + "/history/")
+            self.assertOK(SPECIES + "/" + MODEL + "/history/")
+            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/history/")
+    
+    def test_user_history_detail(self):
+        """Visit history detail page as logged in user"""
+        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/")
+        
+        self.doLogin().add_allow_permission(self.getSpecies(), "READ_HISTORY")
+        
+        with self.assertTemplateUsed("cyano/history_detail.html"):
+            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/")
+
+    def test_user_permission(self):
+        """Visit permission view page as logged in user"""    
+        self.assertForbidden(SPECIES + "/permission/")
+        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/")
+        
+        self.doLogin().add_allow_permission(self.getSpecies(), "READ_PERMISSION")
+        
+        with self.assertTemplateUsed("cyano/permission.html"):
+            self.assertOK(SPECIES + "/permission/")
+            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/")
+
+    def test_user_permission_edit(self):
+        """Visit permission edit page as logged in user"""
+        # Special case: Matches species_wid/edit
+        self.assertNotFound("permission/edit/")
+        # Special case: Matches species_wid/model/edit
+        self.assertNotFound(SPECIES + "/" + MODEL + "/permission/edit/")
+        
+        self.assertForbidden(SPECIES + "/permission/edit/")
+        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
+        
+        self.doLogin().add_allow_permission(self.getSpecies(), "WRITE_PERMISSION")
+        
+        self.assertForbidden(SPECIES + "/permission/edit/")
+        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
+        
+        self.doLogin().add_allow_permission(self.getSpecies(), "READ_PERMISSION")
+        
+        with self.assertTemplateUsed("cyano/permission_edit.html"):
+            self.assertOK(SPECIES + "/permission/edit/")
+            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
+
+    def test_user_sitemap(self):
+        """Visit sitemaps as logged in user"""
+        self._test_sitemap()
 
 class CyanoTest(CyanoBaseTest):
     def test_worker_online(self):
