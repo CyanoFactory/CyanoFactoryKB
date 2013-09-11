@@ -388,7 +388,7 @@ def search(request, species = None):
 def search_haystack(request, species, query):
     results = SearchQuerySet().filter(species=species).filter(content=query)
     
-    #calculate facets        
+    #calculate facets      
     facets = results.facet('model_type')
     tmp = facets.facet_counts()['fields']['model_type']
     modelNameFacet = []
@@ -590,7 +590,9 @@ def history(request, species, model = None, item = None):
     if item:
         # Item specific
         obj = item
-        objects = cmodels.Revision.objects.filter(current = item).distinct("detail").order_by("-detail")
+        objects = cmodels.Revision.objects.filter(current = item).distinct().order_by("-detail")
+        
+        # Add link to the current version of the item
         wid = obj.wid
         detail_id = obj.detail.pk
         date = obj.detail.date.date()
@@ -604,12 +606,13 @@ def history(request, species, model = None, item = None):
         
     elif model:
         # Model specific
-        tm = cmodels.TableMeta.get_by_model(model)
         components = model.objects.for_species(species)
-        objects = cmodels.Revision.objects.filter(current__model_type = tm, current__pk__in = components).distinct("detail").order_by("-detail")
+        objects = cmodels.Revision.objects.filter(current__pk__in = components).distinct().order_by("-detail")
+
     else:
         # Whole species specific
-        objects = cmodels.Revision.objects.filter(current = item, current__species = species).distinct("detail").order_by("-detail")
+        components = cmodels.SpeciesComponent.objects.for_species(species)
+        objects = cmodels.Revision.objects.filter(current__pk__in = components).distinct().order_by("-detail")
     
     for obj in objects:
         last_date = date
@@ -699,12 +702,14 @@ def history_detail(request, species, model, item, detail_id):
             'fieldsets': fieldsets,
             'message': request.GET.get('message', ''),
             })
-            
+
+@login_required
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
 def add(request, species=None, model=None):
     return edit(request, species=species, model=model, action='add')
-    
+
+@login_required
 @resolve_to_objects 
 @permission_required(perm.WRITE_NORMAL)
 def edit(request, species, model = None, item = None, action='edit'):
@@ -798,9 +803,10 @@ def edit(request, species, model = None, item = None, action='edit'):
             'error_messages': error_messages,
             }
         )
-            
+
+@login_required
 @resolve_to_objects 
-@permission_required(perm.WRITE_DELETE)      
+@permission_required(perm.WRITE_DELETE)
 def delete(request, species, model, item):
     qs = chelpers.objectToQuerySet(item, model = model)
     
@@ -819,11 +825,10 @@ def delete(request, species, model, item):
         template = 'cyano/delete.html', 
         )
 
-def exportData(request, species_wid=None):
-    getDict = request.GET.copy()
-    if getDict.get('format', ''):
-        getDict.__setitem__('species', getDict.get('species', species_wid))    
-    form = ExportDataForm(getDict or None)
+@resolve_to_objects
+@permission_required(perm.READ_NORMAL)
+def exportData(request, species):
+    form = ExportDataForm(None)
     if not form.is_valid():        
         return chelpers.render_queryset_to_response(
             species=species,
@@ -833,7 +838,7 @@ def exportData(request, species_wid=None):
                 'form': form
                 }
             )
-    else:        
+    else:
         species = species.objects.get(wid = form.cleaned_data['species'])
         queryset = EmptyQuerySet()
         models = []

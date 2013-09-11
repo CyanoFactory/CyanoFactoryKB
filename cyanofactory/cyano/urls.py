@@ -11,7 +11,7 @@ urlpatterns = patterns('cyano.views',
     url(r'^' + _species_wid + r'/login/$', 'login'),
 
     url(r'^logout/$', 'logout'),
-    url(r'^' + _species_wid + r'/logout/', 'logout'),
+    url(r'^' + _species_wid + r'/logout/$', 'logout'),
 	
 	#url(r'^about/$', 'about'),
 	#url(r'^' + _species_wid + '/about/$', 'about'),
@@ -34,13 +34,12 @@ urlpatterns = patterns('cyano.views',
     url(r'^' + _species_wid + r'/delete/$', 'delete'),
 	url(r'^' + _species_wid_model_type_wid + '/delete/$', 'delete'),
 
-    url(r'^(?P<model_type>Species)/', 'add'), # Special case to create new species
+    url(r'^(?P<model_type>Species)/add/', 'add'), # Special case to create new species
 	url(r'^' + _species_wid_model_type + r'/add/$', 'add'),
 
     url(r'^' + _species_wid + r'/edit/$', 'edit'),
     url(r'^' + _species_wid_model_type_wid + '/edit/$', 'edit'),
 
-	url(r'^export/$', 'exportData'),
 	url(r'^' + _species_wid + '/export/$', 'exportData'),
 
 	url(r'^import/data/$', 'importData'),
@@ -49,7 +48,7 @@ urlpatterns = patterns('cyano.views',
     url(r'^import/species/$', 'importSpeciesData'),
     url(r'^' + _species_wid + '/import/species/$', 'importSpeciesData'),
     
-	url(r'^' + _species_wid + '/validate/$', 'validate'),
+	#url(r'^' + _species_wid + '/validate/$', 'validate'),
 	
 	url(r'^sitemap\.xml$', 'sitemap'),
 	url(r'^sitemap_toplevel\.xml$', 'sitemap_toplevel'),

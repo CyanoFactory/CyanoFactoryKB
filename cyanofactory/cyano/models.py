@@ -1329,18 +1329,18 @@ class Entry(AbstractEntry):
         return format_list_html(results, separator=', ')
     
     def get_as_html_created_user(self, species, is_user_anonymous):
+        detail = self.created_detail
         if is_user_anonymous:
-            return '%s' % (self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
+            return '%s<br>%s' % (detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
         else:
-            detail = self.created_detail
             user = detail.user.user
             return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
     
     def get_as_html_last_updated_user(self, species, is_user_anonymous):
+        detail = self.detail
         if is_user_anonymous:
-            return '%s' % (self.last_updated_date.strftime("%Y-%m-%d %H:%M:%S"))
+            return '%s<br>%s' % (detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
         else:
-            detail = self.detail
             user = detail.user.user
             return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)        
     
