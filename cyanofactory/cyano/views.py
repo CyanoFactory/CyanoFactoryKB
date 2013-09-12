@@ -807,13 +807,22 @@ def edit(request, species, model = None, item = None, action='edit'):
 @login_required
 @resolve_to_objects 
 @permission_required(perm.WRITE_DELETE)
-def delete(request, species, model, item):
-    qs = chelpers.objectToQuerySet(item, model = model)
+def delete(request, species, model = None, item = None):
+    #retrieve object
+    if item is None:
+        obj = species
+    else:
+        obj = item
+        
+    if model is None:
+        model = obj.__class__
+    
+    qs = chelpers.objectToQuerySet(obj, model = model)
     
     #delete
     if request.method == 'POST':
         # Todo: Should be revisioned
-        item.delete()
+        obj.delete()
         return HttpResponseRedirect(reverse('cyano.views.listing', kwargs={'species_wid':species.wid, 'model_type': model.__name__}))
         
     #confirmation message

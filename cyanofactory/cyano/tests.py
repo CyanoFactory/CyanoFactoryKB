@@ -273,6 +273,9 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         
         with self.assertTemplateUsed("cyano/list.html"):
             self.assertOK(url)
+        
+        self.assertNotFound(SPECIES + "/Species/")
+        self.assertNotFound(SPECIES + "/Entry/")
 
     def test_guest_detail(self):
         """Visit detail page as guest"""
@@ -521,7 +524,9 @@ class CyanoUserTest(CyanoGuestUserTestBase):
 
     def test_user_add(self):
         """Visit add page as logged in user"""
-        self.assertForbidden("Species/add/")
+        with self.assertTemplateUsed("cyano/edit.html"):
+            self.assertOK("Species/add/")
+
         self.assertForbidden(SPECIES + "/" + MODEL + "/add/")
     
     def test_user_add_permission(self):

@@ -6,7 +6,7 @@ from django.db.models.loading import get_model
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 
 import cyano.models as models
-from cyano.helpers import render_queryset_to_response_error
+from cyano.helpers import render_queryset_to_response_error, getModel
 
 def __assign_if_not_false(kw, key, obj):
     if obj != False:
@@ -41,8 +41,9 @@ def resolve_to_objects(function):
                     msg = "Database error for species \"{}\". Please report this to an administrator!.".format(species_wid),
                     msg_debug = repr(e))
         if model_type:
-            model = get_model("cyano", model_type)
-            if model == None:
+            model = getModel(model_type)
+            # issubclass test needed to allow /add/Species/ but not /species_wid/Species/
+            if model == None or (species_wid and not issubclass(model, models.SpeciesComponent)):
                 return render_queryset_to_response_error(
                     request,
                     species = species,
@@ -111,7 +112,12 @@ def permission_required(permission):
             
             # allow or deny are not None if an item had permission assigned
             # Mix item permissions with species permissions now
-            allow_species, deny_species = profile.has_permission(species, perm)
+            if species:
+                allow_species, deny_species = profile.has_permission(species, perm)
+            else:
+                # No species -> No perm check possible
+                allow_species = True
+                deny_species = False
             
             if (allow_species or allow_item) and not (deny_species or deny_item):
                 # Has permission

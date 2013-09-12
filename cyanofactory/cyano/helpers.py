@@ -313,7 +313,7 @@ def getModelByVerboseNamePlural(s):
     return
 
 def getModelAdmin(s):
-    app_ = __import__('public')
+    app_ = __import__('cyano')
     admins_ = getattr(app_, 'admin')
     if hasattr(admins_, s + 'Admin'):
         return getattr(admins_, s + 'Admin')
