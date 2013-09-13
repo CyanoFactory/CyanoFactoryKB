@@ -6,7 +6,7 @@ class DBXrefTest(CyanoBaseTest):
     
     def test_main_page_works(self):                
         with self.assertTemplateUsed("db_xref/index.html"):
-            self.GET("/dbxref/")
+            self.assertOK("/dbxref/")
     
     def test_redirect(self):
         self.assertRedirect("/dbxref/EC:1.2.3.4")

@@ -64,15 +64,7 @@ def index(request, legacy = None):
             enzymes_hits += 1
             for x in hits:
                 enzymes.append([x, enzyme[1]])
-    
-    print "enzymes"
-    for x in enzyme_items:
-        print x
-    
-    print "metabolites"
-    for x in metabolite_items:
-        print x
-    
+
     data = {}
     data['items'] = items
     data['metabolites'] = metabolites

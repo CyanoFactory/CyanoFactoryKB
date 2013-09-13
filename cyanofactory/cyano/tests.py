@@ -72,16 +72,24 @@ class CyanoBaseTest(TestCase):
             assert_func(l)
 
     # via http://djangosnippets.org/snippets/137/
-    def GET(self, url, status=200, mimetype="text/html", follow = False):
+    def GET(self, url, params = {}, status=200, mimetype="text/html", follow = False):
         """Get a URL and require a specific status code before proceeding"""
         if url[0] != "/":
             url = "/" + url
-        response = self.client.get(url, follow = follow)
+        response = self.client.get(url, params, follow = follow)
+
+        if response.status_code != status:
+            # print note that login was required when a test fails
+            if "location" in response._headers:
+                if "login" in response._headers["location"][1]:
+                    print "Login required."
+
         self.assertEqual(response.status_code, status, "\nURL: {}\nStatus {} (expected: {})".format(url, response.status_code, status))
+            
         self.assertTrue(response["content-type"].startswith(mimetype), "Mimetype {} (expected: {})".format(response["content-type"], mimetype))     
         return response
 
-    def POST(self, url, params, status=200, mimetype="text/html"):
+    def POST(self, url, params = {}, status=200, mimetype="text/html"):
         """Make a POST and require a specific status code before proceeding"""
         if url[0] != "/":
             url = "/" + url
@@ -90,9 +98,13 @@ class CyanoBaseTest(TestCase):
         self.assertTrue(response["content-type"].startswith(mimetype), "Mimetype {} (expected: {})".format(response["content-type"], mimetype))
         return response
 
-    def assertOK(self, url, follow = False):
+    def assertOK(self, url, data = {}, follow = False):
         """Fail if result code is not 200"""
-        return self.GET(url, status = 200, follow = follow)
+        return self.GET(url, params = data, status = 200, follow = follow)
+    
+    def assertPOSTOK(self, url, data = {}, follow = False):
+        """Fail if result code is not 200"""
+        return self.POST(url, params = data, status = 200)
 
     def assertNotFound(self, url, follow = False):
         """Fail if found (code != 404)"""
