@@ -1780,7 +1780,6 @@ class Chromosome(Molecule):
 
         genes = StringIO.StringIO()
 
-
         genesList = list(self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all())
 
         nTus = 0
@@ -1788,7 +1787,7 @@ class Chromosome(Molecule):
         tus = []
 
         for i, gene in enumerate(genesList):
-            if gene.transcription_units.count() > 0:
+            if len(gene.transcription_units.all()[:1]) == 1:
                 tu = gene.transcription_units.all()[:1][0]
                 if iTUs.has_key(tu.wid):
                     iTu = iTUs[tu.wid]
@@ -1797,57 +1796,61 @@ class Chromosome(Molecule):
                     iTu = nTus
                     iTUs[tu.wid] = iTu
                     nTus += 1
-                    
-                iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
+            else:
+                tu = None
+                iTu = nTus
+                nTus += 1
                 
-                if gene.direction == 'f':
-                    x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                    x3 = min(segmentLeft + segmentW, x1 + gene.length / ntPerSegment * segmentW)
-                    x2 = max(x1, x3 - 5)
-                else:
-                    x3 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                    x1 = min(segmentLeft + segmentW, x3 + gene.length / ntPerSegment * segmentW)
-                    x2 = min(x1, x3 + 5)
-                    
-                y2 = chrTop + (iSegment + 1) * segmentHeight - 2
-                y1 = y2 - geneHeight
+            iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
+            
+            if gene.direction == 'f':
+                x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                x3 = min(segmentLeft + segmentW, x1 + gene.length / ntPerSegment * segmentW)
+                x2 = max(x1, x3 - 5)
+            else:
+                x3 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                x1 = min(segmentLeft + segmentW, x3 + gene.length / ntPerSegment * segmentW)
+                x2 = min(x1, x3 + 5)
                 
-                if math.fabs(x3 - x1) > len(gene.wid) * 5:
-                    label = gene.wid
-                else:
-                    label = ''
-                    
-                if gene.name:
-                    tip_title = gene.name
-                else:
-                    tip_title = gene.wid
-                tip_content = 'Transcription unit: %s' % tu.name
-                tip_title = tip_title.replace("'", "\'")
-                tip_content = tip_content.replace("'", "\'")
-                    
-                gene_abs_url = gene.get_absolute_url(species)
+            y2 = chrTop + (iSegment + 1) * segmentHeight - 2
+            y1 = y2 - geneHeight
+            
+            if math.fabs(x3 - x1) > len(gene.wid) * 5:
+                label = gene.wid
+            else:
+                label = ''
                 
-                genes.write('<g>\
-                    <a xlink:href="%s">\
-                        <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/>\
-                    </a>\
-                    <a xlink:href="%s">\
-                        <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\
-                    </a>\
-                    </g>' % (                
-                    gene_abs_url,
-                    iTu % len(colors),
-                    x1, y1,
-                    x2, y1,
-                    x3, (y1 + y2) / 2, 
-                    x2, y2,
-                    x1, y2,
-                    tip_title, tip_content,
-                    gene_abs_url,
-                    (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
-                    tip_title, tip_content,
-                    label,                
-                    ))
+            if gene.name:
+                tip_title = gene.name
+            else:
+                tip_title = gene.wid
+            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name)
+            tip_title = tip_title.replace("'", "\'")
+            tip_content = tip_content.replace("'", "\'")
+                
+            gene_abs_url = gene.get_absolute_url(species)
+            
+            genes.write('<g>\
+                <a xlink:href="%s">\
+                    <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/>\
+                </a>\
+                <a xlink:href="%s">\
+                    <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\
+                </a>\
+                </g>' % (                
+                gene_abs_url,
+                iTu % len(colors),
+                x1, y1,
+                x2, y1,
+                x3, (y1 + y2) / 2, 
+                x2, y2,
+                x1, y2,
+                tip_title, tip_content,
+                gene_abs_url,
+                (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
+                tip_title, tip_content,
+                label,                
+                ))
         
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
@@ -1991,7 +1994,7 @@ class Chromosome(Molecule):
         tus = []
 
         for i, gene in enumerate(genesList):
-            if gene.transcription_units.count() > 0:
+            if len(gene.transcription_units.all()[:1]) == 1:
                 tu = gene.transcription_units.all()[:1][0]
                 if iTUs.has_key(tu.wid):
                     iTu = iTUs[tu.wid]
@@ -2000,69 +2003,73 @@ class Chromosome(Molecule):
                     iTu = nTus
                     iTUs[tu.wid] = iTu
                     nTus += 1
+            else:
+                tu = None
+                iTu = nTus
+                nTus += 1
+
+            if gene.direction == 'f':
+                x1 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
+                x3 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
+                x2 = max(x1, x3 - 5)
+            else:
+                x3 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
+                x1 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
+                x2 = min(x1, x3 + 5)
                 
-                if gene.direction == 'f':
-                    x1 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
-                    x3 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
-                    x2 = max(x1, x3 - 5)
-                else:
-                    x3 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
-                    x1 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
-                    x2 = min(x1, x3 + 5)
-                    
-                x1 = max(chrL, min(chrR, x1))
-                x2 = max(chrL, min(chrR, x2))
-                x3 = max(chrL, min(chrR, x3))
-                            
-                y1 = geneY
-                y2 = geneY + geneHeight
+            x1 = max(chrL, min(chrR, x1))
+            x2 = max(chrL, min(chrR, x2))
+            x3 = max(chrL, min(chrR, x3))
+                        
+            y1 = geneY
+            y2 = geneY + geneHeight
+            
+            if highlight_wid is None or gene.wid in highlight_wid:
+                fillOpacity = 0.75
+                strokeOpacity = 1
+                strokeWidth = 3
+            else:
+                fillOpacity = 0.15
+                strokeOpacity = 0.35
+                strokeWidth = 1
+            
+            if math.fabs(x3 - x1) > len(gene.wid) * 5:
+                label = gene.wid
+            else:
+                label = ''
+            
+            if gene.name:
+                tip_title = gene.name
+            else:
+                tip_title = gene.wid
+            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name)
+            tip_title = tip_title.replace("'", "\'")
+            tip_content = tip_content.replace("'", "\'")
+            
+            gene_abs_url = gene.get_absolute_url(species)
                 
-                if highlight_wid is None or gene.wid in highlight_wid:
-                    fillOpacity = 0.75
-                    strokeOpacity = 1
-                    strokeWidth = 3
-                else:
-                    fillOpacity = 0.15
-                    strokeOpacity = 0.35
-                    strokeWidth = 1
-                
-                if math.fabs(x3 - x1) > len(gene.wid) * 5:
-                    label = gene.wid
-                else:
-                    label = ''
-                
-                if gene.name:
-                    tip_title = gene.name
-                else:
-                    tip_title = gene.wid
-                tip_content = 'Transcription unit: %s' % tu.name
-                tip_title = tip_title.replace("'", "\'")
-                tip_content = tip_content.replace("'", "\'")
-                
-                gene_abs_url = gene.get_absolute_url(species)
-                    
-                genes.write('<g style="">\n\
-                    <a xlink:href="%s">\n\
-                        <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="fill-opacity: %s; stroke-opacity: %s; stroke-width: %spx"/>\n\
-                    </a>\n\
-                    <a xlink:href="%s">\n\
-                        <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\n\
-                    </a>\n\
-                    </g>\n' % (                
-                    gene_abs_url,
-                    iTu % len(colors),
-                    x1, y1,
-                    x2, y1,
-                    x3, (y1 + y2) / 2, 
-                    x2, y2,
-                    x1, y2,
-                    tip_title, tip_content,
-                    fillOpacity, strokeOpacity, strokeWidth,
-                    gene_abs_url,
-                    (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
-                    tip_title, tip_content,
-                    label,
-                    ))
+            genes.write('<g style="">\n\
+                <a xlink:href="%s">\n\
+                    <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="fill-opacity: %s; stroke-opacity: %s; stroke-width: %spx"/>\n\
+                </a>\n\
+                <a xlink:href="%s">\n\
+                    <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\n\
+                </a>\n\
+                </g>\n' % (                
+                gene_abs_url,
+                iTu % len(colors),
+                x1, y1,
+                x2, y1,
+                x3, (y1 + y2) / 2, 
+                x2, y2,
+                x1, y2,
+                tip_title, tip_content,
+                fillOpacity, strokeOpacity, strokeWidth,
+                gene_abs_url,
+                (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
+                tip_title, tip_content,
+                label,
+                ))
                 
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )

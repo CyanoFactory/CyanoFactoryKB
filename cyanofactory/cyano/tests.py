@@ -533,6 +533,7 @@ class CyanoUserTest(CyanoGuestUserTestBase):
 
         with self.assertTemplateUsed("cyano/detail.html"):
             self.assertOK(url)
+            self.assertOK(SPECIES + "/Chromosome/UnitTest-Chromosome/")
 
     def test_user_add(self):
         """Visit add page as logged in user"""
@@ -675,7 +676,9 @@ class CyanoTest(CyanoBaseTest):
     def test_is_admin(self):
         self.doLogin()
         self.assertForbidden(SPECIES + "/")
-        self.doAdminLogin()
+        
+        self.assertTrue(self.doAdminLogin().is_admin())
+
         with self.assertTemplateUsed("cyano/species.html"): 
             self.assertOK(SPECIES + "/")
     
