@@ -10,6 +10,7 @@ from bioparser.genbank import Genbank
 from django.core.exceptions import ObjectDoesNotExist
 
 import settings
+from cyano.forms import ImportSpeciesForm
 
 '''
 TODO
@@ -52,6 +53,9 @@ class CyanoBaseTest(TestCase):
     def doLogin(self):
         self.client.login(username = "gabriel", password = "aaa")
         return cmodels.UserProfile.objects.get(user__username = "gabriel")
+    
+    def doLogout(self):
+        self.client.logout()
     
     def doAdminLogin(self):
         self.client.login(username = "admin", password = "aaa")
@@ -165,6 +169,66 @@ class CyanoBasicTest(CyanoBaseTest):
         
         with self.assertTemplateUsed("cyano/login.html"): 
             self.assertRedirectPermanent("login", "login/")
+
+    def test_worker_online(self):
+        """Tests if a celery worker is online"""
+        
+        from celery.task.control import inspect
+        
+        insp = inspect()
+        
+        try:
+            res = insp.reserved()
+        except Exception:
+            print "RabbitMQ offline?"
+            raise
+
+        self.assertIsNotNone(res, "No worker online")
+    
+    def test_is_admin(self):
+        self.doLogin()
+        self.assertForbidden(SPECIES + "/")
+        
+        self.assertTrue(self.doAdminLogin().is_admin())
+
+        with self.assertTemplateUsed("cyano/species.html"): 
+            self.assertOK(SPECIES + "/")
+
+class CyanoTest(CyanoBaseTest):
+    def test_permissions_species(self):
+        self.assertForbidden(SPECIES + "/")
+        
+        user = self.doLogin()
+
+        self.assertForbidden(SPECIES + "/")
+
+        entry = cmodels.Species.objects.for_wid(SPECIES)
+        user.add_allow_permission(entry, "READ_NORMAL")
+
+        with self.assertTemplateUsed("cyano/species.html"): 
+            self.assertOK(SPECIES + "/")
+        
+        user.add_deny_permission(entry, "READ_NORMAL")
+        
+        self.assertForbidden(SPECIES + "/")
+    
+    def test_empty_permission_deleted(self):
+        user = self.doLogin()
+        entry = cmodels.Species.objects.for_wid(SPECIES)
+        
+        with self.assertRaises(ObjectDoesNotExist):
+            cmodels.UserPermission.objects.get(user = user, entry = entry)
+        
+        user.add_allow_permission(entry, "READ_NORMAL")
+        cmodels.UserPermission.objects.get(user = user, entry = entry)
+        user.delete_allow_permission(entry, "READ_NORMAL")
+        
+        with self.assertRaises(ObjectDoesNotExist):
+            cmodels.UserPermission.objects.get(user = user, entry = entry)
+    
+    def test_species_not_found(self):
+        with self.assertTemplateUsed("cyano/error.html"):
+            self.assertNotFound("/Wrong-Species/")
 
 class CyanoGuestUserTestBase(CyanoBaseTest):
     def _test_index(self):
@@ -437,19 +501,18 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         # Special case: Matches species_wid/model/edit
         self.assertLoginRequired(SPECIES + "/" + MODEL + "/permission/edit/")
         
-        self.assertForbidden(SPECIES + "/permission/edit/")
-        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
+        self.assertLoginRequired(SPECIES + "/permission/edit/")
+        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "WRITE_PERMISSION")
         
-        self.assertForbidden(SPECIES + "/permission/edit/")
-        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
+        self.assertLoginRequired(SPECIES + "/permission/edit/")
+        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_PERMISSION")
-        
-        with self.assertTemplateUsed("cyano/permission_edit.html"):
-            self.assertOK(SPECIES + "/permission/edit/")
-            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
+
+        self.assertLoginRequired(SPECIES + "/permission/edit/")
+        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
 
     def test_guest_sitemap(self):
         """Visit sitemaps as guest"""
@@ -593,11 +656,27 @@ class CyanoUserTest(CyanoGuestUserTestBase):
         """Visit import page as logged in user"""
         with self.assertTemplateUsed("cyano/importDataForm.html"):
             self.assertOK("/import/data/")
-            self.assertOK(SPECIES + "/import/data/")
+        
+        self.assertForbidden(SPECIES + "/import/data/")
         
         with self.assertTemplateUsed("cyano/importSpeciesForm.html"):
             self.assertOK("/import/species/")
+        
+        self.assertForbidden(SPECIES + "/import/species/")
+    
+    def test_user_species_import_permission(self):
+        """Visit import species page as logged in user with permission"""
+        self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
+
+        with self.assertTemplateUsed("cyano/importSpeciesForm.html"):
             self.assertOK(SPECIES + "/import/species/")
+    
+    def test_user_data_import_permission(self):
+        """Visit import data page as logged in user with permission"""
+        self.doLogin().add_allow_permission(self.getSpecies(), "WRITE_NORMAL")
+
+        with self.assertTemplateUsed("cyano/importDataForm.html"):
+            self.assertOK(SPECIES + "/import/data/")
 
     def test_user_history(self):
         """Visit history pages as logged in user"""
@@ -657,63 +736,91 @@ class CyanoUserTest(CyanoGuestUserTestBase):
         """Visit sitemaps as logged in user"""
         self._test_sitemap()
 
-class CyanoTest(CyanoBaseTest):
-    def test_worker_online(self):
-        """Tests if a celery worker is online"""
-        
-        from celery.task.control import inspect
-        
-        insp = inspect()
-        
-        try:
-            res = insp.reserved()
-        except Exception:
-            print "RabbitMQ offline?"
-            raise
 
-        self.assertIsNotNone(res, "No worker online")
-    
-    def test_is_admin(self):
+class CyanoCreateTest(CyanoBaseTest):
+    def setUp(self):
+        super(CyanoCreateTest, self).setUp()
         self.doLogin()
-        self.assertForbidden(SPECIES + "/")
-        
-        self.assertTrue(self.doAdminLogin().is_admin())
-
-        with self.assertTemplateUsed("cyano/species.html"): 
-            self.assertOK(SPECIES + "/")
     
-    def test_permissions_species(self):
-        self.assertForbidden(SPECIES + "/")
-        
-        user = self.doLogin()
-
-        self.assertForbidden(SPECIES + "/")
-
-        entry = cmodels.Species.objects.for_wid(SPECIES)
-        user.add_allow_permission(entry, "READ_NORMAL")
-
-        with self.assertTemplateUsed("cyano/species.html"): 
-            self.assertOK(SPECIES + "/")
-        
-        user.add_deny_permission(entry, "READ_NORMAL")
-        
-        self.assertForbidden(SPECIES + "/")
-    
-    def test_empty_permission_deleted(self):
-        user = self.doLogin()
-        entry = cmodels.Species.objects.for_wid(SPECIES)
-        
+    def test_new_species_missing(self):
+        """Test new species is missing"""
         with self.assertRaises(ObjectDoesNotExist):
-            cmodels.UserPermission.objects.get(user = user, entry = entry)
-        
-        user.add_allow_permission(entry, "READ_NORMAL")
-        cmodels.UserPermission.objects.get(user = user, entry = entry)
-        user.delete_allow_permission(entry, "READ_NORMAL")
-        
-        with self.assertRaises(ObjectDoesNotExist):
-            cmodels.UserPermission.objects.get(user = user, entry = entry)
-    
-    def test_species_not_found(self):
-        with self.assertTemplateUsed("cyano/error.html"):
-            self.assertNotFound("/Wrong-Species/")
+            cmodels.Species.objects.for_wid("new-species")
 
+    def test_create_species(self):
+        """Create a new species via the webinterface"""
+        # Form validation logic tested below
+        with self.assertTemplateUsed("cyano/importSpeciesForm.html"):
+            data = {
+                'new_species': "New Species",
+                'new_wid': "new-species",
+                'reason': 'unit test'
+            }
+            self.assertPOSTOK("/import/species/", data = data)
+
+        cmodels.Species.objects.for_wid("new-species")
+        
+        self.assertNotFound("new-species/" + MODEL + "/" + ITEM + "/")
+        
+        # Permission test
+        with self.assertTemplateUsed("cyano/species.html"):
+            self.assertOK("new-species/")
+        
+        self.doLogout()
+        self.assertForbidden("new-species/")
+    
+    def test_create_mutant(self):
+        """Create a new mutant of SPECIES via the webinterface"""
+        with self.assertTemplateUsed("cyano/importSpeciesForm.html"):
+            data = {
+                'new_species': "New Species",
+                'new_wid': "new-species",
+                'reason': 'unit test'
+            }
+            self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
+            self.assertPOSTOK(SPECIES + "/import/species/", data = data)
+
+        cmodels.Species.objects.for_wid("new-species")
+        
+        self.assertOK("new-species/" + MODEL + "/" + ITEM + "/")
+        
+        # Permission test
+        with self.assertTemplateUsed("cyano/species.html"):
+            self.assertOK("new-species/")
+        
+        self.doLogout()
+        self.assertForbidden("new-species/")
+        
+    # Missing fields are not tested because all fields have required = True -> django feature
+    
+    def test_create_species_wid_used(self):
+        """SpeciesForm Wid in use"""
+        data = {
+            'new_species': "New Species",
+            'new_wid': SPECIES,
+            'reason': 'unit test'
+        }
+        form = ImportSpeciesForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertFalse("new_wid" in form.cleaned_data)
+
+    def test_create_species_wid_invalid(self):
+        """SpeciesForm Wid invalid"""
+        data = {
+            'new_species': "New Species",
+            'new_wid': "bad wid",
+            'reason': 'unit test'
+        }
+        form = ImportSpeciesForm(data=data)
+        self.assertFalse(form.is_valid())
+        self.assertFalse("new_wid" in form.cleaned_data)
+
+    def test_create_species_ok(self):
+        """SpeciesForm all fine"""
+        data = {
+            'new_species': "New Species",
+            'new_wid': "good-wid",
+            'reason': 'unit test'
+        }
+        form = ImportSpeciesForm(data=data)
+        self.assertTrue(form.is_valid())

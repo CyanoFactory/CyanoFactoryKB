@@ -874,6 +874,7 @@ def exportData(request, species):
 
 @login_required
 @resolve_to_objects
+@permission_required(perm.WRITE_NORMAL)
 def importData(request, species=None):
     data = {}
     
@@ -934,6 +935,7 @@ def importData(request, species=None):
 
 @login_required
 @resolve_to_objects
+@permission_required(perm.READ_NORMAL)
 @commit_on_success
 def importSpeciesData(request, species=None):
     data = {}
@@ -1067,6 +1069,7 @@ def sitemap_species(request, species):
         }
     )
 
+@login_required
 @resolve_to_objects
 @permission_required(perm.WRITE_PERMISSION)
 def permission_edit(request, species, model = None, item = None):
