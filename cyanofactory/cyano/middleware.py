@@ -1,8 +1,11 @@
 from django.conf import settings
 
 #import sys
+import re
 
 from django.shortcuts import redirect
+from django.http.response import HttpResponseRedirect
+from django.core.urlresolvers import reverse
 
 class RedirectAllowedHostMiddlware(object):
     """
@@ -49,3 +52,16 @@ class RedirectAllowedHostMiddlware(object):
 
     def get_redirect_url_options_value(self):
         return getattr(settings, 'REDIRECT_URL', None)
+
+# via http://stackoverflow.com/questions/2093593/
+
+class PasswordChangeMiddleware:
+    def process_request(self, request):
+        if request.user.is_authenticated() and \
+            not re.match(r'^' + reverse("password_change_required"), request.path) and \
+            not re.match(r'^' + reverse("logout"), request.path):
+            #re.match(r'^/admin/?', request.path) and
+
+            profile = request.user.profile
+            if profile.force_password_change:
+                return HttpResponseRedirect(reverse("password_change_required"))

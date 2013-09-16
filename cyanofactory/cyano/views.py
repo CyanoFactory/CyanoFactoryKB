@@ -21,7 +21,6 @@ from django.db.models import Count, Sum
 from django.db.models.fields import BooleanField, NullBooleanField, AutoField, BigIntegerField, DecimalField, FloatField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField
 from django.db.models.fields.related import RelatedObject, ManyToManyField, ForeignKey
 from django.db.models.query import EmptyQuerySet
-from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils.text import capfirst
 from django.views.decorators.debug import sensitive_post_parameters
@@ -1008,6 +1007,25 @@ def registration_handler(request, species=None, funcname=""):
         request = request)
     
     return getattr(django.contrib.auth.views, funcname)(request, extra_context = context)
+
+@login_required
+@resolve_to_objects
+def password_change_required(request, species=None):
+    from django.http import HttpResponseRedirect
+    from django.contrib.auth.views import password_change
+    from django.contrib.auth.forms import AdminPasswordChangeForm
+    
+    if not request.user.profile.force_password_change:
+        HttpResponseRedirect(reverse("cyano.index"))
+    
+    context = chelpers.get_extra_context(
+        species = species,
+        request = request)
+    
+    return password_change(request,
+                           "registration/password_change_form_required.html",
+                           password_change_form = AdminPasswordChangeForm,
+                           extra_context = context)
 
 @login_required
 @resolve_to_objects        

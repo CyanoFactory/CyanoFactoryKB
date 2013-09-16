@@ -100,13 +100,14 @@ TEMPLATE_LOADERS = (
 )
 
 MIDDLEWARE_CLASSES = (
-    'public.redirect_host.RedirectAllowedHostMiddlware',
+    'cyano.middleware.RedirectAllowedHostMiddlware',
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'cyano.middleware.PasswordChangeMiddleware',
     #'django.contrib.messages.middleware.MessageMiddleware',
 )
 
@@ -125,6 +126,8 @@ HAYSTACK_SEARCH_ENGINE  = 'xapian'
 HAYSTACK_XAPIAN_PATH = os.path.join(os.path.dirname(__file__), 'xapian_index')
 
 djcelery.setup_loader()
+
+SOUTH_TESTS_MIGRATE = False
 
 INSTALLED_APPS = (
     'django.contrib.auth',
@@ -154,6 +157,7 @@ INSTALLED_APPS = (
 	'haystack',
     'endless_pagination',
     'django_nose',
+    'south'
 )
 
 if DEBUG:

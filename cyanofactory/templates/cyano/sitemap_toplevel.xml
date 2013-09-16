@@ -21,8 +21,8 @@ Top-level site map
 		<lastmod>{{ "/cyano/about.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
 	</url>{% endcomment %}
 	<url>
-		<loc>{{ ROOT_URL }}{% url "cyano.views.login" %}</loc>
-		<lastmod>{{ "/cyano/login.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
+		<loc>{{ ROOT_URL }}{% url "login" %}</loc>
+		<lastmod>{{ "/registration/login.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
 	</url>
 	{% comment %}<url>
 		<loc>{{ ROOT_URL }}{% url "cyano.views.exportData" %}</loc>

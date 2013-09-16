@@ -23,7 +23,7 @@ from django.core import validators
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min,\
-    manager
+    signals
 from django.db.models.query import EmptyQuerySet, QuerySet
 from django.template import loader, Context
 from django.dispatch.dispatcher import receiver
@@ -33,9 +33,12 @@ from cyano.templatetags.templatetags import set_time_zone
 from cyano.cache import Cache
 from cyano.history import HistoryForeignKey as ForeignKey
 from cyano.history import HistoryManyToManyField as ManyToManyField
-from django.db.models.manager import Manager
 
 from model_utils.managers import PassThroughManager
+
+from south.modelsinspector import add_introspection_rules
+add_introspection_rules([], ["^cyano\.history\.HistoryForeignKey"])
+add_introspection_rules([], ["^cyano\.history\.HistoryManyToManyField"])
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -603,6 +606,7 @@ class UserProfile(ProfileBase):
     state = CharField(max_length=255, blank=True, default='', verbose_name='State')
     zip = CharField(max_length=255, blank=True, default='', verbose_name='Zip')
     country = CharField(max_length=255, blank=True, default='', verbose_name='Country')
+    force_password_change = BooleanField(default=False)
     
     def get_name(self):
         return self.user.first_name + " " + self.user.last_name
@@ -723,6 +727,23 @@ class UserProfile(ProfileBase):
         verbose_name_plural = 'User profiles'
         ordering = ['user__last_name', 'user__first_name']
         get_latest_by = 'user__date_joined'
+
+def create_user_profile_signal(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+def password_change_signal(sender, instance, **kwargs):
+    try:
+        user = User.objects.get(username=instance.username)
+        if not user.password == instance.password:
+            profile = user.profile
+            profile.force_password_change = False
+            profile.save()
+    except User.DoesNotExist:
+        pass
+
+signals.pre_save.connect(password_change_signal, sender=User, dispatch_uid='cyano.models')
+signals.post_save.connect(create_user_profile_signal, sender=User, dispatch_uid='cyano.models')
 
 ''' BEGIN: helper models '''
 

@@ -25,14 +25,15 @@ urlpatterns += patterns('boehringer.views',
 )
 
 # authentication
-urlpatterns += patterns('django.contrib.auth.views',
-    url(r'^login/password_reset_done/$', 'password_reset_done'),
-    url(r'^login/password_reset_confirm/(?P<uidb36>[0-9A-Za-z]+)-(?P<token>.+)/$', 'password_reset_confirm', name='password_reset_confirm'),
-    url(r'^login/password_change/$', 'password_change',  name = "password_change"),
-    url(r'^login/password_change_done/$', 'password_change_done', name = "password_change_done"),
-    url(r'^login/password_reset/$', 'password_reset', name = "password_reset"),
-    url(r'^login/password_reset_confirm/$', 'password_reset_confirm', name = "password_reset_confirm"),
-    url(r'^login/password_reset_complete/$', 'password_reset_complete', name = "password_reset_complete"),
+urlpatterns += patterns('',
+    url(r'^account/', include('django.contrib.auth.urls'))
+    #url(r'^login/password_reset_done/$', 'password_reset_done'),
+    #url(r'^login/password_reset_confirm/(?P<uidb36>[0-9A-Za-z]+)-(?P<token>.+)/$', 'password_reset_confirm', name='password_reset_confirm'),
+    #url(r'^login/password_change/$', 'password_change',  name = "password_change"),
+    #url(r'^login/password_change_done/$', 'password_change_done', name = "password_change_done"),
+    #url(r'^login/password_reset/$', 'password_reset', name = "password_reset"),
+    #url(r'^login/password_reset_confirm/$', 'password_reset_confirm', name = "password_reset_confirm"),
+    #url(r'^login/password_reset_complete/$', 'password_reset_complete', name = "password_reset_complete"),
 )
 
 # cyanofactory project

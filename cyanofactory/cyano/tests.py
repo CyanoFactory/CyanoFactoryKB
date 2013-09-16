@@ -156,7 +156,7 @@ class CyanoBaseTest(TestCase):
         """Tests if a view redirects to login page"""
         # Not for testing the decorator, only if the decorator is set
         
-        with self.assertTemplateUsed("cyano/login.html"):
+        with self.assertTemplateUsed("registration/login.html"):
             self.assertOK(url, follow = True)
 
 class CyanoBasicTest(CyanoBaseTest):
@@ -167,7 +167,7 @@ class CyanoBasicTest(CyanoBaseTest):
         """Test if APPEND_SLASH setting is enabled"""
         self.doLogin()
         
-        with self.assertTemplateUsed("cyano/login.html"): 
+        with self.assertTemplateUsed("registration/login.html"): 
             self.assertRedirectPermanent("login", "login/")
 
     def test_worker_online(self):
@@ -235,8 +235,8 @@ class CyanoGuestUserTestBase(CyanoBaseTest):
         with self.assertTemplateUsed("cyano/index.html"): 
             self.assertOK("/")
 
-    def _test_loginout(self, s):        
-        with self.assertTemplateUsed("cyano/%s.html" % (s)):
+    def _test_loginout(self, s, tmpl):
+        with self.assertTemplateUsed("registration/%s.html" % (tmpl)):
             self.assertOK("%s/" % (s))
             self.assertOK(SPECIES + "/%s/" % (s))
 
@@ -289,11 +289,11 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
 
     def test_guest_login(self):
         """Visit login page as guest"""
-        self._test_loginout("login")
+        self._test_loginout("login", "login")
     
     def test_guest_logout(self):
         """Visit logout page as guest"""
-        self._test_loginout("logout")
+        self._test_loginout("logout", "logged_out")
     
     def _test_basic_uri_stuff(self, s):
         self.assertLoginRequired("%s/" % (s))
@@ -529,11 +529,11 @@ class CyanoUserTest(CyanoGuestUserTestBase):
 
     def test_user_login(self):
         """Visit login page as logged in user"""
-        self._test_loginout("login")
+        self._test_loginout("login", "login")
     
     def test_user_logout(self):
         """Visit logout page as logged in user"""
-        self._test_loginout("logout")
+        self._test_loginout("logout", "logged_out")
 
     def test_user_users(self):
         """Visit users page as logged in user"""
