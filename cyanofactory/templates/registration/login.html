@@ -19,9 +19,13 @@ Last updated: 2012-07-17
 h1{
 	text-align:center;
 }
+
 #login tr:last-child td{
 	padding-top:12px;
 	text-align:right;
+}
+.leftfloat {
+  float: left;
 }
 {% endblock %}
 
@@ -29,7 +33,7 @@ h1{
 {% if form.errors %}
 <p class="errors">Your username and password didn't match. Please try again.</p>
 {% endif %}
-<form id="login" method="post" action="{% if species %}{% url "cyano.views.login" species_wid=species.wid %}{% else %}{% url "cyano.views.login" %}{% endif %}">
+<form id="login" method="post" action="{% if species %}{% url "login" species_wid=species.wid %}{% else %}{% url "login" %}{% endif %}">
 {% csrf_token %}
 	<table>
 	<tr>
@@ -41,9 +45,9 @@ h1{
 		<td><input class="text" type="password" name="password" id="id_password" /></td>
 	</tr>
 	<tr>
-		<td colspan="2"><input class="button" type="submit" value="login" /></td>
+		<td colspan="2"><span class="leftfloat"><a href="{% url 'password_reset' %}">Forgot your password?</a></span><input class="button" type="submit" value="login" /></td>
 	</tr>
 	</table>
-<input type="hidden" name="next" value="{{ next }}" />
+	<input type="hidden" name="next" value="{{ next }}" />
 </form>
 {% endblock %}

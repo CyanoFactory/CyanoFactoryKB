@@ -998,45 +998,27 @@ def validate(request, species_wid):
             'errors': errors
             },
         )
-        
-@sensitive_post_parameters()
-@csrf_protect
-@never_cache
+
 @resolve_to_objects
-def login(request, species=None):
-    next_url = request.REQUEST.get('next', '')
-    
-    if request.method == "POST":
-        form = AuthenticationForm(data=request.POST)
-        if form.is_valid():
-            auth_login(request, form.get_user())
-            
-            if request.session.test_cookie_worked():
-                request.session.delete_test_cookie()
+def registration_handler(request, species=None, funcname=""):
+    import django.contrib.auth.views
 
-            return HttpResponseRedirect(next_url)
-    else:
-        form = AuthenticationForm(request)
-
-    request.session.set_test_cookie()
-
-    return chelpers.render_queryset_to_response(
+    context = chelpers.get_extra_context(
         species = species,
-        request = request, 
-        template = 'cyano/login.html', 
-        data = {
-            'form': form,
-            'next': next_url,
-        })
+        request = request)
+    
+    return getattr(django.contrib.auth.views, funcname)(request, extra_context = context)
 
+@login_required
 @resolve_to_objects        
 def logout(request, species=None):
-    auth_logout(request)    
-    return chelpers.render_queryset_to_response(
+    from django.contrib.auth.views import logout as djlogout
+
+    context = chelpers.get_extra_context(
         species = species,
-        request = request, 
-        template = 'cyano/logout.html', 
-        )
+        request = request)
+    
+    return djlogout(request, extra_context = context)
 
 def sitemap(request):
     return chelpers.render_queryset_to_response(

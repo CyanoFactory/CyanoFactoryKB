@@ -171,7 +171,8 @@ Last updated: 2012-07-17
 			<li><a href="#">{{ request.user.username }}</a>
 				<ul>
 				<li><a href="{% if species %}{% url "cyano.views.user" username=request.user.username species_wid=species.wid %}{% else %}{% url "cyano.views.user" username=request.user.username %}{% endif %}">My Profile</a></li>
-				<li><a href="{% if species %}{% url "cyano.views.logout" species_wid=species.wid %}{% else %}{% url "cyano.views.logout" %}{% endif %}">Logout</a></li>
+				<li><a href="{% url "password_change" %}">Change password</a></li>
+				<li><a href="{% if species %}{% url "logout" species_wid=species.wid %}{% else %}{% url "logout" %}{% endif %}">Logout</a></li>
 				</ul>
 			</li>
 			{% if request.user.profile.is_admin %}
@@ -185,7 +186,7 @@ Last updated: 2012-07-17
 			{% endif %}
 			{% else %}
 			<li class="spacer"/>
-			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% url "cyano.views.login" species_wid=species.wid %}{% else %}{% url "cyano.views.login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
+			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% url "login" species_wid=species.wid %}{% else %}{% url "login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
 			{% endif %}
 		</ul>
 	</div>

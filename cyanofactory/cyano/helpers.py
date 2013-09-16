@@ -392,14 +392,14 @@ From http://www.peterbe.com/plog/uniqifiers-benchmark
 def uniqueSorted(seq):
     return {}.fromkeys(seq).keys()
 
-def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):
-    outformat = request.GET.get('format', 'html')
-
+def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):
     data['species'] = species
     data['queryset'] = queryset
     data['request'] = request
     data['queryargs'] = {}
     data['email'] = "wuenschi@hs-mittweida.de"
+    
+    outformat = request.GET.get('format', 'html')
     
     social_text = ""
     
@@ -411,7 +411,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         
         # Speedup ajax calls
         if outformat == 'html' and request.is_ajax():
-            return render_to_response(template, data, context_instance = RequestContext(request))
+            return data
 
         if queryset != None and len(queryset) > 0:
             if len(queryset) == 1 and isinstance(queryset[0], cmodels.Entry):
@@ -441,15 +441,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
         
         if queryset != None and data['queryset'].model is None:
-            del data['queryset'] 
-
-        return render_to_response(template, data, context_instance = RequestContext(request))
-    elif outformat == 'bib':
-        response = HttpResponse(
-            write_bibtex(species, queryset),
-            mimetype = "application/x-bibtex; charset=UTF-8",
-            content_type = "application/x-bibtex; charset=UTF-8")
-        response['Content-Disposition'] = "attachment; filename=data.bib"
+            del data['queryset']
     elif outformat == 'json':
         objects = []
         for obj in queryset:
@@ -467,10 +459,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         json['copyright'] = '%s %s' % (now.year, 'Experimental & Computational Biology, University of Applied Sciences Mittweida')
         json['result'] = {"code": 200, "type": "Found", "message": "Found", "success": True}
         json['data'] = objects
-        return HttpResponse(
-            simplejson.dumps(json, indent=2, ensure_ascii=False, encoding='utf-8'),
-            mimetype = "application/json; charset=UTF-8",
-            content_type = "application/json; charset=UTF-8")
+        return json
     elif outformat == 'pdf':
         data['is_pdf'] = True
         data['pdfstyles'] = ''
@@ -484,6 +473,27 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
             data['pdfstyles'] += f.read()
             f.close()
 
+    return data
+
+def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):
+    outformat = request.GET.get('format', 'html')
+
+    data = get_extra_context(request, queryset, models, template, data, species)
+
+    if outformat == 'html':
+        return render_to_response(template, data, context_instance = RequestContext(request))
+    elif outformat == 'bib':
+        response = HttpResponse(
+            write_bibtex(species, queryset),
+            mimetype = "application/x-bibtex; charset=UTF-8",
+            content_type = "application/x-bibtex; charset=UTF-8")
+        response['Content-Disposition'] = "attachment; filename=data.bib"
+    elif outformat == 'json':
+        return HttpResponse(
+            simplejson.dumps(data, indent=2, ensure_ascii=False, encoding='utf-8'),
+            mimetype = "application/json; charset=UTF-8",
+            content_type = "application/json; charset=UTF-8")
+    elif outformat == 'pdf':
         response = HttpResponse(
             mimetype = 'application/pdf',
             content_type = 'application/pdf')
