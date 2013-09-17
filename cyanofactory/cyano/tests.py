@@ -21,11 +21,6 @@ from django.core.exceptions import ObjectDoesNotExist
 import settings
 from cyano.forms import ImportSpeciesForm
 
-'''
-TODO
-- import/excel works correctly
-'''
-
 SPECIES = "UnitTest-Species"
 SPECIES2 = "Other-Species"
 MODEL = "Gene"
@@ -526,6 +521,16 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
     def test_guest_sitemap(self):
         """Visit sitemaps as guest"""
         self._test_sitemap()
+    
+    def test_guest_license(self):
+        """Visit license page as guest"""
+        with self.assertTemplateUsed("cyano/license.html"):
+            self.assertOK("license/")
+            self.assertOK(SPECIES + "/license/")
+
+        self.assertNotFound("license/invalid/")
+        self.assertNotFound(SPECIES + "/license/invalid/")
+        self.assertNotFound(SPECIES + "/model/license/")
 
 class CyanoUserTest(CyanoGuestUserTestBase):
     def setUp(self):
@@ -745,6 +750,15 @@ class CyanoUserTest(CyanoGuestUserTestBase):
         """Visit sitemaps as logged in user"""
         self._test_sitemap()
 
+    def test_guest_license(self):
+        """Visit license page as logged in user"""
+        with self.assertTemplateUsed("cyano/license.html"):
+            self.assertOK("license/")
+            self.assertOK(SPECIES + "/license/")
+
+        self.assertNotFound("license/invalid/")
+        self.assertNotFound(SPECIES + "/license/invalid/")
+        self.assertNotFound(SPECIES + "/model/license/")
 
 class CyanoCreateTest(CyanoBaseTest):
     def setUp(self):

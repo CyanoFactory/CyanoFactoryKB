@@ -149,10 +149,10 @@ Released under the MIT license
 			<li class="spacer"/>
 			<li><a href="{% if species %}{% url "cyano.views.users" species_wid=species.wid %}{% else %}{% url "cyano.views.users" %}{% endif %}">Members</a></li>
 			{% endif %}
-			{% comment %}
 			<li class="spacer"/>
 			<li><a href="#">Help</a>
 				<ul>
+				{% comment %}
 				<li><a href="{% if species %}{% url "cyano.views.tutorial" species_wid=species.wid %}{% else %}{% url "cyano.views.tutorial" %}{% endif %}">Getting started</a></li>			
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#downloading_content">Downloading data</a></li>
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#api">RESTful API</a></li>				
@@ -162,10 +162,10 @@ Released under the MIT license
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#modeling">Developing whole-cell<div style="padding-left:10px;">models</div></a></li>
 				<li><a href="{% get_static_prefix %}public/doc/">Source code docs</a></li>
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}">About</a></li>
-				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#contact">Contact</a></li>
+				{% endcomment %}
+				<li><a href="{% if species %}{% url "cyano.views.licensing" species_wid=species.wid %}{% else %}{% url "cyano.views.licensing" %}{% endif %}">License</a></li>
 				</ul>
 			</li>
-			{% endcomment %}
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
 			<li><a href="#">{{ request.user.username }}</a>

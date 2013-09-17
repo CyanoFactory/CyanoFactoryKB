@@ -17,9 +17,7 @@ import tempfile
 from copy import deepcopy
 from itertools import chain
 
-from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db import transaction
@@ -29,9 +27,6 @@ from django.db.models.fields.related import RelatedObject, ManyToManyField, Fore
 from django.db.models.query import EmptyQuerySet
 from django.shortcuts import get_object_or_404
 from django.utils.text import capfirst
-from django.views.decorators.debug import sensitive_post_parameters
-from django.views.decorators.cache import never_cache
-from django.views.decorators.csrf import csrf_protect
 
 from haystack.query import SearchQuerySet
 
@@ -341,8 +336,9 @@ def species(request, species):
             },
         request = request, 
         template = 'cyano/species.html')
-    
-def about(request, species_wid=None):
+
+@resolve_to_objects
+def about(request, species=None):
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
@@ -350,13 +346,21 @@ def about(request, species_wid=None):
         data = {
             'ROOT_URL': settings.ROOT_URL,
         }
-    )    
+    )
         
-def tutorial(request, species_wid=None):
+@resolve_to_objects
+def tutorial(request, species=None):
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
-        template = 'cyano/tutorial.html')    
+        template = 'cyano/tutorial.html')
+
+@resolve_to_objects
+def licensing(request, species=None):
+    return chelpers.render_queryset_to_response(
+        species = species,
+        request = request, 
+        template = 'cyano/license.html')
 
 @login_required
 @resolve_to_objects

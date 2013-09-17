@@ -26,6 +26,9 @@ urlpatterns = patterns('cyano.views',
     
     url(r'^account/password_change_required/$', 'password_change_required', name = "password_change_required"),
 
+    url(r'^license/$', 'licensing'),
+    url(r'^' + _species_wid + '/license/$', 'licensing'),
+
 	#url(r'^about/$', 'about'),
 	#url(r'^' + _species_wid + '/about/$', 'about'),
 	
