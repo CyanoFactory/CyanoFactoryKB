@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 from cyano_command import CyanoCommand
 from cyano.tasks import sbml
 from django.core.management.base import BaseCommand

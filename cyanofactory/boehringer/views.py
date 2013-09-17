@@ -1,3 +1,11 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Copyright (c) 2013 Roebbe Wuenschiers <wuenschi@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 from django.shortcuts import render_to_response
 import boehringer.models as models
 from django.template.context import RequestContext

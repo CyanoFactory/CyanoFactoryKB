@@ -1,3 +1,14 @@
+"""
+Author: Jonathan Karr, jkarr@stanford.edu
+Affiliation: Covert Lab, Department of Bioengineering, Stanford University
+Last updated: 2012-07-17
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 from django.conf.urls import patterns, url
 
 _species_wid = r'(?P<species_wid>[a-zA-Z0-9_\-]+)'

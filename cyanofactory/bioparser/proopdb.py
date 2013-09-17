@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 # Imports Operon Prediction files from ProOpDB
 # Reference:
 # Taboada B., Ciria R., Martinez-Guerrer C.E., Merino E., 2012, ProOpDB:

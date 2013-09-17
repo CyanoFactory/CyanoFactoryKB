@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 from django.db.models.fields.related import ForeignKey, ReverseSingleRelatedObjectDescriptor,\
     ManyToManyField, ReverseManyRelatedObjectsDescriptor
 from django.db.models.related import RelatedObject
