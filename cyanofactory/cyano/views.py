@@ -36,6 +36,7 @@ import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
 from cyano.decorators import resolve_to_objects, permission_required
 from django.db.transaction import commit_on_success
+from django.http.response import HttpResponse
 
 def index(request):
     return chelpers.render_queryset_to_response(
@@ -1329,4 +1330,13 @@ def jobs(request, species = None):
             data = {'pending': pending,
                     'finished': finished,
                     'running': running})
+
+def basket(request):
+    pass
+
+def basket_add(request):
+    if not request.is_ajax():
+        return chelpers.render_queryset_to_response_error(request, error=400, msg="No Ajax")
+    
+    return HttpResponse("/static/cyano/img/cart/cart_delete.png")
 

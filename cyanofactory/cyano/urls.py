@@ -28,6 +28,10 @@ urlpatterns = patterns('cyano.views',
 
     url(r'^license/$', 'licensing'),
     url(r'^' + _species_wid + '/license/$', 'licensing'),
+    
+    url(r'^basket/$', 'basket'),
+    
+    url(r'^basket/ajax/add/$', 'basket_add', name="cyano-basket-add"),
 
 	#url(r'^about/$', 'about'),
 	#url(r'^' + _species_wid + '/about/$', 'about'),

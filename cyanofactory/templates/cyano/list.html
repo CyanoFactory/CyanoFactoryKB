@@ -27,6 +27,17 @@ Released under the MIT license
 <script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless.js"></script>
 <script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless_on_scroll.js"></script>
 <script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
+
+<script type="text/javascript" charset="utf-8">
+function cartClicked(self, wid) {
+	$.ajax({
+		url: "{% url "cyano-basket-add" %}",
+		context: document.body
+	}).done(function(msg) {
+		$(self).find("img").attr("src", msg);
+	});
+}
+</script>
 {% endblock %}
 
 {% block action_icons %}

@@ -20,8 +20,9 @@ Released under the MIT license
 	<td><a href="{{ object|get_absolute_url:species }}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
 	{% if not request.user.is_anonymous %}
 	<td>
-		<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>
-		<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" /></a>
+		<a href="#" id="cartadd" title="Add to cart" onclick="cartClicked(this, '{{ object.wid }}')")><img src="{% get_static_prefix %}cyano/img/cart/cart_add.png" /></a>
+		<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}" title="Edit entry"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>
+		<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}" title="Delete entry"><img src="{% get_static_prefix %}public/img/delete.png" /></a>
 	</td>
 	{% endif %}
 </tr>
