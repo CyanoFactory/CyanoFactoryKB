@@ -400,10 +400,8 @@ def uniqueSorted(seq):
 def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):
     data['species'] = species
     data['queryset'] = queryset
-    data['request'] = request
     data['queryargs'] = {}
-    data['email'] = "wuenschi@hs-mittweida.de"
-    
+
     outformat = request.GET.get('format', 'html')
     
     social_text = ""
@@ -439,7 +437,6 @@ def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], tem
     if outformat == 'html':
         data['is_pdf'] = False
         data['pdfstyles'] = ''
-        data['species_list'] = cmodels.Species.objects.all()
         data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
         data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
@@ -569,14 +566,11 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     
     data['species'] = species
     data['queryset'] = queryset
-    data['request'] = request
-    data['email'] = "roebbe.wuenschiers@hs-mittweida.de"
     data['model'] = model
     data['queryargs'] = {}
 
     data['is_pdf'] = False
     data['pdfstyles'] = ''
-    data['species_list'] = cmodels.Species.objects.all()
     data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/cyano/error.html'))
     data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
 

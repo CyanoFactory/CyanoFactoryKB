@@ -230,6 +230,7 @@ ABSOLUTE_URL_OVERRIDES = {
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
 TEMPLATE_CONTEXT_PROCESSORS += (
     'django.core.context_processors.request',
+    'cyano.context_processor.process',
 )
 
 GOOGLE_SEARCH_ENABLED = False
