@@ -11,6 +11,7 @@ from django.utils.functional import wraps
 from django.contrib.auth.models import User
 from django.db.models.loading import get_model
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
+from django.http import HttpResponseBadRequest
 
 import cyano.models as models
 from cyano.helpers import render_queryset_to_response_error, getModel
@@ -173,3 +174,22 @@ def permission_required(permission):
                     msg_debug = extra)
         return wrapper
     return decorator
+
+def ajax_required(f):
+    """
+    AJAX request required decorator
+    use it in your views:
+
+    @ajax_required
+    def my_view(request):
+        ....
+
+    via http://djangosnippets.org/snippets/771/
+    """    
+    def wrap(request, *args, **kwargs):
+            if not request.is_ajax():
+                return HttpResponseBadRequest("Ajax only")
+            return f(request, *args, **kwargs)
+    wrap.__doc__=f.__doc__
+    wrap.__name__=f.__name__
+    return wrap

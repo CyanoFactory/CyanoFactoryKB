@@ -31,7 +31,7 @@ urlpatterns = patterns('cyano.views',
     
     url(r'^basket/$', 'basket'),
     
-    url(r'^basket/ajax/add/$', 'basket_add', name="cyano-basket-add"),
+    url(r'^' + _species_wid_model_type + r'/basket/op/$', 'basket_op', name="cyano-basket-op"),
 
 	#url(r'^about/$', 'about'),
 	#url(r'^' + _species_wid + '/about/$', 'about'),

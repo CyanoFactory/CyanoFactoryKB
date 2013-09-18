@@ -26,17 +26,24 @@ Released under the MIT license
 
 <script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless.js"></script>
 <script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless_on_scroll.js"></script>
-<script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
+<script language="javascript" type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
 
-<script type="text/javascript" charset="utf-8">
-function cartClicked(self, wid) {
-	$.ajax({
-		url: "{% url "cyano-basket-add" %}",
-		context: document.body
-	}).done(function(msg) {
-		$(self).find("img").attr("src", msg);
+<script language="javascript" type="text/javascript" charset="utf-8">
+$(document).ready(function() {
+	$("table#list").on("click", "#cartop", function (event) {
+		event.preventDefault();
+		target = $(event.target);
+		$.ajax({
+			url: "{% url "cyano-basket-op" species_wid=species.wid model_type=model_type %}",
+			context: document.body,
+			data: {"wid": target.data("wid"), "op": target.data("op") }
+		}).done(function(result) {
+			json = jQuery.parseJSON(result);
+			target.attr("src", "{% get_static_prefix %}cyano/img/cart/cart_" + json.new_op + ".png");
+			target.data("op", json.new_op);
+		});
 	});
-}
+});
 </script>
 {% endblock %}
 

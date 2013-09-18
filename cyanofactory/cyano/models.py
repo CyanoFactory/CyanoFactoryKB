@@ -4592,6 +4592,21 @@ class PublicationReference(SpeciesComponent):
 
 ''' END: specific data types'''
 
+class Basket(Model):
+    user = ForeignKey(UserProfile, related_name = 'baskets', verbose_name = "Users baskets")
+    name = CharField(max_length=255, blank=False, default='', verbose_name = "Basket name")
+    
+    def __unicode__(self):
+        return self.name + " " + str(self.components.all())
+
+class BasketComponent(Model):
+    basket = ForeignKey(Basket, related_name = "components", verbose_name = "In basket")
+    component = ForeignKey(SpeciesComponent, related_name = "+", verbose_name = "component")
+    species = ForeignKey(Species, related_name = "+", verbose_name = "Species component belongs to")
+    
+    def __unicode__(self):
+        return str(self.component)
+
 #http://isoelectric.ovh.org/files/practise-isoelectric-point.html
 def calculate_nucleic_acid_pi(seq):
     numA = float(seq.count('A'))
