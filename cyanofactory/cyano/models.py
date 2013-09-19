@@ -1273,6 +1273,9 @@ class Entry(AbstractEntry):
     
     def natural_key(self):
         return self.wid
+    
+    def get_model(self):
+        return TableMeta.get_by_id(self.model_type_id)
 
     def save(self, revision_detail, *args, **kwargs):
         # Optimized to reduce number of database accesses to a minimum

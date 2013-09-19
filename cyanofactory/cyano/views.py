@@ -1345,8 +1345,21 @@ def jobs(request, species = None):
                     'finished': finished,
                     'running': running})
 
-def basket(request):
-    pass
+@login_required
+@resolve_to_objects
+def basket(request, species=None):
+    basket = cmodels.Basket.objects.get_or_create(user = request.user.profile)[0]
+    
+    components = basket.components.all().prefetch_related("component")
+    
+    for component in components:
+        print component.component.wid
+
+    return chelpers.render_queryset_to_response(
+        species = species,
+        request = request,
+        queryset = components,
+        template = 'cyano/basket.html')
 
 @ajax_required
 @login_required

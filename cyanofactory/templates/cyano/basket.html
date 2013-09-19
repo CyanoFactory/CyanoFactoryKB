@@ -1,0 +1,100 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Basket page template
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+{% load filters %}
+
+{% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.wid }}{% endwith %}{% endblock %}
+{% block page_title %}Basket
+{% if queryset %}{% with object=queryset.0 %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}
+{% elif model_type %}{{ model_verbose_name_plural}}
+{% elif species %}
+{% with object=species %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}
+{% endif %}{% endblock %}
+
+{% block head %}
+{{ block.super }}
+{% with object=queryset.0 %}
+<meta name="entry_created" content="{{ object.created_date }}" />
+<meta name="entry_last_updated" content="{{ object.last_updated_date }}" />
+<meta name="entry_type" content="{{ model_verbose_name }}" />
+<meta name="entry_wid" content="{{ object.wid }}" />
+{% if object.name|length > 0 %}
+<meta name="entry_name" content="{{ object.name }}" />
+{% else %}
+<meta name="entry_name" content="{{ object.wid }}" />
+{% endif %}
+{% endwith %}
+{% endblock %}
+
+{% block action_icons %}
+{% with object=queryset.0 %}
+<a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
+<a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
+<a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" /></a>
+{{ block.super }}
+{% endwith %}
+{% endblock %}
+
+{% block extrastyles %}
+#list{
+	width:100%;
+}
+#detail tbody.data tr td:nth-child(1){
+	width:3%;
+}
+#detail tbody.data tr td:nth-child(2n){
+	width:15%;
+}
+#detail tbody.data tr td:nth-child(3){
+	width:60%;
+}
+
+#detail a {
+	color: rgb(34, 34, 34);
+}
+{% endblock %}
+
+{% block content %}
+{% autoescape off %}
+<table id="list">
+<thead>
+	<tr>
+		<th>WID</th>
+		<th>Name</th>
+		{% if not request.user.is_anonymous %}
+		<th>&nbsp;</th>
+		{% endif %}
+	</tr>
+</thead>
+<tbody>
+{% for component in queryset %}
+{% with object=component.component %}
+{% with species_wid=component.species.wid %}
+<tr>
+	<th><a href="{% url "cyano.views.detail" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}">{{ object.wid }}</a></th>
+	<td><a href="{% url "cyano.views.detail" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
+	{% if not request.user.is_anonymous %}
+	<td>
+		<a href="{% url "cyano.views.edit" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}" title="Edit entry"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>
+		<a href="{% url "cyano.views.delete" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}" title="Delete entry"><img src="{% get_static_prefix %}public/img/delete.png" /></a>
+	</td>
+	{% endif %}
+</tr>
+{% endwith %}
+{% endwith %}
+{% endfor %}
+</tbody>
+</table>
+
+{% endautoescape %}
+{% endblock %}
