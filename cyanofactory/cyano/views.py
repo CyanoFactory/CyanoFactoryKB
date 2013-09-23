@@ -36,6 +36,7 @@ import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
 from cyano.decorators import resolve_to_objects, permission_required
 from django.db.transaction import commit_on_success
+from django.http.response import HttpResponseRedirect
 
 def index(request):
     return chelpers.render_queryset_to_response(

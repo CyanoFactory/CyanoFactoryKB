@@ -1660,9 +1660,8 @@ class Protein(Molecule):
         verbose_name='Protein'
         verbose_name_plural = 'Proteins'
         wid_unique = False
-        
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #regulatory rule
             if obj_data['regulatory_rule'] is not None and obj_data['regulatory_rule']['value'] is not None and obj_data['regulatory_rule']['value'] != '':
                 parse_regulatory_rule(obj_data['regulatory_rule']['value'], all_obj_data, obj_data['species'])
@@ -2256,9 +2255,8 @@ class Chromosome(Molecule):
         verbose_name='Chromosome'
         verbose_name_plural = 'Chromosomes'
         wid_unique = False
-        
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['sequence'] is not None and obj_data['sequence'] != '' and len(obj_data['sequence']) != obj_data['length']:
                 raise ValidationError({'length': 'Length of sequence property must match length property'})
 
@@ -2360,9 +2358,8 @@ class ChromosomeFeature(SpeciesComponent):
         verbose_name='Chromosome feature'
         verbose_name_plural = 'Chromosome features'
         wid_unique = False
-        
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
                 chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
@@ -2573,8 +2570,7 @@ class Gene(Molecule):
         wid_unique = False
         
         #chromosome coordinate, length
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
                 chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
@@ -3345,9 +3341,8 @@ class ProteinComplex(Protein):
         verbose_name='Protein complex'
         verbose_name_plural = 'Protein complexes'
         wid_unique = False
-        
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getModel, getEntry
 
             #biosynthesis
@@ -3678,9 +3673,8 @@ class ProteinMonomer(Protein):
         verbose_name='Protein monomer'
         verbose_name_plural = 'Protein monomers'
         wid_unique = False
-        
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['signal_sequence'] is not None:
                 if all_obj_data is None:
                     gene = Gene.objects.get(species__wid=obj_data['species'], wid=obj_data['gene'])
@@ -3875,8 +3869,7 @@ class Reaction(SpeciesComponent):
         verbose_name_plural = 'Reactions'
         wid_unique = False
 
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getEntry, getModel, EmpiricalFormula
             
             #stoichiometry
@@ -4180,8 +4173,7 @@ class TranscriptionUnit(Molecule):
         verbose_name_plural = 'Transcription units'
         wid_unique = False
         
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if len(obj_data['genes']) == 1:
                 return
             if len(obj_data['genes']) == 0:
@@ -4284,8 +4276,7 @@ class TranscriptionalRegulation(SpeciesComponent):
         verbose_name_plural = 'Transcriptional regulation'
         wid_unique = False
         
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #gene wid
             if all_obj_data is None:                
                 tu = TranscriptionUnit.objects.get(species__wid=obj_data['species'], wid=obj_data['transcription_unit'])

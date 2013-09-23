@@ -1830,7 +1830,7 @@ def validate_object_fields(model, data, wids, species_wid, entry_wid):
                     for wid in data[field.name]:
                         if not wids.has_key(wid):
                             raise ValidationError('Undefined WID %s' % wid)
-                        if not issubclass(getModel(wids[wid]), field.rel.to):
+                        if not any(issubclass(getModel(model), field.rel.to) for model in wids[wid]):
                             raise ValidationError('Invalid WID %s' % wid)
                 else:
                     for idx in range(len(data[field.name])):
@@ -1899,11 +1899,11 @@ def validate_model_unique(model, model_objects_data, all_obj_data=None, all_obj_
 def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2m=False):
     model = obj.__class__
     
-    if obj.model_type_id is None:
-        obj.model_type = cmodels.TableMeta.get_by_model_name(obj._meta.object_name)
-    
     if issubclass(model, cmodels.Entry):
         fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
+        
+        if obj.model_type_id is None:
+            obj.model_type = cmodels.TableMeta.get_by_model_name(obj._meta.object_name)
     else:
         fields = model._meta.fields + model._meta.many_to_many
     
