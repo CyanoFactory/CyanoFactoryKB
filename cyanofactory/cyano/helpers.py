@@ -406,7 +406,7 @@ def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], tem
     
     social_text = ""
     
-    if len(models) > 0 and models[0] != None:
+    if len(models) > 0 and models[0] is not None:
         data['model_verbose_name'] = models[0]._meta.verbose_name
         data['model_verbose_name_plural'] = models[0]._meta.verbose_name_plural
         data['model_type'] = models[0].__name__
@@ -416,10 +416,10 @@ def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], tem
         if outformat == 'html' and request.is_ajax():
             return data
 
-        if queryset != None and len(queryset) > 0:
+        if queryset is not None and len(queryset) > 0:
             if len(queryset) == 1 and isinstance(queryset[0], cmodels.Entry):
-                social_text += data['model_verbose_name'][0] + " "
-                social_text += queryset[0].name
+                social_text += data['model_verbose_name'] + " "
+                social_text += queryset[0].name if queryset[0].name else queryset[0].wid
             else:
                 social_text += data['model_verbose_name_plural']
             
@@ -442,7 +442,7 @@ def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], tem
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
         data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
         
-        if queryset != None and data['queryset'].model is None:
+        if queryset is not None and data['queryset'].model is None:
             del data['queryset']
     elif outformat == 'json':
         objects = []
