@@ -4,15 +4,18 @@ Whole-cell knowledge base styles
 Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 */
 
 /* main */
 body{
 	margin:0px;
-	padding:0px;
-	padding-top:10px;
-	padding-bottom:10px;
-	font-size:12px;
+    padding: 10px 0px;
+    font-size:12px;
 	font-family:PT Sans,sans-serif;
 }
 table{
@@ -50,13 +53,13 @@ select.select{
 
 .sequence div{
 	float:left;	
-	font-family:courier;
+	font-family:courier,monospace;
 }
 .sequence div:nth-child(1){
 	text-align:right;
 }
 .sequence div:nth-child(2){
-	font-family:courier;
+	font-family:courier,monospace;
 	margin-right:10px;
 	margin-left:10px;
 }
@@ -86,9 +89,8 @@ select.select{
 }
 #tooltip h1{
 	padding:0px;
-	margin:0px;
-	margin-bottom:2px;
-	font-size:12px;
+    margin: 0px 0px 2px;
+    font-size:12px;
 }
 
 /* header */
@@ -174,8 +176,7 @@ select.select{
 	border-right:1px solid #aaaaaa;
 	width:auto;	
 	padding:0px;
-	margin:0px;
-	margin-left:-5px;
+    margin: 0px 0px 0px -5px;
 }
 #header .menu li:hover ul{
 	visibility:visible;
@@ -279,10 +280,8 @@ select.select{
 
 /* content */
 #main{
-	margin:0 auto;
-	margin-top:80px;
-	margin-bottom:40px;
-	width:800px;
+    margin: 80px auto 40px;
+    width:800px;
 	padding:0px;
 	height:100%;
 }
@@ -312,9 +311,8 @@ select.select{
 }
 
 #content ul{
-	margin:0px;
-	margin-top:0px;
-	padding-left:16px;
+    margin: 0px;
+    padding-left:16px;
 }
 #content table{
 }
@@ -391,8 +389,7 @@ select.select{
 	min-width:32px;
 }
 #list tbody tr td:nth-child(3) a{
-	padding:0px;
-	padding-right:2px;
+    padding: 0px 2px 0px 0px;
 }
 #list tbody tr td:nth-child(3) a img{
 	padding:0px;
@@ -433,17 +430,15 @@ select.select{
 	margin-top:4px;
 }
 #listfilter .block h2{
-	margin:0px;	
-	padding:0px;	
-	margin-left:12px;
-	font-weight:bold;
+    padding:0px;
+    margin: 0px 0px 0px 12px;
+    font-weight:bold;
 	font-size:12px;
 	color:#3d80b3;
 }
 #listfilter .block ul{
-	margin:0px;
-	margin-bottom:10px;
-	padding-right:0px;
+    margin: 0px 0px 10px;
+    padding-right:0px;
 	padding-top:0px;
 	padding-bottom:0px;
 	overflow:hidden;
@@ -453,12 +448,11 @@ select.select{
 	margin-bottom:-10px;
 }
 #listfilter .block ul li{
-	 white-space: nowrap;
-	 list-style-position: outside;	
-	 list-style-type: none;	 
-	 color:#3d80b3;
-	 font-size:18px;
-	 line-height:12px;
+	white-space: nowrap;
+    list-style: none outside;
+    color:#3d80b3;
+	font-size:18px;
+	line-height:12px;
 }
 #listfilter .block ul li.selected{
 	list-style-type: square;
@@ -494,10 +488,8 @@ select.select{
 }
 #detail tbody.data tr:first-child th{
 	background:#3d80b3;
-	border-radius:0px;
-	border-top-left-radius:6px;
-	border-top-right-radius:6px;
-	color:white;
+    border-radius: 6px 6px 0px 0px;
+    color:white;
 	border:1px solid #3d80b3;
 	padding:2px;	
 }
@@ -525,13 +517,11 @@ select.select{
 
 #detail tbody tr td ul, #detail tbody tr td ol{
 	margin:0px;
-	padding:0px;
-	padding-left:20px;
+    padding: 0px 0px 0px 20px;
 }
 #detail tbody tr td ul li p, #detail tbody tr td ol li p{
-	margin:0px;
-	padding:0px;
-	margin-left:-4px;
+    padding:0px;
+    margin: 0px 0px 0px -4px;
 }
 
 #detail tbody tr td ol li{
@@ -575,9 +565,7 @@ select.select{
 }
 #form .block .content{
 	margin:0px;
-	padding:4px;
-	padding-left:3px;
-	padding-right:3px;
+    padding: 4px 3px;
 }
 #form .block .content .col{
 	float:left;
@@ -718,7 +706,8 @@ select.select{
 }
 
 #edit .save{
-	width:100%; text-align:right; margin:0px; padding:0px; padding-top:10px;
+	width:100%; text-align:right; margin:0px;
+    padding: 10px 0px 0px;
 }
 
 /* modal */
@@ -731,7 +720,7 @@ select.select{
 	width:100%;
 	margin:0px;
 	padding:0px;
-	height:autp;
+	height:auto;
 }
 
 #modal table.evidence tbody tr th, #modal table.evidence tbody tr td{
