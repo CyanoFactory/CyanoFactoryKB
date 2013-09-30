@@ -25,14 +25,13 @@ UNIT_TEST_RUNNING = 'test' in argv
 # Special case for unit testing (SQLite DB -> faster)
 
 if UNIT_TEST_RUNNING:
-    DATABASES = {}
-    DATABASES['default'] = {
+    DATABASES = {'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'cyanobase'
-    }
+    }}
 
     TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-    
+
     DEBUG = False
 else:
     # Workaround for transaction blocks (progress not visible)
@@ -42,7 +41,7 @@ else:
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 ADMINS = (
-    #('Max Mustermann', 'doe@example.com'),
+#('Max Mustermann', 'doe@example.com'),
 )
 
 MANAGERS = ADMINS
@@ -95,14 +94,14 @@ STATICFILES_DIRS = (
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    #'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
+    #'django.template.loaders.eggs.Loader',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -124,11 +123,11 @@ ROOT_URLCONF = 'urls'
 
 #use absolute directories
 TEMPLATE_DIRS = (
-	ROOT_DIR + "/templates",
+    ROOT_DIR + "/templates",
 )
 
 HAYSTACK_SITECONF = 'cyano.search_indexes'
-HAYSTACK_SEARCH_ENGINE  = 'xapian'
+HAYSTACK_SEARCH_ENGINE = 'xapian'
 HAYSTACK_XAPIAN_PATH = os.path.join(os.path.dirname(__file__), 'xapian_index')
 
 djcelery.setup_loader()
@@ -141,26 +140,26 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.messages',
-    'django.contrib.staticfiles',	
+    'django.contrib.staticfiles',
     'django.contrib.admin',
     'django.contrib.admindocs',
-	'django_extensions',
+    'django_extensions',
     'widget_tweaks',
-	
-	#apps
-	'public',
+
+    #apps
+    'public',
     #'biosql',
     'cyano',
     'db_xref',
     #'biowarehouse',
-	'bioparser',
+    'bioparser',
     'boehringer',
-	'kegg',
-	
-	#helpers
+    'kegg',
+
+    #helpers
     'django_dumpdb',
     'djcelery',
-	'haystack',
+    'haystack',
     'endless_pagination',
     'django_nose',
     'south'
@@ -169,7 +168,6 @@ INSTALLED_APPS = (
 if DEBUG:
     INSTALLED_APPS += ('debug_toolbar',)
 
-import django.utils.log
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error.
@@ -182,7 +180,7 @@ LOGGING = {
     'filters': {
         'require_debug_false': {
             '()': 'django.utils.log.RequireDebugFalse'
-            }     
+        }
     },
     'handlers': {
         'mail_admins': {
@@ -224,10 +222,11 @@ LOGIN_REDIRECT_URL = ROOT_URL + '/'
 DATABASE_ROUTERS = ['public.router.WarehouseRouter']
 
 ABSOLUTE_URL_OVERRIDES = {
-    'auth.user': lambda o: ROOT_URL + '/user/' +  o.username,
+    'auth.user': lambda o: ROOT_URL + '/user/' + o.username,
 }
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
+
 TEMPLATE_CONTEXT_PROCESSORS += (
     'django.core.context_processors.request',
     'cyano.context_processor.process',
