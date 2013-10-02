@@ -153,7 +153,7 @@ def permission_required(permission):
                             allow_perms += allow_perms_item
                             deny_perms += deny_perms_item
 
-                    perm_list = [0 for x in range(8)]
+                    perm_list = [0]*8
                     perm_allow = list(perm_list)
                     perm_deny = list(perm_list)
                     perm_needed = list(perm_list)

@@ -30,11 +30,28 @@ h1{
 {% endblock %}
 
 {% block content %}
-{% if form.errors %}
-<p class="errors">Your username and password didn't match. Please try again.</p>
-{% endif %}
 <form id="login" method="post" action="{% if species %}{% url "login" species_wid=species.wid %}{% else %}{% url "login" %}{% endif %}">
 {% csrf_token %}
+
+{% if success %}
+<div class="block" id="{{ success|yesno }}" style="position:relative;">
+    <div class="close_box">X</div>
+    <h1>{{ success|yesno:"Success,Error,Maybe"}}</h1>
+    <div class="content" style="width:340px;">
+    <span>{{ message }}</span>
+    </div>
+</div>
+{% endif %}
+
+{% if form.errors %}
+	<div class="block" id="no" style="position:relative;">
+		<h1>Login error</h1>
+		<div class="content">
+		Your username and password didn't match. Please try again.
+		</div>
+	</div>
+{% endif %}
+
 	<table>
 	<tr>
 		<td>{{ form.username.label_tag }}</td>

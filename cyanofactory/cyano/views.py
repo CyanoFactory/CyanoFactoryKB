@@ -1,4 +1,4 @@
-'''
+"""
 Whole-cell knowledge base views
 
 Author: Jonathan Karr, jkarr@stanford.edu
@@ -9,7 +9,7 @@ Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
 Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
-'''
+"""
 
 import os
 import settings
