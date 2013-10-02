@@ -25,11 +25,11 @@ h1, #content{
 }
 {% endblock %}
 
-{% block action_icons %}
-{% if not request.user.is_anonymous and queryset|length > 0 %}
-<a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" /></a>
-<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
-{% endif %}
+{% block action_icons_edit %}
+{% if queryset|length > 0 %}
+<li><a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" />View {{ queryset.0.wid }}</a></li>
+<li><a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" />Edit {{ queryset.0.wid }}</a>
+</li>{% endif %}
 {{ block.super }}
 {% endblock %}
 

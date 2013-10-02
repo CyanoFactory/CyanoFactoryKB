@@ -29,15 +29,14 @@ Released under the MIT license
 <script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
 {% endblock %}
 
-{% block action_icons %}
-{% if request.user.is_anonymous %}
-<a href="mailto:wholecell[at]lists.stanford.edu?subject=WholeCellKB Species={{ species.wid }} {{ model_verbose_name_plural }}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Suggest an edit" alt="Suggest an edit" /></a>
-{% else %}
-<a href="{% url "cyano.views.add" species_wid=species.wid model_type=model_type %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
-{% endif %}
-<a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
-<a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
-<a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" /></a>
+{% block action_icons_edit %}
+<li><a href="{% url "cyano.views.add" species_wid=species.wid model_type=model_type %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" />Add new {{ model_verbose_name }}</a></li>
+{{ block.super }}
+{% endblock %}
+{% block action_icons_export %}
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download {{ model_verbose_name_plural }} in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download {{ model_verbose_name_plural }} in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download {{ model_verbose_name_plural }} in XML format</a></li>
 {{ block.super }}
 {% endblock %}
 

@@ -164,11 +164,15 @@ window.onload = function()
 </script>
 {% endblock %}
 
-{% block action_icons %}
+{% block action_icons_edit %}
 {% with object=queryset.0 %}
-<a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
-<a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
-<a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" /></a>
+{% if object %}
+<li><a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" />View {{ object.wid }}</a></li>
+<li><a href="{% url "cyano.views.permission" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/lock.png" title="View permissions of {{ object.wid }}" alt="View permissions of {{ object.wid }}" />View permissions of {{ object.wid }}</a></li>
+{% else %}
+<li><a href="{% url "cyano.views.species" species_wid=species.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" />View {{ species.wid }}</a></li>
+<li><a href="{% url "cyano.views.permission" species_wid=species.wid %}"><img src="{% get_static_prefix %}public/img/lock.png" title="View permissions of {{ species.wid }}" alt="View permissions of {{ species.wid }}" />View permissions of {{ species.wid }}</a></li>
+{% endif %}
 {{ block.super }}
 {% endwith %}
 {% endblock %}

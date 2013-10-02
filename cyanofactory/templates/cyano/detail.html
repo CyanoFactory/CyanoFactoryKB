@@ -34,17 +34,18 @@ Released under the MIT license
 {% endwith %}
 {% endblock %}
 
-{% block action_icons %}
+{% block action_icons_edit %}
 {% with object=queryset.0 %}
-{% if request.user.is_anonymous %}
-<a href="mailto:wholecell[at]lists.stanford.edu?subject=WholeCellKB Object Species={{ species.wid }} WID={{ object.wid }}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Suggest an edit" alt="Suggest an edit" /></a>
-{% else %}
-<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></a>
-<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
-{% endif %}
-<a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
-<a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
-<a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" /></a>
+<li><a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" />Edit {{ object.wid }}</a></li>
+<li><a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" />Delete {{ object.wid }}</a></li>
+<li><a href="{% url "cyano.views.permission" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/lock.png" title="View permissions" alt="View permissions" />View permissions of {{ object.wid }}</a></li>
+{% endwith %}
+{% endblock %}
+{% block action_icons_export %}
+{% with object=queryset.0 %}
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download {{ object.wid }} in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download {{ object.wid }} in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download {{ object.wid }} in XML format</a></li>
 {{ block.super }}
 {% endwith %}
 {% endblock %}

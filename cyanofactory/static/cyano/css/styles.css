@@ -243,7 +243,7 @@ select.select{
 	bottom:0px;
 	right:0px;
 	height: 24px;
-	overflow: hidden;
+	overflow: visible;
 	margin: 0px 0px 0px 0px;	
 	padding-top:4px;
 	padding-bottom:4px;
@@ -274,8 +274,74 @@ select.select{
 	position:absolute;
 	top:8px;
 	right:8px;
-	width:250px;
 	text-align:right;
+}
+
+#footer .menu{
+	list-style:none;
+	margin:0px;
+	padding:0px;
+	font-weight: normal;
+	text-align:left;
+    float:left;
+}
+#footer .menu li{
+	float:left;
+	display:inline;
+	margin:0px;
+    width:50px;
+    position:relative;
+}
+#footer .menu li:hover{
+	background-color:#fff;
+}
+#footer .menu li:hover a{
+	color:#3d80b3;
+}
+#footer .menu a{
+	color: #3d80b3;
+	margin:0px;
+	padding:0px;
+}
+#footer .menu li ul{
+	background:#cccccc;
+	list-style:none;
+	visibility:hidden;
+	border-top:1px solid #aaaaaa;
+	border-left:1px solid #aaaaaa;
+	border-right:1px solid #aaaaaa;
+	width:auto;
+	padding:0px;
+    margin: 0px 0px 0px 0px;
+}
+#footer .menu li:hover ul{
+	visibility:visible;
+    position:absolute;
+    bottom:100%;
+    right:0;
+}
+#footer .menu li ul li{
+    width:auto;
+    padding: 2px;
+}
+#footer .menu li:hover ul li{
+	float:none;
+	display:list-item;
+	text-align:left;
+}
+#footer .menu li:hover ul li:hover{
+	background:#fff;
+}
+#footer .menu li:hover ul li a{
+	white-space:nowrap;
+	color:#3d80b3;
+}
+#footer .menu li:hover ul li:hover a{
+	color:#3d80b3;
+}
+#footer .menu li ul li img{
+	vertical-align:middle;
+    padding-right:3px;
 }
 
 /* content */
