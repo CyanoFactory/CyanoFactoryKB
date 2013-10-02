@@ -611,7 +611,7 @@ select.select{
 	margin:0px;
 	padding:0px;
 }
-#form, #login .block{
+#form .block, #login .block{
 	width:100%;
 	padding:0px;
 	margin-bottom:20px;
@@ -619,7 +619,7 @@ select.select{
 	border-radius:6px;
 	text-align:left;
 }
-#form, #login .block h1{
+#form .block h1, #login .block h1{
 	border: 1px solid #3d80b3;
 	border-top-left-radius:6px;
 	border-top-right-radius:6px;
@@ -629,25 +629,25 @@ select.select{
 	padding:2px;
 	margin:0px;
 }
-#form, #login .block .content{
+#form .block .content, #login .block .content{
 	margin:0px;
     padding: 4px 3px;
 }
-#form, #login .block .content .col{
+#form .block .content .col{
 	float:left;
 	width:50%;
 }
-#form, #login .block .content input{
+#form .block .content input{
 	margin-left:0px;
 }
-#form, #login .button{
+#form .button{
 	margin:0px;
 }
-#form, #login .block .content #checkall{
+#form .block .content #checkall{
 	margin-top:20px;
 }
 
-#form, #login .close_box {
+#form .close_box {
     #background:blue;
     color:#fff;
     padding:2px 5px;
@@ -658,26 +658,26 @@ select.select{
     cursor:pointer;
 }
 
-#form, #login .block#yes {
+#form .block#yes, #login .block#yes {
 	border: 1px solid #2DD02D;
 }
-#form, #login .block#yes h1{
+#form .block#yes h1, #login .block#yes h1{
 	background:#2DD02D;
     border: 1px solid #2DD02D;
 }
 
-#form, #login .block#no {
+#form .block#no, #login .block#no {
 	border: 1px solid #ff0000;
 }
-#form, #login .block#no h1{
+#form .block#no h1, #login .block#no h1{
 	background:#ff0000;
     border: 1px solid #ff0000;
 }
 
-#form, #login .block#maybe {
+#form .block#maybe, #login .block#maybe {
 	border: 1px solid #ffdd00;
 }
-#form, #login .block#maybe h1{
+#form .block#maybe h1, #login .block#maybe h1{
 	background:#ffdd00;
     border: 1px solid #ffdd00;
 }
