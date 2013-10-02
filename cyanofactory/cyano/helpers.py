@@ -574,7 +574,7 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/cyano/error.html'))
     data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
 
-    if queryset != None and data['queryset'].model is None:
+    if queryset is not None and data['queryset'].model is None:
             del data['queryset'] 
     
     response = http.HttpResponse
@@ -618,7 +618,8 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
             status = error)
         return response
         
-    c = Context(data)
+    c = RequestContext(request, data)
+
     return response(
         t.render(c),
         mimetype = 'text/html; charset=UTF-8',

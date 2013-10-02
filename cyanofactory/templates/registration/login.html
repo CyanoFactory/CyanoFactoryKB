@@ -33,12 +33,11 @@ h1{
 <form id="login" method="post" action="{% if species %}{% url "login" species_wid=species.wid %}{% else %}{% url "login" %}{% endif %}">
 {% csrf_token %}
 
-{% if success %}
-<div class="block" id="{{ success|yesno }}" style="position:relative;">
-    <div class="close_box">X</div>
-    <h1>{{ success|yesno:"Success,Error,Maybe"}}</h1>
-    <div class="content" style="width:340px;">
-    <span>{{ message }}</span>
+{% if message %}
+<div class="block" id="no" style="position:relative;">
+    <h1>Login required</h1>
+    <div class="content">
+    {{ message }}
     </div>
 </div>
 {% endif %}

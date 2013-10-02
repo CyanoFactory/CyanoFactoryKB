@@ -163,9 +163,16 @@ class CyanoBaseTest(TestCase):
         with self.assertTemplateUsed("registration/login.html"):
             self.assertOK(url, follow = True)
 
+    def assertLoginRequiredNoPerm(self, url):
+        """Tests if a view redirects to login page and passes a no permission status text"""
+        with self.assertTemplateUsed("registration/login.html"):
+            response = self.assertOK(url, follow=True)
+            self.assertEquals(response.context_data.get("message", ""),
+                              "You don't have permission to access this item")
+
 class CyanoBasicTest(CyanoBaseTest):
     def test_logic_works(self):
-        self.assertFalse(True == False, "Hardware error")
+        self.assertFalse(True is False, "Hardware error")
 
     def test_append_slash(self):
         """Test if APPEND_SLASH setting is enabled"""
@@ -200,7 +207,7 @@ class CyanoBasicTest(CyanoBaseTest):
 
 class CyanoTest(CyanoBaseTest):
     def test_permissions_species(self):
-        self.assertForbidden(SPECIES + "/")
+        self.assertLoginRequiredNoPerm(SPECIES + "/")
         
         user = self.doLogin()
 
@@ -334,7 +341,7 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
 
     def test_guest_species(self):
         """Visit species page as guest"""
-        self.assertForbidden(SPECIES + "/")
+        self.assertLoginRequiredNoPerm(SPECIES + "/")
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
         
         with self.assertTemplateUsed("cyano/species.html"):
@@ -344,7 +351,7 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         """Visit listing page as guest"""
         url = SPECIES + "/" + MODEL + "/"
         
-        self.assertForbidden(url)
+        self.assertLoginRequiredNoPerm(url)
         self.assertNotFound(SPECIES + "/" + "Invalid" + "/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
@@ -361,7 +368,7 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         """Visit detail page as guest"""
         url = SPECIES + "/" + MODEL + "/" + ITEM + "/"
         url2 = SPECIES2 + "/" + MODEL + "/" + ITEM + "/"
-        self.assertForbidden(url)
+        self.assertLoginRequiredNoPerm(url)
         self.assertNotFound(url2)
 
         self.assertNotFound(SPECIES + "/" + "Invalid" + "/" + ITEM + "/")
@@ -431,7 +438,7 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
 
     def test_guest_exportData(self):
         """Visit export page as guest"""
-        self.assertForbidden(SPECIES + "/export/")
+        self.assertLoginRequiredNoPerm(SPECIES + "/export/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
         
@@ -461,9 +468,9 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         """Visit history pages as guest"""
         self.assertNotFound("history/")
         
-        self.assertForbidden(SPECIES + "/history/")
-        self.assertForbidden(SPECIES + "/" + MODEL + "/history/")
-        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/history/")
+        self.assertLoginRequiredNoPerm(SPECIES + "/history/")
+        self.assertLoginRequiredNoPerm(SPECIES + "/" + MODEL + "/history/")
+        self.assertLoginRequiredNoPerm(SPECIES + "/" + MODEL + "/" + ITEM + "/history/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_HISTORY")
         
@@ -477,7 +484,7 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/history/a/")
         self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/a/")
         
-        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/")
+        self.assertLoginRequiredNoPerm(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_HISTORY")
         
@@ -488,9 +495,9 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         """Visit permission view page as guest"""
         self.assertNotFound("permission/")
         
-        self.assertForbidden(SPECIES + "/permission/")
+        self.assertLoginRequiredNoPerm(SPECIES + "/permission/")
         self.assertNotFound(SPECIES + "/" + MODEL + "/permission/")
-        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/")
+        self.assertLoginRequiredNoPerm(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_PERMISSION")
         
@@ -790,7 +797,7 @@ class CyanoCreateTest(CyanoBaseTest):
             self.assertOK("new-species/")
         
         self.doLogout()
-        self.assertForbidden("new-species/")
+        self.assertLoginRequiredNoPerm("new-species/")
     
     def test_create_mutant(self):
         """Create a new mutant of SPECIES via the webinterface"""
@@ -812,7 +819,7 @@ class CyanoCreateTest(CyanoBaseTest):
             self.assertOK("new-species/")
         
         self.doLogout()
-        self.assertForbidden("new-species/")
+        self.assertLoginRequiredNoPerm("new-species/")
         
     # Missing fields are not tested because all fields have required = True -> django feature
     

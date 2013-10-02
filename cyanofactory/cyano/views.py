@@ -1009,16 +1009,6 @@ def validate(request, species_wid):
             },
         )
 
-@resolve_to_objects
-def registration_handler(request, species=None, funcname=""):
-    import django.contrib.auth.views
-
-    context = chelpers.get_extra_context(
-        species = species,
-        request = request)
-    
-    return getattr(django.contrib.auth.views, funcname)(request, extra_context = context)
-
 @login_required
 @resolve_to_objects
 def password_change_required(request, species=None):
@@ -1038,8 +1028,22 @@ def password_change_required(request, species=None):
                            password_change_form = AdminPasswordChangeForm,
                            extra_context = context)
 
-@login_required
-@resolve_to_objects        
+@resolve_to_objects
+def login(request, species=None):
+    from django.contrib.auth.views import login as djlogin
+
+    msg = request.GET.get("message", "")
+
+    context = chelpers.get_extra_context(
+        species=species,
+        request=request,
+    )
+
+    context['message'] = msg[:50]
+
+    return djlogin(request, extra_context = context)
+
+@resolve_to_objects
 def logout(request, species=None):
     from django.contrib.auth.views import logout as djlogout
 

@@ -4,6 +4,8 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
+from django.core.urlresolvers import reverse
+from django.http.response import HttpResponseRedirect
 
 from django.utils.functional import wraps
 from django.contrib.auth.models import User
@@ -104,9 +106,12 @@ def permission_required(permission):
 
             user = request.user
 
+            is_guest = False
+
             if not user.is_authenticated():
                 # Special handling for guests
                 user = User.objects.get(username="guest")
+                is_guest = True
 
             perm = models.Permission.objects.get(name=permission)
 
@@ -168,7 +173,10 @@ def permission_required(permission):
                         "".join(str(x) for x in perm_allow),
                         "".join(str(x) for x in perm_deny),
                         "".join(str(x) for x in perm_needed))
-                    #print extra
+                    print extra
+
+                if is_guest:
+                    return HttpResponseRedirect(reverse('login') + "?next={}&message={}".format(request.path, msg))
 
                 return render_queryset_to_response_error(
                     request,
