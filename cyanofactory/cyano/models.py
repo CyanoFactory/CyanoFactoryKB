@@ -1,7 +1,14 @@
 '''
 Cyanofactory data model. Contains the database layout.
 
-Based on Wholecell KB.
+Author: Jonathan Karr, jkarr@stanford.edu
+Affiliation: Covert Lab, Department of Bioengineering, Stanford University
+Last updated: 2012-07-17
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 '''
 
 from __future__ import unicode_literals
@@ -23,8 +30,9 @@ from django.contrib.auth.models import Group
 from django.core import validators
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
-from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min
-from django.db.models.query import EmptyQuerySet
+from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField, FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min,\
+    signals
+from django.db.models.query import EmptyQuerySet, QuerySet
 from django.template import loader, Context
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import m2m_changed
@@ -36,6 +44,11 @@ from cyano.history import HistoryManyToManyField as ManyToManyField
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from copy import deepcopy
 
+from model_utils.managers import PassThroughManager
+
+from south.modelsinspector import add_introspection_rules
+add_introspection_rules([], ["^cyano\.history\.HistoryForeignKey"])
+add_introspection_rules([], ["^cyano\.history\.HistoryManyToManyField"])
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -197,7 +210,7 @@ CHOICES_SIGNAL_SEQUENCE_TYPE = (
 ''' END: CHOICES '''
 
 # add model options
-options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('listing', 'concrete_entry_model', 'fieldsets', 'field_list', 'facet_fields', 'clean', 'validate_unique')
+options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('listing', 'concrete_entry_model', 'fieldsets', 'field_list', 'facet_fields', 'clean', 'validate_unique', 'wid_unique')
 
 ''' BEGIN: validators '''
 def validate_dna_sequence(seq):
@@ -377,6 +390,22 @@ class Permission(Model):
                         "WRITE_PERMISSION"]
     
     @staticmethod
+    def get_instance(permission):
+        if isinstance(permission, basestring):
+            permission = Permission.get_by_name(permission)
+        elif isinstance(permission, int):
+            permission = Permission.get_by_pk(permission)
+        elif isinstance(permission, Permission):
+            permission = permission
+        else:
+            raise ValueError("Must be string, int or Permission type")
+        
+        if not isinstance(permission, Permission):
+            raise ValueError("Invalid permission argument")
+        
+        return permission
+    
+    @staticmethod
     def get_by_name(name):
         if Permission.permission_mapping == None:
             Permission.permission_mapping = {}
@@ -411,6 +440,9 @@ class UserPermission(Model):
         return "[{}, {}]".format(
             "".join(perm_allow), "".join(perm_deny)
         )
+        
+    class Meta:
+        unique_together = ('entry', 'user')
 
 class GroupPermission(Model):
     entry = ForeignKey("Entry", related_name = "group_permissions", auto_created = True)
@@ -425,6 +457,9 @@ class GroupPermission(Model):
         return "[{}, {}]".format(
             "".join(perm_allow), "".join(perm_deny)
         )
+
+    class Meta:
+        unique_together = ('entry', 'group')
 
 class ProfileBase(Model):    
     def has_full_access(self, entry):
@@ -450,6 +485,61 @@ class ProfileBase(Model):
 
     def can_write_permission(self, species, entry):
         return self.has_permission(entry, PermissionEnum.WRITE_PERMISSION)
+    
+    def add_allow_permission(self, entry, permission):
+        self._update_permission(entry, permission, allow=True, add=True)
+    
+    def delete_allow_permission(self, entry, permission):
+        self._update_permission(entry, permission, allow=True, delete=True)
+    
+    def add_deny_permission(self, entry, permission):
+        self._update_permission(entry, permission, deny=True, add=True)
+    
+    def delete_deny_permission(self, entry, permission):
+        self._update_permission(entry, permission, deny=True, delete=True)
+    
+    def _handle_permission_list(self, entry, perm_list, allow):
+        """
+        Internal Api used by permission view
+        """
+        for i, perm in enumerate(perm_list):
+            if allow:
+                if perm == 0:
+                    self.delete_allow_permission(entry, i + 1)
+                else:
+                    self.add_allow_permission(entry, i + 1)
+            else:
+                if perm == 0:
+                    self.delete_deny_permission(entry, i + 1)
+                else:
+                    self.add_deny_permission(entry, i + 1)
+    
+    def _update_permission(self, permission, perm_get, allow=False, deny=False, add=False, delete=False):
+        permission = Permission.get_instance(permission)
+        
+        if allow ^ deny or add ^ delete:
+            ValueError("Invalid args")
+        
+        if add:
+            op = "add"
+            perm = perm_get()
+        else:
+            op = "remove"
+            try:
+                perm = perm_get()
+            except ObjectDoesNotExist:
+                return
+        
+        if allow:
+            field = perm.allow
+        else:
+            field = perm.deny
+        
+        getattr(field, op)(permission)
+        
+        # Test if both fields are empty now, in that case the permission can be deleted
+        if op == "remove" and perm.allow.count() + perm.deny.count() == 0:
+            perm.delete()
 
     class Meta:
         abstract = True
@@ -476,6 +566,17 @@ class GroupProfile(ProfileBase):
             return group_perm.allow.all(), group_perm.deny.all()
         except ObjectDoesNotExist:
             return None, None
+    
+    def _update_permission(self, entry, permission, allow=False, deny=False, add=False, delete=False):
+        if allow ^ deny or add ^ delete:
+            ValueError("Invalid args")
+        
+        if add:
+            perm_get = lambda: GroupPermission.objects.get_or_create(entry = entry, group = self)[0]
+        else:
+            perm_get = lambda: GroupPermission.objects.get(entry = entry, group = self)
+            
+        super(GroupProfile, self)._update_permission(permission, perm_get, allow, deny, add, delete)
 
     def has_permission(self, entry, permissions):
         """
@@ -515,6 +616,7 @@ class UserProfile(ProfileBase):
     state = CharField(max_length=255, blank=True, default='', verbose_name='State')
     zip = CharField(max_length=255, blank=True, default='', verbose_name='Zip')
     country = CharField(max_length=255, blank=True, default='', verbose_name='Country')
+    force_password_change = BooleanField(default=False)
     
     def get_name(self):
         return self.user.first_name + " " + self.user.last_name
@@ -576,6 +678,17 @@ class UserProfile(ProfileBase):
         
         return allow, deny
     
+    def _update_permission(self, entry, permission, allow=False, deny=False, add=False, delete=False):
+        if allow ^ deny or add ^ delete:
+            ValueError("Invalid args")
+        
+        if add:
+            perm_get = lambda: UserPermission.objects.get_or_create(entry = entry, user = self)[0]
+        else:
+            perm_get = lambda: UserPermission.objects.get(entry = entry, user = self)
+            
+        super(UserProfile, self)._update_permission(permission, perm_get, allow, deny, add, delete)
+    
     def has_permission(self, entry, permissions):
         """
         Checks if the user has allow or deny permissions set for a list
@@ -593,9 +706,7 @@ class UserProfile(ProfileBase):
         :return: Tuple (allow, deny). allow is True if the user has allow
          permission for the bitmask specified (same for deny). (None, None)
          if no permission object was found.
-        """
-        
-        
+        """        
         if isinstance(entry, Entry): 
             allow, deny = self.get_permissions(entry)
             if allow == None:
@@ -627,6 +738,23 @@ class UserProfile(ProfileBase):
         ordering = ['user__last_name', 'user__first_name']
         get_latest_by = 'user__date_joined'
 
+def create_user_profile_signal(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+def password_change_signal(sender, instance, **kwargs):
+    try:
+        user = User.objects.get(username=instance.username)
+        if not user.password == instance.password:
+            profile = user.profile
+            profile.force_password_change = False
+            profile.save()
+    except User.DoesNotExist:
+        pass
+
+signals.pre_save.connect(password_change_signal, sender=User, dispatch_uid='cyano.models')
+signals.post_save.connect(create_user_profile_signal, sender=User, dispatch_uid='cyano.models')
+
 ''' BEGIN: helper models '''
 
 class TableMeta(Model):
@@ -648,6 +776,12 @@ class TableMeta(Model):
     @staticmethod
     def get_by_model(model):
         return TableMeta.get_by_model_name(model._meta.object_name)
+    
+    @staticmethod
+    def get_by_id(pk):
+        model_type_key = "model/model_type/pk/" + str(pk)
+        cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(pk = pk))
+        return cache_model_type
     
     def __unicode__(self):
         return self.table_name + " - " + self.model_name
@@ -1050,7 +1184,7 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
     
     if not pk_set is None and len(pk_set) > 0 and isinstance(instance, Entry):
         if action == "post_add":
-            print "m2m-add:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
+            #print "m2m-add:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
 
             table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
     
@@ -1061,11 +1195,11 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
                 save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "I", table = table_meta, new_value = pk))
     
             if len(save_list) > 0:
-                print instance.wid + ": revisioning", len(save_list), "items"
+                #print instance.wid + ": revisioning", len(save_list), "items"
                 # Don't update the detail when actually nothing changed for that entry
                 RevisionManyToMany.objects.bulk_create(save_list)
         elif action == "post_delete":
-            print "m2m-del:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
+            #print "m2m-del:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
 
             table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
     
@@ -1076,12 +1210,49 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
                 save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "D", table = table_meta, new_value = pk))
     
             if len(save_list) > 0:
-                print instance.wid + ": deleting", len(save_list), "items"
+                #print instance.wid + ": deleting", len(save_list), "items"
                 # Don't update the detail when actually nothing changed for that entry
                 RevisionManyToMany.objects.bulk_create(save_list)
             pass
 
-class Entry(Model):
+class EntryQuerySet(QuerySet):
+    def with_permission(self, permission):
+        perm = Permission.get_by_name(permission)
+        
+        # Todo
+    
+    def for_wid(self, wid, get=True, create=False, creation_status=False):
+        if get:
+            try:
+                if not creation_status:
+                    return self.get(wid = wid)
+
+                return self.get(wid = wid), False
+            except ObjectDoesNotExist:
+                if not create:
+                    raise
+                
+                if not creation_status:
+                    return self.model(wid = wid)
+
+                return self.model(wid = wid), True
+        
+        if create:
+            raise ValueError("Create only compatible with get")
+        
+        return self.filter(wid = wid)
+
+class SpeciesComponentQuerySet(EntryQuerySet):
+    def for_species(self, species):
+        return self.filter(species__pk = species.pk)
+
+class AbstractEntry(Model):
+    objects = PassThroughManager.for_queryset_class(EntryQuerySet)()
+    
+    class Meta:
+        abstract = True
+
+class Entry(AbstractEntry):
     """Base class for all knowledge base objects.
     
     :Columns:
@@ -1090,9 +1261,9 @@ class Entry(Model):
         * ``name``: Short, human readable name of that entry
         * ``synonyms``: Other names for that entry
         * ``comments``: Detailed notes about this entry
-    """
+    """    
     model_type = ForeignKey(TableMeta)
-    wid = SlugField(max_length=150, unique = True, verbose_name='WID', validators=[validators.validate_slug])
+    wid = SlugField(max_length=150, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
@@ -1114,7 +1285,7 @@ class Entry(Model):
 
         if self.wid != slugify(self.wid):
             # Slugify the WID
-            self.wid = slugify(self.wid)
+            raise ValidationError("Wid must be slug!")
 
         old_item = None
         if self.pk != None:
@@ -1124,6 +1295,7 @@ class Entry(Model):
         else:
             # New entry (no primary key)
             # The latest entry is not revisioned to save space (and time)
+            
             cache_model_type = TableMeta.get_by_model_name(self._meta.object_name)
             self.created_detail = revision_detail
             self.detail = revision_detail
@@ -1188,18 +1360,18 @@ class Entry(Model):
         return format_list_html(results, separator=', ')
     
     def get_as_html_created_user(self, species, is_user_anonymous):
+        detail = self.created_detail
         if is_user_anonymous:
-            return '%s' % (self.created_date.strftime("%Y-%m-%d %H:%M:%S"))
+            return '%s<br>%s' % (detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
         else:
-            detail = self.created_detail
             user = detail.user.user
             return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
     
     def get_as_html_last_updated_user(self, species, is_user_anonymous):
+        detail = self.detail
         if is_user_anonymous:
-            return '%s' % (self.last_updated_date.strftime("%Y-%m-%d %H:%M:%S"))
+            return '%s<br>%s' % (detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
         else:
-            detail = self.detail
             user = detail.user.user
             return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)        
     
@@ -1233,30 +1405,36 @@ class Entry(Model):
         get_latest_by = 'createdDate'
         verbose_name = 'Entry'
         verbose_name_plural = 'Entries'
+        wid_unique = False
 
 class CrossReferenceMeta(Model):
     name = CharField(max_length=255, verbose_name = "Identifier for crossreference (DB name or URL)", editable = False)
 
-class SpeciesComponent(Entry):
+class AbstractSpeciesComponent(Entry):
+    objects = PassThroughManager.for_queryset_class(SpeciesComponentQuerySet)()
+    
+    class Meta:
+        abstract = True
+
+class SpeciesComponent(AbstractSpeciesComponent):
     '''
     Contains all components that belong to an organism.
     Improves the lookup speed and allows inheritance.
     
     * ``cross_references``: Databases referencing that entry
     * ``publication_references``: Publications referencing that entry
-    '''
+    '''    
     species = ManyToManyField("Species", verbose_name = "Organism containing that entry", related_name = "species")
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
-    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_entries', verbose_name='Cross references')
-    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_entries', verbose_name='Publication references')
+    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
+    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publication references')
 
     #getters
     @permalink
-    def get_absolute_url(self, species, history_id = None):
-        model_type_key = "model/model_type/" + str(self.model_type_id)
-        cache_model_type = Cache.try_get(model_type_key, lambda: self.model_type)
-        
-        dic = {'species_wid':species.wid, 'model_type':cache_model_type.model_name, 'wid': self.wid}
+    def get_absolute_url(self, species, history_id = None):        
+        dic = {'species_wid': species.wid,
+               'model_type': TableMeta.get_by_id(self.model_type_id).model_name,
+               'wid': self.wid}
         
         if history_id is None:
             view = 'cyano.views.detail'
@@ -1313,6 +1491,7 @@ class SpeciesComponent(Entry):
         facet_fields = ['type']
         verbose_name = 'Species component'
         verbose_name_plural = 'Species components'
+        wid_unique = False
 
 class Molecule(SpeciesComponent):
     #parent pointer
@@ -1410,6 +1589,7 @@ class Molecule(SpeciesComponent):
         facet_fields = ['type']
         verbose_name = 'Molecule'
         verbose_name_plural = 'Molecules'
+        wid_unique = False
         
 class Protein(Molecule):
     #parent pointer
@@ -1494,9 +1674,9 @@ class Protein(Molecule):
         facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
         verbose_name='Protein'
         verbose_name_plural = 'Proteins'
-        
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        wid_unique = False
+
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #regulatory rule
             if obj_data['regulatory_rule'] is not None and obj_data['regulatory_rule']['value'] is not None and obj_data['regulatory_rule']['value'] != '':
                 parse_regulatory_rule(obj_data['regulatory_rule']['value'], all_obj_data, obj_data['species'])
@@ -1645,14 +1825,15 @@ class Chromosome(Molecule):
 
         genes = StringIO.StringIO()
 
-        genesList = self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all()
+
+        genesList = list(self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all())
 
         nTus = 0
         iTUs = {}
         tus = []
 
         for i, gene in enumerate(genesList):
-            if gene.transcription_units.count() > 0:
+            if len(gene.transcription_units.all()[:1]) == 1:
                 tu = gene.transcription_units.all()[:1][0]
                 if iTUs.has_key(tu.wid):
                     iTu = iTUs[tu.wid]
@@ -1661,57 +1842,61 @@ class Chromosome(Molecule):
                     iTu = nTus
                     iTUs[tu.wid] = iTu
                     nTus += 1
-                    
-                iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
+            else:
+                tu = None
+                iTu = nTus
+                nTus += 1
                 
-                if gene.direction == 'f':
-                    x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                    x3 = min(segmentLeft + segmentW, x1 + gene.length / ntPerSegment * segmentW)
-                    x2 = max(x1, x3 - 5)
-                else:
-                    x3 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                    x1 = min(segmentLeft + segmentW, x3 + gene.length / ntPerSegment * segmentW)
-                    x2 = min(x1, x3 + 5)
-                    
-                y2 = chrTop + (iSegment + 1) * segmentHeight - 2
-                y1 = y2 - geneHeight
+            iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
+            
+            if gene.direction == 'f':
+                x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                x3 = min(segmentLeft + segmentW, x1 + gene.length / ntPerSegment * segmentW)
+                x2 = max(x1, x3 - 5)
+            else:
+                x3 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                x1 = min(segmentLeft + segmentW, x3 + gene.length / ntPerSegment * segmentW)
+                x2 = min(x1, x3 + 5)
                 
-                if math.fabs(x3 - x1) > len(gene.wid) * 5:
-                    label = gene.wid
-                else:
-                    label = ''
-                    
-                if gene.name:
-                    tip_title = gene.name
-                else:
-                    tip_title = gene.wid
-                tip_content = 'Transcription unit: %s' % tu.name
-                tip_title = tip_title.replace("'", "\'")
-                tip_content = tip_content.replace("'", "\'")
-                    
-                gene_abs_url = gene.get_absolute_url(species)
+            y2 = chrTop + (iSegment + 1) * segmentHeight - 2
+            y1 = y2 - geneHeight
+            
+            if math.fabs(x3 - x1) > len(gene.wid) * 5:
+                label = gene.wid
+            else:
+                label = ''
                 
-                genes.write('<g>\
-                    <a xlink:href="%s">\
-                        <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/>\
-                    </a>\
-                    <a xlink:href="%s">\
-                        <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\
-                    </a>\
-                    </g>' % (                
-                    gene_abs_url,
-                    iTu % len(colors),
-                    x1, y1,
-                    x2, y1,
-                    x3, (y1 + y2) / 2, 
-                    x2, y2,
-                    x1, y2,
-                    tip_title, tip_content,
-                    gene_abs_url,
-                    (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
-                    tip_title, tip_content,
-                    label,                
-                    ))
+            if gene.name:
+                tip_title = gene.name
+            else:
+                tip_title = gene.wid
+            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name)
+            tip_title = tip_title.replace("'", "\'")
+            tip_content = tip_content.replace("'", "\'")
+                
+            gene_abs_url = gene.get_absolute_url(species)
+            
+            genes.write('<g>\
+                <a xlink:href="%s">\
+                    <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/>\
+                </a>\
+                <a xlink:href="%s">\
+                    <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\
+                </a>\
+                </g>' % (                
+                gene_abs_url,
+                iTu % len(colors),
+                x1, y1,
+                x2, y1,
+                x3, (y1 + y2) / 2, 
+                x2, y2,
+                x1, y2,
+                tip_title, tip_content,
+                gene_abs_url,
+                (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
+                tip_title, tip_content,
+                label,                
+                ))
         
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
@@ -1855,7 +2040,7 @@ class Chromosome(Molecule):
         tus = []
 
         for i, gene in enumerate(genesList):
-            if gene.transcription_units.count() > 0:
+            if len(gene.transcription_units.all()[:1]) == 1:
                 tu = gene.transcription_units.all()[:1][0]
                 if iTUs.has_key(tu.wid):
                     iTu = iTUs[tu.wid]
@@ -1864,69 +2049,73 @@ class Chromosome(Molecule):
                     iTu = nTus
                     iTUs[tu.wid] = iTu
                     nTus += 1
+            else:
+                tu = None
+                iTu = nTus
+                nTus += 1
+
+            if gene.direction == 'f':
+                x1 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
+                x3 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
+                x2 = max(x1, x3 - 5)
+            else:
+                x3 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
+                x1 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
+                x2 = min(x1, x3 + 5)
                 
-                if gene.direction == 'f':
-                    x1 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
-                    x3 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
-                    x2 = max(x1, x3 - 5)
-                else:
-                    x3 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
-                    x1 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
-                    x2 = min(x1, x3 + 5)
-                    
-                x1 = max(chrL, min(chrR, x1))
-                x2 = max(chrL, min(chrR, x2))
-                x3 = max(chrL, min(chrR, x3))
-                            
-                y1 = geneY
-                y2 = geneY + geneHeight
+            x1 = max(chrL, min(chrR, x1))
+            x2 = max(chrL, min(chrR, x2))
+            x3 = max(chrL, min(chrR, x3))
+                        
+            y1 = geneY
+            y2 = geneY + geneHeight
+            
+            if highlight_wid is None or gene.wid in highlight_wid:
+                fillOpacity = 0.75
+                strokeOpacity = 1
+                strokeWidth = 3
+            else:
+                fillOpacity = 0.15
+                strokeOpacity = 0.35
+                strokeWidth = 1
+            
+            if math.fabs(x3 - x1) > len(gene.wid) * 5:
+                label = gene.wid
+            else:
+                label = ''
+            
+            if gene.name:
+                tip_title = gene.name
+            else:
+                tip_title = gene.wid
+            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name)
+            tip_title = tip_title.replace("'", "\'")
+            tip_content = tip_content.replace("'", "\'")
+            
+            gene_abs_url = gene.get_absolute_url(species)
                 
-                if highlight_wid is None or gene.wid in highlight_wid:
-                    fillOpacity = 0.75
-                    strokeOpacity = 1
-                    strokeWidth = 3
-                else:
-                    fillOpacity = 0.15
-                    strokeOpacity = 0.35
-                    strokeWidth = 1
-                
-                if math.fabs(x3 - x1) > len(gene.wid) * 5:
-                    label = gene.wid
-                else:
-                    label = ''
-                
-                if gene.name:
-                    tip_title = gene.name
-                else:
-                    tip_title = gene.wid
-                tip_content = 'Transcription unit: %s' % tu.name
-                tip_title = tip_title.replace("'", "\'")
-                tip_content = tip_content.replace("'", "\'")
-                
-                gene_abs_url = gene.get_absolute_url(species)
-                    
-                genes.write('<g style="">\n\
-                    <a xlink:href="%s">\n\
-                        <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="fill-opacity: %s; stroke-opacity: %s; stroke-width: %spx"/>\n\
-                    </a>\n\
-                    <a xlink:href="%s">\n\
-                        <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\n\
-                    </a>\n\
-                    </g>\n' % (                
-                    gene_abs_url,
-                    iTu % len(colors),
-                    x1, y1,
-                    x2, y1,
-                    x3, (y1 + y2) / 2, 
-                    x2, y2,
-                    x1, y2,
-                    tip_title, tip_content,
-                    fillOpacity, strokeOpacity, strokeWidth,
-                    gene_abs_url,
-                    (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
-                    tip_title, tip_content,
-                    label,
-                    ))
+            genes.write('<g style="">\n\
+                <a xlink:href="%s">\n\
+                    <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="fill-opacity: %s; stroke-opacity: %s; stroke-width: %spx"/>\n\
+                </a>\n\
+                <a xlink:href="%s">\n\
+                    <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\n\
+                </a>\n\
+                </g>\n' % (                
+                gene_abs_url,
+                iTu % len(colors),
+                x1, y1,
+                x2, y1,
+                x3, (y1 + y2) / 2, 
+                x2, y2,
+                x1, y2,
+                tip_title, tip_content,
+                fillOpacity, strokeOpacity, strokeWidth,
+                gene_abs_url,
+                (x1 + x3) / 2, (y1 + y2) / 2 + 1, 
+                tip_title, tip_content,
+                label,
+                ))
                 
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
@@ -2103,9 +2292,9 @@ class Chromosome(Molecule):
         facet_fields = ['type']
         verbose_name='Chromosome'
         verbose_name_plural = 'Chromosomes'
-        
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        wid_unique = False
+
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['sequence'] is not None and obj_data['sequence'] != '' and len(obj_data['sequence']) != obj_data['length']:
                 raise ValidationError({'length': 'Length of sequence property must match length property'})
 
@@ -2209,9 +2398,9 @@ class ChromosomeFeature(SpeciesComponent):
         facet_fields = ['type', 'chromosome', 'direction']
         verbose_name='Chromosome feature'
         verbose_name_plural = 'Chromosome features'
-        
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        wid_unique = False
+
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
                 chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
@@ -2232,13 +2421,13 @@ class Compartment(SpeciesComponent):
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_compartment', parent_link=True, verbose_name='Species component')
     
     #additional fields
-    def get_protein_complexes(self):
+    def get_protein_complexes(self, species):
         arr = []
-        for obj in ProteinComplex.objects.all():
+        for obj in ProteinComplex.objects.for_species(species):
             if self.pk == obj.get_localization().pk:
                 arr.append(obj)
         return arr
-        
+
     #getters
     def get_as_html_biomass_compositions(self, species, is_user_anonymous):
         results = []
@@ -2257,7 +2446,7 @@ class Compartment(SpeciesComponent):
         
     def get_as_html_protein_complexes(self, species, is_user_anonymous):
         results = []
-        for p in self.get_protein_complexes():
+        for p in self.get_protein_complexes(species):
             results.append('<a href="%s">%s</a>' % (p.get_absolute_url(species), p.wid))
         return format_list_html(results, comma_separated=True)
     
@@ -2282,6 +2471,7 @@ class Compartment(SpeciesComponent):
         facet_fields = ['type']
         verbose_name='Compartment'
         verbose_name_plural = 'Compartments'
+        wid_unique = False
         
 class Gene(Molecule):
     #parent pointer
@@ -2321,10 +2511,10 @@ class Gene(Molecule):
         
         seq = self.get_sequence()
         return \
-            + Metabolite.objects.get(species__id=self.species.id, wid='AMP').get_empirical_formula() * seq.count('A') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='GMP').get_empirical_formula() * seq.count('C') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='GMP').get_empirical_formula() * seq.count('G') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='UMP').get_empirical_formula() * seq.count('T') \
+            + Metabolite.objects.for_species(self.species).for_wid('AMP').get_empirical_formula() * seq.count('A') \
+            + Metabolite.objects.for_species(self.species).for_wid('GMP').get_empirical_formula() * seq.count('C') \
+            + Metabolite.objects.for_species(self.species).for_wid('GMP').get_empirical_formula() * seq.count('G') \
+            + Metabolite.objects.for_species(self.species).for_wid('UMP').get_empirical_formula() * seq.count('T') \
             - EmpiricalFormula(H=1, O=1) * (len(seq)-1)        
 
     #http://www.owczarzy.net/extinct.htm
@@ -2462,10 +2652,10 @@ class Gene(Molecule):
         facet_fields = ['type', 'chromosome', 'direction', 'is_essential', 'amino_acid']
         verbose_name='Gene'
         verbose_name_plural = 'Genes'
+        wid_unique = False
         
         #chromosome coordinate, length
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
                 chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
@@ -2610,6 +2800,7 @@ class Metabolite(Molecule):
         facet_fields = ['type', 'charge', 'is_hydrophobic']
         verbose_name='Metabolite'
         verbose_name_plural = 'Metabolites'
+        wid_unique = False
         
 class Note(SpeciesComponent):
     #parent pointer
@@ -2639,6 +2830,7 @@ class Note(SpeciesComponent):
         facet_fields = ['type']
         verbose_name='Note'
         verbose_name_plural = 'Notes'
+        wid_unique = False
     
 class Parameter(SpeciesComponent):
     #parent pointer
@@ -2679,12 +2871,41 @@ class Parameter(SpeciesComponent):
         facet_fields = ['type', 'reactions', 'molecules', 'state', 'process']
         verbose_name='Misc. parameter'
         verbose_name_plural = 'Misc. parameters'
+        wid_unique = False
         
 class Pathway(SpeciesComponent):
     #parent pointer
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_pathway', parent_link=True, verbose_name='Species component')
     
     #helpers
+    @staticmethod
+    def add_boehringer_pathway(species, revdetail):
+        wid = "Boehringer"
+        try:
+            x = Pathway.objects.for_species(species).for_wid(wid)
+            return
+        except ObjectDoesNotExist:
+            # Create new boehringer (if it was never created yet) or assign to one
+            x = Pathway.objects.for_wid(wid, create = True)
+
+        x.name = "Biochemical Pathways"
+        x.save(revdetail)
+        x.species.add(species)
+    
+    @staticmethod
+    def add_kegg_pathway(species, revdetail):
+        from kegg.models import Map
+        
+        crs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
+        maps = Map.objects.filter(ec_numbers__name__in = crs).distinct()
+        
+        for map_ in maps:
+            x = Pathway.objects.for_wid(map_.name, create = True)
+            
+            x.name = map_.title
+            x.save(revdetail)
+            x.species.add(species)
+    
     def extract_ecs(self, text):
         """Extracts EC numbers out of a string and returns a list with all numbers"""
         return re.findall(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+", text)
@@ -2706,10 +2927,10 @@ class Pathway(SpeciesComponent):
     
     def get_boehringer_hits(self, species):
         import boehringer.models as bmodels
-        species_ecs = CrossReference.objects.filter(species = species, source = "EC").values_list('xid', flat=True)
+        species_ecs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
         enzymes = bmodels.Enzyme.objects.filter(ec__in = species_ecs).order_by('title')
 
-        species_metabolites = Metabolite.objects.filter(species = species).values_list('name', flat=True)
+        species_metabolites = Metabolite.objects.for_species(species).values_list('name', flat=True)
         metabolites = bmodels.Metabolite.objects.filter(title__in = species_metabolites).order_by('title')
         
         return enzymes, metabolites
@@ -2752,7 +2973,7 @@ class Pathway(SpeciesComponent):
         from xml.etree.ElementTree import ElementTree, Element
         
         # All Pathways of the organism
-        species_ecs = CrossReference.objects.filter(species = species, source = "EC").values_list('xid', flat=True)
+        species_ecs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
 
         with open("{}/kegg/img/{}.png".format(settings.STATICFILES_DIRS[0], self.wid), "rb") as image:
 
@@ -2840,7 +3061,7 @@ class Pathway(SpeciesComponent):
                     color_component = "rgb(0,0,255)"
                     
                     try:
-                        pw_obj = Pathway.objects.get(wid = pathway_name, species = species)
+                        pw_obj = Pathway.objects.for_species(species).for_wid(pathway_name)
                         elem.set("xlink:href", pw_obj.get_absolute_url(species))
                         fill_opacity = "0.2"
                         fill_color = "blue"
@@ -2923,6 +3144,7 @@ class Pathway(SpeciesComponent):
         facet_fields = ['type']
         verbose_name='Pathway'
         verbose_name_plural = 'Pathways'
+        wid_unique = True
         
 class Process(SpeciesComponent):
     #parent pointer
@@ -2970,6 +3192,7 @@ class Process(SpeciesComponent):
         facet_fields = ['type']
         verbose_name='Process'
         verbose_name_plural = 'Processes'
+        wid_unique = False
         
         @staticmethod
         def validate_unique(model, model_objects_data, all_obj_data=None, all_obj_data_by_model=None):
@@ -3039,10 +3262,10 @@ class ProteinComplex(Protein):
             return localizations[0]
         
         if len(localizations) == 2 and len(set(['c', 'm']) & set([x.wid for x in localizations])) == 2:
-            return Compartment.objects.get(species__id=self.species.id, wid='m')
+            return Compartment.objects.for_species(self.species).for_wid('m')
         
         if len(localizations) == 3 and len(set(['c', 'm', 'e']) & set([x.wid for x in localizations])) == 3:
-            return Compartment.objects.get(species__id=self.species.id, wid='m')
+            return Compartment.objects.for_species(self.species).for_wid('m')
     
         raise TypeError(str(localizations))
         
@@ -3202,9 +3425,9 @@ class ProteinComplex(Protein):
         facet_fields = ['type', 'dna_footprint__binding', 'dna_footprint__region', 'formation_process', 'chaperones']
         verbose_name='Protein complex'
         verbose_name_plural = 'Protein complexes'
-        
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        wid_unique = False
+
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getModel, getEntry
 
             #biosynthesis
@@ -3312,26 +3535,26 @@ class ProteinMonomer(Protein):
         
         seq = self.get_sequence()
         return \
-            + Metabolite.objects.get(species__id=self.species.id, wid='ALA').get_empirical_formula() * seq.count('A') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='ARG').get_empirical_formula() * seq.count('R') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='ASN').get_empirical_formula() * seq.count('N') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='ASP').get_empirical_formula() * seq.count('D') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='CYS').get_empirical_formula() * seq.count('C') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='GLU').get_empirical_formula() * seq.count('E') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='GLN').get_empirical_formula() * seq.count('Q') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='GLY').get_empirical_formula() * seq.count('G') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='HIS').get_empirical_formula() * seq.count('H') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='ILE').get_empirical_formula() * seq.count('I') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='LEU').get_empirical_formula() * seq.count('L') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='LYS').get_empirical_formula() * seq.count('K') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='MET').get_empirical_formula() * (seq.count('M')-1) + Metabolite.objects.get(species__id=self.species.id, wid='FMET').get_empirical_formula() * (1) \
-            + Metabolite.objects.get(species__id=self.species.id, wid='PHE').get_empirical_formula() * seq.count('F') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='PRO').get_empirical_formula() * seq.count('P') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='SER').get_empirical_formula() * seq.count('S') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='THR').get_empirical_formula() * seq.count('T') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='TRP').get_empirical_formula() * seq.count('W') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='TYR').get_empirical_formula() * seq.count('Y') \
-            + Metabolite.objects.get(species__id=self.species.id, wid='VAL').get_empirical_formula() * seq.count('V') \
+            + Metabolite.objects.for_species(self.species).for_wid('ALA').get_empirical_formula() * seq.count('A') \
+            + Metabolite.objects.for_species(self.species).for_wid('ARG').get_empirical_formula() * seq.count('R') \
+            + Metabolite.objects.for_species(self.species).for_wid('ASN').get_empirical_formula() * seq.count('N') \
+            + Metabolite.objects.for_species(self.species).for_wid('ASP').get_empirical_formula() * seq.count('D') \
+            + Metabolite.objects.for_species(self.species).for_wid('CYS').get_empirical_formula() * seq.count('C') \
+            + Metabolite.objects.for_species(self.species).for_wid('GLU').get_empirical_formula() * seq.count('E') \
+            + Metabolite.objects.for_species(self.species).for_wid('GLN').get_empirical_formula() * seq.count('Q') \
+            + Metabolite.objects.for_species(self.species).for_wid('GLY').get_empirical_formula() * seq.count('G') \
+            + Metabolite.objects.for_species(self.species).for_wid('HIS').get_empirical_formula() * seq.count('H') \
+            + Metabolite.objects.for_species(self.species).for_wid('ILE').get_empirical_formula() * seq.count('I') \
+            + Metabolite.objects.for_species(self.species).for_wid('LEU').get_empirical_formula() * seq.count('L') \
+            + Metabolite.objects.for_species(self.species).for_wid('LYS').get_empirical_formula() * seq.count('K') \
+            + Metabolite.objects.for_species(self.species).for_wid('MET').get_empirical_formula() * (seq.count('M')-1) + Metabolite.objects.for_species(self.species).for_wid('FMET').get_empirical_formula() * (1) \
+            + Metabolite.objects.for_species(self.species).for_wid('PHE').get_empirical_formula() * seq.count('F') \
+            + Metabolite.objects.for_species(self.species).for_wid('PRO').get_empirical_formula() * seq.count('P') \
+            + Metabolite.objects.for_species(self.species).for_wid('SER').get_empirical_formula() * seq.count('S') \
+            + Metabolite.objects.for_species(self.species).for_wid('THR').get_empirical_formula() * seq.count('T') \
+            + Metabolite.objects.for_species(self.species).for_wid('TRP').get_empirical_formula() * seq.count('W') \
+            + Metabolite.objects.for_species(self.species).for_wid('TYR').get_empirical_formula() * seq.count('Y') \
+            + Metabolite.objects.for_species(self.species).for_wid('VAL').get_empirical_formula() * seq.count('V') \
             - EmpiricalFormula(H=2, O=1) * (len(seq)-1)    
         
     def get_pi(self):
@@ -3537,9 +3760,9 @@ class ProteinMonomer(Protein):
         facet_fields = ['type', 'is_n_terminal_methionine_cleaved__value', 'signal_sequence__type', 'signal_sequence__location', 'dna_footprint__binding', 'dna_footprint__region', 'localization', 'chaperones']
         verbose_name='Protein monomer'
         verbose_name_plural = 'Protein monomers'
-        
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        wid_unique = False
+
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['signal_sequence'] is not None:
                 if all_obj_data is None:
                     gene = Gene.objects.get(species__wid=obj_data['species'], wid=obj_data['gene'])
@@ -3731,10 +3954,10 @@ class Reaction(SpeciesComponent):
             ]
         facet_fields = ['type', 'direction', 'enzyme__protein', 'coenzymes__metabolite', 'is_spontaneous', 'pathways', 'processes', 'states']
         verbose_name='Reaction'
-        verbose_name_plural = 'Reactions'    
+        verbose_name_plural = 'Reactions'
+        wid_unique = False
 
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getEntry, getModel, EmpiricalFormula
             
             #stoichiometry
@@ -3823,7 +4046,7 @@ class Species(Entry):
     
     #getters
     @permalink
-    def get_absolute_url(self):
+    def get_absolute_url(self, species = None, history_id = None):
         return ('cyano.views.species', (), {'species_wid': self.wid})
     
     #html formatting
@@ -3886,6 +4109,7 @@ class State(SpeciesComponent):
         facet_fields = ['type']
         verbose_name='State'
         verbose_name_plural = 'States'
+        wid_unique = False
         
 class Stimulus(Molecule):
     #parent pointer
@@ -3925,6 +4149,7 @@ class Stimulus(Molecule):
         facet_fields = ['type', 'value__units']
         verbose_name='Stimulus'
         verbose_name_plural = 'Stimuli'
+        wid_unique = False
     
 class TranscriptionUnit(Molecule):
     #parent pointer
@@ -4037,9 +4262,9 @@ class TranscriptionUnit(Molecule):
         facet_fields = ['type']
         verbose_name='Transcription unit'
         verbose_name_plural = 'Transcription units'
+        wid_unique = False
         
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if len(obj_data['genes']) == 1:
                 return
             if len(obj_data['genes']) == 0:
@@ -4140,9 +4365,9 @@ class TranscriptionalRegulation(SpeciesComponent):
         facet_fields = ['type', 'transcription_unit', 'transcription_factor']
         verbose_name='Transcriptional regulation'
         verbose_name_plural = 'Transcriptional regulation'
+        wid_unique = False
         
-        @staticmethod
-        def clean(model, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #gene wid
             if all_obj_data is None:                
                 tu = TranscriptionUnit.objects.get(species__wid=obj_data['species'], wid=obj_data['transcription_unit'])
@@ -4190,9 +4415,9 @@ class Type(SpeciesComponent):
     #getters
     def get_all_members(self, species):
         members = []
-        for m in self.members.filter(species = species):
+        for m in self.members.for_species(species):
             members.append(m)
-        for c in self.children.filter(species = species):
+        for c in self.children.for_species(species):
             members += c.get_all_members()
         return members
 
@@ -4206,7 +4431,7 @@ class Type(SpeciesComponent):
         
     def get_as_html_children(self, species, is_user_anonymous):
         results = []
-        for c in self.children.filter(species = species):
+        for c in self.children.for_species(species):
             results.append('<a href="%s">%s</a>' % (c.get_absolute_url(species), c.wid))        
         return format_list_html(results, comma_separated=True)
         
@@ -4236,41 +4461,13 @@ class Type(SpeciesComponent):
         facet_fields = ['type', 'parent']
         verbose_name='Type'
         verbose_name_plural = 'Types'
+        wid_unique = True
             
-class CrossReference(SpeciesComponent):
-    #parent pointer
-    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_crossreference', parent_link=True, verbose_name='Species component')
+class CrossReference(EntryData):
+    xid = CharField(max_length=255, verbose_name='External ID')
+    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source')
     
-    #additional fields
-    xid = CharField(max_length=255, verbose_name='External ID', blank=True)
-    source = CharField(max_length=20, choices=CHOICES_CROSS_REFERENCE_SOURCES, verbose_name='Source', blank=True)
-
-    #getters
-    def get_all_members(self, species):
-        return self.cross_referenced_entries.filter(species = species)
-    
-    def get_as_html_members(self, species, is_user_anonymous):
-        results = []
-        for m in self.get_all_members(species):
-            results.append('<a href="%s">%s</a>' % (m.get_absolute_url(species), m.wid))        
-        return format_list_html(results, comma_separated=True)
-
     class Meta:
-        concrete_entry_model = True
-        fieldsets = [
-            ('Type', {'fields': ['model_type']}),
-            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
-            ('Classification', {'fields': [{'verbose_name': "Referenced by", 'name': 'members'}]}),
-            ('Comments', {'fields': ['comments', 'publication_references']}),
-            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
-            ]
-        field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references',
-            'comments',
-            'publication_references', 
-            'created_detail', 'detail', 
-            ]
-        facet_fields = ['type', 'source']
         ordering = ['xid']
         verbose_name='Cross reference'
         verbose_name_plural = 'Cross references'
@@ -4473,6 +4670,7 @@ class PublicationReference(SpeciesComponent):
         facet_fields = ['type', 'year', 'publication']
         verbose_name='Publication Reference'
         verbose_name_plural = 'Publication References'
+        wid_unique = True
 
 ''' END: specific data types'''
 
@@ -4626,7 +4824,7 @@ def sub_rate_law(species):
         if match.group(0)[0:2] == 'Km':
             return '<i>K</i><sub>m%s</sub>' % match.group(0)[2:]
         try:
-            obj = SpeciesComponent.objects.get(species__wid=species.wid, wid=match.group(0))
+            obj = SpeciesComponent.objects.for_species(species).for_wid(match.group(0))
             return '[<a href="%s">%s</a>]' % (obj.get_absolute_url(species), obj.wid)
         except:
             return match.group(0)

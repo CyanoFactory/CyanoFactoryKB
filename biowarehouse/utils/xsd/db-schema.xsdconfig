@@ -1,9 +1,0 @@
-<xb:config xmlns:pol="http://openuri.org/easypoLocal"
-           xmlns:xb="http://www.bea.com/2002/09/xbean/config">
-
-    <!-- Use the "namespace" element to map a namespace to the Java package
-        name that should be generated. -->
-    <xb:namespace uri="##any">
-        <xb:package>com.sri.bw.dbschema</xb:package>
-    </xb:namespace>
-</xb:config>

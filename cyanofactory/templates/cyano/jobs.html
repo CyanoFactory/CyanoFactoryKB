@@ -1,0 +1,101 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+User list template
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+
+{% block head_title %}{{ block.super }} :: Jobs{% endblock %}
+{% block page_title %}Jobs{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<meta http-equiv="refresh" content="3">
+{% endblock %}
+
+{% block action_icons %}
+{% endblock %}
+
+{% block extrastyles %}
+#detail tbody.data tr td:nth-child(2){
+	width:20%;
+}
+
+{% endblock %}
+
+{% block content %}
+<table id="detail">
+
+{% if running|length > 0 %}
+<tbody class="data">
+	<tr>
+		<th colspan="3">Running jobs</th>
+	</tr>
+{% endif %}
+
+{% for object in running %}
+<tr>
+	<th colspan="2"><progress max="{{ object.total }}" value="{{ object.current }}" style="width:99%;">
+				<strong>Progress: {{ object.current }} of {{ object.total }} done.</strong>
+		</progress>
+	</th>
+	<td>{{ object.message }}</td>
+</tr>
+{% endfor %}
+
+{% if running|length > 0 %}
+</tbody>
+<tbody class="spacing">
+	<tr><td colspan="3">&nbsp;</td></tr>
+</tbody>
+{% endif %}
+
+{% if pending|length > 0 %}
+<tbody class="data">
+	<tr>
+		<th colspan="3">Pending jobs</th>
+	</tr>
+{% endif %}
+
+{% for object in pending %}
+<tr>
+	<td colspan="3">{{ object.reason }}</td>
+</tr>
+{% endfor %}
+
+{% if pending|length > 0 %}
+</tbody>
+<tbody class="spacing">
+	<tr><td colspan="3">&nbsp;</td></tr>
+</tbody>
+{% endif %}
+
+{% if finished|length > 0 %}
+<tbody class="data">
+	<tr>
+		<th colspan="3">Finished jobs</th>
+	</tr>
+{% endif %}
+
+{% for object in finished %}
+	<tr>
+		<th>{{ object.status|title }}</td>
+		<td>{{ object.date_done }}</td>
+		<td>{{ object.result.message }}{% if object.status == "FAILURE" %} ({{ object.result.result }}){% endif %}</td>
+	</tr>
+{% endfor %}
+
+{% if finished|length > 0 %}
+</tbody>
+{% endif %}
+</table>
+
+<div style="clear:both;"></div>
+{% endblock %}

@@ -2,6 +2,14 @@
 
 {% comment %}
 Top-level site map
+
+Author: Jonathan Karr, jkarr@stanford.edu
+Affiliation: Covert Lab, Department of Bioengineering, Stanford University
+
+Copyright (c) 2013, Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 {% endcomment %}
 
 {% load templatetags %}
@@ -10,22 +18,22 @@ Top-level site map
 	<!-- top-level pages -->
 	<url>
 		<loc>{{ ROOT_URL }}{% url "cyano.views.index" %}</loc>
-		<lastmod>{{ "/cyano/index.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<lastmod>{{ "/cyano/index.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
 	</url>
-	<url>
+	{% comment %}<url>
 		<loc>{{ ROOT_URL }}{% url "cyano.views.tutorial" %}</loc>
-		<lastmod>{{ "/cyano/tutorial.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<lastmod>{{ "/cyano/tutorial.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
 	</url>
 	<url>
 		<loc>{{ ROOT_URL }}{% url "cyano.views.about" %}</loc>
-		<lastmod>{{ "/cyano/about.html"|get_template_last_updated|date:"c" }}</lastmod>
-	</url>
+		<lastmod>{{ "/cyano/about.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
+	</url>{% endcomment %}
 	<url>
-		<loc>{{ ROOT_URL }}{% url "cyano.views.login" %}</loc>
-		<lastmod>{{ "/cyano/login.html"|get_template_last_updated|date:"c" }}</lastmod>
+		<loc>{{ ROOT_URL }}{% url "login" %}</loc>
+		<lastmod>{{ "/registration/login.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
 	</url>
-	<url>
+	{% comment %}<url>
 		<loc>{{ ROOT_URL }}{% url "cyano.views.exportData" %}</loc>
-		<lastmod>{{ "/cyano/exportDataForm.html"|get_template_last_updated|date:"c" }}</lastmod>
-	</url>
+		<lastmod>{{ "/cyano/exportDataForm.html"|get_template_last_updated|date:"Y-m-d" }}</lastmod>
+	</url>{% endcomment %}
 </urlset>

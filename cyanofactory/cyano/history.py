@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 from django.db.models.fields.related import ForeignKey, ReverseSingleRelatedObjectDescriptor,\
     ManyToManyField, ReverseManyRelatedObjectsDescriptor
 from django.db.models.related import RelatedObject
@@ -12,8 +19,8 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
         try:
             rel_obj = getattr(instance, self.cache_name)
         except AttributeError:
-            if hasattr(instance, "detail_history"):
-                print "redirecting to " + str(instance.detail_history)
+            #if hasattr(instance, "detail_history"):
+            #    print "redirecting to " + str(instance.detail_history)
             val = getattr(instance, self.field.attname)
             if val is None:
                 rel_obj = None
@@ -39,7 +46,7 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
                             column = TableMetaColumn.get_by_field(field)
                             history_obj = Revision.objects.filter(current = rel_obj, detail__lte = instance.detail_history, column = column).order_by("-detail")
                             if history_obj.exists():
-                                print "revisioning: " + str(rel_obj) + " - " + field.name
+                                #print "revisioning: " + str(rel_obj) + " - " + field.name
                                 new_value = field.to_python(history_obj[0].new_value)        
                                 setattr(rel_obj, field.name, new_value)
 
@@ -59,7 +66,7 @@ def create_history_many_related_manager(superclass):
         def get_query_set(self):
             from cyano.models import RevisionManyToMany, TableMetaManyToMany
             if hasattr(self.instance, "detail_history"):
-                print "m2m history"
+                #print "m2m history"
 
                 try:
                     return self.instance._prefetched_objects_cache[self.prefetch_cache_name]
@@ -73,7 +80,7 @@ def create_history_many_related_manager(superclass):
                     queryset = Manager.get_query_set(self).using(db)._next_is_sticky().filter(**self.core_filters)
                     queryset = queryset.filter(pk__in = vals)
                     
-                    print queryset, self.core_filters, self.target_field_name, self.source_field_name, self._fk_val
+                    #print queryset, self.core_filters, self.target_field_name, self.source_field_name, self._fk_val
                     
                     return queryset
             else:

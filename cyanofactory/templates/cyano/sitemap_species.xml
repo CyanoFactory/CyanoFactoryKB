@@ -2,30 +2,38 @@
 
 {% comment %}
 Site map
+
+Author: Jonathan Karr, jkarr@stanford.edu
+Affiliation: Covert Lab, Department of Bioengineering, Stanford University
+
+Copyright (c) 2013, Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 {% endcomment %}
 
 {% load templatetags %}
+{% load filters %}
 
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 	<!-- species home page -->
 	<url>
 		<loc>{{ ROOT_URL }}{{ species.get_absolute_url }}</loc> 
-		<lastmod>{{ species.last_updated_date|set_time_zone|date:"c" }}</lastmod>
+		<lastmod>{{ species.detail.date|set_time_zone|date:"Y-m-d" }}</lastmod>
 	</url>
 	
 	<!-- species browse -->
 	{% for model_name in modelnames %}
 	<url>
-		<loc>{{ ROOT_URL }}{% url "cyano.views.list" species_wid=species.wid model_type=model_name %}</loc> 
-		<lastmod>{{ species.last_updated_date|set_time_zone|date:"c" }}</lastmod>
+		<loc>{{ ROOT_URL }}{% url "cyano.views.listing" species_wid=species.wid model_type=model_name %}</loc> 
+		<lastmod>{{ species.detail.date|set_time_zone|date:"Y-m-d" }}</lastmod>
 	</url>
 	{% endfor %}
-	
 	<!-- species entries -->
 	{% for entry in entries %}
 	<url>
-		<loc>{{ ROOT_URL }}{{ entry.get_absolute_url }}</loc> 
-		<lastmod>{{ entry.last_updated_date|set_time_zone|date:"c" }}</lastmod>
+		<loc>{{ ROOT_URL }}{{ entry|get_absolute_url:species }}</loc> 
+		<lastmod>{{ entry.detail.date|set_time_zone|date:"Y-m-d" }}</lastmod>
 	</url>
 	{% endfor %}
 </urlset>

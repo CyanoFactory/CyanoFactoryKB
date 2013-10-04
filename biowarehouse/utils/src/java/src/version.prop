@@ -1,4 +1,0 @@
-# Version number of BioWarehouse release
-# Individual loaders may over-ride this version if they
-# have bug fix releases.
-version.number=4.6

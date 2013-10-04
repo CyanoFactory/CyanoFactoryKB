@@ -1,2 +1,11 @@
 *.pyc
 settings_private.py
+.coverage
+fixture
+htmlcov/
+templates/search/indexes/*/*_text.txt
+xapian_index
+log/*
+migrations/
+
+/.idea

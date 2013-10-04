@@ -1,12 +1,16 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-
-from cyano.models import UserProfile
 
 class Command(BaseCommand):
     def handle(self, *args, **options):
         for name in args:
-            user = UserProfile()
             print "Creating user " + name
             mail = name + "@example.com"
             password = "aaa"
@@ -15,5 +19,4 @@ class Command(BaseCommand):
                 print "User already exists. Aborting."
             else:
                 new_user = User.objects.create_user(username=name, email=mail, password=password)
-                user.user = new_user
-                user.save()
+                new_user.save()

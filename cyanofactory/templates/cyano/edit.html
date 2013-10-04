@@ -6,6 +6,11 @@ Edit page template
 Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 {% endcomment %}
 
 {% load static %}
@@ -14,10 +19,12 @@ Last updated: 2012-07-17
 {% block head_title %}{{ block.super }} :: {{ action|capfirst }} {{ model_verbose_name }}{% endblock %}
 {% block page_title %}{{ action|capfirst }} {{ model_verbose_name }}{% endblock %}
 
-{% block action_icons %}
-{% if not request.user.is_anonymous and queryset|length > 0 %}
-<a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" /></a>
-<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" /></a>
+{% block action_icons_edit %}
+{% if queryset|length > 0 %}
+{% with object=queryset.0 %}
+<li><a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" />View {{ object.wid }}</a></li>
+<li><a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" />Delete {{ object.wid }}</a></li>
+{% endwith %}
 {% endif %}
 {{ block.super }}
 {% endblock %}

@@ -1,9 +1,15 @@
-'''
+"""
 Whole-cell knowledge base views
 
+Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
-'''
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
 
 import os
 import settings
@@ -11,9 +17,7 @@ import tempfile
 from copy import deepcopy
 from itertools import chain
 
-from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db import transaction
@@ -21,20 +25,18 @@ from django.db.models import Count, Sum
 from django.db.models.fields import BooleanField, NullBooleanField, AutoField, BigIntegerField, DecimalField, FloatField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField
 from django.db.models.fields.related import RelatedObject, ManyToManyField, ForeignKey
 from django.db.models.query import EmptyQuerySet
-from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils.text import capfirst
-from django.views.decorators.debug import sensitive_post_parameters
-from django.views.decorators.cache import never_cache
-from django.views.decorators.csrf import csrf_protect
 
 from haystack.query import SearchQuerySet
 
-from cyano.forms import ExportDataForm, ImportDataForm
+from cyano.forms import ExportDataForm, ImportDataForm, ImportSpeciesForm
 import cyano.helpers as chelpers
 import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
 from cyano.decorators import resolve_to_objects, permission_required
+from django.db.transaction import commit_on_success
+from django.http.response import HttpResponseRedirect
 
 def index(request):
     return chelpers.render_queryset_to_response(
@@ -48,20 +50,19 @@ def species(request, species):
     content = []
     if species is not None:
         content.append([
-            [0, 'Compartments', cmodels.Compartment.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
+            [0, 'Compartments', cmodels.Compartment.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
         ])
         
-        chrs = cmodels.Chromosome.objects.filter(species__id = species.id)
-        chrcontent = chrs.aggregate(length=Sum('length'));
-        gc_content = 0 if len(chrs) == 0 else sum([chro.get_gc_content() * chro.length for chro in chrs]) / chrcontent['length']        
+        chrs = cmodels.Chromosome.objects.for_species(species).values_list("length", "sequence")
+        chrcontent = sum(chro[0] for chro in chrs)
+        gc_content = 0 if len(chrs) == 0 else sum([cmodels.Chromosome(sequence = chro[1]).get_gc_content() * chro[0] for chro in chrs]) / chrcontent        
         content.append([
-            [0, 'Chromosomes', chrs.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Chromosome'})],
-            [1, 'Length', chrcontent['length'], 'nt'],
+            [0, 'Chromosomes', len(chrs), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Chromosome'})],
+            [1, 'Length', chrcontent, 'nt'],
             [1, 'GC-content', ('%0.1f' % (gc_content * 100)), '%'],
         ])
                 
-        tus = cmodels.TranscriptionUnit.objects.filter(species__id = species.id).annotate(num_genes = Count('genes'))
-        mons = tus.filter(num_genes__lte = 1)
+        tus = cmodels.TranscriptionUnit.objects.for_species(species).annotate(num_genes = Count('genes'))
         nPolys = tus.filter(num_genes__gt = 1).count()
         content.append([
             [0, 'Transcription units', tus.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionUnit'})],            
@@ -69,144 +70,173 @@ def species(request, species):
             [1, 'Polycistrons', nPolys],
         ])
         
-        content.append([
-            [0, 'Genes', cmodels.Gene.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
-            [1, 'mRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='mRNA').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=mRNA'],
-            [1, 'rRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='rRNA').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=rRNA'],
-            [1, 'sRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='sRNA').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=sRNA'],
-            [1, 'tRNA', cmodels.Gene.objects.filter(species__id = species.id, type__wid='tRNA').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=tRNA'],
-        ])
+        genes = cmodels.Gene.objects.for_species(species).values_list("type__wid", "expression", "half_life")
         
         content.append([
-            [0, 'Chromosome features', 
-                cmodels.ChromosomeFeature.objects.filter(species__id = species.id).count(),
+            [0, 'Genes', len(genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
+            [1, 'mRNA', sum((lambda x: x[0] == "mRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=mRNA'],
+            [1, 'rRNA', sum((lambda x: x[0] == "rRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=rRNA'],
+            [1, 'sRNA', sum((lambda x: x[0] == "sRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=sRNA'],
+            [1, 'tRNA', sum((lambda x: x[0] == "tRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=tRNA'],
+        ])
+        
+        chromosome_features = cmodels.ChromosomeFeature.objects.for_species(species).values_list("type__parent__wid", flat = True)
+        chromosome_features_length = len(chromosome_features)
+        chromosome_features_dnaa_box = sum((lambda x: x == "ChromosomeFeature-DnaA_box")(x) for x in chromosome_features)
+        chromosome_features_str = sum((lambda x: x == "ChromosomeFeature-Short_Tandem_Repeat")(x) for x in chromosome_features)
+        
+        content.append([
+            [0, 'Chromosome features',
+                chromosome_features_length,
                 None,
                 reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ChromosomeFeature'}),
                 ],
             [1, 'DnaA boxes', 
-                cmodels.ChromosomeFeature.objects.filter(species__id = species.id, type__parent__wid='ChromosomeFeature-DnaA_box').count(),
+                chromosome_features_dnaa_box,
                 ],                
             [1, 'Short tandem repeats', 
-                cmodels.ChromosomeFeature.objects.filter(species__id = species.id, type__parent__wid='ChromosomeFeature-Short_Tandem_Repeat').count(),
+                chromosome_features_str,
                 ],
             [1, 'Other', 
-                cmodels.ChromosomeFeature.objects.filter(species__id = species.id).exclude(type__parent__wid='ChromosomeFeature-DnaA_box').exclude(type__parent__wid='ChromosomeFeature-Short_Tandem_Repeat').count()],
+                chromosome_features_length - chromosome_features_dnaa_box - chromosome_features_str],
         ])
         
+        metabolites = cmodels.Metabolite.objects.for_species(species).values_list("type__wid", "type__parent__wid", "type__parent__parent__wid", "biomass_composition", "media_composition")
+        
+        metabolites_aa_list = ["amino_acid", "modified_amino_acid", "non-standard_amino_acid", "vitamin_non-standard_amino_acid"]
+        
         content.append([
-            [0, 'Metabolites', cmodels.Metabolite.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Metabolite'})],
+            [0, 'Metabolites', len(metabolites), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Metabolite'})],
             [1, 'Amino acids', 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__wid='amino_acid').count() + 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__wid='modified_amino_acid').count() +
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__wid='non-standard_amino_acid').count() +
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__wid='vitamin_non-standard_amino_acid').count()                
+                sum((lambda x: x in metabolites_aa_list)(x) for x in metabolites)
                 ],
-            [1, 'Antibiotic', 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__wid='antibiotic').count() + 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__parent__wid='antibiotic').count()
+            [1, 'Antibiotic',
+                sum((lambda x: x[0] == "antibiotic")(x) for x in metabolites) +
+                sum((lambda x: x[1] == "antibiotic")(x) for x in metabolites)
                 ],
             [1, 'Gases', 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__wid='gas').count() + 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__parent__wid='gas').count()
+                sum((lambda x: x[0] == "gas")(x) for x in metabolites) +
+                sum((lambda x: x[1] == "gas")(x) for x in metabolites)
                 ],
             [1, 'Ions', 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__wid='ion').count() + 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__parent__wid='ion').count()
+                sum((lambda x: x[0] == "ion")(x) for x in metabolites) +
+                sum((lambda x: x[1] == "ion")(x) for x in metabolites)
                 ],
             [1, 'Lipids', 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__wid='lipid').count() + 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__parent__wid='lipid').count() +
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__parent__parent__wid='lipid').count()
+                sum((lambda x: x[0] == "lipid")(x) for x in metabolites) +
+                sum((lambda x: x[1] == "lipid")(x) for x in metabolites) +
+                sum((lambda x: x[2] == "lipid")(x) for x in metabolites)
                 ],
-            [1, 'Vitamins', 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__wid='vitamin').count() + 
-                cmodels.Metabolite.objects.filter(species__id = species.id, type__parent__wid='vitamin').count()
+            [1, 'Vitamins',
+                sum((lambda x: x[0] == "vitamin")(x) for x in metabolites) +
+                sum((lambda x: x[1] == "vitamin")(x) for x in metabolites)
                 ],
         ])
-                
-        mons = cmodels.ProteinMonomer.objects.filter(species__id = species.id)
-        cpxs = cmodels.ProteinComplex.objects.filter(species__id = species.id)
+
+        mons = cmodels.ProteinMonomer.objects.for_species(species)
+        mons_list = mons.values_list("localization__wid", "signal_sequence__type")
+        mons_list_count = len(mons_list)
+        monTermOrg_list = ["tc", "tm"]
+        
         monDNABind = mons.filter(dna_footprint__length__gt=0).count()
-        monIntMem = mons.filter(localization__wid = 'm').exclude(signal_sequence__type = 'lipoprotein').count() + mons.filter(localization__wid = 'tm').exclude(signal_sequence__type = 'lipoprotein').count()
-        monLipo = mons.filter(signal_sequence__type = 'lipoprotein').count()
-        monSecreted = mons.filter(signal_sequence__type = 'secretory').count()
-        monTermOrg = mons.filter(localization__wid = 'tc').count() + mons.filter(localization__wid = 'tm').count()
+        
+        monLipo = sum((lambda x: x[1] == "lipoprotein")(x) for x in mons_list)
+        monSecreted = sum((lambda x: x[1] == "secretory")(x) for x in mons_list)
+        monTermOrg = sum((lambda x: x[0] in monTermOrg_list)(x) for x in mons_list)
+        
+        monIntMem = sum((lambda x: x[0] == "m" and x[1] != "lipoprotein")(x) for x in mons_list) +\
+                    sum((lambda x: x[0] == "tm" and x[1] != "lipoprotein")(x) for x in mons_list)
+
+        cpxs = cmodels.ProteinComplex.objects.for_species(species)
         cpxDNABind = cpxs.filter(dna_footprint__length__gt=0).count()
+        cpxCount = cpxs.count()
+        
         content.append([
-            [0, 'Proteins', mons.count() + cpxs.count()],
-                [1, 'Monomers', mons.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'})],            
+            [0, 'Proteins', mons_list_count + cpxCount],
+                [1, 'Monomers', mons_list_count, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'})],            
                     [2, 'DNA-binding', monDNABind],
                     [2, 'Integral membrane', monIntMem],
                     [2, 'Lipoprotein', monLipo, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'}) + '?signal_sequence__type=lipoprotein'],            
                     [2, 'Secreted', monSecreted, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'}) + '?signal_sequence__type=secretory'],
                     [2, 'Terminal organelle', monTermOrg],                    
-                [1, 'Complexes', cpxs.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinComplex'})],
+                [1, 'Complexes', cpxCount, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinComplex'})],
                     [2, 'DNA-binding', cpxDNABind],
         ])
 
-        rxns = cmodels.Reaction.objects.filter(species__id = species.id)
+        rxns = cmodels.Reaction.objects.for_species(species).values_list("processes__wid", flat = True)
+        rxns_count = [
+            len(rxns),
+            sum((lambda x: x == "Process_DNADamage")(x) for x in rxns),
+            sum((lambda x: x == "Process_DNARepair")(x) for x in rxns),
+            sum((lambda x: x == "Process_Metabolism")(x) for x in rxns),
+            sum((lambda x: x == "Process_ProteinDecay")(x) for x in rxns),
+            sum((lambda x: x == "Process_ProteinModification")(x) for x in rxns),
+            sum((lambda x: x == "Process_ReplicationInitiation")(x) for x in rxns),
+            sum((lambda x: x == "Process_RNADecay")(x) for x in rxns),
+            sum((lambda x: x == "Process_RNAModification")(x) for x in rxns),
+            sum((lambda x: x == "Process_RNAProcessing")(x) for x in rxns),
+            sum((lambda x: x == "Process_Transcription")(x) for x in rxns),
+            sum((lambda x: x == "Process_Translation")(x) for x in rxns),
+            sum((lambda x: x == "Process_tRNAAminoacylation")(x) for x in rxns)
+        ]
+        
         content.append([
-            [0, 'Reactions', rxns.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'})],
-            [1, 'DNA damage', rxns.filter(processes__wid='Process_DNADamage').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNADamage'],
-            [1, 'DNA repair', rxns.filter(processes__wid='Process_DNARepair').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNARepair'],
-            [1, 'Metabolic', rxns.filter(processes__wid='Process_Metabolism').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Metabolism'],            
-            [1, 'Protein decay', rxns.filter(processes__wid='Process_ProteinDecay').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ProteinDecay'],
-            [1, 'Protein modification', rxns.filter(processes__wid='Process_ProteinModification').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ProteinModification'],            
-            [1, 'Replication Initiation', rxns.filter(processes__wid='Process_ReplicationInitiation').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ReplicationInitiation'],
-            [1, 'RNA decay', rxns.filter(processes__wid='Process_RNADecay').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNADecay'],
-            [1, 'RNA modification', rxns.filter(processes__wid='Process_RNAModification').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNAModification'],            
-            [1, 'RNA processing', rxns.filter(processes__wid='Process_RNAProcessing').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNAProcessing'],            
-            [1, 'Transcription', rxns.filter(processes__wid='Process_Transcription').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Transcription'],            
-            [1, 'Translation', rxns.filter(processes__wid='Process_Translation').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Translation'],            
-            [1, 'tRNA aminoacylation', rxns.filter(processes__wid='Process_tRNAAminoacylation').count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_tRNAAminoacylation'],
-            [1, 'Other', rxns.exclude(processes__wid='Process_DNADamage')
-                .exclude(processes__wid='Process_DNARepair')
-                .exclude(processes__wid='Process_Metabolism')
-                .exclude(processes__wid='Process_ProteinDecay')
-                .exclude(processes__wid='Process_ProteinModification')
-                .exclude(processes__wid='Process_ReplicationInitiation')                
-                .exclude(processes__wid='Process_RNADecay')
-                .exclude(processes__wid='Process_RNAModification')
-                .exclude(processes__wid='Process_RNAProcessing')
-                .exclude(processes__wid='Process_Transcription')
-                .exclude(processes__wid='Process_Translation')
-                .exclude(processes__wid='Process_tRNAAminoacylation')
-                .count()],
+            [0, 'Reactions', rxns_count[0], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'})],
+            [1, 'DNA damage', rxns_count[1], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNADamage'],
+            [1, 'DNA repair', rxns_count[2], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNARepair'],
+            [1, 'Metabolic', rxns_count[3], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Metabolism'],            
+            [1, 'Protein decay', rxns_count[4], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ProteinDecay'],
+            [1, 'Protein modification', rxns_count[5], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ProteinModification'],            
+            [1, 'Replication Initiation', rxns_count[6], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ReplicationInitiation'],
+            [1, 'RNA decay', rxns_count[7], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNADecay'],
+            [1, 'RNA modification', rxns_count[8], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNAModification'],            
+            [1, 'RNA processing', rxns_count[9], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNAProcessing'],            
+            [1, 'Transcription', rxns_count[10], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Transcription'],            
+            [1, 'Translation', rxns_count[11], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Translation'],            
+            [1, 'tRNA aminoacylation', rxns_count[12], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_tRNAAminoacylation'],
+            [1, 'Other', rxns_count[0] - sum(rxns_count[1:])],
         ])        
         
-        tr = cmodels.TranscriptionalRegulation.objects.filter(species__id = species.id)
-        nTus = len(set([x[0] for x in tr.values_list('transcription_unit')]))
-        nTfs = len(set([x[0] for x in tr.values_list('transcription_factor')]))
+        tr = cmodels.TranscriptionalRegulation.objects.for_species(species).values_list("transcription_unit", "transcription_factor", "affinity", "activity")
+        nTus = len(set([x[0] for x in tr]))
+        nTfs = len(set([x[1] for x in tr]))
         content.append([
             [0, 'Transcriptional regulation'],
             [1, 'Interactions', tr.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionalRegulation'})],
             [1, 'Transcriptional regulators', nTfs],
             [1, 'Regulated promoters', nTus],
-        ])        
+        ])
 
         content.append([
             [0, 'Pathways', cmodels.Pathway.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Pathway'})],
         ])
+        
+        stimuli = cmodels.Stimulus.objects.for_species(species).values_list("value", flat=True)
+        nStimuli = sum((lambda x: x[3] is not None)(x) for x in stimuli)
+
         content.append([
-            [0, 'Stimuli', cmodels.Stimulus.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Stimulus'})],
+            [0, 'Stimuli', len(stimuli), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Stimulus'})],
         ])
         
+        nCellComp = sum((lambda x: x[3] is not None)(x) for x in metabolites)
+        nMediaComp = sum((lambda x: x[4] is not None)(x) for x in metabolites)
         
-        nCellComp = cmodels.Metabolite.objects.filter(species__id = species.id, biomass_composition__concentration__isnull=False).count()
-        nMediaComp = cmodels.Metabolite.objects.filter(species__id = species.id, media_composition__concentration__isnull=False).count()        
-        nKineticsKeq = cmodels.Reaction.objects.filter(species__id = species.id, keq__isnull=False).count()
-        nKineticsKm = \
-            cmodels.Reaction.objects.filter(species__id = species.id, kinetics_forward__km__isnull=False).count() + \
-            cmodels.Reaction.objects.filter(species__id = species.id, kinetics_backward__km__isnull=False).count()
-        nKineticsVmax = \
-            cmodels.Reaction.objects.filter(species__id = species.id, kinetics_forward__vmax__isnull=False).count() + \
-            cmodels.Reaction.objects.filter(species__id = species.id, kinetics_backward__vmax__isnull=False).count()
-        nRnaExp = cmodels.Gene.objects.filter(species__id = species.id, expression__isnull=False).count()
-        nRnaHl = cmodels.Gene.objects.filter(species__id = species.id, half_life__isnull=False).count()
-        nStimuli = cmodels.Stimulus.objects.filter(species__id = species.id, value__isnull=False).count()
-        nTrAffinity = cmodels.TranscriptionalRegulation.objects.filter(species__id = species.id, affinity__isnull=False).count()        
-        nTrActivity = cmodels.TranscriptionalRegulation.objects.filter(species__id = species.id, activity__isnull=False).count()        
-        nOther = cmodels.Parameter.objects.filter(species__id = species.id).count()
+        reactions = cmodels.Reaction.objects.for_species(species).\
+            values_list("keq", "kinetics_forward__km", "kinetics_backward__km", "kinetics_forward__vmax", "kinetics_backward__vmax")
+       
+        nKineticsKeq = sum((lambda x: x[0] is not None)(x) for x in reactions)
+        nKineticsKm = sum((lambda x: x[1] is not None)(x) for x in reactions) +\
+                        sum((lambda x: x[2] is not None)(x) for x in reactions)
+        nKineticsVmax = sum((lambda x: x[3] is not None)(x) for x in reactions) +\
+                        sum((lambda x: x[4] is not None)(x) for x in reactions)
+
+        nRnaExp = sum((lambda x: x[1] is not None)(x) for x in genes)
+        nRnaHl = sum((lambda x: x[2] is not None)(x) for x in genes)
+
+        nTrAffinity = sum((lambda x: x[2] is not None)(x) for x in tr)
+        nTrActivity = sum((lambda x: x[3] is not None)(x) for x in tr)
+       
+        nOther = cmodels.Parameter.objects.for_species(species).count()
         nTotParameters = nCellComp + nMediaComp + nKineticsVmax + nRnaExp + nRnaHl + nStimuli + nTrAffinity + nTrActivity + nOther
 
         content.append([
@@ -218,7 +248,7 @@ def species(request, species):
             [1, 'Reaction V<sub>max</sub>', nKineticsVmax],
             [1, 'RNA expression', nRnaExp],
             [1, 'RNA half-lives', nRnaHl],
-            [1, 'Stimulus values', nStimuli],            
+            [1, 'Stimulus values', nStimuli],   
             [1, 'Transcr. reg. activity', nTrAffinity],
             [1, 'Transcr. reg. affinity', nTrActivity],
             [1, 'Other', nOther, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Parameter'})],            
@@ -229,7 +259,7 @@ def species(request, species):
         ])
         
         content.append([
-            [0, 'States', cmodels.State.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
+            [0, 'States', cmodels.State.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
         ])
         
     nContent = [len(x) for x in content]
@@ -274,42 +304,42 @@ def species(request, species):
         'evidence_pH': [],
         'evidence_temperature': [],
     }
-    if species is not None:
-        #refs = cmodels.PublicationReference.objects.filter(species__id = species.id)
+    #if species is not None:
+        #refs = cmodels.PublicationReference.objects.filter.for_species(species)
         #sources['total'] = refs.count()
         #sources['types'] = [
-        #        {'type': 'Articles', 'count': refs.filter(species__id = species.id, type__wid='article').count()},
-        #        {'type': 'Books', 'count': refs.filter(species__id = species.id, type__wid='book').count()},
-        #        {'type': 'Thesis', 'count': refs.filter(species__id = species.id, type__wid='thesis').count()},
-        #        {'type': 'Other', 'count': refs.filter(species__id = species.id, type__wid='misc').count()},
+        #        {'type': 'Articles', 'count': refs.filter(type__wid='article').count()},
+        #        {'type': 'Books', 'count': refs.filter(type__wid='book').count()},
+        #        {'type': 'Thesis', 'count': refs.filter(type__wid='thesis').count()},
+        #        {'type': 'Other', 'count': refs.filter(type__wid='misc').count()},
         #    ]
         #sources['dates'] = refs.filter(year__isnull=False).order_by('year').values('year').annotate(count=Count('year'))
         
             
-        nEstimated = cmodels.Parameter.objects.filter(species__id = species.id, value__evidence__is_experimentally_constrained=False).count()
-        nExpConstrained = nTotParameters - nEstimated
-        sources['evidence_parameters'] = [
-            {'type': 'Experimentally constrained', 'count': nExpConstrained},
-            {'type': 'Computationally estimated', 'count': nEstimated},
-            ]
-            
+        #nEstimated = cmodels.Parameter.objects.for_species(species).filter(value__evidence__is_experimentally_constrained=False).count()
+        #nExpConstrained = nTotParameters - nEstimated
+        #sources['evidence_parameters'] = [
+        #     {'type': 'Experimentally constrained', 'count': nExpConstrained},
+        #     {'type': 'Computationally estimated', 'count': nEstimated},
+        #     ]
         
-        sources['evidence_species'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('species').annotate(count = Count('id'))
-        sources['evidence_media'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('media').annotate(count = Count('id'))
-        sources['evidence_pH'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('pH').annotate(count = Count('id'))
-        sources['evidence_temperature'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('temperature').annotate(count = Count('id'))
+        # sources['evidence_species'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('species').annotate(count = Count('id'))
+        # sources['evidence_media'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('media').annotate(count = Count('id'))
+        # sources['evidence_pH'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('pH').annotate(count = Count('id'))
+        # sources['evidence_temperature'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('temperature').annotate(count = Count('id'))
             
     return chelpers.render_queryset_to_response(
         species = species,
         data = {
             'content': [contentCol1, contentCol2, contentCol3],
             'contentRows': range(max(len(contentCol1), len(contentCol2), len(contentCol3))),
-            'sources': sources,            
+            'sources': sources,    
             },
         request = request, 
         template = 'cyano/species.html')
-    
-def about(request, species_wid=None):
+
+@resolve_to_objects
+def about(request, species=None):
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
@@ -317,13 +347,21 @@ def about(request, species_wid=None):
         data = {
             'ROOT_URL': settings.ROOT_URL,
         }
-    )    
+    )
         
-def tutorial(request, species_wid=None):
+@resolve_to_objects
+def tutorial(request, species=None):
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
-        template = 'cyano/tutorial.html')    
+        template = 'cyano/tutorial.html')
+
+@resolve_to_objects
+def licensing(request, species=None):
+    return chelpers.render_queryset_to_response(
+        species = species,
+        request = request, 
+        template = 'cyano/license.html')
 
 @login_required
 @resolve_to_objects
@@ -334,7 +372,7 @@ def users(request, species = None):
         request = request, 
         models = [cmodels.UserProfile],
         queryset = queryset,
-        template = 'cyano/users.html')    
+        template = 'cyano/users.html')
         
 @login_required   
 @resolve_to_objects
@@ -347,22 +385,20 @@ def user(request, username, species = None):
         queryset = queryset,
         template = 'cyano/user.html')    
 
-def search(request, species_wid = None):
+@resolve_to_objects
+def search(request, species = None):
     query = request.GET.get('q', '')
     engine = request.GET.get('engine', 'haystack')
     
-    if engine == 'haystack':
-        return search_haystack(request, species_wid, query)
+    if engine == 'haystack' or not getattr(settings, 'GOOGLE_SEARCH_ENABLED', False):
+        return search_haystack(request, species, query)
     else:
-        return search_google(request, species_wid, query)
+        return search_google(request, species, query)
                 
-def search_haystack(request, species_wid, query):
-    #search
-    if species_wid is None:
-        species_wid = cmodels.Species.objects.all()[0].wid
+def search_haystack(request, species, query):
     results = SearchQuerySet().filter(species=species).filter(content=query)
     
-    #calculate facets        
+    #calculate facets      
     facets = results.facet('model_type')
     tmp = facets.facet_counts()['fields']['model_type']
     modelNameFacet = []
@@ -407,7 +443,7 @@ def search_haystack(request, species_wid, query):
             'modelNameFacet': modelNameFacet,
             })
 
-def search_google(request, species_wid, query):
+def search_google(request, species, query):
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
@@ -420,7 +456,7 @@ def search_google(request, species_wid, query):
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def listing(request, species, model):
-    objects = model.objects.all().filter(species__id=species.id)
+    objects = model.objects.for_species(species)
 
     facet_fields = []    
     for field_full_name in model._meta.facet_fields:
@@ -439,9 +475,9 @@ def listing(request, species, model):
             continue
         
         if isinstance(field, (ForeignKey, ManyToManyField)):
-            tmp = model.objects.filter(species__id=species.id).order_by(field_full_name + '__name').values(field_full_name).annotate(count=Count(field_full_name))
+            tmp = model.objects.for_species(species).order_by(field_full_name + '__name').values(field_full_name).annotate(count=Count(field_full_name))
         else:
-            tmp = model.objects.filter(species__id=species.id).order_by(field_full_name).values(field_full_name).annotate(count=Count(field_full_name))
+            tmp = model.objects.for_species(species).order_by(field_full_name).values(field_full_name).annotate(count=Count(field_full_name))
         facets = []
         for facet in tmp:
             value = facet[field_full_name]            
@@ -491,7 +527,7 @@ def listing(request, species, model):
         template = "cyano/list_page.html"
     else:
         template = "cyano/list.html"
-
+    
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
@@ -565,7 +601,9 @@ def history(request, species, model = None, item = None):
     if item:
         # Item specific
         obj = item
-        objects = cmodels.Revision.objects.filter(current = item).distinct("detail").order_by("-detail")
+        objects = cmodels.Revision.objects.filter(current = item).distinct().order_by("-detail")
+        
+        # Add link to the current version of the item
         wid = obj.wid
         detail_id = obj.detail.pk
         date = obj.detail.date.date()
@@ -579,12 +617,13 @@ def history(request, species, model = None, item = None):
         
     elif model:
         # Model specific
-        tm = cmodels.TableMeta.get_by_model(model)
-        components = model.objects.filter(species = species)
-        objects = cmodels.Revision.objects.filter(current__model_type = tm, current__pk__in = components).distinct("detail").order_by("-detail")
+        components = model.objects.for_species(species)
+        objects = cmodels.Revision.objects.filter(current__pk__in = components).distinct().order_by("-detail")
+
     else:
         # Whole species specific
-        objects = cmodels.Revision.objects.filter(current = item, current__species = species).distinct("detail").order_by("-detail")
+        components = cmodels.SpeciesComponent.objects.for_species(species)
+        objects = cmodels.Revision.objects.filter(current__pk__in = components).distinct().order_by("-detail")
     
     for obj in objects:
         last_date = date
@@ -674,15 +713,19 @@ def history_detail(request, species, model, item, detail_id):
             'fieldsets': fieldsets,
             'message': request.GET.get('message', ''),
             })
-            
+
+@login_required
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
 def add(request, species=None, model=None):
     return edit(request, species=species, model=model, action='add')
-    
+
+@login_required
 @resolve_to_objects 
 @permission_required(perm.WRITE_NORMAL)
 def edit(request, species, model = None, item = None, action='edit'):
+    from collections import defaultdict
+    
     #retrieve object
     if action == 'add':
         obj = model()
@@ -716,12 +759,13 @@ def edit(request, species, model = None, item = None, action='edit'):
                 if action == 'edit':
                     qs = qs.exclude(id=obj.id)
                     
-                wids = {}
+                wids = defaultdict(list)
                 for x in qs:
-                    wids[x['wid']] = x['model_type__model_name']
+                    wids[x['wid']].append(x['model_type__model_name'])
                 
                 if data['wid'] in wids.keys():
-                    raise ValidationError({'wid': 'Value must be unique'})
+                    if model.__name__ in wids[data['wid']]:
+                        raise ValidationError({'wid': 'Value must be unique for model'})
                     
                 wids[data['wid']] = model.__name__
             
@@ -731,7 +775,7 @@ def edit(request, species, model = None, item = None, action='edit'):
                 chelpers.validate_model_objects(model, data)
                 chelpers.validate_model_unique(model, [data])
                 
-                #save
+                #save                
                 obj = chelpers.save_object_data(species, obj, data, {}, request.user, save=False, save_m2m=False)
                 obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=False)
                 obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=True)
@@ -739,7 +783,10 @@ def edit(request, species, model = None, item = None, action='edit'):
                 #redirect to details page
                 return HttpResponseRedirect(obj.get_absolute_url(species))
             except ValidationError as error:
-                error_messages = error.message_dict
+                if hasattr(error, "message_dict"):
+                    error_messages = error.message_dict
+                else:
+                    raise
 
     #form query set
     if action == 'edit':
@@ -767,16 +814,26 @@ def edit(request, species, model = None, item = None, action='edit'):
             'error_messages': error_messages,
             }
         )
-            
+
+@login_required
 @resolve_to_objects 
-@permission_required(perm.WRITE_DELETE)      
-def delete(request, species, model, item):
-    qs = chelpers.objectToQuerySet(item, model = model)
+@permission_required(perm.WRITE_DELETE)
+def delete(request, species, model = None, item = None):
+    #retrieve object
+    if item is None:
+        obj = species
+    else:
+        obj = item
+        
+    if model is None:
+        model = obj.__class__
+    
+    qs = chelpers.objectToQuerySet(obj, model = model)
     
     #delete
     if request.method == 'POST':
         # Todo: Should be revisioned
-        item.delete()
+        obj.delete()
         return HttpResponseRedirect(reverse('cyano.views.listing', kwargs={'species_wid':species.wid, 'model_type': model.__name__}))
         
     #confirmation message
@@ -788,11 +845,10 @@ def delete(request, species, model, item):
         template = 'cyano/delete.html', 
         )
 
-def exportData(request, species_wid=None):
-    getDict = request.GET.copy()
-    if getDict.get('format', ''):
-        getDict.__setitem__('species', getDict.get('species', species_wid))    
-    form = ExportDataForm(getDict or None)
+@resolve_to_objects
+@permission_required(perm.READ_NORMAL)
+def exportData(request, species):
+    form = ExportDataForm(None)
     if not form.is_valid():        
         return chelpers.render_queryset_to_response(
             species=species,
@@ -802,7 +858,7 @@ def exportData(request, species_wid=None):
                 'form': form
                 }
             )
-    else:        
+    else:
         species = species.objects.get(wid = form.cleaned_data['species'])
         queryset = EmptyQuerySet()
         models = []
@@ -815,9 +871,9 @@ def exportData(request, species_wid=None):
         for model_type in model_types:
             model = chelpers.getModel(model_type)
             if issubclass(model, cmodels.SpeciesComponent):
-                queryset = chain(queryset, model.objects.filter(species__id=species.id).select_related(depth=2).all())
+                queryset = chain(queryset, model.objects.for_species(species).select_related(depth=2).all())
             else:
-                queryset = chain(queryset, model.objects.select_related(depth=2).filter(id=species.id))
+                queryset = chain(queryset, model.objects.for_species(species).select_related(depth=2))
             models.append(chelpers.getModel(model_type))
         
         return chelpers.render_queryset_to_response(
@@ -829,17 +885,22 @@ def exportData(request, species_wid=None):
 
 @login_required
 @resolve_to_objects
+@permission_required(perm.WRITE_NORMAL)
 def importData(request, species=None):
+    data = {}
+    
     if request.method == 'POST':
-        form = ImportDataForm(request.POST or None, request.FILES)
+        form = ImportDataForm(request.POST, request.FILES)
         
-        if form.is_valid():       
-            selected_species_wid = form.cleaned_data['species'] or form.cleaned_data['new_wid']
-            if selected_species_wid == '' or selected_species_wid is None:
-                form.errors["species"] = ['Please select a species or create a new one']
-            elif form.cleaned_data['new_wid'] and cmodels.Species.objects.filter(wid = selected_species_wid).exists():
-                form.errors["new_wid"] = ['The identifier specified is already in use']
+        if form.is_valid():
+            selected_species_wid = None
+
+            if form.cleaned_data.get('species'):
+                selected_species_wid = form.cleaned_data.get('species')
             else:
+                selected_species_wid = species.wid
+            
+            if selected_species_wid:
                 #save to temporary file
                 #originalFileName, originalFileExtension = os.path.splitext(request.FILES['file'].name)[1]
                 originalFileExtension = os.path.splitext(request.FILES['file'].name)[1]
@@ -851,68 +912,91 @@ def importData(request, species=None):
                 
                 #read file
                 data_type = form.cleaned_data["data_type"]
-                request.POST["new_species"] = form.cleaned_data["new_species"]
-                request.POST["data_type"] = data_type
-                request.POST["reason"] = form.cleaned_data["reason"]
                 
-                if data_type == "fasta":
-                    from cyano.importer.fasta import FastaImporter
-                    importer = FastaImporter()
-                elif data_type == "fastagene":
-                    from cyano.importer.fasta_to_genbank import FastaToGenbankImporter
-                    importer = FastaToGenbankImporter()
-                elif data_type == "genbank":
-                    from cyano.importer.genbank import GenbankImporter
-                    importer = GenbankImporter()
-                elif data_type == "optgene":
-                    from cyano.importer.optgene import OptGeneImporter
-                    importer = OptGeneImporter()
+                args = {"filename": filename,
+                        "wid": selected_species_wid,
+                        "user": request.user.username,
+                        "reason": form.cleaned_data['reason']}
+
+                if data_type == "genbank":
+                    from cyano.tasks import genbank
+                    genbank.delay(name = form.cleaned_data["chromosome"],
+                                  chromosome = form.cleaned_data["chromosome_wid"],
+                                  **args)
+                elif data_type == "sbml":
+                    from cyano.tasks import sbml
+                    sbml.delay(**args)
+                elif data_type == "proopdb":
+                    from cyano.tasks import proopdb
+                    proopdb.delay(**args)
                 
-                if importer:
-                    importer.load(filename)
-                    return importer.preview(request, selected_species_wid)
-                
-                os.remove(filename)
-                raise Http404
-                
-                #if originalFileExtension == '.xlsx':
-                #    try:
-                #        batch_import_from_excel(selected_species_wid, filename, request.user)
-                #        success = True
-                #        message = 'Data successfully saved!'
-                #    except ValidationError as error:
-                #        success = False
-                #        message = 'Unable to import data: ' + ' '.join(error.messages)
+                data['success'] = 'success'
+                data['message'] = "New import job created for %s" % (request.FILES['file'].name)
 
     else:
         form = ImportDataForm(None)
 
+    data["form"] = form
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
         template = 'cyano/importDataForm.html', 
-        data = {
-            'form': form},
+        data = data
         )
 
 @login_required
 @resolve_to_objects
-def importSubmitData(request, species=None):
-    from cyano.importer.genbank import GenbankImporter
+@permission_required(perm.READ_NORMAL)
+@commit_on_success
+def importSpeciesData(request, species=None):
+    data = {}
+    
     if request.method == 'POST':
-        data_type = request.POST["data_type"]
-        filename = request.POST['filename']
-        #if data_type == "fasta":
+        form = ImportSpeciesForm(request.POST)
+        
+        if form.is_valid():            
+            rev = cmodels.RevisionDetail(user = request.user.profile, reason = form.cleaned_data["reason"])
+            rev.save()
             
-        if data_type == "fastagene":
-            g = GenbankImporter()
-            g.load(filename)
-            os.remove(filename)
-            return g.submit(request, request.POST['species_wid'])
+            mutant = False
+            if species: # Create mutant
+                import itertools
+                
+                mutant = True
+                
+                through = cmodels.SpeciesComponent.species.through
+                    
+                component = cmodels.SpeciesComponent.objects.for_species(species).values_list("pk", flat=True).order_by("pk")
+                
+                species.pk = None
+                species.id = None
+                species.wid = form.cleaned_data['new_wid']
+                species.name = form.cleaned_data['new_species']
+                species.save(rev)
+                
+                through.objects.bulk_create(map(lambda x: through(species_id = x[0], speciescomponent_id = x[1]), itertools.izip(itertools.cycle([species.pk]), component)))
+            else: # Create species
+                species = cmodels.Species(wid = form.cleaned_data['new_wid'], name = form.cleaned_data['new_species'])
+                species.save(rev)
+                cmodels.Pathway.add_boehringer_pathway(species, rev)
 
-        os.remove(filename)
-        raise Http404
-    pass
+            # Assign permissions
+            new_perm, _ = cmodels.UserPermission.objects.get_or_create(entry = species, user = request.user.profile)
+            new_perm.allow.add(*cmodels.Permission.objects.all())
+
+            data['success'] = 'success'
+            data['message'] = "New %s %s created" % ("mutant" if mutant else "species", species.name)
+
+    else:
+        form = ImportSpeciesForm(None)
+
+    data["form"] = form
+    return chelpers.render_queryset_to_response(
+        species = species,
+        request = request, 
+        template = 'cyano/importSpeciesForm.html', 
+        data = data,
+        )
     
 def validate(request, species_wid):
     errors = chelpers.get_invalid_objects(cmodels.Species.objects.values('id').get(wid=species_wid)['id'])
@@ -925,46 +1009,51 @@ def validate(request, species_wid):
             'errors': errors
             },
         )
-        
-@sensitive_post_parameters()
-@csrf_protect
-@never_cache
+
+@login_required
+@resolve_to_objects
+def password_change_required(request, species=None):
+    from django.http import HttpResponseRedirect
+    from django.contrib.auth.views import password_change
+    from django.contrib.auth.forms import AdminPasswordChangeForm
+    
+    if not request.user.profile.force_password_change:
+        HttpResponseRedirect(reverse("cyano.index"))
+    
+    context = chelpers.get_extra_context(
+        species = species,
+        request = request)
+    
+    return password_change(request,
+                           "registration/password_change_form_required.html",
+                           password_change_form = AdminPasswordChangeForm,
+                           extra_context = context)
+
 @resolve_to_objects
 def login(request, species=None):
-    next_url = request.REQUEST.get('next', '')
-    
-    if request.method == "POST":
-        form = AuthenticationForm(data=request.POST)
-        if form.is_valid():
-            auth_login(request, form.get_user())
-            
-            if request.session.test_cookie_worked():
-                request.session.delete_test_cookie()
+    from django.contrib.auth.views import login as djlogin
 
-            return HttpResponseRedirect(next_url)
-    else:
-        form = AuthenticationForm(request)
+    msg = request.GET.get("message", "")
 
-    request.session.set_test_cookie()
+    context = chelpers.get_extra_context(
+        species=species,
+        request=request,
+    )
 
-    return chelpers.render_queryset_to_response(
-        species = species,
-        request = request, 
-        template = 'cyano/login.html', 
-        data = {
-            'form': form,
-            'next': next_url,
-        })
+    context['message'] = msg[:50]
 
-@resolve_to_objects        
+    return djlogin(request, extra_context = context)
+
+@resolve_to_objects
 def logout(request, species=None):
-    auth_logout(request)    
-    return chelpers.render_queryset_to_response(
+    from django.contrib.auth.views import logout as djlogout
+
+    context = chelpers.get_extra_context(
         species = species,
-        request = request, 
-        template = 'cyano/logout.html', 
-        )
+        request = request)
     
+    return djlogout(request, extra_context = context)
+
 def sitemap(request):
     return chelpers.render_queryset_to_response(
         request = request, 
@@ -987,14 +1076,16 @@ def sitemap_toplevel(request):
 @resolve_to_objects
 def sitemap_species(request, species):
     return chelpers.render_queryset_to_response(
+        species = species,
         request = request, 
-        template = 'cyano/sitemap_species.xml', 
+        template = 'cyano/sitemap_species.xml',
         data = {
             'ROOT_URL': settings.ROOT_URL,
-            'entries': cmodels.SpeciesComponent.objects.filter(species__id = species.id),
+            'entries': cmodels.SpeciesComponent.objects.for_species(species).select_related("detail"),
         }
     )
 
+@login_required
 @resolve_to_objects
 @permission_required(perm.WRITE_PERMISSION)
 def permission_edit(request, species, model = None, item = None):
@@ -1087,7 +1178,7 @@ def permission(request, species, model = None, item = None, edit = False):
                     request,
                     species = species,
                     error = 400,
-                    msg = "Invalid POST request on permission page.",
+                    msg = "Invalid request on permission page.",
                     msg_debug = "POST was: " + str(request.POST.lists()))        
             
             # Data is valid, begin with database operations
@@ -1112,9 +1203,8 @@ def permission(request, species, model = None, item = None, edit = False):
             # Rotate array to group -> permissions
             for i, group in enumerate(new_permissions["gid_deny"], user_count_allow + group_count_allow + user_count_deny):  
                 new_permissions_group_deny[cmodels.GroupProfile.objects.get(pk = group)] = [new_permissions[x][i] for x in cmodels.Permission.permission_types]
-            
-            # Check if user or group is completly missing but had permissions before
-            # Delete if this is the case
+
+            # Test if user is missing but had permission before (Happens with "Remove this user")
             all_user_perms = cmodels.UserPermission.objects.filter(entry = entry).prefetch_related("user")
             for permission in all_user_perms:
                 if not permission.user in new_permissions_user_allow and not permission.user in new_permissions_user_deny:
@@ -1125,6 +1215,7 @@ def permission(request, species, model = None, item = None, edit = False):
                     if not permission.user in new_permissions_user_deny:
                         permission.deny.clear()
             
+            # Test if group is missing but had permission before (Happens with "Remove this group")
             all_group_perms = cmodels.GroupPermission.objects.filter(entry = entry).prefetch_related("group")
             for permission in all_group_perms:
                 if not permission.group in new_permissions_group_allow and not permission.group in new_permissions_group_deny:
@@ -1134,64 +1225,20 @@ def permission(request, species, model = None, item = None, edit = False):
                         permission.allow.clear()
                     if not permission.group in new_permissions_group_deny:
                         permission.deny.clear()
-    
+
             # Create or alter the permission object associated to entry+user/group depending on the
             # new permission settings
             for u, p in new_permissions_user_allow.iteritems():
-                new_perm, _ = cmodels.UserPermission.objects.get_or_create(entry = entry, user = u)
-                allows = new_perm.allow.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.add(cmodels.Permission.get_by_pk(x))
-    
+                u._handle_permission_list(entry, p, allow=True)
+
             for u, p in new_permissions_user_deny.iteritems():
-                new_perm, _ = cmodels.UserPermission.objects.get_or_create(entry = entry, user = u)
-                denies = new_perm.deny.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.add(cmodels.Permission.get_by_pk(x))
-    
-                new_perm.save()
+                u._handle_permission_list(entry, p, allow=False)
                         
             for g, p in new_permissions_group_allow.iteritems():
-                new_perm, _ = cmodels.GroupPermission.objects.get_or_create(entry = entry, group = g)
-                allows = new_perm.allow.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.add(cmodels.Permission.get_by_pk(x))
+                g._handle_permission_list(entry, p, allow=True)
                 
-            for g, p in new_permissions_group_deny.iteritems():     
-                new_perm, _ = cmodels.GroupPermission.objects.get_or_create(entry = entry, group = g)    
-                denies = new_perm.deny.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.add(cmodels.Permission.get_by_pk(x))
-                
-                new_perm.save()
+            for g, p in new_permissions_group_deny.iteritems():
+                g._handle_permission_list(entry, p, allow=False)
 
     # Rendering of the permission page
     user_permissions_db = cmodels.UserPermission.objects.filter(entry = entry).prefetch_related("allow", "deny", "user", "user__user")
@@ -1215,7 +1262,6 @@ def permission(request, species, model = None, item = None, edit = False):
         group_perm_deny = [permission.group.id, [1 if cmodels.Permission.get_by_pk(x) in permission.deny.all() else 0 for x in range(1, 9)]] 
         group_permissions_allow.append(group_perm_allow)
         group_permissions_deny.append(group_perm_deny)
-
     
     queryset = chelpers.objectToQuerySet(item) if item else None
 
@@ -1234,3 +1280,59 @@ def permission(request, species, model = None, item = None, edit = False):
                     'group_permissions_deny': group_permissions_deny,
                     'permission_types': cmodels.Permission.permission_types
                 })
+
+@login_required
+@resolve_to_objects
+def jobs(request, species = None):
+    from djcelery.models import TaskMeta
+    from celery.task.control import inspect
+    from ast import literal_eval # safer than eval
+    
+    pending = []
+    finished = []
+    running = []
+    # Fetch pending tasks
+    insp = inspect()
+    message_debug = "No worker available"
+    try:
+        res = insp.reserved()
+    except Exception as e:
+        res = None
+        message_debug = str(e)
+
+    # Admins see all jobs
+    is_admin = request.user.profile.is_admin()
+
+    if not res:
+        return chelpers.render_queryset_to_response_error(
+            request,
+            error = 503,
+            msg = "Server error or no worker available. Please report this to an administrator!",
+            msg_debug = message_debug
+        )
+
+    for v in res.values():
+        for job in v:
+            kwargs = literal_eval(job["kwargs"])
+            if is_admin or kwargs["user"] == request.user.pk or kwargs["user"] == request.user.username:
+                pending.append(kwargs)
+
+    obj = TaskMeta.objects.all().order_by("pk")
+    for o in obj:
+        if is_admin or o.result["user"] == request.user.pk or o.result["user"] == request.user.username:
+            if o.status == "SUCCESS" or o.status == "FAILURE":
+                finished.append(o)
+            elif o.status == "PROGRESS":
+                running.append(o.result)
+
+    finished = sorted(finished, key = lambda f: f.date_done, reverse = True)
+
+    return chelpers.render_queryset_to_response(
+        species = species,
+        request = request, 
+        models = [cmodels.UserProfile],
+        template = 'cyano/jobs.html',
+            data = {'pending': pending,
+                    'finished': finished,
+                    'running': running})
+

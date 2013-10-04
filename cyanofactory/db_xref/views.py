@@ -1,4 +1,4 @@
-from django.http import HttpResponseBadRequest
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render_to_response
 from django.shortcuts import redirect
 from django.template import Context, loader
@@ -50,11 +50,14 @@ def dbxref(request, source, xid):
         "item" : organism,
         "url" : get_database_url(database, organism)
     }
-    print data["url"]
     
     template = "db_xref/output." + _format
 
     do_error = False
+    
+    if len(data["url"]) == 0:
+        # Unsupported DB
+        do_error = True
 
     if _format == "txt":
         mimetype = "text/plain"
@@ -63,18 +66,18 @@ def dbxref(request, source, xid):
     elif _format == "xml":
         mimetype = "application/xml"
     elif _format == "html":
-        mimetype = "application/xhtml+xml"
+        mimetype = "text/html"
     elif _format == "redirect":
         if len(data["url"]) == 0:
-            do_error = True
             data["error"] = "Unsupported Database " + database
         else:
             return redirect(data["url"])
     else:
         do_error = True
         data["error"] = "Unknown format " + _format
+        _format = "redirect"
         
-    if do_error:
+    if do_error and _format == "redirect":
         t = loader.get_template('db_xref/error.html')
         c = Context(data)
         return HttpResponseBadRequest(
@@ -82,4 +85,8 @@ def dbxref(request, source, xid):
             mimetype = 'text/html; charset=UTF-8',
             content_type = 'text/html; charset=UTF-8')
 
-    return render_to_response(template, data, mimetype = mimetype)
+    status = 400 if do_error else 200
+
+    t = loader.get_template(template)
+    c = Context(data)
+    return HttpResponse(t.render(c), mimetype = mimetype, status = status)

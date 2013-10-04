@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 # Model used to dump Kegg Data from Microbes online
 
 from django.db import models

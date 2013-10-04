@@ -4,16 +4,44 @@ Whole-cell project settings
 Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
+
+Cyanofactory project settings
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 '''
 
 import os
+from sys import argv
+
+import djcelery
 
 from settings_private import *
+
+UNIT_TEST_RUNNING = 'test' in argv
+
+# Special case for unit testing (SQLite DB -> faster)
+
+if UNIT_TEST_RUNNING:
+    DATABASES = {'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'cyanobase'
+    }}
+
+    TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+
+    DEBUG = False
+else:
+    # Workaround for transaction blocks (progress not visible)
+    # Needs the database router
+    DATABASES['djcelery'] = DATABASES['default']
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 ADMINS = (
-    #('Max Mustermann', 'doe@example.com'),
+#('Max Mustermann', 'doe@example.com'),
 )
 
 MANAGERS = ADMINS
@@ -66,38 +94,45 @@ STATICFILES_DIRS = (
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-#    'django.contrib.staticfiles.finders.DefaultStorageFinder',
+    #'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',
-#     'django.template.loaders.eggs.Loader',
+    #'django.template.loaders.eggs.Loader',
 )
 
 MIDDLEWARE_CLASSES = (
-    'public.redirect_host.RedirectAllowedHostMiddlware',
+    'cyano.middleware.RedirectAllowedHostMiddlware',
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
+    'cyano.middleware.PasswordChangeMiddleware',
+    #'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-ROOT_URLCONF = os.path.dirname(os.path.realpath(__file__)).split(os.sep)[-1] + '.urls'
+if DEBUG:
+    MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
+
+ROOT_URLCONF = 'urls'
 
 #use absolute directories
 TEMPLATE_DIRS = (
-	ROOT_DIR + "/templates",
+    ROOT_DIR + "/templates",
 )
 
-HAYSTACK_SITECONF = 'public.search_indexes'
-HAYSTACK_SEARCH_ENGINE  = 'xapian'
+HAYSTACK_SITECONF = 'cyano.search_indexes'
+HAYSTACK_SEARCH_ENGINE = 'xapian'
 HAYSTACK_XAPIAN_PATH = os.path.join(os.path.dirname(__file__), 'xapian_index')
+
+djcelery.setup_loader()
+
+SOUTH_TESTS_MIGRATE = False
 
 INSTALLED_APPS = (
     'django.contrib.auth',
@@ -105,30 +140,34 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.messages',
-    'django.contrib.staticfiles',	
+    'django.contrib.staticfiles',
     'django.contrib.admin',
     'django.contrib.admindocs',
-	'django_extensions',
-    'endless_pagination',
-	
-	#apps
-	'public',
+    'django_extensions',
+    'widget_tweaks',
+
+    #apps
+    'public',
     #'biosql',
     'cyano',
     'db_xref',
-    'django_dumpdb',
     #'biowarehouse',
-	'bioparser',
+    'bioparser',
     'boehringer',
-	'kegg',
-	
-	#helpers
-	'haystack',
-    
-    'debug_toolbar',
+    'kegg',
+
+    #helpers
+    'django_dumpdb',
+    'djcelery',
+    'haystack',
+    'endless_pagination',
+    'django_nose',
+    'south'
 )
 
-import django.utils.log
+if DEBUG:
+    INSTALLED_APPS += ('debug_toolbar',)
+
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error.
@@ -141,7 +180,7 @@ LOGGING = {
     'filters': {
         'require_debug_false': {
             '()': 'django.utils.log.RequireDebugFalse'
-            }     
+        }
     },
     'handlers': {
         'mail_admins': {
@@ -180,12 +219,18 @@ AUTH_PROFILE_MODULE = 'cyano.UserProfile'
 LOGIN_URL = ROOT_URL + '/login/'
 LOGIN_REDIRECT_URL = ROOT_URL + '/'
 
+DATABASE_ROUTERS = ['public.router.WarehouseRouter']
+
 ABSOLUTE_URL_OVERRIDES = {
-    'auth.user': lambda o: ROOT_URL + '/user/' +  o.username,
+    'auth.user': lambda o: ROOT_URL + '/user/' + o.username,
 }
 
 from django.conf.global_settings import TEMPLATE_CONTEXT_PROCESSORS
+
 TEMPLATE_CONTEXT_PROCESSORS += (
     'django.core.context_processors.request',
+    'cyano.context_processor.process',
 )
+
+GOOGLE_SEARCH_ENABLED = False
 

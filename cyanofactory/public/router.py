@@ -1,21 +1,29 @@
 class WarehouseRouter(object):
     def db_for_read(self, model, **hints):
-        if model._meta.app_label == 'biowarehouse':
-            return 'cyano'
-        return 'default'
+        #if model._meta.app_label == 'biowarehouse':
+        #    return 'cyano'
+        
+        #if model._meta.app_label == 'djcelery':
+        #    return "djcelery"
+        return None
 
     def db_for_write(self, model, **hints):
-        if model._meta.app_label == 'biowarehouse':
-            return 'biowarehouse'
-        return 'default'
+        #if model._meta.app_label == 'biowarehouse':
+        #    return 'cyano'
+        
+        if model._meta.app_label == 'djcelery':
+            return "djcelery"
+        
+        return None
 
     def allow_relation(self, obj1, obj2, **hints):
         """
         Allow relations if a model in the auth app is involved.
         """
-        if obj1._meta.app_label == 'biowarehouse' or \
-           obj2._meta.app_label == 'biowarehouse':
-            return True
+        #if obj1._meta.app_label == 'biowarehouse' or \
+        #   obj2._meta.app_label == 'biowarehouse':
+        #    return True
+
         return None
 
     def allow_syncdb(self, db, model):

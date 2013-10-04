@@ -1,6 +1,14 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 from django.core.management.base import BaseCommand
 from django.db.models import get_app, get_models
 from django.db import connection
+from settings import UNIT_TEST_RUNNING
 
 from cyano.models import TableMeta, TableMetaColumn, TableMetaManyToMany
 
@@ -17,8 +25,13 @@ class Command(BaseCommand):
             for field in obj._meta.local_fields:                
                 column_name = field.column
                 cursor = connection.cursor()
-                cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [table_name, column_name])
-                column_id = cursor.fetchone()[0]
+                if UNIT_TEST_RUNNING:
+                    # FIXME: Metadata for SqLite needs
+                    # PRAGMA table_info(table-name);
+                    column_id = 0
+                else:
+                    cursor.execute("SELECT ordinal_position FROM information_schema.columns WHERE table_name = %s AND column_name = %s", [table_name, column_name])
+                    column_id = cursor.fetchone()[0]
                 TableMetaColumn.objects.get_or_create(table = table, column_name = column_name, column_id = column_id)
 
         for model in get_models(app):
