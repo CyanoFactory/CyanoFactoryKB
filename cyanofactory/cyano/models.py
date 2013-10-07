@@ -207,7 +207,9 @@ CHOICES_SIGNAL_SEQUENCE_TYPE = (
 ''' END: CHOICES '''
 
 # add model options
-options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('listing', 'concrete_entry_model', 'fieldsets', 'field_list', 'facet_fields', 'clean', 'validate_unique', 'wid_unique')
+options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('listing', 'concrete_entry_model', 'fieldsets', 'field_list',
+                                                 'facet_fields', 'clean', 'validate_unique', 'wid_unique',
+                                                 'group_field')
 
 ''' BEGIN: validators '''
 def validate_dna_sequence(seq):
@@ -3048,7 +3050,7 @@ class Pathway(SpeciesComponent):
                 ]}),
             ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
-            ]            
+            ]
         field_list = [
             'id', 'wid', 'name', 'synonyms', 'cross_references',
             'type', 
@@ -3056,6 +3058,7 @@ class Pathway(SpeciesComponent):
             'publication_references', 
             'created_detail', 'detail' 
             ]
+        group_field = 'type'
         facet_fields = ['type']
         verbose_name='Pathway'
         verbose_name_plural = 'Pathways'

@@ -469,6 +469,11 @@ select.select{
 #list thead tr th:nth-child(2), #list tbody tr td:nth-child(2){
 	overflow-x:hidden;
 }
+#list tbody.spacing tr td{
+	border:none;
+	background-color:transparent;
+	border-radius:0px;
+}
 
 #listfilter{
 	width:190px;
