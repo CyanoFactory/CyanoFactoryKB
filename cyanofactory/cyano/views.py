@@ -549,7 +549,7 @@ def listing(request, species, model):
 
             def group_func(x):
                 try:
-                    return getattr(x, field_name).all()[0]
+                    return getattr(x, field_name).all()[0].wid
                 except IndexError:
                     return "None"
 

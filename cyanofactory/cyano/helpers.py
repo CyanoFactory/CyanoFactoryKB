@@ -1812,9 +1812,9 @@ def validate_object_fields(model, data, wids, species_wid, entry_wid):
                         raise ValidationError('Undefined WID %s' % data[field.name])
                 else:
                     if issubclass(field.rel.to, cmodels.Entry):    
-                        if not wids.has_key(data[field.name]):
+                        if not data[field.name] in wids:
                             raise ValidationError('Undefined WID %s' % data[field.name])
-                        if not issubclass(getModel(wids[data[field.name]]), field.rel.to):
+                        if not issubclass(getModel(wids[data[field.name]][0]), field.rel.to):
                             raise ValidationError('Invalid WID %s' % data[field.name])
                     else:
                         try:
