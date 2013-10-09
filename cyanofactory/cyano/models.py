@@ -1450,7 +1450,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
             view = 'cyano.views.history_detail'
             dic['detail_id'] = history_id
 
-        return (view, (), dic)
+        return view, (), dic
 
     def get_all_references(self):
         return self.publication_references.all() | PublicationReference.objects.filter(evidence__species_component__id = self.id)
@@ -2987,7 +2987,7 @@ class Pathway(SpeciesComponent):
                 # Pathways are blue
                 # Something with EC numbers green
                 # Everything else red 
-                color_component = "rgb(255,0,0)"
+                color_component = "red"
                 fill_opacity = "0.0"
                 fill_color = "green" # not displayed with 0.0
 
@@ -2996,7 +2996,7 @@ class Pathway(SpeciesComponent):
                 # Repoint pathway links to our versions
                 if "show_pathway?" in url:
                     pathway_name = url[url.index("?") + 1:]
-                    color_component = "rgb(0,0,255)"
+                    color_component = "blue"
 
                     try:
                         pw_obj = Pathway.objects.for_species(species).for_wid(pathway_name)
@@ -3006,7 +3006,6 @@ class Pathway(SpeciesComponent):
                     except ObjectDoesNotExist:
                         elem.set("xlink:href", url)
                         elem.set("target", "_blank")
-                        pass
                 else:
                     elem.set("xlink:href", url)
                     elem.set("target", "_blank")
@@ -3018,7 +3017,7 @@ class Pathway(SpeciesComponent):
                 ecs = self.uniqify(self.extract_ecs(title))
 
                 if len(ecs) > 0:
-                    color_component = "rgb(0,255,0)"
+                    color_component = "green"
                     for ec in ecs:
                         if ec in species_ecs:
                             fill_opacity = "0.2"
@@ -3048,7 +3047,11 @@ class Pathway(SpeciesComponent):
             for elem in pending:
                 graphics.append(elem)
 
+            template = loader.get_template("cyano/pathway/sidebar.html")
+
             out = StringIO.StringIO()
+            out.write(template.render(Context()))
+
             out.write('<script type="text/javascript" src="' + settings.STATIC_URL + 'kegg/js/jquery-svgpan.js"></script>')
             tree.write(out)
             out.write('<script type="text/javascript">$("svg").svgPan("viewport");</script>')
