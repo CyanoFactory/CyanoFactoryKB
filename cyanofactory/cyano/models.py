@@ -1219,7 +1219,6 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
                 #print instance.wid + ": deleting", len(save_list), "items"
                 # Don't update the detail when actually nothing changed for that entry
                 RevisionManyToMany.objects.bulk_create(save_list)
-            pass
 
 class EntryQuerySet(QuerySet):
     def with_permission(self, permission):
@@ -1293,7 +1292,7 @@ class Entry(AbstractEntry):
             # Slugify the WID
             raise ValidationError("Wid must be slug!")
 
-        if self.pk != None:
+        if self.pk is not None:
             # can this be optimized? Probably not
             old_item = self._meta.concrete_model.objects.get(pk = self.pk)
             super(Entry, self).save(*args, **kwargs)
@@ -1425,6 +1424,20 @@ class SpeciesComponent(AbstractSpeciesComponent):
     publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publication references')
 
     #getters
+
+    def delete(self, species, using=None):
+        """
+        Delete is referenced counted and only detached when at least one more item is left
+        """
+        if self.species.count() > 1:
+            # Detach
+            # Todo revisioning
+            self.species.remove(species.pk)
+        else:
+            # Delete
+            # Todo revisioning
+            super(SpeciesComponent, self).delete(using=using)
+
     @permalink
     def get_absolute_url(self, species, history_id = None):
         dic = {'species_wid': species.wid,
@@ -3999,8 +4012,9 @@ class Species(Entry):
             'comments'
             ]
         facet_fields = []
-        verbose_name='Species'
+        verbose_name = 'Species'
         verbose_name_plural = 'Species'
+        wid_unique = True
 
 class State(SpeciesComponent):
     #parent pointer

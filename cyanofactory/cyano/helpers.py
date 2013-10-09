@@ -1890,7 +1890,7 @@ def validate_model_unique(model, model_objects_data, all_obj_data=None, all_obj_
             if obj['id'] is not None:
                 qs = qs.exclude(id=obj['id'])
         for obj in qs:
-            model_objects_data.append(obj)        
+            model_objects_data.append(obj)
     
     for ancestor_model in parent_list + [model]:
         if hasattr(ancestor_model._meta, 'validate_unique'):
@@ -1940,7 +1940,10 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
     if save:
         obj.full_clean()
         if isinstance(obj, cmodels.Entry):
-            obj.save(obj_data["revision_detail"])
+            try:
+                obj.save(obj_data["revision_detail"])
+            except ValidationError as e:
+                raise ValidationError({"wid": ". ".join(e.messages)})
         else:
             obj.save()
             

@@ -864,7 +864,7 @@ def delete(request, species, model = None, item = None):
     #delete
     if request.method == 'POST':
         # Todo: Should be revisioned
-        obj.delete()
+        obj.delete(species)
         return HttpResponseRedirect(reverse('cyano.views.listing', kwargs={'species_wid':species.wid, 'model_type': model.__name__}))
         
     #confirmation message

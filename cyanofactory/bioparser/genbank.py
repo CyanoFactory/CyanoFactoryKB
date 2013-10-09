@@ -232,11 +232,9 @@ class Genbank(BioParser):
             if v.type == "CDS":
                 v.type = "mRNA"
             
-            try:
-                t = cmodels.Type.objects.get(wid = slugify(v.type))
-            except ObjectDoesNotExist:
-                t = cmodels.Type(wid = slugify(v.type), name = v.type)
-    
+            t = cmodels.Type.objects.for_wid(wid = slugify(v.type), create = True)
+            t.name = v.type
+
             t.save(self.detail)
             t.species.add(self.species)
     
