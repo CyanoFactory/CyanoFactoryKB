@@ -538,7 +538,7 @@ def listing(request, species, model):
         group_field = model._meta.get_field_by_name(getattr(model._meta, "group_field"))[0]
 
         if group_field:
-            objects = objects.order_by(field_name)
+            objects = objects.order_by(field_name, "wid")
 
             #if isinstance(group_field, (ForeignKey, ManyToManyField)):
             #    print "m2m or fk"
@@ -555,6 +555,8 @@ def listing(request, species, model):
 
             groups = OrderedDict((k, list(v)) for k, v in groupby(objects, group_func))
             #print groups
+    else:
+        objects = objects.order_by("wid")
     
     return chelpers.render_queryset_to_response(
         species=species,

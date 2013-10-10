@@ -2824,10 +2824,15 @@ class Pathway(SpeciesComponent):
             return
         except ObjectDoesNotExist:
             # Create new boehringer (if it was never created yet) or assign to one
-            x = Pathway.objects.for_wid(wid, create = True)
+            x, created = Pathway.objects.for_wid(wid, create=True, creation_status=True)
+            if created:
+                typ = Type.objects.for_wid("Main-Pathway", create=True)
+                typ.save(revdetail)
+                typ.species.add(species)
+                x.name = "Biochemical Pathways"
+                x.save(revdetail)
+                x.type.add(typ)
 
-        x.name = "Biochemical Pathways"
-        x.save(revdetail)
         x.species.add(species)
 
     @staticmethod
@@ -2835,13 +2840,17 @@ class Pathway(SpeciesComponent):
         from kegg.models import Map
 
         crs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
-        maps = Map.objects.filter(ec_numbers__name__in = crs).distinct()
+        maps = Map.objects.filter(ec_numbers__name__in=crs).distinct()
 
         for map_ in maps:
-            x = Pathway.objects.for_wid(map_.name, create = True)
-
+            x = Pathway.objects.for_wid(map_.name, create=True)
             x.name = map_.title
             x.save(revdetail)
+            if map_.overview:
+                typ = Type.objects.for_wid("Main-Pathway", create=True)
+                typ.save(revdetail)
+                typ.species.add(species)
+                x.type.add(typ)
             x.species.add(species)
 
     def extract_ecs(self, text):
