@@ -1436,7 +1436,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
     species = ManyToManyField("Species", verbose_name = "Organism containing that entry", related_name = "species_components")
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
     cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
-    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publication references')
+    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publications')
 
     #getters
 
@@ -1485,11 +1485,11 @@ class SpeciesComponent(AbstractSpeciesComponent):
             lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':species.wid, 'model_type': 'PublicationReference', 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
 
-    def get_as_html_references(self, species, is_user_anonymous):
+    def get_as_html_publication_references(self, species, is_user_anonymous):
         results = {}
         for r in self.get_all_references():
             key = r.authors + ' ' + r.editors
-            results[key] = r.get_citation(True)
+            results[key] = r.get_citation(species, cross_references=True)
 
         keys = results.keys()
         keys.sort()
@@ -4846,7 +4846,7 @@ def format_evidence(evidence):
         if len(ev.references.all()) > 0:
             tmp2 = []
             for ref in ev.references.all():
-                tmp2.append(ref.get_citation(True))
+                tmp2.append(ref.get_citation(Species.objects.for_wid(ev.species), cross_references=True))
             tmp += '<div style="margin-top:4px;"><i>References</i><ol style="margin-top:0px"><li style="margin-bottom:0px">%s</li></ol></div>' % '</li><li style="margin-bottom:0px">'.join(tmp2)
 
         txt.append(tmp)
