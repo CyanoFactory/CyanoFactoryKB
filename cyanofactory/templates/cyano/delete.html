@@ -16,7 +16,7 @@ Released under the MIT license
 {% load static %}
 {% load templatetags %}
 
-{% block head_title %}{{ block.super }} :: Delete? {{ model_verbose_name }} :: queryset.0.wid {% endblock %}
+{% block head_title %}{{ block.super }} :: Delete? {{ model_verbose_name }} :: {{ queryset.0.wid }}{% endblock %}
 {% block page_title %}Delete?{% endblock %}
 
 {% block extrastyles %}

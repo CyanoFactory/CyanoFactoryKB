@@ -1836,9 +1836,9 @@ def validate_object_fields(model, data, wids, species_wid, entry_wid):
                         raise ValidationError('Undefined WID %s' % data[field.name])
                 else:
                     if issubclass(field.rel.to, cmodels.Entry):    
-                        if not wids.has_key(data[field.name]):
+                        if not data[field.name] in wids:
                             raise ValidationError('Undefined WID %s' % data[field.name])
-                        if not issubclass(getModel(wids[data[field.name]]), field.rel.to):
+                        if not issubclass(getModel(wids[data[field.name]][0]), field.rel.to):
                             raise ValidationError('Invalid WID %s' % data[field.name])
                     else:
                         try:
@@ -1914,7 +1914,7 @@ def validate_model_unique(model, model_objects_data, all_obj_data=None, all_obj_
             if obj['id'] is not None:
                 qs = qs.exclude(id=obj['id'])
         for obj in qs:
-            model_objects_data.append(obj)        
+            model_objects_data.append(obj)
     
     for ancestor_model in parent_list + [model]:
         if hasattr(ancestor_model._meta, 'validate_unique'):
@@ -1967,7 +1967,10 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
     if save:
         obj.full_clean()
         if isinstance(obj, cmodels.Entry):
-            obj.save(obj_data["revision_detail"])
+            try:
+                obj.save(obj_data["revision_detail"])
+            except ValidationError as e:
+                raise ValidationError({"wid": ". ".join(e.messages)})
         else:
             obj.save()
             

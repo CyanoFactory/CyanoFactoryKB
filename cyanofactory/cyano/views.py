@@ -456,6 +456,9 @@ def search_google(request, species, query):
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def listing(request, species, model):
+    from itertools import groupby
+    from collections import OrderedDict
+
     objects = model.objects.for_species(species)
 
     facet_fields = []    
@@ -490,7 +493,7 @@ def listing(request, species, model):
                 name = capfirst(tmp2['name'])
             elif (field.choices is not None) and (len(field.choices) > 0) and (not isinstance(field, (BooleanField, NullBooleanField))):    
                 id_ = value
-                choices = [x[0] for x in field.choices]
+                choices = [choice[0] for choice in field.choices]
                 if id_ in choices:
                     name = field.choices[choices.index(id_)][1]
                 else:
@@ -527,14 +530,45 @@ def listing(request, species, model):
         template = "cyano/list_page.html"
     else:
         template = "cyano/list.html"
+
+    groups = None
+
+    if hasattr(model._meta, "group_field"):
+        field_name = getattr(model._meta, "group_field")
+        group_field = model._meta.get_field_by_name(getattr(model._meta, "group_field"))[0]
+
+        if group_field:
+            objects = objects.order_by(field_name, "wid")
+
+            #if isinstance(group_field, (ForeignKey, ManyToManyField)):
+            #    print "m2m or fk"
+            #else:
+            #    print "other"
+
+            objects = objects.prefetch_related(group_field.name)
+
+            def group_func(x):
+                try:
+                    return getattr(x, field_name).all()[0].wid
+                except IndexError:
+                    return "None"
+
+            groups = OrderedDict((k, list(v)) for k, v in groupby(objects, group_func))
+            #print groups
+    else:
+        objects = objects.order_by("wid")
     
     return chelpers.render_queryset_to_response(
-        species = species,
-        request = request, 
-        models = [model], 
-        queryset = objects, 
-        template = template,
-        data = {'facet_fields': facet_fields})
+        species=species,
+        request=request,
+        models=[model],
+        queryset=objects,
+        template=template,
+        data={
+            'groups': groups,
+            'facet_fields': facet_fields
+        }
+    )
 
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
@@ -833,7 +867,7 @@ def delete(request, species, model = None, item = None):
     #delete
     if request.method == 'POST':
         # Todo: Should be revisioned
-        obj.delete()
+        obj.delete(species)
         return HttpResponseRedirect(reverse('cyano.views.listing', kwargs={'species_wid':species.wid, 'model_type': model.__name__}))
         
     #confirmation message

@@ -11,31 +11,40 @@ import os
 from xml.etree.ElementTree import ElementTree
 import kegg.models as models
 
+
 def extract_ecs(text):
     """Extracts EC numbers out of a string and returns a list with all numbers"""
     return re.findall(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+", text)
+
 
 def uniqify(seq, idfun=None):
     """Order preserving list uniqifier.
     Source: http://www.peterbe.com/plog/uniqifiers-benchmark
     """
     if idfun is None:
-        def idfun(x): return x
+        def idfun(x):
+            return x
     seen = {}
     result = []
     for item in seq:
         marker = idfun(item)
-        if marker in seen: continue
+        if marker in seen:
+            continue
         seen[marker] = 1
         result.append(item)
     return result
+
+
+def is_overview(pathway):
+    return pathway in ["map01100", "map01110", "map01120"]
+
 
 class Command(BaseCommand):
     help = 'Takes the data from fetch_kegg and loads it into the database'
 
     def handle(self, *args, **options):
         # [:-5] removes extension
-        html_files = map(lambda x: x[:-5], filter(lambda x: x.endswith(".html"), os.listdir("../kegg/fetch")))
+        html_files = map(lambda y: y[:-5], filter(lambda y: y.endswith(".html"), os.listdir("../kegg/fetch")))
         
         html_files_count = len(html_files)
         
@@ -63,8 +72,6 @@ class Command(BaseCommand):
                         print "skipping"
                         continue
                     
-                    coords = coords.split(",")
-                    
                     if filename in title and ":" in title:
                         map_names[filename] = title[title.index(":") + 2:]
                     
@@ -80,8 +87,8 @@ class Command(BaseCommand):
         
         print("Importing into Database")
         all_ecs = sorted(uniqify(all_ecs))
-        ec_items = [models.EcNumber(name = x) for x in all_ecs]
-        if models.EcNumber.objects.filter(name = ec_items[0].name).exists():
+        ec_items = [models.EcNumber(name=x) for x in all_ecs]
+        if models.EcNumber.objects.filter(name=ec_items[0].name).exists():
             print "Already imported, terminating..."
             return
         else:
@@ -89,15 +96,15 @@ class Command(BaseCommand):
 
         for i, filename in enumerate(sorted(html_files)):            
             print "Importing {} ({}/{})".format(filename, i + 1, html_files_count)
-            
+
             numbers = ec_numbers.get(filename)
             if not numbers is None:
                 title = map_names.get(filename, "")
-                map_, _ = models.Map.objects.get_or_create(name = filename)
+                map_, _ = models.Map.objects.get_or_create(name=filename)
                 map_.title = title
+                if is_overview(filename):
+                    map_.overview = True
                 map_.save()
+
                 for ec in models.EcNumber.objects.filter(name__in=numbers):
                     map_.ec_numbers.add(ec)
-                map_.save()
-
-
