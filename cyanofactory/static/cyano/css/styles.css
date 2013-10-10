@@ -539,6 +539,7 @@ select.select{
 /* details content */
 #detail{
 	width:100%;
+    position:relative;
 }
 #detail tbody tr th, #detail tbody tr td{
 	padding-left:2px;
