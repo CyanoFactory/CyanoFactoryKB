@@ -51,7 +51,6 @@ from openpyxl.style import NumberFormat, Border, Color, HashableObject, Alignmen
 from cyano.templatetags.templatetags import ceil
 import cyano.models as cmodels
 
-import xhtml2pdf.pisa as pisa
 from Bio import SeqIO, Seq, SeqFeature
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import IUPAC
@@ -471,18 +470,13 @@ def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], tem
         data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
         data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
 
-        for fileName in ['styles', 'styles.print', 'styles.pdf']:
-            f = open(settings.STATICFILES_DIRS[0] + '/public/css/' + fileName + '.css', 'r')
-            data['pdfstyles'] += f.read()
-            f.close()
-
     return data
 
-def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):
+
+def render_queryset_to_response(request=[], queryset=EmptyQuerySet(), models=[], template='', data={}, species=None):
     outformat = request.GET.get('format', 'html')
 
     data = get_extra_context(request, queryset, models, template, data, species)
-    response = None
 
     try:
         if outformat == 'html':
@@ -490,29 +484,64 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         elif outformat == 'bib':
             response = HttpResponse(
                 write_bibtex(species, queryset),
-                mimetype = "application/x-bibtex; charset=UTF-8",
-                content_type = "application/x-bibtex; charset=UTF-8")
+                mimetype="application/x-bibtex; charset=UTF-8",
+                content_type="application/x-bibtex; charset=UTF-8")
             response['Content-Disposition'] = "attachment; filename=data.bib"
         elif outformat == 'json':
             return HttpResponse(
                 simplejson.dumps(data, indent=2, ensure_ascii=False, encoding='utf-8'),
-                mimetype = "application/json; charset=UTF-8",
-                content_type = "application/json; charset=UTF-8")
+                mimetype="application/json; charset=UTF-8",
+                content_type="application/json; charset=UTF-8")
         elif outformat == 'pdf':
-            response = HttpResponse(
-                mimetype = 'application/pdf',
-                content_type = 'application/pdf')
+            import subprocess
+            from django.test import Client
+            from django.contrib.auth.models import User
+            from django.contrib.auth import login, get_backends
+
+            # Workflow:
+            # Create a django client and visit the page the user visited with his current login information.
+            # Invoke wkhtmltopdf using a xserver (xvfb-run) and render the client output to pdf.
+            # Serve that output as a file to the user.
+
+            # via https://code.djangoproject.com/ticket/5938
+            # Allow login without password
+            def fake_authenticate(user):
+                if not hasattr(user, "backend"):
+                    backend = get_backends()[0]
+                    user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
+                return user
+
+            def client_login_user(client, user):
+                from django.test import client as client_module
+                orig_authenticate = client_module.authenticate
+                try:
+                    client_module.authenticate = fake_authenticate
+                    client.login(user=user)
+                finally:
+                    client_module.authenticate = orig_authenticate
+                return user
+
+            client = Client()
+            client_login_user(client, request.user)
+            request.GET = request.GET.copy()
+            request.GET.update({"format": "html"})
+            response = client.get("{}?{}".format(request.path_info, request.GET.urlencode()),
+                                  follow=False, HTTP_HOST=request.META["HTTP_HOST"])
+            if response.status_code != 200:
+                raise ValueError("Creating PDF failed")
+
+            try:
+                process = subprocess.Popen(['xvfb-run', 'wkhtmltopdf', '--quiet', '-', '-'],
+                                           stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
+                stdin = process.communicate(response.content)[0]
+            except OSError:
+                raise ValueError("Creating PDF failed")
+
+            response = HttpResponse(stdin,
+                                    mimetype='application/pdf',
+                                    content_type='application/pdf')
             response['Content-Disposition'] = "attachment; filename=data.pdf"
-    
-            template = get_template(template)
-    
-            pdf = pisa.CreatePDF(
-                src = template.render(Context(data)),
-                dest = response)
-    
-            if not pdf.err:
-                return response
-            return Http404
+
         elif outformat == 'xlsx':
             #write work book
             wb = writeExcel(species, queryset, models, request.user.is_anonymous())
@@ -547,17 +576,17 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
                     objects.appendChild(convert_modelobject_to_xml(obj, doc, request.user.is_anonymous()))
 
             response = HttpResponse(
-                doc.toprettyxml(indent=" "*2, encoding = 'utf-8'),
-                mimetype = "application/xml; charset=UTF-8",
-                content_type = "application/xml; charset=UTF-8")
+                doc.toprettyxml(indent=" "*2, encoding='utf-8'),
+                mimetype="application/xml; charset=UTF-8",
+                content_type="application/xml; charset=UTF-8")
             response['Content-Disposition'] = "attachment; filename=data.xml"
         elif outformat == "fasta":
             response = HttpResponse(write_fasta(species, queryset),
-                                    content_type = "application/octet-stream")
+                                    content_type="application/octet-stream")
             response['Content-Disposition'] = "attachment; filename=sequence.fasta"
         elif outformat == "genbank":
             response = HttpResponse(write_genbank(species, queryset),
-                content_type = "application/octet-stream")
+                content_type="application/octet-stream")
             response['Content-Disposition'] = "attachment; filename=sequence.gb"
         else:
             raise NotImplementedError('"%s" is not a supported export format.' % outformat)
@@ -567,7 +596,7 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
                                                  data,
                                                  species,
                                                  400,
-                                                 '"%s" is not a supported export format.' % outformat)
+                                                 str(e))
 
     return response
 
