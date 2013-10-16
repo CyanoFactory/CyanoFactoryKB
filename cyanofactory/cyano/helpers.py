@@ -512,6 +512,8 @@ def render_queryset_to_response(request=[], queryset=EmptyQuerySet(), models=[],
                 return user
 
             def client_login_user(client, user):
+                if user.is_anonymous():
+                    return user
                 from django.test import client as client_module
                 orig_authenticate = client_module.authenticate
                 try:
