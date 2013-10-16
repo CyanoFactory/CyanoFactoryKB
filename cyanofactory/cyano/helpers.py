@@ -526,7 +526,7 @@ def render_queryset_to_response(request=[], queryset=EmptyQuerySet(), models=[],
             request.GET = request.GET.copy()
             request.GET.update({"format": "html"})
             response = client.get("{}?{}".format(request.path_info, request.GET.urlencode()),
-                                  follow=False, HTTP_HOST=request.META["HTTP_HOST"])
+                                  follow=False, HTTP_HOST=request.get_host())
             if response.status_code != 200:
                 raise ValueError("Creating PDF failed")
 
