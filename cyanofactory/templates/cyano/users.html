@@ -15,8 +15,7 @@ Released under the MIT license
 {% block head_title %}{{ block.super }} :: Members{% endblock %}
 {% block page_title %}Members{% endblock %}
 
-{% block action_icons %}
-{% endblock %}
+{% block action_icons_share %}{% endblock %}
 
 {% block extrastyles %}
 #list{
@@ -38,7 +37,7 @@ Released under the MIT license
 	{% with user=object.user profile=object%}
 	<tr>
 		<th><a href="{% if species %}{% url "cyano.views.user" species_wid=species.wid username=user.username %}{% else %}{% url "cyano.views.user" username=user.username %}{% endif %}">{{ user.first_name }}&nbsp;{{ user.last_name }}</a></th>
-		<td><a href="{{ user.get_absolute_url }}/{{ species.wid }}">{{ profile.affiliation|truncatechars:80 }}</a></td>
+		<td><a href="{% if species %}{% url "cyano.views.user" species_wid=species.wid username=user.username %}{% else %}{% url "cyano.views.user" username=user.username %}{% endif %}">{{ profile.affiliation|truncatechars:80 }}</a></td>
 	</tr>
 	{% endwith %}
 	{% endfor %}
