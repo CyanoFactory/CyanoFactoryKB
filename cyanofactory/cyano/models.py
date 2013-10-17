@@ -2274,7 +2274,7 @@ class Chromosome(Molecule):
     
     def get_as_genbank(self, species):
         genbank = StringIO.StringIO()
-        genes = Gene.objects.filter(species = species, chromosome_id = self.pk).prefetch_related("cross_references", "protein_monomers")
+        genes = Gene.objects.filter(species=species, chromosome_id=self.pk).prefetch_related("cross_references", "protein_monomers")
         record = SeqRecord.SeqRecord(Seq(self.sequence, IUPAC.IUPACUnambiguousDNA()))
         record.annotations["organism"] = species.name
         record.annotations["comment"] = species.comments
