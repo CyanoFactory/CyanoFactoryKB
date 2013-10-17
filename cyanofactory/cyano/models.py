@@ -238,7 +238,7 @@ def validate_kinetics(reaction, direction):
             usedVmax = 1
         elif match.group(1)[0:2] == 'Km':
             if len(match.group(1)) == 2:
-                usedKmMax = max(usedKmMax, 1);
+                usedKmMax = max(usedKmMax, 1)
             elif match.group(1)[2:].isnumeric():
                 usedKmMax = max(usedKmMax, int(float(match.group(1)[2:])))
             else:
@@ -1385,16 +1385,16 @@ class Entry(AbstractEntry):
             return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
 
     def get_as_fasta(self, species):
-        raise NotImplementedError("FASTA export not supported for %s" % (self._meta.verbose_name_plural))
+        raise NotImplementedError("FASTA export not supported for %s" % self._meta.verbose_name_plural)
 
     def get_fasta_header(self):
         return ">" + self.wid + "|" + self.name
 
     def get_as_genbank(self, species):
-        raise NotImplementedError("GenBank export not supported for %s" % (self._meta.verbose_name_plural))
+        raise NotImplementedError("GenBank export not supported for %s" % self._meta.verbose_name_plural)
     
     def get_as_sbml(self, species):
-        raise NotImplementedError("SBML export not supported for %s" % (self._meta.verbose_name_plural))
+        raise NotImplementedError("SBML export not supported for %s" % self._meta.verbose_name_plural)
 
     #meta information
     class Meta:
@@ -2332,8 +2332,14 @@ class ChromosomeFeature(SpeciesComponent):
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
 
     #getters
-    def get_sequence(self):
-        seq = self.chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
+    def get_sequence(self, cache=False):
+        if cache:
+            chromosome_key = "chromosome/%s" % self.chromosome_id
+            chromosome = Cache.try_get(chromosome_key, lambda: self.chromosome, 60)
+        else:
+            chromosome = self.chromosome
+
+        seq = chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
         if self.direction == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
         return seq
@@ -2395,8 +2401,9 @@ class ChromosomeFeature(SpeciesComponent):
         for tu in self.get_transcription_units():
             results.append('<a href="%s">%s</a>' % (tu.get_absolute_url(species), tu.wid))
         return format_list_html(results, comma_separated=True)
+
     def get_as_fasta(self, species):
-        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence()) + "\r\n"
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
 
     #meta information
     class Meta:
@@ -2513,8 +2520,14 @@ class Gene(Molecule):
     homologs = ManyToManyField(Homolog, blank=True, null=True, related_name='genes', verbose_name='Homologs')
 
     #getters    
-    def get_sequence(self):
-        seq = self.chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
+    def get_sequence(self, cache=False):
+        if cache:
+            chromosome_key = "chromosome/%s" % self.chromosome_id
+            chromosome = Cache.try_get(chromosome_key, lambda: self.chromosome, 60)
+        else:
+            chromosome = self.chromosome
+        seq = chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
+
         if self.direction == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
         return seq
@@ -2593,12 +2606,12 @@ class Gene(Molecule):
             format_sequence_as_html(self.get_sequence()))
 
     def get_as_fasta(self, species):
-        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence()) + "\r\n"
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
     
     def get_as_seqfeature(self, species, sequence):
         gene = SeqFeature(FeatureLocation(self.coordinate - 1,
-                                             self.coordinate + self.length - (0 if self.direction == "f" else 1),
-                                             strand=1 if self.direction == "f" else -1), type="gene")
+                                          self.coordinate + self.length - (0 if self.direction == "f" else 1),
+                                          strand=1 if self.direction == "f" else -1), type="gene")
         gene.qualifiers["locus_tag"] = [self.wid]
         if self.name:
             gene.qualifiers["gene"] = [self.name]
@@ -3548,8 +3561,8 @@ class ProteinMonomer(Protein):
     signal_sequence = ForeignKey(SignalSequence, blank=True, null=True, related_name='protein_monomers', on_delete=SET_NULL, verbose_name='Sequence sequence')
 
     #getters
-    def get_sequence(self, species):
-        return unicode(Seq(self.gene.get_sequence(), IUPAC.unambiguous_dna).translate(table=species.genetic_code))
+    def get_sequence(self, species, cache=False):
+        return unicode(Seq(self.gene.get_sequence(cache=cache), IUPAC.unambiguous_dna).translate(table=species.genetic_code))
 
     def get_length(self):
         return len(self.get_sequence())
@@ -3741,7 +3754,7 @@ class ProteinMonomer(Protein):
         return self.get_gravy(species)
     
     def get_as_fasta(self, species):
-        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(species)) + "\r\n"      
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(species, cache=True)) + "\r\n"
 
     #meta information
     class Meta:
@@ -4200,11 +4213,17 @@ class TranscriptionUnit(Molecule):
     tss_coordinate = IntegerField(null=True, blank=True, verbose_name='Transcription start site coordinate (nt)')
 
     #getters
-    def get_chromosome(self):
-        chro = list(set([g.chromosome for g in self.genes.all()]))
+    def get_chromosome(self, cache=False):
+        chro = list(set([g.chromosome_id for g in self.genes.all()]))
         if len(chro) != 1:
             raise
-        return chro[0]
+
+        if cache:
+            chromosome_key = "chromosome/%s" % chro[0]
+            chromosome = Cache.try_get(chromosome_key, lambda: Chromosome.objects.get(pk=chro[0]), 60)
+        else:
+            chromosome = Chromosome.objects.get(pk=chro[0])
+        return chromosome
 
     def get_coordinate(self):
         return self.genes.all().aggregate(Min('coordinate'))['coordinate__min']
@@ -4218,8 +4237,8 @@ class TranscriptionUnit(Molecule):
             raise
         return direction[0]
 
-    def get_sequence(self):
-        seq = self.get_chromosome().sequence[self.get_coordinate() - 1:self.get_coordinate() - 1 + self.get_length()]
+    def get_sequence(self, cache=False):
+        seq = self.get_chromosome(cache=cache).sequence[self.get_coordinate() - 1:self.get_coordinate() - 1 + self.get_length()]
         if self.get_direction() == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
         return seq
@@ -4259,7 +4278,7 @@ class TranscriptionUnit(Molecule):
         return format_list_html(results)
     
     def get_as_fasta(self, species):
-        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence()) + "\r\n"
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
 
     #meta information
     class Meta:

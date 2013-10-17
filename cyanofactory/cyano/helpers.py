@@ -2149,18 +2149,8 @@ def write_bibtex(species, qs):
 
 def write_fasta(species, qs):
     fasta = StringIO()
-    chrs = cmodels.Chromosome.objects.filter(species = species)
-    chromosomes = {}
 
-    for c in chrs:
-        chromosomes[c.pk] = c
-    
     for obj in qs:
-        if hasattr(obj, "chromosome_id"):
-            obj.chromosome = chromosomes[obj.chromosome_id]
-        elif hasattr(obj, "genes_id"):
-            print "todo genes fast call"
-            
         fasta.write(obj.get_as_fasta(species))
 
     return fasta.getvalue()
