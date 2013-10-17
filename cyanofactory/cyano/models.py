@@ -3564,24 +3564,24 @@ class ProteinMonomer(Protein):
     def get_sequence(self, species, cache=False):
         return unicode(Seq(self.gene.get_sequence(cache=cache), IUPAC.unambiguous_dna).translate(table=species.genetic_code))
 
-    def get_length(self):
-        return len(self.get_sequence())
+    def get_length(self, species):
+        return len(self.get_sequence(species))
 
-    def get_neg_aa(self):
-        seq = self.get_sequence()
+    def get_neg_aa(self, species):
+        seq = self.get_sequence(species)
         return seq.count('E') + seq.count('D')
 
-    def get_pos_aa(self):
-        seq = self.get_sequence()
+    def get_pos_aa(self, species):
+        seq = self.get_sequence(species)
         return seq.count('R') + seq.count('H') + seq.count('K')
 
-    def get_n_terminal_aa(self):
-        return self.get_sequence()[0]
+    def get_n_terminal_aa(self, species):
+        return self.get_sequence(species)[0]
 
-    def get_empirical_formula(self):
+    def get_empirical_formula(self, species):
         from cyano.helpers import EmpiricalFormula
 
-        seq = self.get_sequence()
+        seq = self.get_sequence(species)
         return \
             + Metabolite.objects.for_species(self.species).for_wid('ALA').get_empirical_formula() * seq.count('A') \
             + Metabolite.objects.for_species(self.species).for_wid('ARG').get_empirical_formula() * seq.count('R') \
@@ -3605,8 +3605,8 @@ class ProteinMonomer(Protein):
             + Metabolite.objects.for_species(self.species).for_wid('VAL').get_empirical_formula() * seq.count('V') \
             - EmpiricalFormula(H=2, O=1) * (len(seq)-1)
 
-    def get_pi(self):
-        seq = self.get_sequence()
+    def get_pi(self, species):
+        seq = self.get_sequence(species)
 
         numAsp = float(seq.count('D'))
         numGlu = float(seq.count('E'))
@@ -3669,11 +3669,11 @@ class ProteinMonomer(Protein):
         from cyano.helpers import DipeptideInstabilityWeight
 
         seq = self.get_sequence(species)
-        value = 0.;
+        value = 0.
         for i in range(len(seq)-1):
             if seq[i] != '*' and seq[i+1] != '*':
                 value += DipeptideInstabilityWeight.value[seq[i]][seq[i+1]]
-        return 10. / float(len(seq)) * value;
+        return 10. / float(len(seq)) * value
 
     #http://ca.expasy.org/tools/protparam-doc.html
     def get_is_stable(self, species):
@@ -3682,43 +3682,43 @@ class ProteinMonomer(Protein):
     #http://ca.expasy.org/tools/protparam-doc.html
     def get_aliphatic(self, species):
         seq = self.get_sequence(species)
-        return 100. * ( \
-            + 1.0 * float(seq.count('A')) \
-            + 2.9 * float(seq.count('V')) \
-            + 3.9 * float(seq.count('I')) \
-            + 3.9 * float(seq.count('L')) \
-            ) / float(len(seq))
+        return 100. * (
+            + 1.0 * float(seq.count('A'))
+            + 2.9 * float(seq.count('V'))
+            + 3.9 * float(seq.count('I'))
+            + 3.9 * float(seq.count('L'))
+                      ) / float(len(seq))
 
     #http://ca.expasy.org/tools/protparam-doc.html
     def get_gravy(self, species):
         seq = self.get_sequence(species)
         return \
-            ( \
-            + 1.8 * float(seq.count('A')) \
-            - 4.5 * float(seq.count('R')) \
-            - 3.5 * float(seq.count('N')) \
-            - 3.5 * float(seq.count('D')) \
-            + 2.5 * float(seq.count('C')) \
-            - 3.5 * float(seq.count('Q')) \
-            - 3.5 * float(seq.count('E')) \
-            - 0.4 * float(seq.count('G')) \
-            - 3.2 * float(seq.count('H')) \
-            + 4.5 * float(seq.count('I')) \
-            + 3.8 * float(seq.count('L')) \
-            - 3.9 * float(seq.count('K')) \
-            + 1.9 * float(seq.count('M')) \
-            + 2.8 * float(seq.count('F')) \
-            - 1.6 * float(seq.count('P')) \
-            - 0.8 * float(seq.count('S')) \
-            - 0.7 * float(seq.count('T')) \
-            - 0.9 * float(seq.count('W')) \
-            - 1.3 * float(seq.count('Y')) \
-            + 4.2 * float(seq.count('V')) \
-             ) / float(len(seq))
+            (
+                + 1.8 * float(seq.count('A'))
+                - 4.5 * float(seq.count('R'))
+                - 3.5 * float(seq.count('N'))
+                - 3.5 * float(seq.count('D'))
+                + 2.5 * float(seq.count('C'))
+                - 3.5 * float(seq.count('Q'))
+                - 3.5 * float(seq.count('E'))
+                - 0.4 * float(seq.count('G'))
+                - 3.2 * float(seq.count('H'))
+                + 4.5 * float(seq.count('I'))
+                + 3.8 * float(seq.count('L'))
+                - 3.9 * float(seq.count('K'))
+                + 1.9 * float(seq.count('M'))
+                + 2.8 * float(seq.count('F'))
+                - 1.6 * float(seq.count('P'))
+                - 0.8 * float(seq.count('S'))
+                - 0.7 * float(seq.count('T'))
+                - 0.9 * float(seq.count('W'))
+                - 1.3 * float(seq.count('Y'))
+                + 4.2 * float(seq.count('V'))
+            ) / float(len(seq))
 
     #Source: http://ca.expasy.org/tools/protparam-doc.html
-    def get_extinction_coefficient(self):
-        seq = self.get_sequence()
+    def get_extinction_coefficient(self, species):
+        seq = self.get_sequence(species)
         return \
             + seq.count('W') * 5500 \
             + seq.count('Y') * 1490 \
@@ -3736,7 +3736,7 @@ class ProteinMonomer(Protein):
         return format_with_evidence(obj = ss, txt = 'Type: %s, Location: %s, Length: %s (nt)' % (ss.type, ss.location, ss.length))
 
     def get_as_html_disulfide_bonds(self, species, is_user_anonymous):
-        results = [];
+        results = []
         for b in self.disulfide_bonds.all():
             results.append('<a href="%s">%s</a>: %s-%s' % (b.protein_complexes.all()[0].get_absolute_url(species), b.protein_complexes.all()[0].wid, b.residue_1, b.residue_2))
         return format_list_html(results)
@@ -3755,6 +3755,50 @@ class ProteinMonomer(Protein):
     
     def get_as_fasta(self, species):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(species, cache=True)) + "\r\n"
+
+    def get_as_genbank(self, species):
+        genbank = StringIO.StringIO()
+        record = SeqRecord.SeqRecord(Seq(self.get_sequence(species)[:-1], IUPAC.IUPACProtein()))
+        record.annotations["organism"] = species.name
+        record.annotations["comment"] = species.comments
+
+        record.features += self.get_as_seqfeature(species)
+
+        SeqIO.write(record, genbank, "genbank")
+
+        return genbank.getvalue()
+
+    def get_as_seqfeature(self, species):
+        gene = SeqFeature(FeatureLocation(0, self.get_length(species) - 1), type="Protein")
+        gene.qualifiers["locus_tag"] = [self.wid]
+        if self.name:
+            gene.qualifiers["gene"] = [self.name]
+
+        db_xref = []
+        EC_number = []
+        for reference in self.cross_references.all():
+            if reference.source == "EC":
+                EC_number.append(reference.xid)
+            db_xref.append(":".join([reference.source, reference.xid]))
+
+        if len(db_xref) > 0:
+            gene.qualifiers["db_xref"] = db_xref
+
+        cds = deepcopy(gene)
+        if self.comments:
+            cds.qualifiers["note"] = [self.comments]
+        if len(EC_number) > 0:
+            gene.qualifiers["EC_number"] = EC_number
+        cds.qualifiers["transl_table"] = [species.genetic_code]
+        cds.qualifiers["codon_start"] = [1]
+
+        cds.type = "CDS"
+        #if cds.type == "mRNA":
+        #    cds.type = "CDS"
+            #s = self.get_sequence(species)
+            #cds.qualifiers["translation"] = [s.translate(table=species.genetic_code)[:-1]]
+
+        return gene, cds
 
     #meta information
     class Meta:
