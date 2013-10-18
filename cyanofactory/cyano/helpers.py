@@ -51,7 +51,11 @@ from openpyxl.style import NumberFormat, Border, Color, HashableObject, Alignmen
 from cyano.templatetags.templatetags import ceil
 import cyano.models as cmodels
 
-import xhtml2pdf.pisa as pisa
+from Bio import SeqIO, Seq, SeqFeature
+from Bio.SeqRecord import SeqRecord
+from Bio.Alphabet import IUPAC
+from Bio.Alphabet.IUPAC import IUPACUnambiguousDNA
+from Bio.SeqFeature import FeatureLocation
 
 class ELEMENT_MWS:
     H = 1.0079
@@ -332,11 +336,7 @@ def getModelDataFields(model, auto_created=True, metadata=True):
             
     ordered_fields = []
     for field in model._meta.field_list:
-        if not metadata and field in ['id', 'created_user', 'last_updated_user']:
-            continue
-        
-        # TODO: Implement these 4 fields!
-        if field in ['created_user', 'last_updated_user', 'created_date', 'last_updated_date']:
+        if not metadata and field in ['id', 'created_detail', 'detail']:
             continue
         
         field = model._meta.get_field_by_name(field)[0]
@@ -470,94 +470,138 @@ def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], tem
         data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
         data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
 
-        for fileName in ['styles', 'styles.print', 'styles.pdf']:
-            f = open(settings.STATICFILES_DIRS[0] + '/public/css/' + fileName + '.css', 'r')
-            data['pdfstyles'] += f.read()
-            f.close()
-
     return data
 
-def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):
+
+def render_queryset_to_response(request=[], queryset=EmptyQuerySet(), models=[], template='', data={}, species=None):
     outformat = request.GET.get('format', 'html')
 
     data = get_extra_context(request, queryset, models, template, data, species)
 
-    if outformat == 'html':
-        return render_to_response(template, data, context_instance = RequestContext(request))
-    elif outformat == 'bib':
-        response = HttpResponse(
-            write_bibtex(species, queryset),
-            mimetype = "application/x-bibtex; charset=UTF-8",
-            content_type = "application/x-bibtex; charset=UTF-8")
-        response['Content-Disposition'] = "attachment; filename=data.bib"
-    elif outformat == 'json':
-        return HttpResponse(
-            simplejson.dumps(data, indent=2, ensure_ascii=False, encoding='utf-8'),
-            mimetype = "application/json; charset=UTF-8",
-            content_type = "application/json; charset=UTF-8")
-    elif outformat == 'pdf':
-        response = HttpResponse(
-            mimetype = 'application/pdf',
-            content_type = 'application/pdf')
-        response['Content-Disposition'] = "attachment; filename=data.pdf"
+    try:
+        if outformat == 'html':
+            return render_to_response(template, data, context_instance = RequestContext(request))
+        elif outformat == 'bib':
+            response = HttpResponse(
+                write_bibtex(species, queryset),
+                mimetype="application/x-bibtex; charset=UTF-8",
+                content_type="application/x-bibtex; charset=UTF-8")
+            response['Content-Disposition'] = "attachment; filename=data.bib"
+        elif outformat == 'json':
+            return HttpResponse(
+                simplejson.dumps(data, indent=2, ensure_ascii=False, encoding='utf-8'),
+                mimetype="application/json; charset=UTF-8",
+                content_type="application/json; charset=UTF-8")
+        elif outformat == 'pdf':
+            import subprocess
+            from django.test import Client
+            from django.contrib.auth.models import User
+            from django.contrib.auth import login, get_backends
 
-        template = get_template(template)
+            # Workflow:
+            # Create a django client and visit the page the user visited with his current login information.
+            # Invoke wkhtmltopdf using a xserver (xvfb-run) and render the client output to pdf.
+            # Serve that output as a file to the user.
 
-        pdf = pisa.CreatePDF(
-            src = template.render(Context(data)),
-            dest = response)
+            # via https://code.djangoproject.com/ticket/5938
+            # Allow login without password
+            def fake_authenticate(user):
+                if not hasattr(user, "backend"):
+                    backend = get_backends()[0]
+                    user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
+                return user
 
-        if not pdf.err:
-            return response
-        return Http404
-    elif outformat == 'xlsx':
-        #write work book
-        wb = writeExcel(species, queryset, models, request.user.is_anonymous())
+            def client_login_user(client, user):
+                if user.is_anonymous():
+                    return user
+                from django.test import client as client_module
+                orig_authenticate = client_module.authenticate
+                try:
+                    client_module.authenticate = fake_authenticate
+                    client.login(user=user)
+                finally:
+                    client_module.authenticate = orig_authenticate
+                return user
 
-        #save to string
-        result = StringIO()
-        wb.save(filename = result)
+            client = Client()
+            client_login_user(client, request.user)
+            request.GET = request.GET.copy()
+            request.GET.update({"format": "html"})
+            response = client.get("{}?{}".format(request.path_info, request.GET.urlencode()),
+                                  follow=False, HTTP_HOST=request.get_host())
+            if response.status_code != 200:
+                raise ValueError("Creating PDF failed")
 
-        #generate HttpResponse
-        response = HttpResponse(
-            result.getvalue(),
-            mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        response['Content-Disposition'] = "attachment; filename=data.xlsx"
-    elif outformat == 'xml':
-        doc = Document()
-        
-        now = datetime.datetime.now(tzlocal())
-        comment = doc.createComment('\n%s WholeCellKB\nGenerated by %s on %s at %s\n%s %s %s\n' % (
-            species.name, 
-            'WholeCellKB', now.isoformat(), 
-            settings.ROOT_URL + reverse('cyano.views.exportData', kwargs={'species_wid': species.wid}),
-            html_to_ascii('&copy;'), now.year, 'Covert Lab, Department of Bioengineering, Stanford University',
-            ))
-        doc.appendChild(comment)
-        
-        objects = doc.createElement('objects')
-        doc.appendChild(objects)
+            try:
+                process = subprocess.Popen(['xvfb-run', 'wkhtmltopdf', '--quiet', '-', '-'],
+                                           stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
+                stdin = process.communicate(response.content)[0]
+            except OSError:
+                raise ValueError("Creating PDF failed")
 
-        if queryset:
-            for obj in queryset:
-                objects.appendChild(convert_modelobject_to_xml(obj, doc, request.user.is_anonymous()))
+            response = HttpResponse(stdin,
+                                    mimetype='application/pdf',
+                                    content_type='application/pdf')
+            response['Content-Disposition'] = "attachment; filename=data.pdf"
 
-        response = HttpResponse(
-            doc.toprettyxml(indent=" "*2, encoding = 'utf-8'),
-            mimetype = "application/xml; charset=UTF-8",
-            content_type = "application/xml; charset=UTF-8")
-        response['Content-Disposition'] = "attachment; filename=data.xml"
+        elif outformat == 'xlsx':
+            #write work book
+            wb = writeExcel(species, queryset, models, request.user.is_anonymous())
+    
+            #save to string
+            result = StringIO()
+            wb.save(filename = result)
+    
+            #generate HttpResponse
+            response = HttpResponse(
+                result.getvalue(),
+                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            response['Content-Disposition'] = "attachment; filename=data.xlsx"
+        elif outformat == 'xml':
+            doc = Document()
 
-    else:
+            now = datetime.datetime.now(tzlocal())
+            comment = doc.createComment('\n%s CyanoFactory KB\nGenerated by %s on %s at %s\n%s %s %s\n' % (
+                species.name,
+                'CyanoFactory KB', now.isoformat(),
+                settings.ROOT_URL + reverse('cyano.views.exportData', kwargs={'species_wid': species.wid}),
+                html_to_ascii('&copy;'), now.year, 'Experimental & Computational Biology, University of Applied Sciences Mittweida',
+                ))
+            doc.appendChild(comment)
+
+            objects = doc.createElement('objects')
+            doc.appendChild(objects)
+
+            if queryset:
+                for obj in queryset:
+                    objects.appendChild(convert_modelobject_to_xml(obj, doc, request.user.is_anonymous()))
+
+            response = HttpResponse(
+                doc.toprettyxml(indent=" "*2, encoding='utf-8'),
+                mimetype="application/xml; charset=UTF-8",
+                content_type="application/xml; charset=UTF-8")
+            response['Content-Disposition'] = "attachment; filename=data.xml"
+        elif outformat == "fasta":
+            response = HttpResponse(write_fasta(species, queryset),
+                                    content_type="application/octet-stream")
+            response['Content-Disposition'] = "attachment; filename=sequence.fasta"
+        elif outformat == "genbank":
+            response = HttpResponse(write_genbank(species, queryset),
+                content_type="application/octet-stream")
+            response['Content-Disposition'] = "attachment; filename=sequence.gb"
+        else:
+            raise NotImplementedError('"%s" is not a supported export format.' % outformat)
+    except (ValueError, NotImplementedError) as e:
         return render_queryset_to_response_error(request,
                                                  queryset, models[0] if models else None,
                                                  data,
                                                  species,
                                                  400,
-                                                 '"%s" is not a supported export format.' % outformat)
+                                                 str(e))
 
     return response
+
 
 def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), model = None, data = {}, species=None, error = 403, msg = "", msg_debug = ""):
     import django.http as http
@@ -647,19 +691,19 @@ def writeExcel(species, queryset, modelArr, is_user_anonymous):
 
     #meta data
     now = datetime.datetime.now(tzlocal())
-    wb.properties.creator = 'Generated by WholeCellKB on %s at %s' % (
+    wb.properties.creator = 'Generated by CyanoFactory KB on %s at %s' % (
         now.isoformat(), 
         settings.ROOT_URL + reverse('cyano.views.exportData', kwargs={'species_wid': species.wid}),
         )
     wb.properties.last_modified_by = wb.properties.creator
     wb.properties.created = now
     wb.properties.modified = now
-    wb.properties.title = '%s WholeCellKB' % species.name
+    wb.properties.title = '%s CyanoFactory KB' % species.name
     wb.properties.subject = wb.properties.title
     wb.properties.description = wb.properties.title
     wb.properties.keywords = 'biology, systems, database, knowledge base'
     wb.properties.category = ''
-    wb.properties.company = 'Covert Lab, Department of Bioengineering, Stanford University'
+    wb.properties.company = 'Experimental & Computational Biology, University of Applied Sciences Mittweida'
     wb.properties.excel_base_date = CALENDAR_WINDOWS_1900
     
     #print table of contents
@@ -914,9 +958,9 @@ def format_value_excel(obj, field, depth = 0):
         value = SharedDate().datetime_to_julian(date=value)
         data_type = Cell.TYPE_NUMERIC
         format_code = NumberFormat.FORMAT_DATE_TIME4
-    elif field.__class__ is ForeignKey:
+    elif isinstance(field, ForeignKey):
         subobj = value        
-        if issubclass(field.rel.to, (cmodels.Entry, User)):
+        if issubclass(field.rel.to, (cmodels.Entry, cmodels.UserProfile)):
             value = None
             if subobj is not None:
                 value = unicode(subobj)
@@ -924,9 +968,10 @@ def format_value_excel(obj, field, depth = 0):
             format_code = NumberFormat.FORMAT_TEXT
         elif depth > 0:
             value = {}
-            for subfield in field.rel.to._meta.fields + field.rel.to._meta.many_to_many:
-                if not subfield.auto_created and getattr(subobj, subfield.name) is not None:
-                    value[subfield.name] = format_value_excel(subobj, subfield, depth = depth + 1)[0]        
+            if not subobj is None:
+                for subfield in field.rel.to._meta.fields + field.rel.to._meta.many_to_many:
+                    if not subfield.auto_created and getattr(subobj, subfield.name) is not None:
+                        value[subfield.name] = format_value_excel(subobj, subfield, depth = depth + 1)[0]        
             data_type = Cell.TYPE_STRING
             format_code = NumberFormat.FORMAT_TEXT
         else:
@@ -943,7 +988,7 @@ def format_value_excel(obj, field, depth = 0):
                     value.append(tmp_val)
                     data_type.append(tmp_data_type)
                     format_code.append(tmp_format_code)
-    elif field.__class__ is ManyToManyField:        
+    elif isinstance(field, ManyToManyField):      
         data_type = Cell.TYPE_STRING
         format_code = NumberFormat.FORMAT_TEXT        
 
@@ -1594,8 +1639,18 @@ def convert_modelobject_to_xml(obj, xml_doc, is_user_anonymous, ancestors = []):
             else:
                 if issubclass(field.rel.to, cmodels.Entry):
                     xml_field.appendChild(xml_doc.createTextNode(unicode(model_val.wid)))
-                elif issubclass(field.rel.to, User):
-                    xml_field.appendChild(xml_doc.createTextNode(unicode(model_val.username)))
+                elif issubclass(field.rel.to, cmodels.RevisionDetail):
+                    doc = xml_doc.createElement("user")
+                    doc.appendChild(xml_doc.createTextNode(unicode(model_val.user.user.username)))
+                    xml_field.appendChild(doc)
+                    doc = xml_doc.createElement("date")
+                    doc.appendChild(xml_doc.createTextNode(unicode(model_val.date)))
+                    xml_field.appendChild(doc)
+                    doc = xml_doc.createElement("reason")
+                    doc.appendChild(xml_doc.createTextNode(unicode(model_val.reason)))
+                    xml_field.appendChild(doc)
+                elif issubclass(field.rel.to, cmodels.UserProfile):
+                    xml_field.appendChild(xml_doc.createTextNode(unicode(model_val.user.username)))
                 else:
                     xml_field.appendChild(convert_modelobject_to_xml(model_val, xml_doc, is_user_anonymous, ancestors + [obj]))
         elif isinstance(field, ManyToManyField):
@@ -1604,10 +1659,10 @@ def convert_modelobject_to_xml(obj, xml_doc, is_user_anonymous, ancestors = []):
                     doc = xml_doc.createElement('object')
                     doc.appendChild(xml_doc.createTextNode(unicode(model_subval.wid)))
                     xml_field.appendChild(doc)
-            elif issubclass(field.rel.to, User):
+            elif issubclass(field.rel.to, cmodels.UserProfile):
                 for model_subval in model_val.all():
                     doc = xml_doc.createElement('object')
-                    doc.appendChild(xml_doc.createTextNode(unicode(model_subval.username)))
+                    doc.appendChild(xml_doc.createTextNode(unicode(model_subval.user.username)))
                     xml_field.appendChild(doc)
             else:
                 for model_subval in model_val.all():
@@ -1900,6 +1955,9 @@ def validate_model_unique(model, model_objects_data, all_obj_data=None, all_obj_
 def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2m=False):
     model = obj.__class__
     
+    if obj.model_type_id is None:
+        obj.model_type = cmodels.TableMeta.get_by_model_name(obj._meta.object_name)
+    
     if issubclass(model, cmodels.Entry):
         fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
         
@@ -2088,6 +2146,20 @@ def write_bibtex(species, qs):
         + ('\t%s %s %s\n' % (html_to_ascii('&copy;'), now.year, 'Covert Lab, Department of Bioengineering, Stanford University', )) \
         + '"}\n\n' \
         + '\n\n'.join(bibs)
+
+def write_fasta(species, qs):
+    fasta = StringIO()
+
+    for obj in qs:
+        fasta.write(obj.get_as_fasta(species))
+
+    return fasta.getvalue()
+
+def write_genbank(species, qs):
+    if len(qs) != 1:
+        raise ValueError("GenBank export only supported in detail view")
+
+    return qs[0].get_as_genbank(species)
     
 def get_invalid_objects(species_id, validate_fields=False, validate_objects=True, full_clean=False, validate_unique=False):
     #check that species WIDs unique

@@ -23,6 +23,7 @@ import StringIO
 
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
+from Bio import SeqRecord, SeqIO
 
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
@@ -40,6 +41,8 @@ from cyano.templatetags.templatetags import set_time_zone
 from cyano.cache import Cache
 from cyano.history import HistoryForeignKey as ForeignKey
 from cyano.history import HistoryManyToManyField as ManyToManyField
+from Bio.SeqFeature import SeqFeature, FeatureLocation
+from copy import deepcopy
 
 from model_utils.managers import PassThroughManager
 
@@ -235,7 +238,7 @@ def validate_kinetics(reaction, direction):
             usedVmax = 1
         elif match.group(1)[0:2] == 'Km':
             if len(match.group(1)) == 2:
-                usedKmMax = max(usedKmMax, 1);
+                usedKmMax = max(usedKmMax, 1)
             elif match.group(1)[2:].isnumeric():
                 usedKmMax = max(usedKmMax, int(float(match.group(1)[2:])))
             else:
@@ -427,7 +430,7 @@ class Permission(Model):
         return self.name
 
 class UserPermission(Model):
-    entry = ForeignKey("Entry", related_name = "user_permissions")
+    entry = ForeignKey("Entry", related_name = "user_permissions", auto_created = True)
     user = ForeignKey("UserProfile", related_name = 'permissions')
     allow = ManyToManyField(Permission, verbose_name = 'Allowed Permissions', related_name = 'user_permission_allow')
     deny = ManyToManyField(Permission, verbose_name = 'Denied Permissions', related_name = 'user_permission_deny')
@@ -444,7 +447,7 @@ class UserPermission(Model):
         unique_together = ('entry', 'user')
 
 class GroupPermission(Model):
-    entry = ForeignKey("Entry", related_name = "group_permissions")
+    entry = ForeignKey("Entry", related_name = "group_permissions", auto_created = True)
     group = ForeignKey("GroupProfile", related_name = 'permissions')
     allow = ManyToManyField(Permission, verbose_name = 'Allowed Permissions', related_name = 'group_permission_allow')
     deny = ManyToManyField(Permission, verbose_name = 'Denied Permissions', related_name = 'group_permission_deny')
@@ -843,7 +846,7 @@ class Revision(Model):
         * ``column``: Table and column where the modification occured
         * ``new_value``: New value in the cell of the column
     """
-    current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False)
+    current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False, auto_created = True)
     detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions', editable = False, null = True)
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
     column = ForeignKey(TableMetaColumn, verbose_name = 'Table and column where the modification occured', related_name = '+')
@@ -864,7 +867,7 @@ class RevisionManyToMany(Model):
         * ``table``: Table where the modification occured
         * ``new_value``: New value in the cell of the column
     """
-    current = ForeignKey("Entry", verbose_name = "Current version of entry points to source of m2m", related_name = 'revisions_m2m', editable = False)
+    current = ForeignKey("Entry", verbose_name = "Current version of entry points to source of m2m", related_name = 'revisions_m2m', editable = False, auto_created = True)
     detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions_m2m', editable = False, null = True)
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
     table = ForeignKey(TableMetaManyToMany, verbose_name = 'M2M Table where the modification occured', related_name = '+')
@@ -1381,6 +1384,18 @@ class Entry(AbstractEntry):
             user = detail.user.user
             return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
 
+    def get_as_fasta(self, species):
+        raise NotImplementedError("FASTA export not supported for %s" % self._meta.verbose_name_plural)
+
+    def get_fasta_header(self):
+        return ">" + self.wid + "|" + self.name
+
+    def get_as_genbank(self, species):
+        raise NotImplementedError("GenBank export not supported for %s" % self._meta.verbose_name_plural)
+    
+    def get_as_sbml(self, species):
+        raise NotImplementedError("SBML export not supported for %s" % self._meta.verbose_name_plural)
+
     #meta information
     class Meta:
         concrete_entry_model = False
@@ -1421,7 +1436,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
     species = ManyToManyField("Species", verbose_name = "Organism containing that entry", related_name = "species_components")
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
     cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
-    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publication references')
+    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publications')
 
     #getters
 
@@ -1470,11 +1485,11 @@ class SpeciesComponent(AbstractSpeciesComponent):
             lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':species.wid, 'model_type': 'PublicationReference', 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
 
-    def get_as_html_references(self, species, is_user_anonymous):
+    def get_as_html_publication_references(self, species, is_user_anonymous):
         results = {}
         for r in self.get_all_references():
             key = r.authors + ' ' + r.editors
-            results[key] = r.get_citation(True)
+            results[key] = r.get_citation(species, cross_references=True)
 
         keys = results.keys()
         keys.sort()
@@ -1722,6 +1737,9 @@ class Chromosome(Molecule):
     length = PositiveIntegerField(verbose_name='Length (nt)')
 
     #getters
+    def get_sequence(self):
+        return self.sequence
+    
     def get_length(self):
         return self.length
 
@@ -1829,6 +1847,7 @@ class Chromosome(Molecule):
         '
 
         genes = StringIO.StringIO()
+
 
         genesList = list(self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all())
 
@@ -2250,6 +2269,39 @@ class Chromosome(Molecule):
             results.append('<a href="%s">%s</a>' % (f.get_absolute_url(species), f.wid))
         return format_list_html(results, comma_separated=True)
 
+    def get_as_fasta(self, species):
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence()) + "\r\n"
+    
+    def get_as_genbank(self, species):
+        genbank = StringIO.StringIO()
+        genes = Gene.objects.filter(species=species, chromosome_id=self.pk).prefetch_related("cross_references", "protein_monomers")
+        record = SeqRecord.SeqRecord(Seq(self.sequence, IUPAC.IUPACUnambiguousDNA()))
+
+        record.description = self.name
+        record.name = self.wid
+        accession = self.cross_references.filter(source="RefSeq")
+        if len(accession) > 0:
+            record.annotations["accession"] = accession[0].xid
+
+        record.annotations["date"] = self.detail.date.strftime("%d-%b-%Y").upper()
+        record.annotations["source"] = species.name
+        record.annotations["organism"] = species.name
+        record.annotations["comment"] = self.comments
+        
+        features = record.features
+
+        source = SeqFeature(FeatureLocation(0, self.length - 1), type="source")
+        source.qualifiers["organism"] = species.name
+
+        features += [source]
+
+        for item in genes:
+            features += item.get_as_seqfeature(species, record.seq)
+        
+        SeqIO.write(record, genbank, "genbank")
+        
+        return genbank.getvalue()
+        
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -2294,8 +2346,14 @@ class ChromosomeFeature(SpeciesComponent):
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
 
     #getters
-    def get_sequence(self):
-        seq = self.chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
+    def get_sequence(self, cache=False):
+        if cache:
+            chromosome_key = "chromosome/%s" % self.chromosome_id
+            chromosome = Cache.try_get(chromosome_key, lambda: self.chromosome, 60)
+        else:
+            chromosome = self.chromosome
+
+        seq = chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
         if self.direction == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
         return seq
@@ -2357,6 +2415,9 @@ class ChromosomeFeature(SpeciesComponent):
         for tu in self.get_transcription_units():
             results.append('<a href="%s">%s</a>' % (tu.get_absolute_url(species), tu.wid))
         return format_list_html(results, comma_separated=True)
+
+    def get_as_fasta(self, species):
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
 
     #meta information
     class Meta:
@@ -2473,8 +2534,14 @@ class Gene(Molecule):
     homologs = ManyToManyField(Homolog, blank=True, null=True, related_name='genes', verbose_name='Homologs')
 
     #getters    
-    def get_sequence(self):
-        seq = self.chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
+    def get_sequence(self, cache=False):
+        if cache:
+            chromosome_key = "chromosome/%s" % self.chromosome_id
+            chromosome = Cache.try_get(chromosome_key, lambda: self.chromosome, 60)
+        else:
+            chromosome = self.chromosome
+        seq = chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
+
         if self.direction == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
         return seq
@@ -2552,6 +2619,50 @@ class Gene(Molecule):
             self.get_gc_content() * 100,
             format_sequence_as_html(self.get_sequence()))
 
+    def get_as_fasta(self, species):
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
+    
+    def get_as_seqfeature(self, species, sequence):
+        gene = SeqFeature(FeatureLocation(self.coordinate - 1,
+                                          self.coordinate + self.length - (0 if self.direction == "f" else 1),
+                                          strand=1 if self.direction == "f" else -1), type="gene")
+        gene.qualifiers["locus_tag"] = [self.wid]
+        if self.name:
+            gene.qualifiers["gene"] = [self.name]
+
+        db_xref = []
+        EC_number = []
+        for reference in self.cross_references.all():
+            if reference.source == "EC":
+                EC_number.append(reference.xid)
+            db_xref.append(":".join([reference.source, reference.xid]))
+        
+        if len(db_xref) > 0:
+            gene.qualifiers["db_xref"] = db_xref
+            
+        cds = deepcopy(gene)
+        if self.comments:
+            cds.qualifiers["note"] = [self.comments]
+        if len(EC_number) > 0:
+            gene.qualifiers["EC_number"] = EC_number
+        cds.qualifiers["transl_table"] = [species.genetic_code]
+        cds.qualifiers["codon_start"] = [1]
+
+        typ = list(self.type.all()[:1])
+        cds.type = typ[0].wid
+        if cds.type == "mRNA":
+            cds.type = "CDS"
+            s = gene.extract(sequence)
+            cds.qualifiers["translation"] = [s.translate(table=species.genetic_code)[:-1]]
+
+        #monomer = ProteinMonomer.objects.values_list('wid', 'name').filter(species = species).get(gene_id = self.pk)
+        monomer = list(self.protein_monomers.all()[:1])
+        if len(monomer) > 0:
+            cds.qualifiers["protein_id"] = monomer[0].wid
+            cds.qualifiers["product"] = monomer[0].name
+
+        return gene, cds
+        
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -3464,27 +3575,27 @@ class ProteinMonomer(Protein):
     signal_sequence = ForeignKey(SignalSequence, blank=True, null=True, related_name='protein_monomers', on_delete=SET_NULL, verbose_name='Sequence sequence')
 
     #getters
-    def get_sequence(self, species):
-        return unicode(Seq(self.gene.get_sequence(), IUPAC.unambiguous_dna).translate(table=species.genetic_code))
+    def get_sequence(self, species, cache=False):
+        return unicode(Seq(self.gene.get_sequence(cache=cache), IUPAC.unambiguous_dna).translate(table=species.genetic_code))
 
-    def get_length(self):
-        return len(self.get_sequence())
+    def get_length(self, species):
+        return len(self.get_sequence(species))
 
-    def get_neg_aa(self):
-        seq = self.get_sequence()
+    def get_neg_aa(self, species):
+        seq = self.get_sequence(species)
         return seq.count('E') + seq.count('D')
 
-    def get_pos_aa(self):
-        seq = self.get_sequence()
+    def get_pos_aa(self, species):
+        seq = self.get_sequence(species)
         return seq.count('R') + seq.count('H') + seq.count('K')
 
-    def get_n_terminal_aa(self):
-        return self.get_sequence()[0]
+    def get_n_terminal_aa(self, species):
+        return self.get_sequence(species)[0]
 
-    def get_empirical_formula(self):
+    def get_empirical_formula(self, species):
         from cyano.helpers import EmpiricalFormula
 
-        seq = self.get_sequence()
+        seq = self.get_sequence(species)
         return \
             + Metabolite.objects.for_species(self.species).for_wid('ALA').get_empirical_formula() * seq.count('A') \
             + Metabolite.objects.for_species(self.species).for_wid('ARG').get_empirical_formula() * seq.count('R') \
@@ -3508,8 +3619,8 @@ class ProteinMonomer(Protein):
             + Metabolite.objects.for_species(self.species).for_wid('VAL').get_empirical_formula() * seq.count('V') \
             - EmpiricalFormula(H=2, O=1) * (len(seq)-1)
 
-    def get_pi(self):
-        seq = self.get_sequence()
+    def get_pi(self, species):
+        seq = self.get_sequence(species)
 
         numAsp = float(seq.count('D'))
         numGlu = float(seq.count('E'))
@@ -3572,11 +3683,11 @@ class ProteinMonomer(Protein):
         from cyano.helpers import DipeptideInstabilityWeight
 
         seq = self.get_sequence(species)
-        value = 0.;
+        value = 0.
         for i in range(len(seq)-1):
             if seq[i] != '*' and seq[i+1] != '*':
                 value += DipeptideInstabilityWeight.value[seq[i]][seq[i+1]]
-        return 10. / float(len(seq)) * value;
+        return 10. / float(len(seq)) * value
 
     #http://ca.expasy.org/tools/protparam-doc.html
     def get_is_stable(self, species):
@@ -3585,43 +3696,43 @@ class ProteinMonomer(Protein):
     #http://ca.expasy.org/tools/protparam-doc.html
     def get_aliphatic(self, species):
         seq = self.get_sequence(species)
-        return 100. * ( \
-            + 1.0 * float(seq.count('A')) \
-            + 2.9 * float(seq.count('V')) \
-            + 3.9 * float(seq.count('I')) \
-            + 3.9 * float(seq.count('L')) \
-            ) / float(len(seq))
+        return 100. * (
+            + 1.0 * float(seq.count('A'))
+            + 2.9 * float(seq.count('V'))
+            + 3.9 * float(seq.count('I'))
+            + 3.9 * float(seq.count('L'))
+                      ) / float(len(seq))
 
     #http://ca.expasy.org/tools/protparam-doc.html
     def get_gravy(self, species):
         seq = self.get_sequence(species)
         return \
-            ( \
-            + 1.8 * float(seq.count('A')) \
-            - 4.5 * float(seq.count('R')) \
-            - 3.5 * float(seq.count('N')) \
-            - 3.5 * float(seq.count('D')) \
-            + 2.5 * float(seq.count('C')) \
-            - 3.5 * float(seq.count('Q')) \
-            - 3.5 * float(seq.count('E')) \
-            - 0.4 * float(seq.count('G')) \
-            - 3.2 * float(seq.count('H')) \
-            + 4.5 * float(seq.count('I')) \
-            + 3.8 * float(seq.count('L')) \
-            - 3.9 * float(seq.count('K')) \
-            + 1.9 * float(seq.count('M')) \
-            + 2.8 * float(seq.count('F')) \
-            - 1.6 * float(seq.count('P')) \
-            - 0.8 * float(seq.count('S')) \
-            - 0.7 * float(seq.count('T')) \
-            - 0.9 * float(seq.count('W')) \
-            - 1.3 * float(seq.count('Y')) \
-            + 4.2 * float(seq.count('V')) \
-             ) / float(len(seq))
+            (
+                + 1.8 * float(seq.count('A'))
+                - 4.5 * float(seq.count('R'))
+                - 3.5 * float(seq.count('N'))
+                - 3.5 * float(seq.count('D'))
+                + 2.5 * float(seq.count('C'))
+                - 3.5 * float(seq.count('Q'))
+                - 3.5 * float(seq.count('E'))
+                - 0.4 * float(seq.count('G'))
+                - 3.2 * float(seq.count('H'))
+                + 4.5 * float(seq.count('I'))
+                + 3.8 * float(seq.count('L'))
+                - 3.9 * float(seq.count('K'))
+                + 1.9 * float(seq.count('M'))
+                + 2.8 * float(seq.count('F'))
+                - 1.6 * float(seq.count('P'))
+                - 0.8 * float(seq.count('S'))
+                - 0.7 * float(seq.count('T'))
+                - 0.9 * float(seq.count('W'))
+                - 1.3 * float(seq.count('Y'))
+                + 4.2 * float(seq.count('V'))
+            ) / float(len(seq))
 
     #Source: http://ca.expasy.org/tools/protparam-doc.html
-    def get_extinction_coefficient(self):
-        seq = self.get_sequence()
+    def get_extinction_coefficient(self, species):
+        seq = self.get_sequence(species)
         return \
             + seq.count('W') * 5500 \
             + seq.count('Y') * 1490 \
@@ -3639,7 +3750,7 @@ class ProteinMonomer(Protein):
         return format_with_evidence(obj = ss, txt = 'Type: %s, Location: %s, Length: %s (nt)' % (ss.type, ss.location, ss.length))
 
     def get_as_html_disulfide_bonds(self, species, is_user_anonymous):
-        results = [];
+        results = []
         for b in self.disulfide_bonds.all():
             results.append('<a href="%s">%s</a>: %s-%s' % (b.protein_complexes.all()[0].get_absolute_url(species), b.protein_complexes.all()[0].wid, b.residue_1, b.residue_2))
         return format_list_html(results)
@@ -3655,6 +3766,66 @@ class ProteinMonomer(Protein):
 
     def get_as_html_gravy(self, species, is_user_anonymous):
         return self.get_gravy(species)
+    
+    def get_as_fasta(self, species):
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(species, cache=True)) + "\r\n"
+
+    def get_as_genbank(self, species):
+        genbank = StringIO.StringIO()
+
+        record = SeqRecord.SeqRecord(Seq(self.get_sequence(species)[:-1], IUPAC.IUPACProtein()))
+        record.description = self.name
+        record.name = self.wid
+        accession = self.cross_references.filter(source="RefSeq")
+        if len(accession) > 0:
+            record.annotations["accession"] = accession[0].xid
+
+        record.annotations["date"] = self.detail.date.strftime("%d-%b-%Y").upper()
+        record.annotations["source"] = species.name
+        record.annotations["organism"] = species.name
+        record.annotations["comment"] = self.comments
+
+        source = SeqFeature(FeatureLocation(0, self.get_length(species) - 1), type="source")
+        source.qualifiers["organism"] = species.name
+
+        record.features += [source]
+        record.features += self.get_as_seqfeature(species)
+
+        SeqIO.write(record, genbank, "genbank")
+
+        return genbank.getvalue()
+
+    def get_as_seqfeature(self, species):
+        gene = SeqFeature(FeatureLocation(0, self.get_length(species) - 1), type="Protein")
+        gene.qualifiers["locus_tag"] = [self.wid]
+        if self.name:
+            gene.qualifiers["gene"] = [self.name]
+
+        db_xref = []
+        EC_number = []
+        for reference in self.cross_references.all():
+            if reference.source == "EC":
+                EC_number.append(reference.xid)
+            db_xref.append(":".join([reference.source, reference.xid]))
+
+        if len(db_xref) > 0:
+            gene.qualifiers["db_xref"] = db_xref
+
+        cds = deepcopy(gene)
+        if self.comments:
+            cds.qualifiers["note"] = [self.comments]
+        if len(EC_number) > 0:
+            gene.qualifiers["EC_number"] = EC_number
+        cds.qualifiers["transl_table"] = [species.genetic_code]
+        cds.qualifiers["codon_start"] = [1]
+
+        cds.type = "CDS"
+        #if cds.type == "mRNA":
+        #    cds.type = "CDS"
+            #s = self.get_sequence(species)
+            #cds.qualifiers["translation"] = [s.translate(table=species.genetic_code)[:-1]]
+
+        return gene, cds
 
     #meta information
     class Meta:
@@ -4113,11 +4284,17 @@ class TranscriptionUnit(Molecule):
     tss_coordinate = IntegerField(null=True, blank=True, verbose_name='Transcription start site coordinate (nt)')
 
     #getters
-    def get_chromosome(self):
-        chro = list(set([g.chromosome for g in self.genes.all()]))
+    def get_chromosome(self, cache=False):
+        chro = list(set([g.chromosome_id for g in self.genes.all()]))
         if len(chro) != 1:
             raise
-        return chro[0]
+
+        if cache:
+            chromosome_key = "chromosome/%s" % chro[0]
+            chromosome = Cache.try_get(chromosome_key, lambda: Chromosome.objects.get(pk=chro[0]), 60)
+        else:
+            chromosome = Chromosome.objects.get(pk=chro[0])
+        return chromosome
 
     def get_coordinate(self):
         return self.genes.all().aggregate(Min('coordinate'))['coordinate__min']
@@ -4131,8 +4308,8 @@ class TranscriptionUnit(Molecule):
             raise
         return direction[0]
 
-    def get_sequence(self):
-        seq = self.get_chromosome().sequence[self.get_coordinate() - 1:self.get_coordinate() - 1 + self.get_length()]
+    def get_sequence(self, cache=False):
+        seq = self.get_chromosome(cache=cache).sequence[self.get_coordinate() - 1:self.get_coordinate() - 1 + self.get_length()]
         if self.get_direction() == 'r':
             seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
         return seq
@@ -4170,6 +4347,9 @@ class TranscriptionUnit(Molecule):
         for r in self.transcriptional_regulations.all():
             results.append('<a href="%s">%s</a>: <a href="%s">%s</a>' % (r.get_absolute_url(species), r.wid, r.transcription_factor.get_absolute_url(species), r.transcription_factor.wid))
         return format_list_html(results)
+    
+    def get_as_fasta(self, species):
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
 
     #meta information
     class Meta:
@@ -4756,7 +4936,7 @@ def format_evidence(evidence):
         if len(ev.references.all()) > 0:
             tmp2 = []
             for ref in ev.references.all():
-                tmp2.append(ref.get_citation(True))
+                tmp2.append(ref.get_citation(Species.objects.for_wid(ev.species), cross_references=True))
             tmp += '<div style="margin-top:4px;"><i>References</i><ol style="margin-top:0px"><li style="margin-bottom:0px">%s</li></ol></div>' % '</li><li style="margin-bottom:0px">'.join(tmp2)
 
         txt.append(tmp)

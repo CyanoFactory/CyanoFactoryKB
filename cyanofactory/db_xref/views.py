@@ -48,7 +48,7 @@ def dbxref(request, source, xid):
     data = {
         "database" : database,
         "item" : organism,
-        "url" : get_database_url(database, organism)()
+        "url" : get_database_url(database, organism)
     }
     
     template = "db_xref/output." + _format

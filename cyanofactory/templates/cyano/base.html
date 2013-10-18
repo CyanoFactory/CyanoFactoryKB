@@ -51,16 +51,30 @@ Released under the MIT license
 	<link rel="icon" type="image/png" href="{% get_static_prefix %}cyano/favicon.png">	
 	
 	<!-- javascript -->
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/jquery-ui-1.8.23.custom.min.js"></script>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.min.js"></script>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.axislabels.min.js"></script>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.pie.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-ui-1.8.23.custom.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.axislabels.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.pie.min.js"></script>
 	<!–[if lte IE 8]>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/flot/excanvas.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/excanvas.min.js"></script>
 	<![endif]–>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/evidence.js"></script>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/tooltip.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/evidence.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/tooltip.js"></script>
+
+    <script type="text/javascript">
+    $(document).ready(function() {
+        if ($("#action_icons_edit ul").children().length == 0) {
+            $("#action_icons_edit").remove()
+        }
+        if ($("#action_icons_share ul").children().length == 0) {
+            $("#action_icons_share").remove()
+        }
+        if ($("#action_icons_export ul").children().length == 0) {
+            $("#action_icons_export").remove()
+        }
+    });
+    </script>
 	{% endblock %}
 </head>
 <body>
@@ -213,14 +227,16 @@ Released under the MIT license
 		<div class="right">
             <ul class="menu">
                 {% block action_icons %}
-                <li>Share
+                <li id="action_icons_share">Share
                     <ul>
+                        {% block action_icons_share %}
                         <li><a href="https://www.facebook.com/sharer/sharer.php?s=100&amp;p[url]={{ request.build_absolute_uri }}&amp;p[title]=CyanoFactory%20KB&amp;p[summary]={{ social_text }}" onclick="javascript:window.open('https://www.facebook.com/sharer/sharer.php?s=100&amp;p[url]={{ request.build_absolute_uri }}&amp;p[title]=CyanoFactory%20KB&amp;p[summary]={{ social_text }}', '', 'width=500,height=300'); return false;" target="_blank" title="Share on Facebook"><img src="{% get_static_prefix %}cyano/img/social/facebook.png" />Share on Facebook</a></li>
                         <li><a href="https://twitter.com/intent/tweet?source=webclient&amp;text=https://twitter.com/intent/tweet?source=webclient&amp;text=CyanoFactory%20KB:{% if social_text %}%20{{ social_text }}%20at{% endif %}&amp;url={{ request.build_absolute_uri }}" onclick="javascript:window.open('https://twitter.com/intent/tweet?source=webclient&amp;text=CyanoFactory%20KB:{% if social_text %}%20{{ social_text }}%20at{% endif %}&amp;url={{ request.build_absolute_uri }}', '', 'width=500,height=300'); return false;" target="_blank" title="Share on Twitter"><img src="{% get_static_prefix %}cyano/img/social/twitter.png" />Share on Twitter</a></li>
                         <li><a href="https://plus.google.com/share?url={{ request.build_absolute_uri }}" onclick="javascript:window.open('https://plus.google.com/share?url={{ request.build_absolute_uri }}', '', 'width=500,height=500'); return false;" target="_blank" title="Share on Google Plus"><img src="{% get_static_prefix %}cyano/img/social/google+.png" />Share on Google+</a></li>
                         <li><a href="mailto:name@example.org?subject=CyanoFactory%20KB&amp;body={% if social_text %}{{ social_text }}%20at%20{% endif %}{{ request.build_absolute_uri }}" title="Share via E-Mail"><img src="{% get_static_prefix %}cyano/img/social/email.png" />Share via Mail</a></li>
+                        {% endblock %}
                     </ul>
-                <li>Export
+                <li id="action_icons_export">Export
                     <ul>
                         {% block action_icons_export %}
                         <li><a href="?{% makeurl queryargs 'format' 'pdf' %}" title="Convert to PDF"><img src="{% get_static_prefix %}public/img/page_white_acrobat.png" />Convert to PDF</a></li>
@@ -228,7 +244,7 @@ Released under the MIT license
                         {% endblock %}
                     </ul>
                 </li>
-                <li>Actions
+                <li id="action_icons_edit">Actions
                     <ul>
                         {% block action_icons_edit %}
                         {% endblock %}

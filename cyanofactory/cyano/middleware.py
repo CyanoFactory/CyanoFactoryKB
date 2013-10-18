@@ -46,7 +46,7 @@ class RedirectAllowedHostMiddlware(object):
                 if ahost == host:
                     #print >>sys.stderr, host
                     #print >>sys.stderr, "Redi: " + redirect_url + request.path
-                    return redirect(redirect_url + request.path, permanent=True)
+                    return redirect(redirect_url + request.path)
 
         # Host suspicious, this is handled by django
         return None

@@ -25,6 +25,8 @@ Released under the MIT license
 {{ block.super }}
 {% endblock %}
 
+{% block action_icons_share %}{% endblock %}
+
 {% block content %}
 {% with user=queryset.0.user profile=queryset.0 %}
 <table id="detail">
@@ -81,7 +83,7 @@ Released under the MIT license
 			<td>{{ user.date_joined|date:"Y-m-d" }}</td>
 		</tr>
 	</tbody>
-	{% if request.user == user %}
+	{% if request.user == user or request.user.profile.is_admin %}
 	<tbody class="spacing">
 		<tr><td colspan="2">&nbsp;</td></tr>
 	</tbody>

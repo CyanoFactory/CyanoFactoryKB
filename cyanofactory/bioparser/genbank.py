@@ -118,7 +118,7 @@ class Genbank(BioParser):
                     pubref.cross_references.add(xref)
                     
                 pubref.species.add(self.species)
-                self.species.publication_references.add(pubref)
+                chromosome.publication_references.add(pubref)
     
         if "gi" in self.annotation:
             xref, _ = cmodels.CrossReference.objects.get_or_create(xid = self.annotation["gi"], source = "GI")
