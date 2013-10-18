@@ -1,0 +1,69 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Login template
+
+Author: Jonathan Karr, jkarr@stanford.edu
+Affiliation: Covert Lab, Department of Bioengineering, Stanford University
+Last updated: 2012-07-17
+{% endcomment %}
+
+{% block head_title %}{{ block.super }} :: Login{% endblock %}
+{% block page_title %}Login{% endblock %}
+{% block action_icons %}{% endblock %}
+
+{% block extrastyles %}
+#main{
+	width:230px;
+}
+h1{
+	text-align:center;
+}
+
+#login tr:last-child td{
+	padding-top:12px;
+	text-align:right;
+}
+.leftfloat {
+  float: left;
+}
+{% endblock %}
+
+{% block content %}
+<form id="login" method="post" action="{% if species %}{% url "login" species_wid=species.wid %}{% else %}{% url "login" %}{% endif %}">
+{% csrf_token %}
+
+{% if message %}
+<div class="block" id="no" style="position:relative;">
+    <h1>Login required</h1>
+    <div class="content">
+    {{ message }}
+    </div>
+</div>
+{% endif %}
+
+{% if form.errors %}
+	<div class="block" id="no" style="position:relative;">
+		<h1>Login error</h1>
+		<div class="content">
+		Your username and password didn't match. Please try again.
+		</div>
+	</div>
+{% endif %}
+
+	<table>
+	<tr>
+		<td>{{ form.username.label_tag }}</td>
+		<td><input class="text" id="id_username" type="text" name="username" maxlength="30" /></td>
+	</tr>
+	<tr>
+		<td>{{ form.password.label_tag }}</td>
+		<td><input class="text" type="password" name="password" id="id_password" /></td>
+	</tr>
+	<tr>
+		<td colspan="2"><span class="leftfloat"><a href="{% url 'password_reset' %}">Forgot your password?</a></span><input class="button" type="submit" value="login" /></td>
+	</tr>
+	</table>
+	<input type="hidden" name="next" value="{{ next }}" />
+</form>
+{% endblock %}

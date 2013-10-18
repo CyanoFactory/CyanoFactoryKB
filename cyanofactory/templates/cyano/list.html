@@ -6,6 +6,11 @@ List template
 Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 {% endcomment %}
 
 {% load static %}
@@ -24,15 +29,15 @@ Last updated: 2012-07-17
 <script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
 {% endblock %}
 
-{% block action_icons %}
-{% if request.user.is_anonymous %}
-<a href="mailto:wholecell[at]lists.stanford.edu?subject=WholeCellKB Species={{ species.wid }} {{ model_verbose_name_plural }}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Suggest an edit" alt="Suggest an edit" /></a>
-{% else %}
-<a href="{% url "cyano.views.add" species_wid=species.wid model_type=model_type %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" /></a>
-{% endif %}
-<a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
-<a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
-<a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" /></a>
+{% block action_icons_edit %}
+<li><a href="{% url "cyano.views.add" species_wid=species.wid model_type=model_type %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" />Add new {{ model_verbose_name }}</a></li>
+{{ block.super }}
+{% endblock %}
+{% block action_icons_export %}
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download {{ model_verbose_name_plural }} in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download {{ model_verbose_name_plural }} in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download {{ model_verbose_name_plural }} in XML format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'fasta' %}">Download {{ model_verbose_name_plural }} in FASTA format</a></li>
 {{ block.super }}
 {% endblock %}
 
@@ -53,6 +58,38 @@ Last updated: 2012-07-17
 
 {% block content %}
 
+{% if groups %}
+<table id="list">
+{% for key, value in groups.items %}
+<thead>
+	<tr>
+		<th>WID</th>
+		<th>Name</th>
+		{% if not request.user.is_anonymous %}
+		<th>&nbsp;</th>
+		{% endif %}
+	</tr>
+</thead>
+<tbody>
+{% for object in value %}
+<tr>
+	<th><a href="{{ object|get_absolute_url:species }}">{{ object.wid }}</a></th>
+	<td><a href="{{ object|get_absolute_url:species }}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
+	{% if not request.user.is_anonymous %}
+	<td>
+		<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>
+		<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" /></a>
+	</td>
+	{% endif %}
+</tr>
+{% endfor %}
+</tbody>
+<tbody class="spacing">
+    <tr><td colspan="2">&nbsp;</td></tr>
+</tbody>
+{% endfor %}
+</table>
+{% else %}
 <table id="list">
 <thead>
 	<tr>
@@ -67,6 +104,7 @@ Last updated: 2012-07-17
 {% include "cyano/list_page.html" %}
 </tbody>
 </table>
+{% endif %}
 
 <div id="listfilter">
 <h1>Filter</h1>

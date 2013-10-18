@@ -4,6 +4,11 @@ Whole-cell helper functions
 Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 '''
 
 from __future__ import unicode_literals
@@ -46,7 +51,11 @@ from openpyxl.style import NumberFormat, Border, Color, HashableObject, Alignmen
 from cyano.templatetags.templatetags import ceil
 import cyano.models as cmodels
 
-import xhtml2pdf.pisa as pisa
+from Bio import SeqIO, Seq, SeqFeature
+from Bio.SeqRecord import SeqRecord
+from Bio.Alphabet import IUPAC
+from Bio.Alphabet.IUPAC import IUPACUnambiguousDNA
+from Bio.SeqFeature import FeatureLocation
 
 class ELEMENT_MWS:
     H = 1.0079
@@ -313,7 +322,7 @@ def getModelByVerboseNamePlural(s):
     return
 
 def getModelAdmin(s):
-    app_ = __import__('public')
+    app_ = __import__('cyano')
     admins_ = getattr(app_, 'admin')
     if hasattr(admins_, s + 'Admin'):
         return getattr(admins_, s + 'Admin')
@@ -327,11 +336,7 @@ def getModelDataFields(model, auto_created=True, metadata=True):
             
     ordered_fields = []
     for field in model._meta.field_list:
-        if not metadata and field in ['id', 'created_user', 'last_updated_user']:
-            continue
-        
-        # TODO: Implement these 4 fields!
-        if field in ['created_user', 'last_updated_user', 'created_date', 'last_updated_date']:
+        if not metadata and field in ['id', 'created_detail', 'detail']:
             continue
         
         field = model._meta.get_field_by_name(field)[0]
@@ -361,13 +366,13 @@ def getEntryDatas():
 
 def getEntry(species_wid = None, wid = None):
     try:
-        species_id = cmodels.Species.objects.values('id').get(wid = species_wid)['id']
+        species_id = cmodels.Species.objects.values('id').for_wid(species_wid)['id']
     except ObjectDoesNotExist:
         return None    
     
     try:
         if species_wid == wid:
-            return cmodels.Species.objects.get(wid=wid)
+            return cmodels.Species.objects.for_wid(wid)
         else:
             tmp = cmodels.SpeciesComponent.objects.get(species__id = species_id, wid=wid)
             return getModel(tmp.model_type).objects.select_related(depth=2).get(id=tmp.id)
@@ -392,18 +397,16 @@ From http://www.peterbe.com/plog/uniqifiers-benchmark
 def uniqueSorted(seq):
     return {}.fromkeys(seq).keys()
 
-def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):
-    outformat = request.GET.get('format', 'html')
-
+def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):
     data['species'] = species
     data['queryset'] = queryset
-    data['request'] = request
     data['queryargs'] = {}
-    data['email'] = "wuenschi@hs-mittweida.de"
+
+    outformat = request.GET.get('format', 'html')
     
     social_text = ""
     
-    if len(models) > 0 and models[0] != None:
+    if len(models) > 0 and models[0] is not None:
         data['model_verbose_name'] = models[0]._meta.verbose_name
         data['model_verbose_name_plural'] = models[0]._meta.verbose_name_plural
         data['model_type'] = models[0].__name__
@@ -411,12 +414,12 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         
         # Speedup ajax calls
         if outformat == 'html' and request.is_ajax():
-            return render_to_response(template, data, context_instance = RequestContext(request))
+            return data
 
-        if queryset != None and len(queryset) > 0:
+        if queryset is not None and len(queryset) > 0:
             if len(queryset) == 1 and isinstance(queryset[0], cmodels.Entry):
-                social_text += data['model_verbose_name'][0] + " "
-                social_text += queryset[0].name
+                social_text += data['model_verbose_name'] + " "
+                social_text += queryset[0].name if queryset[0].name else queryset[0].wid
             else:
                 social_text += data['model_verbose_name_plural']
             
@@ -434,21 +437,13 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
     if outformat == 'html':
         data['is_pdf'] = False
         data['pdfstyles'] = ''
-        data['species_list'] = cmodels.Species.objects.all()
         data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
         data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
+        data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
         
-        if queryset != None and data['queryset'].model is None:
-            del data['queryset'] 
-
-        return render_to_response(template, data, context_instance = RequestContext(request))
-    elif outformat == 'bib':
-        response = HttpResponse(
-            write_bibtex(species, queryset),
-            mimetype = "application/x-bibtex; charset=UTF-8",
-            content_type = "application/x-bibtex; charset=UTF-8")
-        response['Content-Disposition'] = "attachment; filename=data.bib"
+        if queryset is not None and data['queryset'].model is None:
+            del data['queryset']
     elif outformat == 'json':
         objects = []
         for obj in queryset:
@@ -466,84 +461,147 @@ def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models
         json['copyright'] = '%s %s' % (now.year, 'Experimental & Computational Biology, University of Applied Sciences Mittweida')
         json['result'] = {"code": 200, "type": "Found", "message": "Found", "success": True}
         json['data'] = objects
-        return HttpResponse(
-            simplejson.dumps(json, indent=2, ensure_ascii=False, encoding='utf-8'),
-            mimetype = "application/json; charset=UTF-8",
-            content_type = "application/json; charset=UTF-8")
+        return json
     elif outformat == 'pdf':
         data['is_pdf'] = True
         data['pdfstyles'] = ''
         data['species_list'] = cmodels.Species.objects.all()
         data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
         data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
+        data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
 
-        for fileName in ['styles', 'styles.print', 'styles.pdf']:
-            f = open(settings.STATICFILES_DIRS[0] + '/public/css/' + fileName + '.css', 'r')
-            data['pdfstyles'] += f.read()
-            f.close()
+    return data
 
-        response = HttpResponse(
-            mimetype = 'application/pdf',
-            content_type = 'application/pdf')
-        response['Content-Disposition'] = "attachment; filename=data.pdf"
 
-        template = get_template(template)
+def render_queryset_to_response(request=[], queryset=EmptyQuerySet(), models=[], template='', data={}, species=None):
+    outformat = request.GET.get('format', 'html')
 
-        pdf = pisa.CreatePDF(
-            src = template.render(Context(data)),
-            dest = response)
+    data = get_extra_context(request, queryset, models, template, data, species)
 
-        if not pdf.err:
-            return response
-        return Http404
-    elif outformat == 'xlsx':
-        #write work book
-        wb = writeExcel(species, queryset, models, request.user.is_anonymous())
+    try:
+        if outformat == 'html':
+            return render_to_response(template, data, context_instance = RequestContext(request))
+        elif outformat == 'bib':
+            response = HttpResponse(
+                write_bibtex(species, queryset),
+                mimetype="application/x-bibtex; charset=UTF-8",
+                content_type="application/x-bibtex; charset=UTF-8")
+            response['Content-Disposition'] = "attachment; filename=data.bib"
+        elif outformat == 'json':
+            return HttpResponse(
+                simplejson.dumps(data, indent=2, ensure_ascii=False, encoding='utf-8'),
+                mimetype="application/json; charset=UTF-8",
+                content_type="application/json; charset=UTF-8")
+        elif outformat == 'pdf':
+            import subprocess
+            from django.test import Client
+            from django.contrib.auth.models import User
+            from django.contrib.auth import login, get_backends
 
-        #save to string
-        result = StringIO()
-        wb.save(filename = result)
+            # Workflow:
+            # Create a django client and visit the page the user visited with his current login information.
+            # Invoke wkhtmltopdf using a xserver (xvfb-run) and render the client output to pdf.
+            # Serve that output as a file to the user.
 
-        #generate HttpResponse
-        response = HttpResponse(
-            result.getvalue(),
-            mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        response['Content-Disposition'] = "attachment; filename=data.xlsx"
-    elif outformat == 'xml':
-        doc = Document()
-        
-        now = datetime.datetime.now(tzlocal())
-        comment = doc.createComment('\n%s WholeCellKB\nGenerated by %s on %s at %s\n%s %s %s\n' % (
-            species.name, 
-            'WholeCellKB', now.isoformat(), 
-            settings.ROOT_URL + reverse('cyano.views.exportData', kwargs={'species_wid': species.wid}),
-            html_to_ascii('&copy;'), now.year, 'Covert Lab, Department of Bioengineering, Stanford University',
-            ))
-        doc.appendChild(comment)
-        
-        objects = doc.createElement('objects')
-        doc.appendChild(objects)
+            # via https://code.djangoproject.com/ticket/5938
+            # Allow login without password
+            def fake_authenticate(user):
+                if not hasattr(user, "backend"):
+                    backend = get_backends()[0]
+                    user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
+                return user
 
-        if queryset:
-            for obj in queryset:
-                objects.appendChild(convert_modelobject_to_xml(obj, doc, request.user.is_anonymous()))
+            def client_login_user(client, user):
+                if user.is_anonymous():
+                    return user
+                from django.test import client as client_module
+                orig_authenticate = client_module.authenticate
+                try:
+                    client_module.authenticate = fake_authenticate
+                    client.login(user=user)
+                finally:
+                    client_module.authenticate = orig_authenticate
+                return user
 
-        response = HttpResponse(
-            doc.toprettyxml(indent=" "*2, encoding = 'utf-8'),
-            mimetype = "application/xml; charset=UTF-8",
-            content_type = "application/xml; charset=UTF-8")
-        response['Content-Disposition'] = "attachment; filename=data.xml"
+            client = Client()
+            client_login_user(client, request.user)
+            request.GET = request.GET.copy()
+            request.GET.update({"format": "html"})
+            response = client.get("{}?{}".format(request.path_info, request.GET.urlencode()),
+                                  follow=False, HTTP_HOST=request.get_host())
+            if response.status_code != 200:
+                raise ValueError("Creating PDF failed")
 
-    else:
+            try:
+                process = subprocess.Popen(['xvfb-run', 'wkhtmltopdf', '--quiet', '-', '-'],
+                                           stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=None)
+                stdin = process.communicate(response.content)[0]
+            except OSError:
+                raise ValueError("Creating PDF failed")
+
+            response = HttpResponse(stdin,
+                                    mimetype='application/pdf',
+                                    content_type='application/pdf')
+            response['Content-Disposition'] = "attachment; filename=data.pdf"
+
+        elif outformat == 'xlsx':
+            #write work book
+            wb = writeExcel(species, queryset, models, request.user.is_anonymous())
+    
+            #save to string
+            result = StringIO()
+            wb.save(filename = result)
+    
+            #generate HttpResponse
+            response = HttpResponse(
+                result.getvalue(),
+                mimetype = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            response['Content-Disposition'] = "attachment; filename=data.xlsx"
+        elif outformat == 'xml':
+            doc = Document()
+
+            now = datetime.datetime.now(tzlocal())
+            comment = doc.createComment('\n%s CyanoFactory KB\nGenerated by %s on %s at %s\n%s %s %s\n' % (
+                species.name,
+                'CyanoFactory KB', now.isoformat(),
+                settings.ROOT_URL + reverse('cyano.views.exportData', kwargs={'species_wid': species.wid}),
+                html_to_ascii('&copy;'), now.year, 'Experimental & Computational Biology, University of Applied Sciences Mittweida',
+                ))
+            doc.appendChild(comment)
+
+            objects = doc.createElement('objects')
+            doc.appendChild(objects)
+
+            if queryset:
+                for obj in queryset:
+                    objects.appendChild(convert_modelobject_to_xml(obj, doc, request.user.is_anonymous()))
+
+            response = HttpResponse(
+                doc.toprettyxml(indent=" "*2, encoding='utf-8'),
+                mimetype="application/xml; charset=UTF-8",
+                content_type="application/xml; charset=UTF-8")
+            response['Content-Disposition'] = "attachment; filename=data.xml"
+        elif outformat == "fasta":
+            response = HttpResponse(write_fasta(species, queryset),
+                                    content_type="application/octet-stream")
+            response['Content-Disposition'] = "attachment; filename=sequence.fasta"
+        elif outformat == "genbank":
+            response = HttpResponse(write_genbank(species, queryset),
+                content_type="application/octet-stream")
+            response['Content-Disposition'] = "attachment; filename=sequence.gb"
+        else:
+            raise NotImplementedError('"%s" is not a supported export format.' % outformat)
+    except (ValueError, NotImplementedError) as e:
         return render_queryset_to_response_error(request,
                                                  queryset, models[0] if models else None,
                                                  data,
                                                  species,
                                                  400,
-                                                 '"%s" is not a supported export format.' % outformat)
+                                                 str(e))
 
     return response
+
 
 def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), model = None, data = {}, species=None, error = 403, msg = "", msg_debug = ""):
     import django.http as http
@@ -552,17 +610,15 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     
     data['species'] = species
     data['queryset'] = queryset
-    data['request'] = request
-    data['email'] = "roebbe.wuenschiers@hs-mittweida.de"
     data['model'] = model
     data['queryargs'] = {}
 
     data['is_pdf'] = False
     data['pdfstyles'] = ''
-    data['species_list'] = cmodels.Species.objects.all()
     data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/cyano/error.html'))
+    data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
 
-    if queryset != None and data['queryset'].model is None:
+    if queryset is not None and data['queryset'].model is None:
             del data['queryset'] 
     
     response = http.HttpResponse
@@ -583,13 +639,13 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
     t = loader.get_template('cyano/error.html')
     data['message'] = msg
 
-    if settings.DEBUG:
+    if settings.DEBUG or (request.user.is_authenticated() and request.user.profile.is_admin()):
         data['message_extra'] = msg_debug
     
     if _format == "json":
         objects = []
         
-        now = datetime.datetime.now(tzlocal())        
+        now = datetime.datetime.now(tzlocal())
         json = odict()
         json['title'] = 'CyanoFactory KB'
         json['time'] = str(now.isoformat())
@@ -606,7 +662,8 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
             status = error)
         return response
         
-    c = Context(data)
+    c = RequestContext(request, data)
+
     return response(
         t.render(c),
         mimetype = 'text/html; charset=UTF-8',
@@ -634,19 +691,19 @@ def writeExcel(species, queryset, modelArr, is_user_anonymous):
 
     #meta data
     now = datetime.datetime.now(tzlocal())
-    wb.properties.creator = 'Generated by WholeCellKB on %s at %s' % (
+    wb.properties.creator = 'Generated by CyanoFactory KB on %s at %s' % (
         now.isoformat(), 
         settings.ROOT_URL + reverse('cyano.views.exportData', kwargs={'species_wid': species.wid}),
         )
     wb.properties.last_modified_by = wb.properties.creator
     wb.properties.created = now
     wb.properties.modified = now
-    wb.properties.title = '%s WholeCellKB' % species.name
+    wb.properties.title = '%s CyanoFactory KB' % species.name
     wb.properties.subject = wb.properties.title
     wb.properties.description = wb.properties.title
     wb.properties.keywords = 'biology, systems, database, knowledge base'
     wb.properties.category = ''
-    wb.properties.company = 'Covert Lab, Department of Bioengineering, Stanford University'
+    wb.properties.company = 'Experimental & Computational Biology, University of Applied Sciences Mittweida'
     wb.properties.excel_base_date = CALENDAR_WINDOWS_1900
     
     #print table of contents
@@ -901,9 +958,9 @@ def format_value_excel(obj, field, depth = 0):
         value = SharedDate().datetime_to_julian(date=value)
         data_type = Cell.TYPE_NUMERIC
         format_code = NumberFormat.FORMAT_DATE_TIME4
-    elif field.__class__ is ForeignKey:
+    elif isinstance(field, ForeignKey):
         subobj = value        
-        if issubclass(field.rel.to, (cmodels.Entry, User)):
+        if issubclass(field.rel.to, (cmodels.Entry, cmodels.UserProfile)):
             value = None
             if subobj is not None:
                 value = unicode(subobj)
@@ -911,9 +968,10 @@ def format_value_excel(obj, field, depth = 0):
             format_code = NumberFormat.FORMAT_TEXT
         elif depth > 0:
             value = {}
-            for subfield in field.rel.to._meta.fields + field.rel.to._meta.many_to_many:
-                if not subfield.auto_created and getattr(subobj, subfield.name) is not None:
-                    value[subfield.name] = format_value_excel(subobj, subfield, depth = depth + 1)[0]        
+            if not subobj is None:
+                for subfield in field.rel.to._meta.fields + field.rel.to._meta.many_to_many:
+                    if not subfield.auto_created and getattr(subobj, subfield.name) is not None:
+                        value[subfield.name] = format_value_excel(subobj, subfield, depth = depth + 1)[0]        
             data_type = Cell.TYPE_STRING
             format_code = NumberFormat.FORMAT_TEXT
         else:
@@ -930,7 +988,7 @@ def format_value_excel(obj, field, depth = 0):
                     value.append(tmp_val)
                     data_type.append(tmp_data_type)
                     format_code.append(tmp_format_code)
-    elif field.__class__ is ManyToManyField:        
+    elif isinstance(field, ManyToManyField):      
         data_type = Cell.TYPE_STRING
         format_code = NumberFormat.FORMAT_TEXT        
 
@@ -978,7 +1036,7 @@ def batch_import_from_excel(species_wid, fileName, user):
         species_wid = species['wid']
     else:
         try:
-            species = cmodels.Species.objects.get(wid=species_wid)
+            species = cmodels.Species.objects.for_wid(species_wid)
             species_id = species.id
         except ObjectDoesNotExist:
             raise ValidationError('Please edit an editing PGDB')
@@ -1581,8 +1639,18 @@ def convert_modelobject_to_xml(obj, xml_doc, is_user_anonymous, ancestors = []):
             else:
                 if issubclass(field.rel.to, cmodels.Entry):
                     xml_field.appendChild(xml_doc.createTextNode(unicode(model_val.wid)))
-                elif issubclass(field.rel.to, User):
-                    xml_field.appendChild(xml_doc.createTextNode(unicode(model_val.username)))
+                elif issubclass(field.rel.to, cmodels.RevisionDetail):
+                    doc = xml_doc.createElement("user")
+                    doc.appendChild(xml_doc.createTextNode(unicode(model_val.user.user.username)))
+                    xml_field.appendChild(doc)
+                    doc = xml_doc.createElement("date")
+                    doc.appendChild(xml_doc.createTextNode(unicode(model_val.date)))
+                    xml_field.appendChild(doc)
+                    doc = xml_doc.createElement("reason")
+                    doc.appendChild(xml_doc.createTextNode(unicode(model_val.reason)))
+                    xml_field.appendChild(doc)
+                elif issubclass(field.rel.to, cmodels.UserProfile):
+                    xml_field.appendChild(xml_doc.createTextNode(unicode(model_val.user.username)))
                 else:
                     xml_field.appendChild(convert_modelobject_to_xml(model_val, xml_doc, is_user_anonymous, ancestors + [obj]))
         elif isinstance(field, ManyToManyField):
@@ -1591,10 +1659,10 @@ def convert_modelobject_to_xml(obj, xml_doc, is_user_anonymous, ancestors = []):
                     doc = xml_doc.createElement('object')
                     doc.appendChild(xml_doc.createTextNode(unicode(model_subval.wid)))
                     xml_field.appendChild(doc)
-            elif issubclass(field.rel.to, User):
+            elif issubclass(field.rel.to, cmodels.UserProfile):
                 for model_subval in model_val.all():
                     doc = xml_doc.createElement('object')
-                    doc.appendChild(xml_doc.createTextNode(unicode(model_subval.username)))
+                    doc.appendChild(xml_doc.createTextNode(unicode(model_subval.user.username)))
                     xml_field.appendChild(doc)
             else:
                 for model_subval in model_val.all():
@@ -1799,9 +1867,9 @@ def validate_object_fields(model, data, wids, species_wid, entry_wid):
                         raise ValidationError('Undefined WID %s' % data[field.name])
                 else:
                     if issubclass(field.rel.to, cmodels.Entry):    
-                        if not wids.has_key(data[field.name]):
+                        if not data[field.name] in wids:
                             raise ValidationError('Undefined WID %s' % data[field.name])
-                        if not issubclass(getModel(wids[data[field.name]]), field.rel.to):
+                        if not issubclass(getModel(wids[data[field.name]][0]), field.rel.to):
                             raise ValidationError('Invalid WID %s' % data[field.name])
                     else:
                         try:
@@ -1818,7 +1886,7 @@ def validate_object_fields(model, data, wids, species_wid, entry_wid):
                     for wid in data[field.name]:
                         if not wids.has_key(wid):
                             raise ValidationError('Undefined WID %s' % wid)
-                        if not issubclass(getModel(wids[wid]), field.rel.to):
+                        if not any(issubclass(getModel(model), field.rel.to) for model in wids[wid]):
                             raise ValidationError('Invalid WID %s' % wid)
                 else:
                     for idx in range(len(data[field.name])):
@@ -1877,7 +1945,7 @@ def validate_model_unique(model, model_objects_data, all_obj_data=None, all_obj_
             if obj['id'] is not None:
                 qs = qs.exclude(id=obj['id'])
         for obj in qs:
-            model_objects_data.append(obj)        
+            model_objects_data.append(obj)
     
     for ancestor_model in parent_list + [model]:
         if hasattr(ancestor_model._meta, 'validate_unique'):
@@ -1892,6 +1960,9 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
     
     if issubclass(model, cmodels.Entry):
         fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
+        
+        if obj.model_type_id is None:
+            obj.model_type = cmodels.TableMeta.get_by_model_name(obj._meta.object_name)
     else:
         fields = model._meta.fields + model._meta.many_to_many
     
@@ -1907,7 +1978,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
                         if obj_list.has_key(obj_data[field.name]):
                             tmp = obj_list[obj_data[field.name]]
                         elif issubclass(field.rel.to, cmodels.SpeciesComponent):
-                            tmp = field.rel.to.objects.get(species__wid=species.wid, wid=obj_data[field.name])
+                            tmp = field.rel.to.objects.for_species(species).for_wid(obj_data[field.name])
                         else:
                             tmp = field.rel.to.objects.get(wid=obj_data[field.name])
                         setattr(obj, field.name, tmp)
@@ -1927,12 +1998,15 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
     if save:
         obj.full_clean()
         if isinstance(obj, cmodels.Entry):
-            obj.save(obj_data["revision_detail"])
+            try:
+                obj.save(obj_data["revision_detail"])
+            except ValidationError as e:
+                raise ValidationError({"wid": ". ".join(e.messages)})
         else:
             obj.save()
             
         if isinstance(obj, cmodels.SpeciesComponent):
-            obj.species.add(cmodels.Species.objects.get(wid=species.wid))
+            obj.species.add(cmodels.Species.objects.for_wid(species.wid))
     
     #many-to-many fields
     for field in fields:
@@ -1947,7 +2021,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
                         if obj_list.has_key(wid):
                             tmp = obj_list[wid]
                         elif issubclass(field.rel.to, cmodels.SpeciesComponent):
-                            tmp = field.rel.to.objects.get(species__wid=species.wid, wid=wid)
+                            tmp = field.rel.to.objects.for_species(species).for_wid(wid)
                         else:
                             tmp = field.rel.to.objects.get(wid=wid)
                         getattr(obj, field.name).add(tmp)
@@ -2072,6 +2146,20 @@ def write_bibtex(species, qs):
         + ('\t%s %s %s\n' % (html_to_ascii('&copy;'), now.year, 'Covert Lab, Department of Bioengineering, Stanford University', )) \
         + '"}\n\n' \
         + '\n\n'.join(bibs)
+
+def write_fasta(species, qs):
+    fasta = StringIO()
+
+    for obj in qs:
+        fasta.write(obj.get_as_fasta(species))
+
+    return fasta.getvalue()
+
+def write_genbank(species, qs):
+    if len(qs) != 1:
+        raise ValueError("GenBank export only supported in detail view")
+
+    return qs[0].get_as_genbank(species)
     
 def get_invalid_objects(species_id, validate_fields=False, validate_objects=True, full_clean=False, validate_unique=False):
     #check that species WIDs unique

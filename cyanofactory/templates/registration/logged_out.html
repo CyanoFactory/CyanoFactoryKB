@@ -1,12 +1,24 @@
-{% extends "admin/base_site.html" %}
-{% load i18n %}
+{% extends "cyano/base.html" %}
 
-{% block breadcrumbs %}<div class="breadcrumbs"><a href="../">{% trans 'Home' %}</a></div>{% endblock %}
+{% comment %}
+Logout template
+
+Author: Jonathan Karr, jkarr@stanford.edu
+Affiliation: Covert Lab, Department of Bioengineering, Stanford University
+Last updated: 2012-07-17
+{% endcomment %}
+
+
+{% block head_title %}{{ block.super }} :: Logout{% endblock %}
+{% block page_title %}Logout{% endblock %}
+{% block action_icons %}{% endblock %}
+
+{% block extrastyles %}
+h1, #content{
+	text-align:center;
+}
+{% endblock %}
 
 {% block content %}
-
-<p>{% trans "Thanks for spending some quality time with the Web site today." %}</p>
-
-<p><a href="../">{% trans 'Log in again' %}</a></p>
-
+You have successfully logged out.
 {% endblock %}

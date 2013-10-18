@@ -2,6 +2,11 @@
 
 {% comment %}
 Create new species form template
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 {% endcomment %}
 
 {% load templatetags %}
@@ -9,7 +14,7 @@ Create new species form template
 
 {% block head_title %}{{ block.super }} :: {% if species %}Create Mutant{% else %}Create new species{% endif %}{% endblock %}
 {% block page_title %}{% if species %}Create mutant{% else %}Create new species{% endif %}{% endblock %}
-{% block action_icons %}{% endblock %}
+{% block action_icons_share %}{% endblock %}
 
 {% block head %}
 {{ block.super }}
@@ -29,25 +34,6 @@ $(document).on('input', '#id_new_species',function(){
 {% block extrastyles %}
 {{ block.super }}
 
-.close_box {
-    #background:blue;
-    color:#fff;
-    padding:2px 5px;
-    display:inline;
-    position:absolute;
-    right:0px;
-    border-radius:3px;
-    cursor:pointer;
-}
-
-#form .block#info {	
-	border: 1px solid #2DD02D;
-}
-#form .block#info h1{
-	border: 1px solid #2DD02D;
-	background:#2DD02D;
-}
-
 #content ul {
 	list-style: none;
     list-style-type: none;
@@ -61,7 +47,7 @@ $(document).on('input', '#id_new_species',function(){
 	{% csrf_token %}
 	
 	{% if success %}
-	<div class="block" id="info" style="position:relative;">
+	<div class="block" id="{{ success|yesno }}" style="position:relative;">
 		<div class="close_box">X</div>
 		<h1>{{ success|yesno:"Success,Error,Maybe"}}</h1>
 		<div class="content" style="width:340px;">

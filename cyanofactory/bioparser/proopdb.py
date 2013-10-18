@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 # Imports Operon Prediction files from ProOpDB
 # Reference:
 # Taboada B., Ciria R., Martinez-Guerrer C.E., Merino E., 2012, ProOpDB:
@@ -53,7 +60,7 @@ class ProOpDB(BioParser):
                 operon_str = "TU_%04d" % (operon)
                 
                 try:
-                    gene = cmodels.Gene.objects.get(wid = locus)
+                    gene = cmodels.Gene.objects.for_species(self.species).for_wid(locus)
                 except ObjectDoesNotExist:
                     #self.stderr.write("Gene with wid {} not found".format(locus))
                     continue
@@ -70,11 +77,8 @@ class ProOpDB(BioParser):
             wid = "TU_" + "-".join(map(lambda x: x.wid, genes[:5]))
             if len(genes) > 5:
                 wid += "-et_al"
-            
-            try:
-                tu = cmodels.TranscriptionUnit.objects.get(wid = wid)
-            except ObjectDoesNotExist:
-                tu = cmodels.TranscriptionUnit(wid = wid)
+
+            tu = cmodels.TranscriptionUnit.objects.for_species(self.species).for_wid(wid, create = True)
             self.tu.append([tu, genes])
 
     @commit_on_success

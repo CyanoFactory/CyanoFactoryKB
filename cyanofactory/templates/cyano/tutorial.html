@@ -13,11 +13,15 @@ Last updated: 2012-07-17
 {% block head_title %}{{ block.super }} :: Tutorial{% endblock %}
 {% block page_title %}{% endblock %}
 
-{% block action_icons %}
-<img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" />
-<img src="{% get_static_prefix %}public/img/json.png" title="Export as JSON" alt="Export as JSON" />
-<img src="{% get_static_prefix %}public/img/xml.gif" title="Export as XML" alt="Export as XML" />
-<img src="{% get_static_prefix %}public/img/page_excel.png" title="Export as Excel" alt="Export as Excel" />
+{% block action_icons_export %}
+<li><img src="{% get_static_prefix %}public/img/json.png" title="Export as JSON" alt="Export as JSON" /></li>
+<li><img src="{% get_static_prefix %}public/img/xml.gif" title="Export as XML" alt="Export as XML" /></li>
+<li><img src="{% get_static_prefix %}public/img/page_excel.png" title="Export as Excel" alt="Export as Excel" /></li>
+{{ block.super }}
+{% endblock %}
+
+{% block action_icons_edit %}
+<li><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></li>
 {{ block.super }}
 {% endblock %}
 

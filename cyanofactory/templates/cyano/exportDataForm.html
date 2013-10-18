@@ -12,7 +12,8 @@ Last updated: 2012-07-17
 
 {% block head_title %}{{ block.super }} :: Export{% endblock %}
 {% block page_title %}Export data{% endblock %}
-{% block action_icons %}{% endblock %}
+
+{% block action_icons_share %}{% endblock %}
 
 {% block content %}
 <script type="text/javascript" language="javascript">
@@ -78,7 +79,7 @@ function uncheckAll(field){
 	</div>
 		
 	<div class="block">
-		<h1>Select {{ form.format.label }} <a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#downloading_content" style="margin-left:716px; color:white;">?</a></h1>
+		<h1>Select {{ form.format.label }} {% comment %}<a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#downloading_content" style="margin-left:716px; color:white;">?</a>{% endcomment %}</h1>
 		<div class="content">
 			{% if form.format.errors|length > 0 %}<div class="errors">{{ form.format.errors|join:" " }}</div>{% endif %}
 			<div class="col">

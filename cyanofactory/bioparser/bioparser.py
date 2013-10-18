@@ -1,5 +1,11 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 from cyano.models import RevisionDetail, UserProfile, Species
-from django.core.exceptions import ObjectDoesNotExist
 from cyano.helpers import slugify
 
 class BioParser(object):
@@ -18,11 +24,7 @@ class BioParser(object):
             raise ValueError("reason is mandatory")
         
         self.wid = self.try_slugify("Wid", wid)
-       
-        try:
-            self.species = Species.objects.get(wid = wid)
-        except ObjectDoesNotExist:
-            raise ValueError("Species {} not found".format(wid))
+        self.species = Species.objects.for_wid(wid, create=True)
 
         try:
             self.user = UserProfile.objects.get(user__username = user)

@@ -1,14 +1,14 @@
 {% comment %}
 Base template
 
-Author: Gabriel Kind, gkind@hs-mittweida.de
-Affliation: Experimental & Computational Biology, University of Applied Sciences Mittweida
-Last updated: 2013-01-17
-
-Based on:
 Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 {% endcomment %}
 
 <?xml version="1.0" encoding="UTF-8"?>
@@ -51,16 +51,30 @@ Last updated: 2012-07-17
 	<link rel="icon" type="image/png" href="{% get_static_prefix %}cyano/favicon.png">	
 	
 	<!-- javascript -->
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/jquery-ui-1.8.23.custom.min.js"></script>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.min.js"></script>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.axislabels.min.js"></script>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.pie.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-ui-1.8.23.custom.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.axislabels.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.pie.min.js"></script>
 	<!–[if lte IE 8]>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/flot/excanvas.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/excanvas.min.js"></script>
 	<![endif]–>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/evidence.js"></script>
-	<script language="javascript" type="text/javascript" src="{% get_static_prefix %}public/js/tooltip.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/evidence.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/tooltip.js"></script>
+
+    <script type="text/javascript">
+    $(document).ready(function() {
+        if ($("#action_icons_edit ul").children().length == 0) {
+            $("#action_icons_edit").remove()
+        }
+        if ($("#action_icons_share ul").children().length == 0) {
+            $("#action_icons_share").remove()
+        }
+        if ($("#action_icons_export ul").children().length == 0) {
+            $("#action_icons_export").remove()
+        }
+    });
+    </script>
 	{% endblock %}
 </head>
 <body>
@@ -82,10 +96,12 @@ Last updated: 2012-07-17
 						/></td>
 					<td><a href="javascript:document.search.submit()"><img src="{% get_static_prefix %}public/img/magnifier.png" /></a></td>
 				</tr>
+					{% if GOOGLE_SEARCH_ENABLED %}
 					<td class="engine">
-						<input type="radio" name="engine" value="haystack" {% if not engine or engine == 'haystack' %} checked="true" {% endif %}/><span>CyanoFactory KB</span>
+						<input type="radio" name="engine" value="haystack" {% if not engine or engine != 'google' %} checked="true" {% endif %}/><span>CyanoFactory KB</span>
 						<input type="radio" name="engine" value="google" {% if engine == 'google' %} checked="true" {% endif %}/><span>Google</span>
 					</td>
+					{% endif %} 
 					<td></td>
 				</table>
 			</form>
@@ -147,10 +163,10 @@ Last updated: 2012-07-17
 			<li class="spacer"/>
 			<li><a href="{% if species %}{% url "cyano.views.users" species_wid=species.wid %}{% else %}{% url "cyano.views.users" %}{% endif %}">Members</a></li>
 			{% endif %}
-			{% comment %}
 			<li class="spacer"/>
 			<li><a href="#">Help</a>
 				<ul>
+				{% comment %}
 				<li><a href="{% if species %}{% url "cyano.views.tutorial" species_wid=species.wid %}{% else %}{% url "cyano.views.tutorial" %}{% endif %}">Getting started</a></li>			
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#downloading_content">Downloading data</a></li>
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#api">RESTful API</a></li>				
@@ -160,16 +176,17 @@ Last updated: 2012-07-17
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#modeling">Developing whole-cell<div style="padding-left:10px;">models</div></a></li>
 				<li><a href="{% get_static_prefix %}public/doc/">Source code docs</a></li>
 				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}">About</a></li>
-				<li><a href="{% if species %}{% url "cyano.views.about" species_wid=species.wid %}{% else %}{% url "cyano.views.about" %}{% endif %}#contact">Contact</a></li>
+				{% endcomment %}
+				<li><a href="{% if species %}{% url "cyano.views.licensing" species_wid=species.wid %}{% else %}{% url "cyano.views.licensing" %}{% endif %}">License</a></li>
 				</ul>
 			</li>
-			{% endcomment %}
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
 			<li><a href="#">{{ request.user.username }}</a>
 				<ul>
 				<li><a href="{% if species %}{% url "cyano.views.user" username=request.user.username species_wid=species.wid %}{% else %}{% url "cyano.views.user" username=request.user.username %}{% endif %}">My Profile</a></li>
-				<li><a href="{% if species %}{% url "cyano.views.logout" species_wid=species.wid %}{% else %}{% url "cyano.views.logout" %}{% endif %}">Logout</a></li>
+				<li><a href="{% url "password_change" %}">Change password</a></li>
+				<li><a href="{% if species %}{% url "logout" species_wid=species.wid %}{% else %}{% url "logout" %}{% endif %}">Logout</a></li>
 				</ul>
 			</li>
 			{% if request.user.profile.is_admin %}
@@ -183,7 +200,7 @@ Last updated: 2012-07-17
 			{% endif %}
 			{% else %}
 			<li class="spacer"/>
-			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% url "cyano.views.login" species_wid=species.wid %}{% else %}{% url "cyano.views.login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
+			<li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% url "login" species_wid=species.wid %}{% else %}{% url "login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
 			{% endif %}
 		</ul>
 	</div>
@@ -203,25 +220,44 @@ Last updated: 2012-07-17
 		</div>
 		
 		<div class="center">			
-			Last updated {{ last_updated_date }}. Contact: <a href="mailto:{{ email }}">{{ email }}</a>.<br/> 
+			{% if last_updated_date %}Last updated {{ last_updated_date }}. {% endif %}Contact: <a href="mailto:{{ email }}">{{ email }}</a>.<br/> 
 			&copy; <a href="http://http://www.hs-mittweida.de/wuenschi">Experimental &amp; Computational Biology</a>, <a href="http://www.hs-mittweida.de">University of Applied Sciences Mittweida</a> 2013.		
 		</div>
 		
 		<div class="right">
-			{% block action_icons %}
-			<a href="https://www.facebook.com/sharer/sharer.php?s=100&amp;p[url]={{ request.build_absolute_uri }}&amp;p[title]=CyanoFactory%20KB&amp;p[summary]={{ social_text }}" onclick="javascript:window.open('https://www.facebook.com/sharer/sharer.php?s=100&amp;p[url]={{ request.build_absolute_uri }}&amp;p[title]=CyanoFactory%20KB&amp;p[summary]={{ social_text }}', '', 'width=500,height=300'); return false;" target="_blank" title="Share on Facebook"><img src="{% get_static_prefix %}cyano/img/social/facebook.png" /></a>
-			<a href="https://twitter.com/intent/tweet?source=webclient&amp;text=https://twitter.com/intent/tweet?source=webclient&amp;text=CyanoFactory%20KB:{% if social_text %}%20{{ social_text }}%20at{% endif %}&amp;url={{ request.build_absolute_uri }}" onclick="javascript:window.open('https://twitter.com/intent/tweet?source=webclient&amp;text=CyanoFactory%20KB:{% if social_text %}%20{{ social_text }}%20at{% endif %}&amp;url={{ request.build_absolute_uri }}', '', 'width=500,height=300'); return false;" target="_blank" title="Share on Twitter"><img src="{% get_static_prefix %}cyano/img/social/twitter.png" /></a>
-			<a href="https://plus.google.com/share?url={{ request.build_absolute_uri }}" onclick="javascript:window.open('https://plus.google.com/share?url={{ request.build_absolute_uri }}', '', 'width=500,height=500'); return false;" target="_blank" title="Share on Google Plus"><img src="{% get_static_prefix %}cyano/img/social/google+.png" /></a>
-			<a href="mailto:name@example.org&amp;subject=CyanoFactory%20KB?body={% if social_text %}{{ social_text }}%20at%20{% endif %}{{ request.build_absolute_uri }}" title="Share via E-Mail"><img src="{% get_static_prefix %}cyano/img/social/email.png" /></a>
-			<a href="?{% makeurl queryargs 'format' 'pdf' %}" title="Convert to PDF"><img src="{% get_static_prefix %}public/img/page_white_acrobat.png" /></a>
-			<a href="javascript:window.print()" title="Print this page"><img src="{% get_static_prefix %}public/img/printer.png" /></a>
-			{% endblock %}
+            <ul class="menu">
+                {% block action_icons %}
+                <li id="action_icons_share">Share
+                    <ul>
+                        {% block action_icons_share %}
+                        <li><a href="https://www.facebook.com/sharer/sharer.php?s=100&amp;p[url]={{ request.build_absolute_uri }}&amp;p[title]=CyanoFactory%20KB&amp;p[summary]={{ social_text }}" onclick="javascript:window.open('https://www.facebook.com/sharer/sharer.php?s=100&amp;p[url]={{ request.build_absolute_uri }}&amp;p[title]=CyanoFactory%20KB&amp;p[summary]={{ social_text }}', '', 'width=500,height=300'); return false;" target="_blank" title="Share on Facebook"><img src="{% get_static_prefix %}cyano/img/social/facebook.png" />Share on Facebook</a></li>
+                        <li><a href="https://twitter.com/intent/tweet?source=webclient&amp;text=https://twitter.com/intent/tweet?source=webclient&amp;text=CyanoFactory%20KB:{% if social_text %}%20{{ social_text }}%20at{% endif %}&amp;url={{ request.build_absolute_uri }}" onclick="javascript:window.open('https://twitter.com/intent/tweet?source=webclient&amp;text=CyanoFactory%20KB:{% if social_text %}%20{{ social_text }}%20at{% endif %}&amp;url={{ request.build_absolute_uri }}', '', 'width=500,height=300'); return false;" target="_blank" title="Share on Twitter"><img src="{% get_static_prefix %}cyano/img/social/twitter.png" />Share on Twitter</a></li>
+                        <li><a href="https://plus.google.com/share?url={{ request.build_absolute_uri }}" onclick="javascript:window.open('https://plus.google.com/share?url={{ request.build_absolute_uri }}', '', 'width=500,height=500'); return false;" target="_blank" title="Share on Google Plus"><img src="{% get_static_prefix %}cyano/img/social/google+.png" />Share on Google+</a></li>
+                        <li><a href="mailto:name@example.org?subject=CyanoFactory%20KB&amp;body={% if social_text %}{{ social_text }}%20at%20{% endif %}{{ request.build_absolute_uri }}" title="Share via E-Mail"><img src="{% get_static_prefix %}cyano/img/social/email.png" />Share via Mail</a></li>
+                        {% endblock %}
+                    </ul>
+                <li id="action_icons_export">Export
+                    <ul>
+                        {% block action_icons_export %}
+                        <li><a href="?{% makeurl queryargs 'format' 'pdf' %}" title="Convert to PDF"><img src="{% get_static_prefix %}public/img/page_white_acrobat.png" />Convert to PDF</a></li>
+                        <li><a href="javascript:window.print()" title="Print this page"><img src="{% get_static_prefix %}public/img/printer.png" />Print this page</a></li>
+                        {% endblock %}
+                    </ul>
+                </li>
+                <li id="action_icons_edit">Actions
+                    <ul>
+                        {% block action_icons_edit %}
+                        {% endblock %}
+                    </ul>
+                </li>
+                {% endblock %}
+            </ul>
 		</div>
-	</div>	
-	
+	</div>
+
 	<!-- modal -->
 	<div id="modal"></div>
-	
+
 	<!-- tooltip -->
 	<div id="tooltip" class="ui-widget-header ui-corner-all"></div>
 </body>

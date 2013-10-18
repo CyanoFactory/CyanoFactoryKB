@@ -1,9 +1,15 @@
-'''
+"""
 Whole-cell knowledge base views
 
+Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
-'''
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
 
 import os
 import settings
@@ -11,9 +17,7 @@ import tempfile
 from copy import deepcopy
 from itertools import chain
 
-from django.contrib.auth import login as auth_login, logout as auth_logout
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import AuthenticationForm
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.db import transaction
@@ -21,12 +25,8 @@ from django.db.models import Count, Sum
 from django.db.models.fields import BooleanField, NullBooleanField, AutoField, BigIntegerField, DecimalField, FloatField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField
 from django.db.models.fields.related import RelatedObject, ManyToManyField, ForeignKey
 from django.db.models.query import EmptyQuerySet
-from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.utils.text import capfirst
-from django.views.decorators.debug import sensitive_post_parameters
-from django.views.decorators.cache import never_cache
-from django.views.decorators.csrf import csrf_protect
 
 from haystack.query import SearchQuerySet
 
@@ -36,6 +36,7 @@ import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
 from cyano.decorators import resolve_to_objects, permission_required
 from django.db.transaction import commit_on_success
+from django.http.response import HttpResponseRedirect
 
 def index(request):
     return chelpers.render_queryset_to_response(
@@ -49,10 +50,10 @@ def species(request, species):
     content = []
     if species is not None:
         content.append([
-            [0, 'Compartments', cmodels.Compartment.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
+            [0, 'Compartments', cmodels.Compartment.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
         ])
         
-        chrs = cmodels.Chromosome.objects.filter(species__id = species.id).values_list("length", "sequence")
+        chrs = cmodels.Chromosome.objects.for_species(species).values_list("length", "sequence")
         chrcontent = sum(chro[0] for chro in chrs)
         gc_content = 0 if len(chrs) == 0 else sum([cmodels.Chromosome(sequence = chro[1]).get_gc_content() * chro[0] for chro in chrs]) / chrcontent        
         content.append([
@@ -61,7 +62,7 @@ def species(request, species):
             [1, 'GC-content', ('%0.1f' % (gc_content * 100)), '%'],
         ])
                 
-        tus = cmodels.TranscriptionUnit.objects.filter(species__id = species.id).annotate(num_genes = Count('genes'))
+        tus = cmodels.TranscriptionUnit.objects.for_species(species).annotate(num_genes = Count('genes'))
         nPolys = tus.filter(num_genes__gt = 1).count()
         content.append([
             [0, 'Transcription units', tus.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionUnit'})],            
@@ -69,7 +70,7 @@ def species(request, species):
             [1, 'Polycistrons', nPolys],
         ])
         
-        genes = cmodels.Gene.objects.filter(species__id = species.id).values_list("type__wid", "expression", "half_life")
+        genes = cmodels.Gene.objects.for_species(species).values_list("type__wid", "expression", "half_life")
         
         content.append([
             [0, 'Genes', len(genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
@@ -79,7 +80,7 @@ def species(request, species):
             [1, 'tRNA', sum((lambda x: x[0] == "tRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=tRNA'],
         ])
         
-        chromosome_features = cmodels.ChromosomeFeature.objects.filter(species__id = species.id).values_list("type__parent__wid", flat = True)
+        chromosome_features = cmodels.ChromosomeFeature.objects.for_species(species).values_list("type__parent__wid", flat = True)
         chromosome_features_length = len(chromosome_features)
         chromosome_features_dnaa_box = sum((lambda x: x == "ChromosomeFeature-DnaA_box")(x) for x in chromosome_features)
         chromosome_features_str = sum((lambda x: x == "ChromosomeFeature-Short_Tandem_Repeat")(x) for x in chromosome_features)
@@ -100,7 +101,7 @@ def species(request, species):
                 chromosome_features_length - chromosome_features_dnaa_box - chromosome_features_str],
         ])
         
-        metabolites = cmodels.Metabolite.objects.filter(species__id = species.id).values_list("type__wid", "type__parent__wid", "type__parent__parent__wid", "biomass_composition", "media_composition")
+        metabolites = cmodels.Metabolite.objects.for_species(species).values_list("type__wid", "type__parent__wid", "type__parent__parent__wid", "biomass_composition", "media_composition")
         
         metabolites_aa_list = ["amino_acid", "modified_amino_acid", "non-standard_amino_acid", "vitamin_non-standard_amino_acid"]
         
@@ -132,7 +133,7 @@ def species(request, species):
                 ],
         ])
 
-        mons = cmodels.ProteinMonomer.objects.filter(species__id = species.id)
+        mons = cmodels.ProteinMonomer.objects.for_species(species)
         mons_list = mons.values_list("localization__wid", "signal_sequence__type")
         mons_list_count = len(mons_list)
         monTermOrg_list = ["tc", "tm"]
@@ -146,7 +147,7 @@ def species(request, species):
         monIntMem = sum((lambda x: x[0] == "m" and x[1] != "lipoprotein")(x) for x in mons_list) +\
                     sum((lambda x: x[0] == "tm" and x[1] != "lipoprotein")(x) for x in mons_list)
 
-        cpxs = cmodels.ProteinComplex.objects.filter(species__id = species.id)
+        cpxs = cmodels.ProteinComplex.objects.for_species(species)
         cpxDNABind = cpxs.filter(dna_footprint__length__gt=0).count()
         cpxCount = cpxs.count()
         
@@ -162,7 +163,7 @@ def species(request, species):
                     [2, 'DNA-binding', cpxDNABind],
         ])
 
-        rxns = cmodels.Reaction.objects.filter(species__id = species.id).values_list("processes__wid", flat = True)
+        rxns = cmodels.Reaction.objects.for_species(species).values_list("processes__wid", flat = True)
         rxns_count = [
             len(rxns),
             sum((lambda x: x == "Process_DNADamage")(x) for x in rxns),
@@ -196,7 +197,7 @@ def species(request, species):
             [1, 'Other', rxns_count[0] - sum(rxns_count[1:])],
         ])        
         
-        tr = cmodels.TranscriptionalRegulation.objects.filter(species__id = species.id).values_list("transcription_unit", "transcription_factor", "affinity", "activity")
+        tr = cmodels.TranscriptionalRegulation.objects.for_species(species).values_list("transcription_unit", "transcription_factor", "affinity", "activity")
         nTus = len(set([x[0] for x in tr]))
         nTfs = len(set([x[1] for x in tr]))
         content.append([
@@ -210,7 +211,7 @@ def species(request, species):
             [0, 'Pathways', cmodels.Pathway.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Pathway'})],
         ])
         
-        stimuli = cmodels.Stimulus.objects.filter(species__id = species.id).values_list("value", flat=True)
+        stimuli = cmodels.Stimulus.objects.for_species(species).values_list("value", flat=True)
         nStimuli = sum((lambda x: x[3] is not None)(x) for x in stimuli)
 
         content.append([
@@ -220,7 +221,7 @@ def species(request, species):
         nCellComp = sum((lambda x: x[3] is not None)(x) for x in metabolites)
         nMediaComp = sum((lambda x: x[4] is not None)(x) for x in metabolites)
         
-        reactions = cmodels.Reaction.objects.filter(species__id = species.id).\
+        reactions = cmodels.Reaction.objects.for_species(species).\
             values_list("keq", "kinetics_forward__km", "kinetics_backward__km", "kinetics_forward__vmax", "kinetics_backward__vmax")
        
         nKineticsKeq = sum((lambda x: x[0] is not None)(x) for x in reactions)
@@ -235,7 +236,7 @@ def species(request, species):
         nTrAffinity = sum((lambda x: x[2] is not None)(x) for x in tr)
         nTrActivity = sum((lambda x: x[3] is not None)(x) for x in tr)
        
-        nOther = cmodels.Parameter.objects.filter(species__id = species.id).count()
+        nOther = cmodels.Parameter.objects.for_species(species).count()
         nTotParameters = nCellComp + nMediaComp + nKineticsVmax + nRnaExp + nRnaHl + nStimuli + nTrAffinity + nTrActivity + nOther
 
         content.append([
@@ -258,7 +259,7 @@ def species(request, species):
         ])
         
         content.append([
-            [0, 'States', cmodels.State.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
+            [0, 'States', cmodels.State.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
         ])
         
     nContent = [len(x) for x in content]
@@ -304,18 +305,18 @@ def species(request, species):
         'evidence_temperature': [],
     }
     #if species is not None:
-        #refs = cmodels.PublicationReference.objects.filter(species__id = species.id)
+        #refs = cmodels.PublicationReference.objects.filter.for_species(species)
         #sources['total'] = refs.count()
         #sources['types'] = [
-        #        {'type': 'Articles', 'count': refs.filter(species__id = species.id, type__wid='article').count()},
-        #        {'type': 'Books', 'count': refs.filter(species__id = species.id, type__wid='book').count()},
-        #        {'type': 'Thesis', 'count': refs.filter(species__id = species.id, type__wid='thesis').count()},
-        #        {'type': 'Other', 'count': refs.filter(species__id = species.id, type__wid='misc').count()},
+        #        {'type': 'Articles', 'count': refs.filter(type__wid='article').count()},
+        #        {'type': 'Books', 'count': refs.filter(type__wid='book').count()},
+        #        {'type': 'Thesis', 'count': refs.filter(type__wid='thesis').count()},
+        #        {'type': 'Other', 'count': refs.filter(type__wid='misc').count()},
         #    ]
         #sources['dates'] = refs.filter(year__isnull=False).order_by('year').values('year').annotate(count=Count('year'))
         
             
-        #nEstimated = cmodels.Parameter.objects.filter(species__id = species.id, value__evidence__is_experimentally_constrained=False).count()
+        #nEstimated = cmodels.Parameter.objects.for_species(species).filter(value__evidence__is_experimentally_constrained=False).count()
         #nExpConstrained = nTotParameters - nEstimated
         #sources['evidence_parameters'] = [
         #     {'type': 'Experimentally constrained', 'count': nExpConstrained},
@@ -336,8 +337,9 @@ def species(request, species):
             },
         request = request, 
         template = 'cyano/species.html')
-    
-def about(request, species_wid=None):
+
+@resolve_to_objects
+def about(request, species=None):
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
@@ -345,13 +347,21 @@ def about(request, species_wid=None):
         data = {
             'ROOT_URL': settings.ROOT_URL,
         }
-    )    
+    )
         
-def tutorial(request, species_wid=None):
+@resolve_to_objects
+def tutorial(request, species=None):
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
-        template = 'cyano/tutorial.html')    
+        template = 'cyano/tutorial.html')
+
+@resolve_to_objects
+def licensing(request, species=None):
+    return chelpers.render_queryset_to_response(
+        species = species,
+        request = request, 
+        template = 'cyano/license.html')
 
 @login_required
 @resolve_to_objects
@@ -375,22 +385,20 @@ def user(request, username, species = None):
         queryset = queryset,
         template = 'cyano/user.html')    
 
-def search(request, species_wid = None):
+@resolve_to_objects
+def search(request, species = None):
     query = request.GET.get('q', '')
     engine = request.GET.get('engine', 'haystack')
     
-    if engine == 'haystack':
-        return search_haystack(request, species_wid, query)
+    if engine == 'haystack' or not getattr(settings, 'GOOGLE_SEARCH_ENABLED', False):
+        return search_haystack(request, species, query)
     else:
-        return search_google(request, species_wid, query)
+        return search_google(request, species, query)
                 
-def search_haystack(request, species_wid, query):
-    #search
-    if species_wid is None:
-        species_wid = cmodels.Species.objects.all()[0].wid
+def search_haystack(request, species, query):
     results = SearchQuerySet().filter(species=species).filter(content=query)
     
-    #calculate facets        
+    #calculate facets      
     facets = results.facet('model_type')
     tmp = facets.facet_counts()['fields']['model_type']
     modelNameFacet = []
@@ -435,7 +443,7 @@ def search_haystack(request, species_wid, query):
             'modelNameFacet': modelNameFacet,
             })
 
-def search_google(request, species_wid, query):
+def search_google(request, species, query):
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
@@ -448,7 +456,10 @@ def search_google(request, species_wid, query):
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def listing(request, species, model):
-    objects = model.objects.all().filter(species__id=species.id)
+    from itertools import groupby
+    from collections import OrderedDict
+
+    objects = model.objects.for_species(species)
 
     facet_fields = []    
     for field_full_name in model._meta.facet_fields:
@@ -467,9 +478,9 @@ def listing(request, species, model):
             continue
         
         if isinstance(field, (ForeignKey, ManyToManyField)):
-            tmp = model.objects.filter(species__id=species.id).order_by(field_full_name + '__name').values(field_full_name).annotate(count=Count(field_full_name))
+            tmp = model.objects.for_species(species).order_by(field_full_name + '__name').values(field_full_name).annotate(count=Count(field_full_name))
         else:
-            tmp = model.objects.filter(species__id=species.id).order_by(field_full_name).values(field_full_name).annotate(count=Count(field_full_name))
+            tmp = model.objects.for_species(species).order_by(field_full_name).values(field_full_name).annotate(count=Count(field_full_name))
         facets = []
         for facet in tmp:
             value = facet[field_full_name]            
@@ -482,7 +493,7 @@ def listing(request, species, model):
                 name = capfirst(tmp2['name'])
             elif (field.choices is not None) and (len(field.choices) > 0) and (not isinstance(field, (BooleanField, NullBooleanField))):    
                 id_ = value
-                choices = [x[0] for x in field.choices]
+                choices = [choice[0] for choice in field.choices]
                 if id_ in choices:
                     name = field.choices[choices.index(id_)][1]
                 else:
@@ -520,52 +531,84 @@ def listing(request, species, model):
     else:
         template = "cyano/list.html"
 
+    groups = None
+
+    if hasattr(model._meta, "group_field"):
+        field_name = getattr(model._meta, "group_field")
+        group_field = model._meta.get_field_by_name(getattr(model._meta, "group_field"))[0]
+
+        if group_field:
+            objects = objects.order_by(field_name, "wid")
+
+            #if isinstance(group_field, (ForeignKey, ManyToManyField)):
+            #    print "m2m or fk"
+            #else:
+            #    print "other"
+
+            objects = objects.prefetch_related(group_field.name)
+
+            def group_func(x):
+                try:
+                    return getattr(x, field_name).all()[0].wid
+                except IndexError:
+                    return "None"
+
+            groups = OrderedDict((k, list(v)) for k, v in groupby(objects, group_func))
+            #print groups
+    else:
+        objects = objects.order_by("wid")
+    
     return chelpers.render_queryset_to_response(
-        species = species,
-        request = request, 
-        models = [model], 
-        queryset = objects, 
-        template = template,
-        data = {'facet_fields': facet_fields})
+        species=species,
+        request=request,
+        models=[model],
+        queryset=objects,
+        template=template,
+        data={
+            'groups': groups,
+            'facet_fields': facet_fields
+        }
+    )
 
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def detail(request, species, model, item):
     fieldsets = deepcopy(model._meta.fieldsets)
     
-    #filter out type, metadata
-    fieldset_names = [x[0] for x in fieldsets]
-    if 'Type' in fieldset_names:
-        idx = fieldset_names.index('Type')
-        del fieldsets[idx]
-        
-    #filter out empty fields
-    rmfieldsets = []
-    for idx in range(len(fieldsets)):
-        rmfields = []
-        for idx2 in range(len(fieldsets[idx][1]['fields'])):
-            if isinstance(fieldsets[idx][1]['fields'][idx2], dict):
-                field_name = fieldsets[idx][1]['fields'][idx2]['name']
-                verbose_name = fieldsets[idx][1]['fields'][idx2]['verbose_name']
-            else:
-                field_name = fieldsets[idx][1]['fields'][idx2]
-                field = model._meta.get_field_by_name(field_name)[0]
-                if isinstance(field, RelatedObject):
-                    verbose_name = capfirst(field.get_accessor_name())
-                else:
-                    verbose_name = field.verbose_name
-                
-            data = chelpers.format_field_detail_view(species, item, field_name, request.user.is_anonymous())
-            if (data is None) or (data == ''):
-                rmfields = [idx2] + rmfields
+    if request.GET.get('format', 'html') == "html":
+        #filter out type, metadata
+        fieldset_names = [x[0] for x in fieldsets]
+        if 'Type' in fieldset_names:
+            idx = fieldset_names.index('Type')
+            del fieldsets[idx]
             
-            fieldsets[idx][1]['fields'][idx2] = {'verbose_name': verbose_name.replace(" ", '&nbsp;').replace("-", "&#8209;"), 'data': data}
-        for idx2 in rmfields:
-            del fieldsets[idx][1]['fields'][idx2]
-        if len(fieldsets[idx][1]['fields']) == 0:
-            rmfieldsets = [idx] + rmfieldsets
-    for idx in rmfieldsets:
-        del fieldsets[idx]
+        #filter out empty fields
+        rmfieldsets = []
+        for idx in range(len(fieldsets)):
+            rmfields = []
+            for idx2 in range(len(fieldsets[idx][1]['fields'])):
+                if isinstance(fieldsets[idx][1]['fields'][idx2], dict):
+                    field_name = fieldsets[idx][1]['fields'][idx2]['name']
+                    verbose_name = fieldsets[idx][1]['fields'][idx2]['verbose_name']
+                else:
+                    field_name = fieldsets[idx][1]['fields'][idx2]
+                    field = model._meta.get_field_by_name(field_name)[0]
+                    if isinstance(field, RelatedObject):
+                        verbose_name = capfirst(field.get_accessor_name())
+                    else:
+                        verbose_name = field.verbose_name
+                    
+                data = chelpers.format_field_detail_view(species, item, field_name, request.user.is_anonymous())
+                if (data is None) or (data == ''):
+                    rmfields = [idx2] + rmfields
+                
+                fieldsets[idx][1]['fields'][idx2] = {'verbose_name': verbose_name.replace(" ", '&nbsp;').replace("-", "&#8209;"), 'data': data}
+            for idx2 in rmfields:
+                del fieldsets[idx][1]['fields'][idx2]
+            if len(fieldsets[idx][1]['fields']) == 0:
+                rmfieldsets = [idx] + rmfieldsets
+        for idx in rmfieldsets:
+            del fieldsets[idx]
     
     #form query set
     qs = chelpers.objectToQuerySet(item, model = model)
@@ -592,7 +635,9 @@ def history(request, species, model = None, item = None):
     if item:
         # Item specific
         obj = item
-        objects = cmodels.Revision.objects.filter(current = item).distinct("detail").order_by("-detail")
+        objects = cmodels.Revision.objects.filter(current = item).distinct().order_by("-detail")
+        
+        # Add link to the current version of the item
         wid = obj.wid
         detail_id = obj.detail.pk
         date = obj.detail.date.date()
@@ -606,12 +651,13 @@ def history(request, species, model = None, item = None):
         
     elif model:
         # Model specific
-        tm = cmodels.TableMeta.get_by_model(model)
-        components = model.objects.filter(species = species)
-        objects = cmodels.Revision.objects.filter(current__model_type = tm, current__pk__in = components).distinct("detail").order_by("-detail")
+        components = model.objects.for_species(species)
+        objects = cmodels.Revision.objects.filter(current__pk__in = components).distinct().order_by("-detail")
+
     else:
         # Whole species specific
-        objects = cmodels.Revision.objects.filter(current = item, current__species = species).distinct("detail").order_by("-detail")
+        components = cmodels.SpeciesComponent.objects.for_species(species)
+        objects = cmodels.Revision.objects.filter(current__pk__in = components).distinct().order_by("-detail")
     
     for obj in objects:
         last_date = date
@@ -701,15 +747,19 @@ def history_detail(request, species, model, item, detail_id):
             'fieldsets': fieldsets,
             'message': request.GET.get('message', ''),
             })
-            
+
+@login_required
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
 def add(request, species=None, model=None):
     return edit(request, species=species, model=model, action='add')
-    
+
+@login_required
 @resolve_to_objects 
 @permission_required(perm.WRITE_NORMAL)
 def edit(request, species, model = None, item = None, action='edit'):
+    from collections import defaultdict
+    
     #retrieve object
     if action == 'add':
         obj = model()
@@ -743,12 +793,13 @@ def edit(request, species, model = None, item = None, action='edit'):
                 if action == 'edit':
                     qs = qs.exclude(id=obj.id)
                     
-                wids = {}
+                wids = defaultdict(list)
                 for x in qs:
-                    wids[x['wid']] = x['model_type__model_name']
+                    wids[x['wid']].append(x['model_type__model_name'])
                 
                 if data['wid'] in wids.keys():
-                    raise ValidationError({'wid': 'Value must be unique'})
+                    if model.__name__ in wids[data['wid']]:
+                        raise ValidationError({'wid': 'Value must be unique for model'})
                     
                 wids[data['wid']] = model.__name__
             
@@ -758,7 +809,7 @@ def edit(request, species, model = None, item = None, action='edit'):
                 chelpers.validate_model_objects(model, data)
                 chelpers.validate_model_unique(model, [data])
                 
-                #save
+                #save                
                 obj = chelpers.save_object_data(species, obj, data, {}, request.user, save=False, save_m2m=False)
                 obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=False)
                 obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=True)
@@ -766,7 +817,10 @@ def edit(request, species, model = None, item = None, action='edit'):
                 #redirect to details page
                 return HttpResponseRedirect(obj.get_absolute_url(species))
             except ValidationError as error:
-                error_messages = error.message_dict
+                if hasattr(error, "message_dict"):
+                    error_messages = error.message_dict
+                else:
+                    raise
 
     #form query set
     if action == 'edit':
@@ -794,16 +848,26 @@ def edit(request, species, model = None, item = None, action='edit'):
             'error_messages': error_messages,
             }
         )
-            
+
+@login_required
 @resolve_to_objects 
-@permission_required(perm.WRITE_DELETE)      
-def delete(request, species, model, item):
-    qs = chelpers.objectToQuerySet(item, model = model)
+@permission_required(perm.WRITE_DELETE)
+def delete(request, species, model = None, item = None):
+    #retrieve object
+    if item is None:
+        obj = species
+    else:
+        obj = item
+        
+    if model is None:
+        model = obj.__class__
+    
+    qs = chelpers.objectToQuerySet(obj, model = model)
     
     #delete
     if request.method == 'POST':
         # Todo: Should be revisioned
-        item.delete()
+        obj.delete(species)
         return HttpResponseRedirect(reverse('cyano.views.listing', kwargs={'species_wid':species.wid, 'model_type': model.__name__}))
         
     #confirmation message
@@ -815,11 +879,10 @@ def delete(request, species, model, item):
         template = 'cyano/delete.html', 
         )
 
-def exportData(request, species_wid=None):
-    getDict = request.GET.copy()
-    if getDict.get('format', ''):
-        getDict.__setitem__('species', getDict.get('species', species_wid))    
-    form = ExportDataForm(getDict or None)
+@resolve_to_objects
+@permission_required(perm.READ_NORMAL)
+def exportData(request, species):
+    form = ExportDataForm(None)
     if not form.is_valid():        
         return chelpers.render_queryset_to_response(
             species=species,
@@ -829,7 +892,7 @@ def exportData(request, species_wid=None):
                 'form': form
                 }
             )
-    else:        
+    else:
         species = species.objects.get(wid = form.cleaned_data['species'])
         queryset = EmptyQuerySet()
         models = []
@@ -842,9 +905,9 @@ def exportData(request, species_wid=None):
         for model_type in model_types:
             model = chelpers.getModel(model_type)
             if issubclass(model, cmodels.SpeciesComponent):
-                queryset = chain(queryset, model.objects.filter(species__id=species.id).select_related(depth=2).all())
+                queryset = chain(queryset, model.objects.for_species(species).select_related(depth=2).all())
             else:
-                queryset = chain(queryset, model.objects.select_related(depth=2).filter(id=species.id))
+                queryset = chain(queryset, model.objects.for_species(species).select_related(depth=2))
             models.append(chelpers.getModel(model_type))
         
         return chelpers.render_queryset_to_response(
@@ -856,6 +919,7 @@ def exportData(request, species_wid=None):
 
 @login_required
 @resolve_to_objects
+@permission_required(perm.WRITE_NORMAL)
 def importData(request, species=None):
     data = {}
     
@@ -916,6 +980,7 @@ def importData(request, species=None):
 
 @login_required
 @resolve_to_objects
+@permission_required(perm.READ_NORMAL)
 @commit_on_success
 def importSpeciesData(request, species=None):
     data = {}
@@ -935,7 +1000,7 @@ def importSpeciesData(request, species=None):
                 
                 through = cmodels.SpeciesComponent.species.through
                     
-                component = cmodels.SpeciesComponent.objects.filter(species = species).values_list("pk", flat=True).order_by("pk")
+                component = cmodels.SpeciesComponent.objects.for_species(species).values_list("pk", flat=True).order_by("pk")
                 
                 species.pk = None
                 species.id = None
@@ -948,6 +1013,10 @@ def importSpeciesData(request, species=None):
                 species = cmodels.Species(wid = form.cleaned_data['new_wid'], name = form.cleaned_data['new_species'])
                 species.save(rev)
                 cmodels.Pathway.add_boehringer_pathway(species, rev)
+
+            # Assign permissions
+            new_perm, _ = cmodels.UserPermission.objects.get_or_create(entry = species, user = request.user.profile)
+            new_perm.allow.add(*cmodels.Permission.objects.all())
 
             data['success'] = 'success'
             data['message'] = "New %s %s created" % ("mutant" if mutant else "species", species.name)
@@ -974,46 +1043,51 @@ def validate(request, species_wid):
             'errors': errors
             },
         )
-        
-@sensitive_post_parameters()
-@csrf_protect
-@never_cache
+
+@login_required
+@resolve_to_objects
+def password_change_required(request, species=None):
+    from django.http import HttpResponseRedirect
+    from django.contrib.auth.views import password_change
+    from django.contrib.auth.forms import AdminPasswordChangeForm
+    
+    if not request.user.profile.force_password_change:
+        HttpResponseRedirect(reverse("cyano.index"))
+    
+    context = chelpers.get_extra_context(
+        species = species,
+        request = request)
+    
+    return password_change(request,
+                           "registration/password_change_form_required.html",
+                           password_change_form = AdminPasswordChangeForm,
+                           extra_context = context)
+
 @resolve_to_objects
 def login(request, species=None):
-    next_url = request.REQUEST.get('next', '')
-    
-    if request.method == "POST":
-        form = AuthenticationForm(data=request.POST)
-        if form.is_valid():
-            auth_login(request, form.get_user())
-            
-            if request.session.test_cookie_worked():
-                request.session.delete_test_cookie()
+    from django.contrib.auth.views import login as djlogin
 
-            return HttpResponseRedirect(next_url)
-    else:
-        form = AuthenticationForm(request)
+    msg = request.GET.get("message", "")
 
-    request.session.set_test_cookie()
+    context = chelpers.get_extra_context(
+        species=species,
+        request=request,
+    )
 
-    return chelpers.render_queryset_to_response(
-        species = species,
-        request = request, 
-        template = 'cyano/login.html', 
-        data = {
-            'form': form,
-            'next': next_url,
-        })
+    context['message'] = msg[:50]
 
-@resolve_to_objects        
+    return djlogin(request, extra_context = context)
+
+@resolve_to_objects
 def logout(request, species=None):
-    auth_logout(request)    
-    return chelpers.render_queryset_to_response(
+    from django.contrib.auth.views import logout as djlogout
+
+    context = chelpers.get_extra_context(
         species = species,
-        request = request, 
-        template = 'cyano/logout.html', 
-        )
+        request = request)
     
+    return djlogout(request, extra_context = context)
+
 def sitemap(request):
     return chelpers.render_queryset_to_response(
         request = request, 
@@ -1036,14 +1110,16 @@ def sitemap_toplevel(request):
 @resolve_to_objects
 def sitemap_species(request, species):
     return chelpers.render_queryset_to_response(
+        species = species,
         request = request, 
-        template = 'cyano/sitemap_species.xml', 
+        template = 'cyano/sitemap_species.xml',
         data = {
             'ROOT_URL': settings.ROOT_URL,
-            'entries': cmodels.SpeciesComponent.objects.filter(species__id = species.id),
+            'entries': cmodels.SpeciesComponent.objects.for_species(species).select_related("detail"),
         }
     )
 
+@login_required
 @resolve_to_objects
 @permission_required(perm.WRITE_PERMISSION)
 def permission_edit(request, species, model = None, item = None):
@@ -1136,7 +1212,7 @@ def permission(request, species, model = None, item = None, edit = False):
                     request,
                     species = species,
                     error = 400,
-                    msg = "Invalid POST request on permission page.",
+                    msg = "Invalid request on permission page.",
                     msg_debug = "POST was: " + str(request.POST.lists()))        
             
             # Data is valid, begin with database operations
@@ -1161,9 +1237,8 @@ def permission(request, species, model = None, item = None, edit = False):
             # Rotate array to group -> permissions
             for i, group in enumerate(new_permissions["gid_deny"], user_count_allow + group_count_allow + user_count_deny):  
                 new_permissions_group_deny[cmodels.GroupProfile.objects.get(pk = group)] = [new_permissions[x][i] for x in cmodels.Permission.permission_types]
-            
-            # Check if user or group is completly missing but had permissions before
-            # Delete if this is the case
+
+            # Test if user is missing but had permission before (Happens with "Remove this user")
             all_user_perms = cmodels.UserPermission.objects.filter(entry = entry).prefetch_related("user")
             for permission in all_user_perms:
                 if not permission.user in new_permissions_user_allow and not permission.user in new_permissions_user_deny:
@@ -1174,6 +1249,7 @@ def permission(request, species, model = None, item = None, edit = False):
                     if not permission.user in new_permissions_user_deny:
                         permission.deny.clear()
             
+            # Test if group is missing but had permission before (Happens with "Remove this group")
             all_group_perms = cmodels.GroupPermission.objects.filter(entry = entry).prefetch_related("group")
             for permission in all_group_perms:
                 if not permission.group in new_permissions_group_allow and not permission.group in new_permissions_group_deny:
@@ -1183,64 +1259,20 @@ def permission(request, species, model = None, item = None, edit = False):
                         permission.allow.clear()
                     if not permission.group in new_permissions_group_deny:
                         permission.deny.clear()
-    
+
             # Create or alter the permission object associated to entry+user/group depending on the
             # new permission settings
             for u, p in new_permissions_user_allow.iteritems():
-                new_perm, _ = cmodels.UserPermission.objects.get_or_create(entry = entry, user = u)
-                allows = new_perm.allow.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.add(cmodels.Permission.get_by_pk(x))
-    
+                u._handle_permission_list(entry, p, allow=True)
+
             for u, p in new_permissions_user_deny.iteritems():
-                new_perm, _ = cmodels.UserPermission.objects.get_or_create(entry = entry, user = u)
-                denies = new_perm.deny.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.add(cmodels.Permission.get_by_pk(x))
-    
-                new_perm.save()
+                u._handle_permission_list(entry, p, allow=False)
                         
             for g, p in new_permissions_group_allow.iteritems():
-                new_perm, _ = cmodels.GroupPermission.objects.get_or_create(entry = entry, group = g)
-                allows = new_perm.allow.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in allows:
-                            new_perm.allow.add(cmodels.Permission.get_by_pk(x))
+                g._handle_permission_list(entry, p, allow=True)
                 
-            for g, p in new_permissions_group_deny.iteritems():     
-                new_perm, _ = cmodels.GroupPermission.objects.get_or_create(entry = entry, group = g)    
-                denies = new_perm.deny.all()
-                for i, x in enumerate(range(1, 9)):
-                    if p[i] == 0:
-                        # delete the entry if it exists
-                        if cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.remove(cmodels.Permission.get_by_pk(x))
-                    else:
-                        # add the entry if missing
-                        if not cmodels.Permission.get_by_pk(x) in denies:
-                            new_perm.deny.add(cmodels.Permission.get_by_pk(x))
-                
-                new_perm.save()
+            for g, p in new_permissions_group_deny.iteritems():
+                g._handle_permission_list(entry, p, allow=False)
 
     # Rendering of the permission page
     user_permissions_db = cmodels.UserPermission.objects.filter(entry = entry).prefetch_related("allow", "deny", "user", "user__user")
@@ -1264,7 +1296,6 @@ def permission(request, species, model = None, item = None, edit = False):
         group_perm_deny = [permission.group.id, [1 if cmodels.Permission.get_by_pk(x) in permission.deny.all() else 0 for x in range(1, 9)]] 
         group_permissions_allow.append(group_perm_allow)
         group_permissions_deny.append(group_perm_deny)
-
     
     queryset = chelpers.objectToQuerySet(item) if item else None
 
@@ -1296,17 +1327,24 @@ def jobs(request, species = None):
     running = []
     # Fetch pending tasks
     insp = inspect()
-    res = insp.reserved()
-    
+    message_debug = "No worker available"
+    try:
+        res = insp.reserved()
+    except Exception as e:
+        res = None
+        message_debug = str(e)
+
     # Admins see all jobs
     is_admin = request.user.profile.is_admin()
-    
+
     if not res:
         return chelpers.render_queryset_to_response_error(
             request,
             error = 503,
-            msg = "No worker available. Please report this to an administrator!")
-    
+            msg = "Server error or no worker available. Please report this to an administrator!",
+            msg_debug = message_debug
+        )
+
     for v in res.values():
         for job in v:
             kwargs = literal_eval(job["kwargs"])
