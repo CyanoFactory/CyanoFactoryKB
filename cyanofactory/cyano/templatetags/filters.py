@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 import re
 from django import template
 
@@ -31,5 +38,5 @@ def getattribute(value, arg):
         return settings.TEMPLATE_STRING_IF_INVALID
 
 @register.filter(name='get_absolute_url')
-def getabsoluteurlwithspecies(value, arg):
-    return value.get_absolute_url(arg)
+def getabsoluteurlwithspecies(value, species):
+    return value.get_absolute_url(species)

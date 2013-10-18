@@ -15,13 +15,13 @@ TODO
 - import/excel works correctly
 '''
 
-class Test(TestCase):
-	def test_data_model(self):		
-		for name, model in helpers.getModels().iteritems():
-			validate_fields(model)
-			validate_model(model)
-		for tmp in helpers.getEntryDatas():
-			validate_model(tmp[1])
+#class Test(TestCase):
+#	def test_data_model(self):		
+#		for name, model in helpers.getModels().iteritems():
+#			validate_fields(model)
+#			validate_model(model)
+#		for tmp in helpers.getEntryDatas():
+#			validate_model(tmp[1])
 				
 def validate_fields(model):
 	for field in model._meta.fields + model._meta.many_to_many:

@@ -6,6 +6,11 @@ Import data form template
 Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 {% endcomment %}
 
 {% load templatetags %}
@@ -13,18 +18,10 @@ Last updated: 2012-07-17
 
 {% block head_title %}{{ block.super }} :: Import{% endblock %}
 {% block page_title %}Import data{% endblock %}
-{% block action_icons %}{% endblock %}
+{% block action_icons_share %}{% endblock %}
 
 {% block head %}
 {{ block.super }}
-
-<script language="javascript" type="text/javascript">
-$(document).on('click','.close_box',function(){
-    $(this).parent().fadeTo(300,0,function(){
-          $(this).remove();
-    });
-});
-</script>
 
 <script language="javascript" type="text/javascript">
 $(document).on('click','.close_box',function(){
@@ -58,25 +55,6 @@ $(document).ready(function() {
 {% block extrastyles %}
 {{ block.super }}
 
-.close_box {
-    #background:blue;
-    color:#fff;
-    padding:2px 5px;
-    display:inline;
-    position:absolute;
-    right:0px;
-    border-radius:3px;
-    cursor:pointer;
-}
-
-#form .block#info {	
-	border: 1px solid #2DD02D;
-}
-#form .block#info h1{
-	border: 1px solid #2DD02D;
-	background:#2DD02D;
-}
-
 #content ul {
 	list-style: none;
     list-style-type: none;
@@ -91,7 +69,7 @@ $(document).ready(function() {
 	{% csrf_token %}
 	
 	{% if success %}
-	<div class="block" id="info" style="position:relative;">
+	<div class="block" id="{{ success|yesno }}" style="position:relative;">
 		<div class="close_box">X</div>
 		<h1>{{ success|yesno:"Success,Error,Maybe"}}</h1>
 		<div class="content" style="width:340px;">

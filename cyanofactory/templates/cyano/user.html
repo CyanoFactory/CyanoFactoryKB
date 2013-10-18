@@ -6,6 +6,11 @@ Contributor page template
 Author: Jonathan Karr, jkarr@stanford.edu
 Affiliation: Covert Lab, Department of Bioengineering, Stanford University
 Last updated: 2012-07-17
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 {% endcomment %}
 
 {% load static %}
@@ -19,6 +24,8 @@ Last updated: 2012-07-17
 {% endif %}
 {{ block.super }}
 {% endblock %}
+
+{% block action_icons_share %}{% endblock %}
 
 {% block content %}
 {% with user=queryset.0.user profile=queryset.0 %}
@@ -76,7 +83,7 @@ Last updated: 2012-07-17
 			<td>{{ user.date_joined|date:"Y-m-d" }}</td>
 		</tr>
 	</tbody>
-	{% if request.user == user %}
+	{% if request.user == user or request.user.profile.is_admin %}
 	<tbody class="spacing">
 		<tr><td colspan="2">&nbsp;</td></tr>
 	</tbody>

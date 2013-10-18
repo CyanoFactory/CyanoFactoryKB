@@ -2,6 +2,11 @@
 
 {% comment %}
 User list template
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
 {% endcomment %}
 
 {% load static %}
@@ -15,14 +20,12 @@ User list template
 <meta http-equiv="refresh" content="3">
 {% endblock %}
 
-{% block action_icons %}
-{% endblock %}
+{% block action_icons_share %}{% endblock %}
 
 {% block extrastyles %}
 #detail tbody.data tr td:nth-child(2){
 	width:20%;
 }
-
 {% endblock %}
 
 {% block content %}

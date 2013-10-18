@@ -1,11 +1,17 @@
-from Bio import SeqIO
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
 
-from django.core.exceptions import ObjectDoesNotExist
+Released under the MIT license
+"""
+
+from Bio import SeqIO
 
 import cyano.models as cmodels
 from cyano.helpers import slugify
 from bioparser import BioParser
 from django.db.transaction import commit_on_success
+from django.core.exceptions import ObjectDoesNotExist
 
 class Genbank(BioParser):    
     def __init__(self, wid, user, reason, chromosome, name):
@@ -51,10 +57,7 @@ class Genbank(BioParser):
         
         self.species.save(self.detail)
         
-        try:
-            chromosome = cmodels.Chromosome.objects.get(wid = self.chromosome)
-        except ObjectDoesNotExist:
-            chromosome = cmodels.Chromosome(wid = self.chromosome)
+        chromosome = cmodels.Chromosome.objects.for_species(self.species).for_wid(self.chromosome, create=True)
         chromosome.name = self.name
         chromosome.sequence = str(self.record.seq) # Cast needed, otherwise revision-compare fails!
         chromosome.length = len(self.record.seq)
@@ -98,11 +101,8 @@ class Genbank(BioParser):
                         else:
                             wid = "REF_0001"
                             name = "Reference #0001"
-                
-                try:
-                    pubref = cmodels.PublicationReference.objects.get(wid = slugify(wid))
-                except ObjectDoesNotExist:
-                    pubref = cmodels.PublicationReference(wid = slugify(wid))
+            
+                pubref = cmodels.PublicationReference.objects.for_wid(slugify(wid), create=True)
                 pubref.name = name
                 pubref.authors = ref.authors
                 pubref.title = ref.title
@@ -118,7 +118,7 @@ class Genbank(BioParser):
                     pubref.cross_references.add(xref)
                     
                 pubref.species.add(self.species)
-                self.species.publication_references.add(pubref)
+                chromosome.publication_references.add(pubref)
     
         if "gi" in self.annotation:
             xref, _ = cmodels.CrossReference.objects.get_or_create(xid = self.annotation["gi"], source = "GI")
@@ -160,10 +160,7 @@ class Genbank(BioParser):
                     self.species.genetic_code = qualifiers["transl_table"][0]
                     self.species.save(self.detail)
             
-            try:
-                g = cmodels.Gene.objects.get(wid = slugify(qualifiers["locus_tag"][0]))
-            except ObjectDoesNotExist:
-                g = cmodels.Gene(wid = slugify(qualifiers["locus_tag"][0]))
+            g = cmodels.Gene.objects.for_species(self.species).for_wid(slugify(qualifiers["locus_tag"][0]), create = True)
             
             if hasattr(self, "notify_progress"):
                 outstr = "Importing Gene %s (%d/%d)" % (g.wid, i + 1, len(cds_map.values()))
@@ -208,20 +205,15 @@ class Genbank(BioParser):
                     # Inconsistency: Multiple synonyms appear in one entry,
                     # why don't they split them like for all other items?
                     for syn in synonym.split(";"):
-                        try:
-                            obj = cmodels.Synonym.objects.get(name = syn.strip())
-                        except ObjectDoesNotExist:
-                            obj = cmodels.Synonym(name = syn.strip())
+                        obj, _ = cmodels.Synonym.objects.get_or_create(name = syn.strip())
                         obj.save()
                         g.synonyms.add(obj)
             
             if "protein_id" in qualifiers:
                 protxref = qualifiers["protein_id"][0]
                 wid = slugify(g.wid + "_Monomer")
-                try:
-                    protein = cmodels.ProteinMonomer.objects.get(wid = wid)
-                except ObjectDoesNotExist:
-                    protein = cmodels.ProteinMonomer(wid = wid)
+
+                protein = cmodels.ProteinMonomer.objects.for_species(self.species).for_wid(wid, create = True)
          
                 if "product" in qualifiers:
                     protein.name = qualifiers["product"][0]
@@ -240,11 +232,9 @@ class Genbank(BioParser):
             if v.type == "CDS":
                 v.type = "mRNA"
             
-            try:
-                t = cmodels.Type.objects.get(wid = slugify(v.type))
-            except ObjectDoesNotExist:
-                t = cmodels.Type(wid = slugify(v.type), name = v.type)
-    
+            t = cmodels.Type.objects.for_wid(wid = slugify(v.type), create = True)
+            t.name = v.type
+
             t.save(self.detail)
             t.species.add(self.species)
     

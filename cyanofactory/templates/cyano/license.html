@@ -1,0 +1,131 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Author: Jonathan Karr, jkarr@stanford.edu
+Affiliation: Covert Lab, Department of Bioengineering, Stanford University
+Last updated: 2012-07-17
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+
+{% block head_title %}{{ block.super }} :: License{% endblock %}
+
+{% block extrastyles %}
+#content h1{
+	margin-bottom:2px;
+}
+.logo{
+	width:100%;
+	text-align:center;
+}
+.logo img{
+	margin-bottom:0px;
+}
+@media print{
+	.logo{
+		display:none;
+	}
+}
+
+#content ul{
+	margin-top:-6px;
+	padding-top:0px;
+}
+#content ul.download_formats{
+	margin-top:-4px;
+}
+#content ul.download_formats li{
+	margin-top:2px;
+}
+#content ul.download_formats ul li{
+	margin-top:0px;
+}
+
+#content .variable{
+	font-style:italic;
+	color:grey;
+}
+
+.inline-icon{
+	position:relative;
+	top:4px;
+}
+
+{% endblock %}
+
+{% block content %}
+<h1>License</h1>
+
+<div><h2><a name="intro"></a>Knowledge base</h2>
+<p>The knowledge base sourcecode is licensed under MIT license.
+
+<p>CyanoFactory KB has been developed and further extended on the basis of WholeCellKB (Karr JR, Sanghvi JC, Macklin DN, Arora A, Covert MW.)
+</p>
+
+<p>WholeCellKB: Model Organism Databases for Comprehensive Whole-Cell Models. <i>Nucleic Acids Research</i> <b>41</b>, D787-D792 (2013). <a href="http://nar.oxfordjournals.org/content/early/2012/11/21/nar.gks1108.long">Nucleic Acids Research</a> | <a href="http://www.ncbi.nlm.nih.gov/pubmed/23175606">PubMed</a>, Karr JR, Sanghvi JC, Macklin DN, Gutschow MV, Jacobs JM, Bolival B, Assad-Garcia N, Glass JI, Covert MW. A Whole-Cell Computational Model Predicts Phenotype from Genotype. <i>Cell</i> <b>150</b>, 389-401 (2012). <a href="http://www.cell.com/abstract/S0092-8674(12)00776-3">Cell</a> | <a href="http://www.ncbi.nlm.nih.gov/pubmed/22817898">PubMed</a></p>
+
+<h2>MIT license</h2>
+
+<p>
+Copyright &copy; 2012, Stanford University<br>
+Copyright &copy; 2013, Hochschule Mittweida, University of Applied Sciences</p>
+<p>
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</p>
+<p>
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p>
+<p>
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+</h2>
+
+<h2>Python package list</h2>
+
+<p>The Knowledge Base was developed using Python and the webframework django.</p>
+
+<p>
+<ul>
+    <li>BeautifulSoup</li>
+    <li>biopython</li>
+    <li>django-celery</li>
+    <li>django-debug-toolbar</li>
+    <li>django-endless-pagination</li>
+    <li>django-extensions</li>
+    <li>django-haystack</li>
+    <li>django-model-utils</li>
+    <li>django-widget-tweaks</li>
+    <li>django</li>
+    <li>docutils</li>
+    <li>epydoc</li>
+    <li>hashlib</li>
+    <li>httplib2</li>
+    <li>huTools</li>
+    <li>nose</li>
+    <li>numpy</li>
+    <li>odict</li>
+    <li>openpyxl</li>
+    <li>pisa</li>
+    <li>python-dateutil</li>
+    <li>south</li>
+    <li>xapian-haystack</li>
+    <li>xhtml2pdf</li>
+</ul>
+</p>
+
+<h2><a name="intro"></a>Creative Commons</h2>
+
+<p>This website uses graphics licensed under Creative Commons licenses</p>
+
+<p>
+Social Media Icons: <a href="http://www.paulrobertlloyd.com/2009/06/social_media_icons/" title="Social Media Icons">Paul Robert Lloyd</a>. Licensed under <a href="http://creativecommons.org/licenses/by-sa/3.0/" title="Creative Commons Attribution-Share Alike 3.0 Licence">Creative Commons Attribution-Share Alike 3.0 Licence</a>
+</p>
+
+<p>
+Silk Icons: <a href="http://www.famfamfam.com/about/" title="Social Media Icons">Mark James</a>. Licensed under <a href="http://creativecommons.org/licenses/by/2.5/" title="Creative Commons Attribution 2.5 License">Creative Commons Attribution 2.5 Licence</a>
+</p>
+
+</div>
+{% endblock %}

@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 from optparse import make_option
 from cyano.tasks import genbank
 from cyano_command import CyanoCommand
