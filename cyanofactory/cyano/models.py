@@ -2276,10 +2276,24 @@ class Chromosome(Molecule):
         genbank = StringIO.StringIO()
         genes = Gene.objects.filter(species=species, chromosome_id=self.pk).prefetch_related("cross_references", "protein_monomers")
         record = SeqRecord.SeqRecord(Seq(self.sequence, IUPAC.IUPACUnambiguousDNA()))
+
+        record.description = self.name
+        record.name = self.wid
+        accession = self.cross_references.filter(source="RefSeq")
+        if len(accession) > 0:
+            record.annotations["accession"] = accession[0].xid
+
+        record.annotations["date"] = self.detail.date.strftime("%d-%b-%Y").upper()
+        record.annotations["source"] = species.name
         record.annotations["organism"] = species.name
-        record.annotations["comment"] = species.comments
+        record.annotations["comment"] = self.comments
         
         features = record.features
+
+        source = SeqFeature(FeatureLocation(0, self.length - 1), type="source")
+        source.qualifiers["organism"] = species.name
+
+        features += [source]
 
         for item in genes:
             features += item.get_as_seqfeature(species, record.seq)
@@ -3758,10 +3772,23 @@ class ProteinMonomer(Protein):
 
     def get_as_genbank(self, species):
         genbank = StringIO.StringIO()
-        record = SeqRecord.SeqRecord(Seq(self.get_sequence(species)[:-1], IUPAC.IUPACProtein()))
-        record.annotations["organism"] = species.name
-        record.annotations["comment"] = species.comments
 
+        record = SeqRecord.SeqRecord(Seq(self.get_sequence(species)[:-1], IUPAC.IUPACProtein()))
+        record.description = self.name
+        record.name = self.wid
+        accession = self.cross_references.filter(source="RefSeq")
+        if len(accession) > 0:
+            record.annotations["accession"] = accession[0].xid
+
+        record.annotations["date"] = self.detail.date.strftime("%d-%b-%Y").upper()
+        record.annotations["source"] = species.name
+        record.annotations["organism"] = species.name
+        record.annotations["comment"] = self.comments
+
+        source = SeqFeature(FeatureLocation(0, self.get_length(species) - 1), type="source")
+        source.qualifiers["organism"] = species.name
+
+        record.features += [source]
         record.features += self.get_as_seqfeature(species)
 
         SeqIO.write(record, genbank, "genbank")
