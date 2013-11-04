@@ -1,0 +1,104 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Kegg overview page
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+{% load filters %}
+
+{% block head_title %}{{ block.super }} :: KEGG Maps{% endblock %}
+{% block page_title %}KEGG Maps{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function() {
+    $("form").submit(function(e) {
+        var search_box = $("form textarea#search_box")
+        var text = search_box.val()
+        text = text.replaceAll("#", "%23")
+        search_box.val(text)
+    });
+});
+</script>
+{% endblock %}
+
+{% block extrastyles %}
+#listfilter .nofilters{
+	font-style:italic;
+	text-align:center;
+}
+
+#list{
+	width:100%;
+}
+#listfilter{
+	display:none;
+}
+
+#sidebar {
+	position:absolute;
+	right: -200px;
+	width: 200px;
+	margin: 0px -30px;
+	padding: 10px 10px;
+	border: 5px;
+	border:1px solid #3d80b3;
+	border-radius: 8px;
+    color: black;
+    font-weight: normal;
+}
+#search_box {
+	width: 100%;
+	border:1px solid #3d80b3;
+	border-radius:6px;
+}
+{% endblock %}
+
+{% block content %}
+<table id="list" style="position:relative;">
+{% for key, value in groups.items %}
+<thead>
+	<tr>
+		<th>
+            {% if forloop.first %}
+            <div id="sidebar">
+                <form method="get">
+                      <p><b>Search:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using #.<br><br>
+                      <textarea id="search_box" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
+                      <br>
+                      <input class="button" type="submit" value="Submit" />
+                      </p>
+                </form>
+            </div>
+            {% endif %}
+            WID
+        </th>
+		<th>Name</th>
+	</tr>
+</thead>
+<tbody>
+{% for object in value %}
+<tr>
+	<th><a href="{% url 'kegg.views.map_view' object.name %}?items={{ quote }}">{{ object.name }}</a></th>
+	<td><a href="{% url 'kegg.views.map_view' object.name %}?items={{ quote }}">{% autoescape off %}{{ object.title|truncatechars:80 }}{% endautoescape %}</a></td>
+</tr>
+{% endfor %}
+</tbody>
+<tbody class="spacing">
+    <tr><td colspan="2">&nbsp;</td></tr>
+</tbody>
+{% endfor %}
+</table>
+
+<div style="clear:both;"></div>
+{% endblock %}

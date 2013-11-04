@@ -1,0 +1,151 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+
+
+{% block head_title %}{{ block.super }} :: {{ map_id }}{% endblock %}
+{% block page_title %}KEGG - {{ map_id }}{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}boehringer/jquery-svgpan.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function() {
+    $("form").submit(function(e) {
+        var search_box = $("form textarea#search_box")
+        var text = search_box.val()
+        text = text.replaceAll("#", "%23")
+        search_box.val(text)
+    });
+});
+</script>
+{% endblock %}
+
+{% block extrastyles %}
+#map {
+	width: 100%;
+	height: 100%;
+	}
+#sidebar {
+	position:absolute;
+	right: -200px;
+	width: 200px;
+	margin: 0px -30px;
+	padding: 10px 10px;
+	border: 5px;
+	border:1px solid #3d80b3;
+	border-radius: 8px;
+}
+#map_box {
+	overflow:scroll;
+	height:500px;
+}
+#search_box {
+	width: 100%;
+	border:1px solid #3d80b3;
+	border-radius:6px;
+}
+{% endblock %}
+
+{% block content %}
+<table id="detail" style="position:relative;">
+	<tbody class="data">
+		<tr>
+			<th colspan="2">Search results</th>
+		</tr>
+		<tr>
+			<th>Enzymes</th>
+			<td>{{ enzymes_hits }} hit{% if enzymes_hits != 1 %}s{% endif %} - {{ enzymes_no_hits }} miss{% if enzymes_no_hits != 1 %}es{% endif %}</td>
+		</tr>
+		<tr>
+			<th>Metabolites</th>
+			<td>{{ metabolites_hits }} hit{% if metabolites_hits != 1 %}s{% endif %} - {{ metabolites_no_hits}} miss{% if metabolites_no_hits != 1 %}es{% endif %}</td>
+		</tr>
+	</tbody>
+	<tbody class="spacing">
+		<tr><td colspan="2">&nbsp;</td></tr>
+	</tbody>
+	<tbody class="data">
+		<tr>
+			<th colspan="2">Navigator</th>
+		</tr>
+		<tr>
+			<th>Navigate to</th>
+			<td>
+			<select id="selectionField" class="select">
+				<option id="0">(Select an item)</option>
+				<optgroup label="Enzymes">
+				  {% for enzyme in enzymes %}
+				  {% with object=enzyme.0 %}
+				  <option id="e{{ forloop.counter }}">{{ object.title }}</option>
+				  {% endwith %}
+				  {% endfor %}
+				  <optgroup label="Metabolites">
+				  {% for metabolite in metabolites %}
+				  {% with object=metabolite.0 %}
+				  <option id="m{{ forloop.counter }}">{{ object.title }}</option>
+				  {% endwith %}
+				  {% endfor %}
+			</select>
+			</td>
+        </tr>
+	</tbody>
+	
+	<tbody class="spacing">
+		<tr><td colspan="2">&nbsp;</td></tr>
+	</tbody>
+	
+	<tbody class="data">
+		<tr>
+			<th colspan="2">Map</th>
+		</tr>
+		<tr>
+			<td colspan="2" id="map_box">
+			<div id="sidebar">
+			<form method="get">
+			  <p><b>Search:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using #.<br><br>
+			  <textarea id="search_box" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
+			  <br>
+			  <input class="button" type="submit" value="Submit" />
+			  </p>
+			</form>
+
+			</div>
+			
+			<div id="map">
+			<svg id="kegg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="731" height="600" pointer-events="visible">
+			<script xlink:href="{% get_static_prefix %}boehringer/SVGPan.js"/>
+            {{ map_data|safe }}
+			</svg>
+
+			<script type="text/javascript">
+				$('svg').svgPan('viewport'); 
+			$(document.body).delegate("select", "change", function(){
+				i = $('#selectionField option:selected').attr("id");
+				if (i == "0") {
+					// (Select item) element
+					return;
+				}
+				item = $("rect#" + i);
+				new_x = ($("#map").width() / 2) - $(item).attr("x");
+				new_y = ($("#map").height() / 2) - $(item).attr("y");
+
+				$("svg").find("g").attr("transform", "translate(" + new_x + "," + new_y +")");
+			});
+			</script>
+			</div>
+			</td>
+		</tr>
+	</tbody>
+</table>
+
+{% endblock %}

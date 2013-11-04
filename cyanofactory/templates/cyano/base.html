@@ -142,7 +142,8 @@ Released under the MIT license
 			<li class="spacer"/>
 			<li><a href="#">Tools</a>
 				<ul>
-				<li><a href="{% url "boehringer.views.index" %}">Boehringer Pathway Map</a></li>	
+				<li><a href="{% url "boehringer.views.index" %}">Biochemical Pathways</a></li>
+                <li><a href="{% url "kegg.views.index" %}">KEGG Pathways</a></li>
 				</ul>
 			</li>
 			{% if request.user.is_authenticated %}

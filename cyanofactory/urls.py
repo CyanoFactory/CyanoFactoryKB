@@ -24,6 +24,11 @@ urlpatterns += patterns('boehringer.views',
     url(r'^boehringer/', include("boehringer.urls")),
 )
 
+# kegg maps
+urlpatterns += patterns('kegg.views',
+    url(r'^kegg/', include("kegg.urls")),
+)
+
 # authentication
 urlpatterns += patterns('',
     url(r'^account/', include('django.contrib.auth.urls'))

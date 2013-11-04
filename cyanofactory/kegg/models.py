@@ -8,6 +8,7 @@ Released under the MIT license
 from django.db import models
 from django.db.models.fields.related import ManyToManyField
 
+
 class EcNumber(models.Model):
     name = models.CharField(max_length=255, blank=False, null=False)
 

@@ -17,7 +17,7 @@ def legacy(request):
     return index(request, True)
 
 @login_required
-def index(request, legacy = None):
+def index(request, legacy=None):
     """
     """
     if not "items" in request.POST:
