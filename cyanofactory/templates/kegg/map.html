@@ -78,6 +78,10 @@ $(document).ready(function() {
 		<tr>
 			<th colspan="2">Navigator</th>
 		</tr>
+        <tr>
+            <th>Pathways</th>
+            <td><a href="{% url "kegg.views.index" %}?items={{ quote }}" title="Pathway list">Return to pathway list</a></td>
+        </tr>
 		<tr>
 			<th>Navigate to</th>
 			<td>
@@ -130,14 +134,15 @@ $(document).ready(function() {
 			<script type="text/javascript">
 				$('svg').svgPan('viewport'); 
 			$(document.body).delegate("select", "change", function(){
-				i = $('#selectionField option:selected').attr("id");
+				var i = $('#selectionField option:selected').attr("id");
 				if (i == "0") {
 					// (Select item) element
 					return;
 				}
-				item = $("rect#" + i);
-				new_x = ($("#map").width() / 2) - $(item).attr("x");
-				new_y = ($("#map").height() / 2) - $(item).attr("y");
+                var val = $('#selectionField option:selected').val();
+                var item = $("g a[*|title*=\"" + val + "\"]").children();
+				var new_x = ($("#map").width() / 2) - $(item).attr("x");
+				var new_y = ($("#map").height() / 2) - $(item).attr("y");
 
 				$("svg").find("g").attr("transform", "translate(" + new_x + "," + new_y +")");
 			});

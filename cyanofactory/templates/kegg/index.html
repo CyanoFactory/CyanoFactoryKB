@@ -66,6 +66,25 @@ $(document).ready(function() {
 
 {% block content %}
 <table id="list" style="position:relative;">
+{% if items %}
+<thead>
+    <tr>
+        <th colspan="2">
+            Search results
+        </th>
+    </tr>
+</thead>
+<tbody>
+    <tr>
+        <td colspan="2">
+            <a href="{% url "kegg.views.index" %}" title="Reset search filter">Only maps containing any of the EC numbers and/or keywords are listed. Click here to reset the map list</a>.
+        </td>
+    </tr>
+</tbody>
+<tbody class="spacing">
+    <tr><td colspan="2">&nbsp;</td></tr>
+</tbody>
+{% endif %}
 {% for key, value in groups.items %}
 <thead>
 	<tr>
@@ -73,7 +92,7 @@ $(document).ready(function() {
             {% if forloop.first %}
             <div id="sidebar">
                 <form method="get">
-                      <p><b>Search:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using #.<br><br>
+                      <p><b>Search:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using #. Searching for metabolites is not supported in the map list.<br><br>
                       <textarea id="search_box" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
                       <br>
                       <input class="button" type="submit" value="Submit" />
