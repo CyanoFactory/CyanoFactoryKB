@@ -5,7 +5,6 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
-from urllib import quote
 from django.conf import settings
 from django.core.urlresolvers import reverse
 
@@ -34,7 +33,7 @@ def extract_ecs(text):
     return re.findall(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+", text)
 
 
-def get_reaction_map(map_id, enzymes, items):
+def get_reaction_map(map_id, enzymes, metabolites, items):
     import StringIO
 
     # Wordaround broken PIL installation
@@ -107,25 +106,9 @@ def get_reaction_map(map_id, enzymes, items):
             # Pathways are blue
             # Something with EC numbers green
             # Everything else red
-            color_component = "red"
             fill_opacity = "0.0"
-            fill_color = "green" # not displayed with 0.0
 
             # Found objects in the organism show a background color
-
-            # Repoint pathway links to our versions
-            if "show_pathway?" in url:
-                pathway_name = url[url.index("?") + 1:]
-                color_component = "blue"
-
-                ##try:
-                ##    pw_obj = Pathway.objects.for_species(species).for_wid(pathway_name)
-                elem.set("xlink:href", reverse("kegg.views.map_view", kwargs={"map_id": pathway_name}) + "?items=" + quote(items))
-                ##    fill_opacity = "0.2"
-                ##    fill_color = "blue"
-            else:
-                elem.set("xlink:href", url)
-                elem.set("target", "_blank")
 
             elem.set("xlink:title", title)
             root.remove(area)
@@ -133,15 +116,42 @@ def get_reaction_map(map_id, enzymes, items):
 
             ecs = uniqify(extract_ecs(title))
 
-            if len(ecs) > 0:
-                color_component = "green"
-                for ec in ecs:
-                    for enzyme in enzymes:
-                        if enzyme[0] == ec:
+            # Repoint pathway links to our versions
+            if "show_pathway?" in url:
+                pathway_name = url[url.index("?") + 1:]
+                color_component = fill_color = "blue"
+
+                ##try:
+                ##    pw_obj = Pathway.objects.for_species(species).for_wid(pathway_name)
+                elem.set("xlink:href", reverse("kegg.views.map_view", kwargs={"map_id": pathway_name}) + "?items=" + items_to_quoted_string(items))
+
+                for metabolite in metabolites:
+                    ltitle = title.lower()
+                    if metabolite[0].lower() in ltitle:
+                        fill_opacity = "0.2"
+                        if metabolite[1] is not None:
+                            color_component = fill_color = metabolite[1]
+            else:
+                elem.set("xlink:href", url)
+                elem.set("target", "_blank")
+                # Handle enzymes
+                if len(ecs) > 0:
+                    color_component = fill_color = "green"
+                    for ec in ecs:
+                        for enzyme in enzymes:
+                            if enzyme[0] == ec:
+                                fill_opacity = "0.2"
+                                if enzyme[1] is not None:
+                                    color_component = fill_color = enzyme[1]
+                else:
+                    # Everything else: metabolite
+                    color_component = fill_color = "red"
+                    for metabolite in metabolites:
+                        ltitle = title.lower()
+                        if metabolite[0].lower() in ltitle:
                             fill_opacity = "0.2"
-                            if enzyme[1] is not None:
-                                color_component = enzyme[1]
-                                fill_color = enzyme[1]
+                            if metabolite[1] is not None:
+                                color_component = fill_color = metabolite[1]
 
             if shape == "circle":
                 pending.append(elem)
@@ -178,16 +188,9 @@ def get_reaction_map(map_id, enzymes, items):
         return out.getvalue()
 
 
-def request_extract_ecs(request):
+def request_extract(request):
     import re
-    ##if not "items" in request.POST:
-    ##    items = [["1.1.1.1", None],
-    ##             ["2.2.2.2", None],
-    ##             ["4.1.2.20", "green"],
-    ##             ["1.1.1.20", None],
-    ##             ["1.2.1.3", None],
-    ##             ["ascorbate", "red"]]
-    ##else:
+
     items = []
     if "items" in request.GET:
         get_items = request.GET["items"].replace("%23", "#")
@@ -201,7 +204,7 @@ def request_extract_ecs(request):
             else:
                 items.append([item, None])
 
-    ##metabolite_items = []
+    metabolite_items = []
     enzyme_items = []
 
     for item in items:
@@ -215,6 +218,19 @@ def request_extract_ecs(request):
                 # not a valid EC number, maybe a metabolite
                 pass
 
-        ##metabolite_items.append(item)
+        metabolite_items.append(item)
 
-    return enzyme_items
+    return items, enzyme_items, metabolite_items
+
+
+def items_to_quoted_string(items):
+    itemstr = ""
+
+    for name, color in items:
+        if color is not None:
+            itemstr += name + "%23" + color
+        else:
+            itemstr += name
+        itemstr += "%20"
+
+    return itemstr
