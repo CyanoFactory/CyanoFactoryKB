@@ -35,6 +35,8 @@ def index(request, legacy=None):
 
             if "#" in item:
                 item = item.split("#", 2)
+                if len(item[0]) == 0:
+                    continue
                 items.append([item[0], item[1]])
             else:
                 items.append([item, None])

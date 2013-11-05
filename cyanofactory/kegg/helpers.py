@@ -72,6 +72,9 @@ def get_reaction_map(map_id, enzymes, metabolites, items):
         # overlap other elements
         pending = []
 
+        enzymes_found = []
+        metabolites_found = []
+
         for area in areas:
             shape = area.get("shape")
             coords = area.get("coords")
@@ -129,6 +132,7 @@ def get_reaction_map(map_id, enzymes, metabolites, items):
                     ltitle = title.lower()
                     if metabolite[0].lower() in ltitle:
                         fill_opacity = "0.2"
+                        metabolites_found.append(metabolite)
                         if metabolite[1] is not None:
                             color_component = fill_color = metabolite[1]
             else:
@@ -141,6 +145,7 @@ def get_reaction_map(map_id, enzymes, metabolites, items):
                         for enzyme in enzymes:
                             if enzyme[0] == ec:
                                 fill_opacity = "0.2"
+                                enzymes_found.append(enzyme)
                                 if enzyme[1] is not None:
                                     color_component = fill_color = enzyme[1]
                 else:
@@ -150,6 +155,7 @@ def get_reaction_map(map_id, enzymes, metabolites, items):
                         ltitle = title.lower()
                         if metabolite[0].lower() in ltitle:
                             fill_opacity = "0.2"
+                            metabolites_found.append(metabolite)
                             if metabolite[1] is not None:
                                 color_component = fill_color = metabolite[1]
 
@@ -178,12 +184,21 @@ def get_reaction_map(map_id, enzymes, metabolites, items):
         for elem in pending:
             root.append(elem)
 
+
         ##template = loader.get_template("cyano/pathway/sidebar.html")
 
         out = StringIO.StringIO()
         ##out.write(template.render(Context()))
 
         tree.write(out)
+
+        # overwrite enzymes and metabolites content
+        # Reference preserving list clear
+        # (via http://stackoverflow.com/questions/850795)
+        del enzymes[:]
+        del metabolites[:]
+        enzymes += uniqify(enzymes_found, lambda x: x[0])
+        metabolites += uniqify(metabolites_found, lambda x: x[0])
 
         return out.getvalue()
 
@@ -200,6 +215,8 @@ def request_extract(request):
 
             if "#" in item:
                 item = item.split("#", 2)
+                if len(item[0]) == 0:
+                    continue
                 items.append([item[0], item[1]])
             else:
                 items.append([item, None])
