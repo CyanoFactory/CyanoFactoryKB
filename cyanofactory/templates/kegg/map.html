@@ -47,6 +47,9 @@ $(document).ready(function() {
     color: black;
     font-weight: normal;
 }
+.sidebar_next {
+    bottom: 0px;
+}
 #map_box {
 	overflow:scroll;
 	height:500px;
@@ -56,7 +59,7 @@ $(document).ready(function() {
 	border:1px solid #3d80b3;
 	border-radius:6px;
 }
-#pathway, #pathway-found, #enzyme, #enzyme-found, #other {
+#pathway, #pathway-found, #enzyme, #enzyme-found, #metabolite, #metabolite-found {
     border-width:1;
     margin-top:5px;
     padding-left:5px;
@@ -75,27 +78,21 @@ $(document).ready(function() {
     border:solid green;
     background:rgba(0,255,0,0.2);
 }
-#other {
+#metabolite {
     border:solid red;
+}
+#metabolite-found {
+    border:solid red;
+    background:rgba(255,0,0,0.2);
 }
 {% endblock %}
 
 {% block content %}
 <table id="detail" style="position:relative;">
+{% comment %}
 	<tbody class="data">
 		<tr>
 			<th colspan="2">
-            <div id="sidebar">
-                <p><b>Legend:</b>
-                <ul style="list-style-type:none;margin:0;padding:0;">
-                    <li id="pathway">Pathway</li>
-                    <li id="pathway-found">Pathway found in organism</li>
-                    <li id="enzyme">Enzyme</li>
-                    <li id="enzyme-found">Enzyme found in organism</li>
-                    <li id="other">Metabolite</li>
-                </ul>
-            </div>
-
             Search results</th>
 		</tr>
 		<tr>
@@ -110,9 +107,23 @@ $(document).ready(function() {
 	<tbody class="spacing">
 		<tr><td colspan="2">&nbsp;</td></tr>
 	</tbody>
+{% endcomment %}
 	<tbody class="data">
 		<tr>
-			<th colspan="2">Navigator</th>
+			<th colspan="2">
+            <div id="sidebar">
+                <p><b>Legend:</b>
+                <ul style="list-style-type:none;margin:0;padding:0;">
+                    <li id="pathway">Pathway</li>
+                    <li id="pathway-found">Pathway matched search query</li>
+                    <li id="enzyme">Enzyme</li>
+                    <li id="enzyme-found">Enzyme matched search query</li>
+                    <li id="metabolite">Metabolite</li>
+                    <li id="metabolite-found">Metabolite matched search query</li>
+                </ul>
+            </div>
+
+            Navigator</th>
 		</tr>
         <tr>
             <th>Pathways</th>
@@ -150,7 +161,7 @@ $(document).ready(function() {
 		</tr>
 		<tr>
 			<td colspan="2" id="map_box">
-			<div id="sidebar">
+			<div id="sidebar" class="sidebar_next">
 			<form method="get">
 			  <p><b>Search:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using #.<br><br>
 			  <textarea id="search_box" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
