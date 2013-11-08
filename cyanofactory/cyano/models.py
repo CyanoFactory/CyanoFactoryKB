@@ -1710,10 +1710,10 @@ class Protein(Molecule):
 
                 if all_obj_data_by_model is None:
                     species_id = Species.objects.values('id').get(wid=obj_data['species'])['id']
-                    for obj in Chromosome.objects.values('length').filter(species__id=species_id):
+                    for obj in DNA.objects.values('length').filter(species__id=species_id):
                         chr_lens.append(obj['length'])
                 else:
-                    for obj in all_obj_data_by_model['Chromosome']:
+                    for obj in all_obj_data_by_model['DNA']:
                         if isinstance(obj, Entry):
                             chr_lens.append(obj.length)
                         else:
@@ -1728,9 +1728,9 @@ class Protein(Molecule):
 BEGIN: Specific data types 
 '''
 
-class Chromosome(Molecule):
+class DNA(Molecule):
     #parent pointer
-    parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_chromosome', parent_link=True, verbose_name='Molecule')
+    parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_dna', parent_link=True, verbose_name='Molecule')
 
     #additional fields
     sequence = TextField(blank=True, default='', verbose_name='Sequence', validators=[validate_dna_sequence])
@@ -2304,7 +2304,7 @@ class Chromosome(Molecule):
         
     #meta information
     class Meta:
-        concrete_entry_model = True
+        concrete_entry_model = False
         fieldsets = [
             ('Type', {'fields': ['model_type']}),
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
@@ -2327,20 +2327,50 @@ class Chromosome(Molecule):
             'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'sequence', 'length', 'comments', 'publication_references', 'created_detail', 'detail'
             ]
         facet_fields = ['type']
-        verbose_name='Chromosome'
-        verbose_name_plural = 'Chromosomes'
+        verbose_name = 'DNA'
+        verbose_name_plural = 'DNAs'
         wid_unique = False
 
         def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['sequence'] is not None and obj_data['sequence'] != '' and len(obj_data['sequence']) != obj_data['length']:
                 raise ValidationError({'length': 'Length of sequence property must match length property'})
 
+class Chromosome(DNA):
+    #parent pointer
+    parent_ptr_dna = OneToOneField(DNA, related_name='child_ptr_chromosome', parent_link=True, verbose_name='DNA')
+
+    #meta information
+    class Meta:
+        fieldsets = DNA._meta.fieldsets
+        field_list = DNA._meta.field_list
+        facet_fields = DNA._meta.facet_fields
+
+        concrete_entry_model = True
+        verbose_name = 'Chromosome'
+        verbose_name_plural = 'Chromosomes'
+        wid_unique = False
+
+class Plasmid(DNA):
+    #parent pointer
+    parent_ptr_dna = OneToOneField(DNA, related_name='child_ptr_plasmid', parent_link=True, verbose_name='DNA')
+
+    #meta information
+    class Meta:
+        fieldsets = DNA._meta.fieldsets
+        field_list = DNA._meta.field_list
+        facet_fields = DNA._meta.facet_fields
+
+        concrete_entry_model = True
+        verbose_name = 'Plasmid'
+        verbose_name_plural = 'Plasmids'
+        wid_unique = False
+
 class ChromosomeFeature(SpeciesComponent):
     #parent pointer
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_chromosome_feature', parent_link=True, verbose_name='Species component')
 
     #additional fields
-    chromosome = ForeignKey(Chromosome, related_name='features', verbose_name='Chromosome')
+    chromosome = ForeignKey(DNA, related_name='features', verbose_name='Chromosome or Plasmid')
     coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
     length = PositiveIntegerField(verbose_name='Length (nt)')
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
@@ -2399,7 +2429,8 @@ class ChromosomeFeature(SpeciesComponent):
 
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]
 
-        return 'Chromosome: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
+        return '%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
+            "Chromosome" if isinstance(self.chromosome, Chromosome) else "Plasmid",
             self.chromosome.get_absolute_url(species), self.chromosome.wid,
             self.coordinate, self.length, direction,
             format_sequence_as_html(self.get_sequence()))
@@ -2445,7 +2476,7 @@ class ChromosomeFeature(SpeciesComponent):
 
         def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
-                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
+                chro = DNA.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
                 chro = all_obj_data[obj_data['chromosome']]
 
@@ -2522,7 +2553,7 @@ class Gene(Molecule):
 
     #additional fields
     symbol = CharField(max_length=255, blank=True, default='', verbose_name='Symbol')
-    chromosome = ForeignKey(Chromosome, related_name='genes', verbose_name='Chromosome')
+    chromosome = ForeignKey(DNA, related_name='genes', verbose_name='Chromosome or Plasmid')
     coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
     length = PositiveIntegerField(verbose_name='Length (nt)')
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
@@ -2613,7 +2644,8 @@ class Gene(Molecule):
 
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]
 
-        return 'Chromosome: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, G/C content: %.1f%%, Sequence: %s' % (
+        return '%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, G/C content: %.1f%%, Sequence: %s' % (
+            "Chromosome" if isinstance(self.chromosome, Chromosome) else "Plasmid",
             self.chromosome.get_absolute_url(species), self.chromosome.wid,
             self.coordinate, self.length, direction,
             self.get_gc_content() * 100,
@@ -2706,7 +2738,7 @@ class Gene(Molecule):
         #chromosome coordinate, length
         def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
-                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
+                chro = DNA.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
                 chro = all_obj_data[obj_data['chromosome']]
 
@@ -4291,9 +4323,9 @@ class TranscriptionUnit(Molecule):
 
         if cache:
             chromosome_key = "chromosome/%s" % chro[0]
-            chromosome = Cache.try_get(chromosome_key, lambda: Chromosome.objects.get(pk=chro[0]), 60)
+            chromosome = Cache.try_get(chromosome_key, lambda: DNA.objects.get(pk=chro[0]), 60)
         else:
-            chromosome = Chromosome.objects.get(pk=chro[0])
+            chromosome = DNA.objects.get(pk=chro[0])
         return chromosome
 
     def get_coordinate(self):
@@ -4337,7 +4369,8 @@ class TranscriptionUnit(Molecule):
 
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.get_direction())][1]
 
-        return 'Chromosome: <a href="%s">%s</a>, Coordinate: %s, Length: %s, Direction: %s, Sequence: %s' % (
+        return '%s: <a href="%s">%s</a>, Coordinate: %s, Length: %s, Direction: %s, Sequence: %s' % (
+            "Chromosome" if isinstance(self.get_chromosome(), Chromosome) else "Plasmid",
             self.get_chromosome().get_absolute_url(species), self.get_chromosome().wid,
             self.get_coordinate(), self.get_length(), direction,
             format_sequence_as_html(self.get_sequence()))
@@ -4456,7 +4489,8 @@ class TranscriptionalRegulation(SpeciesComponent):
                 end_coordinate = bs.coordinate + bs.length + 500,
                 highlight_wid = [self.wid])
 
-        txt = '%s<br/>Chromosome: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
+        txt = '%s<br/>%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
+            "Chromosome" if isinstance(chro, Chromosome) else "Plasmid",
             structure, chro.get_absolute_url(species), chro.wid,
             bs.coordinate, bs.length, direction,
             format_sequence_as_html(self.get_binding_site_sequence()))
@@ -4516,7 +4550,7 @@ class TranscriptionalRegulation(SpeciesComponent):
 
             #chr length
             if all_obj_data is None:
-                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=chr_wid)
+                chro = DNA.objects.get(species__wid=obj_data['species'], wid=chr_wid)
             else:
                 chro = all_obj_data[chr_wid]
             if isinstance(chro, Entry):
