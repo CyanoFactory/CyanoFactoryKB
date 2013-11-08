@@ -2304,7 +2304,7 @@ class DNA(Molecule):
         
     #meta information
     class Meta:
-        concrete_entry_model = False
+        concrete_entry_model = True
         fieldsets = [
             ('Type', {'fields': ['model_type']}),
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
@@ -2328,7 +2328,7 @@ class DNA(Molecule):
             ]
         facet_fields = ['type']
         verbose_name = 'DNA'
-        verbose_name_plural = 'DNAs'
+        verbose_name_plural = 'DNA'
         wid_unique = False
 
         def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):

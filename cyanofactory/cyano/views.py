@@ -47,24 +47,36 @@ def index(request):
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def species(request, species):
-    content = []
+    contentCol1 = []
+    contentCol2 = []
+    contentCol3 = []
+
     if species is not None:
-        content.append([
+        contentCol1.append([
             [0, 'Compartments', cmodels.Compartment.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
         ])
         
         chrs = cmodels.Chromosome.objects.for_species(species).values_list("length", "sequence")
         chrcontent = sum(chro[0] for chro in chrs)
-        gc_content = 0 if len(chrs) == 0 else sum([cmodels.Chromosome(sequence = chro[1]).get_gc_content() * chro[0] for chro in chrs]) / chrcontent        
-        content.append([
-            [0, 'Chromosomes', len(chrs), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Chromosome'})],
-            [1, 'Length', chrcontent, 'nt'],
-            [1, 'GC-content', ('%0.1f' % (gc_content * 100)), '%'],
+        chr_gc_content = 0 if len(chrs) == 0 else sum([cmodels.Chromosome(sequence = chro[1]).get_gc_content() * chro[0] for chro in chrs]) / chrcontent
+
+        plasmids = cmodels.Plasmid.objects.for_species(species).values_list("length", "sequence")
+        plasmid_content = sum(chro[0] for chro in chrs)
+        plasmid_gc_content = 0 if len(plasmids) == 0 else sum([cmodels.Chromosome(sequence = chro[1]).get_gc_content() * chro[0] for chro in plasmids]) / plasmid_content
+
+        contentCol1.append([
+            [0, 'DNA', len(chrs) + len(plasmids), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'DNA'})],
+            [1, 'Chromosomes', len(chrs), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Chromosome'})],
+            [2, 'Length', chrcontent, 'nt'],
+            [2, 'GC-content', ('%0.1f' % (chr_gc_content * 100)), '%'],
+            [1, 'Plasmids', len(plasmids), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Plasmid'})],
+            [2, 'Length', plasmid_content, 'nt'],
+            [2, 'GC-content', ('%0.1f' % (plasmid_gc_content * 100)), '%'],
         ])
                 
         tus = cmodels.TranscriptionUnit.objects.for_species(species).annotate(num_genes = Count('genes'))
         nPolys = tus.filter(num_genes__gt = 1).count()
-        content.append([
+        contentCol1.append([
             [0, 'Transcription units', tus.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionUnit'})],            
             [1, 'Monocistrons', tus.count() - nPolys],
             [1, 'Polycistrons', nPolys],
@@ -72,7 +84,7 @@ def species(request, species):
         
         genes = cmodels.Gene.objects.for_species(species).values_list("type__wid", "expression", "half_life")
         
-        content.append([
+        contentCol1.append([
             [0, 'Genes', len(genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
             [1, 'mRNA', sum((lambda x: x[0] == "mRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=mRNA'],
             [1, 'rRNA', sum((lambda x: x[0] == "rRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=rRNA'],
@@ -84,28 +96,28 @@ def species(request, species):
         chromosome_features_length = len(chromosome_features)
         chromosome_features_dnaa_box = sum((lambda x: x == "ChromosomeFeature-DnaA_box")(x) for x in chromosome_features)
         chromosome_features_str = sum((lambda x: x == "ChromosomeFeature-Short_Tandem_Repeat")(x) for x in chromosome_features)
-        
-        content.append([
-            [0, 'Chromosome features',
-                chromosome_features_length,
-                None,
-                reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ChromosomeFeature'}),
-                ],
-            [1, 'DnaA boxes', 
-                chromosome_features_dnaa_box,
-                ],                
-            [1, 'Short tandem repeats', 
-                chromosome_features_str,
-                ],
-            [1, 'Other', 
-                chromosome_features_length - chromosome_features_dnaa_box - chromosome_features_str],
-        ])
+
+        #contentCol1.append([
+        #    [0, 'Chromosome features',
+        #        chromosome_features_length,
+        #        None,
+        #        reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ChromosomeFeature'}),
+        #        ],
+        #    [1, 'DnaA boxes',
+        #        chromosome_features_dnaa_box,
+        #        ],
+        #    [1, 'Short tandem repeats',
+        #        chromosome_features_str,
+        #        ],
+        #    [1, 'Other',
+        #        chromosome_features_length - chromosome_features_dnaa_box - chromosome_features_str],
+        #])
         
         metabolites = cmodels.Metabolite.objects.for_species(species).values_list("type__wid", "type__parent__wid", "type__parent__parent__wid", "biomass_composition", "media_composition")
         
         metabolites_aa_list = ["amino_acid", "modified_amino_acid", "non-standard_amino_acid", "vitamin_non-standard_amino_acid"]
         
-        content.append([
+        contentCol1.append([
             [0, 'Metabolites', len(metabolites), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Metabolite'})],
             [1, 'Amino acids', 
                 sum((lambda x: x in metabolites_aa_list)(x) for x in metabolites)
@@ -151,7 +163,7 @@ def species(request, species):
         cpxDNABind = cpxs.filter(dna_footprint__length__gt=0).count()
         cpxCount = cpxs.count()
         
-        content.append([
+        contentCol2.append([
             [0, 'Proteins', mons_list_count + cpxCount],
                 [1, 'Monomers', mons_list_count, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'})],            
                     [2, 'DNA-binding', monDNABind],
@@ -180,7 +192,7 @@ def species(request, species):
             sum((lambda x: x == "Process_tRNAAminoacylation")(x) for x in rxns)
         ]
         
-        content.append([
+        contentCol2.append([
             [0, 'Reactions', rxns_count[0], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'})],
             [1, 'DNA damage', rxns_count[1], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNADamage'],
             [1, 'DNA repair', rxns_count[2], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNARepair'],
@@ -200,21 +212,21 @@ def species(request, species):
         tr = cmodels.TranscriptionalRegulation.objects.for_species(species).values_list("transcription_unit", "transcription_factor", "affinity", "activity")
         nTus = len(set([x[0] for x in tr]))
         nTfs = len(set([x[1] for x in tr]))
-        content.append([
+        contentCol3.append([
             [0, 'Transcriptional regulation'],
             [1, 'Interactions', tr.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionalRegulation'})],
             [1, 'Transcriptional regulators', nTfs],
             [1, 'Regulated promoters', nTus],
         ])
 
-        content.append([
+        contentCol3.append([
             [0, 'Pathways', cmodels.Pathway.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Pathway'})],
         ])
         
         stimuli = cmodels.Stimulus.objects.for_species(species).values_list("value", flat=True)
         nStimuli = sum((lambda x: x[3] is not None)(x) for x in stimuli)
 
-        content.append([
+        contentCol3.append([
             [0, 'Stimuli', len(stimuli), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Stimulus'})],
         ])
         
@@ -239,7 +251,7 @@ def species(request, species):
         nOther = cmodels.Parameter.objects.for_species(species).count()
         nTotParameters = nCellComp + nMediaComp + nKineticsVmax + nRnaExp + nRnaHl + nStimuli + nTrAffinity + nTrActivity + nOther
 
-        content.append([
+        contentCol3.append([
             [0, 'Quantitative parameters', nTotParameters],
             [1, 'Cell composition', nCellComp],
             [1, 'Media composition', nMediaComp],            
@@ -254,46 +266,14 @@ def species(request, species):
             [1, 'Other', nOther, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Parameter'})],            
         ])
         
-        content.append([
+        contentCol3.append([
             [0, 'Processes', cmodels.Process.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Process'})],
         ])
         
-        content.append([
+        contentCol3.append([
             [0, 'States', cmodels.State.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
         ])
-        
-    nContent = [len(x) for x in content]
-    totContent = sum(nContent)
-    cum = 0
-    idx = 0
-    breakIdxs = [0, 0]
-    for x in nContent:
-        cum += x
-        idx += 1
-        if cum > totContent * 1/ 3 and breakIdxs[0] == 0:
-            breakIdxs[0] = idx
-        if cum > totContent * 2 / 3 and breakIdxs[1] == 0:
-            breakIdxs[1] = idx        
-            
-    contentCol1 = []
-    contentCol2 = []
-    contentCol3 = []
-    i = 0
-    for x in content[:breakIdxs[0]]:
-        i += 1
-        for y in x:
-            contentCol1.append([i] + y)    
-    i = 0
-    for x in content[breakIdxs[0]:breakIdxs[1]]:
-        i += 1
-        for y in x:
-            contentCol2.append([i] + y)
-    i = 0
-    for x in content[breakIdxs[1]:]:
-        i += 1
-        for y in x:
-            contentCol3.append([i] + y)
-        
+
     sources = {
         'total': 0,
         'types': [],
@@ -327,12 +307,34 @@ def species(request, species):
         # sources['evidence_media'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('media').annotate(count = Count('id'))
         # sources['evidence_pH'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('pH').annotate(count = Count('id'))
         # sources['evidence_temperature'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('temperature').annotate(count = Count('id'))
-            
+    import pprint
+    pprint.PrettyPrinter(indent=4).pprint([contentCol1, contentCol2, contentCol3])
+
+    printCol1 = []
+    printCol2 = []
+    printCol3 = []
+
+    i = 0
+    for x in contentCol1:
+        i += 1
+        for y in x:
+            printCol1.append([i] + y)
+    i = 0
+    for x in contentCol2:
+        i += 1
+        for y in x:
+            printCol2.append([i] + y)
+    i = 0
+    for x in contentCol3:
+        i += 1
+        for y in x:
+            printCol3.append([i] + y)
+
     return chelpers.render_queryset_to_response(
         species = species,
         data = {
-            'content': [contentCol1, contentCol2, contentCol3],
-            'contentRows': range(max(len(contentCol1), len(contentCol2), len(contentCol3))),
+            'content': [printCol1, printCol2, printCol3],
+            'contentRows': range(max(len(printCol1), len(printCol2), len(printCol3))),
             'sources': sources,    
             },
         request = request, 
