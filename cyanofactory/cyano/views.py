@@ -61,8 +61,8 @@ def species(request, species):
         chr_gc_content = 0 if len(chrs) == 0 else sum([cmodels.Chromosome(sequence = chro[1]).get_gc_content() * chro[0] for chro in chrs]) / chrcontent
 
         plasmids = cmodels.Plasmid.objects.for_species(species).values_list("length", "sequence")
-        plasmid_content = sum(chro[0] for chro in chrs)
-        plasmid_gc_content = 0 if len(plasmids) == 0 else sum([cmodels.Chromosome(sequence = chro[1]).get_gc_content() * chro[0] for chro in plasmids]) / plasmid_content
+        plasmid_content = sum(plasmid[0] for plasmid in plasmids)
+        plasmid_gc_content = 0 if len(plasmids) == 0 else sum([cmodels.Plasmid(sequence = plasmid[1]).get_gc_content() * plasmid[0] for plasmid in plasmids]) / plasmid_content
 
         contentCol1.append([
             [0, 'DNA', len(chrs) + len(plasmids), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'DNA'})],
