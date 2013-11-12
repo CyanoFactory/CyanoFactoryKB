@@ -307,8 +307,6 @@ def species(request, species):
         # sources['evidence_media'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('media').annotate(count = Count('id'))
         # sources['evidence_pH'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('pH').annotate(count = Count('id'))
         # sources['evidence_temperature'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('temperature').annotate(count = Count('id'))
-    import pprint
-    pprint.PrettyPrinter(indent=4).pprint([contentCol1, contentCol2, contentCol3])
 
     printCol1 = []
     printCol2 = []
