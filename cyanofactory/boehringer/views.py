@@ -5,16 +5,17 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
-from django.core.exceptions import ObjectDoesNotExist
-from django.http.response import HttpResponse, HttpResponseBadRequest
 
-from django.shortcuts import render_to_response
-import boehringer.models as models
-from django.template.context import RequestContext
 import re
+import boehringer.models as models
 from cyano.decorators import ajax_required
 from cyano.helpers import render_queryset_to_response
+from django.core.exceptions import ObjectDoesNotExist
+from django.http.response import HttpResponse, HttpResponseBadRequest
+from django.shortcuts import render_to_response
+from django.template.context import RequestContext
 from django.contrib.auth.decorators import login_required
+
 
 def legacy(request):
     return index(request, True)
