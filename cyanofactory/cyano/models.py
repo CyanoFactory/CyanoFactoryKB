@@ -3228,8 +3228,7 @@ class Pathway(SpeciesComponent):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references',
-            'type',
+            'id', 'name', 'synonyms', 'cross_references',
             'comments',
             'publication_references',
             'created_detail', 'detail'
