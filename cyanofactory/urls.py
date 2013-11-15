@@ -8,11 +8,6 @@ from django.conf.urls import patterns, include, url
 from django.contrib import admin
 admin.autodiscover()
 
-# database crossreference resolver
-urlpatterns = patterns('db_xref.views',
-    url(r'^dbxref/', include("db_xref.urls")),
-)
-
 # admin interface
 urlpatterns = patterns('',
 #   url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
@@ -27,6 +22,12 @@ urlpatterns += patterns('boehringer.views',
 # kegg maps
 urlpatterns += patterns('kegg.views',
     url(r'^kegg/', include("kegg.urls")),
+)
+
+
+# database crossreference resolver
+urlpatterns += patterns('db_xref.views',
+    url(r'^dbxref/', include("db_xref.urls")),
 )
 
 # authentication
