@@ -7,6 +7,8 @@ Released under the MIT license
 
 from django.db import models
 from django.db.models.fields.related import ManyToManyField
+from cyano.models import UserProfile
+
 
 class EcNumber(models.Model):
     name = models.CharField(max_length=255, blank=False, null=False)
@@ -23,3 +25,9 @@ class Map(models.Model):
 
     def __unicode__(self):
         return self.name
+
+
+class Query(models.Model):
+    user = models.ForeignKey(UserProfile, verbose_name="Saved by", related_name='+', editable=False)
+    name = models.CharField(max_length=255, null=False, blank=False, verbose_name="Name of the query")
+    query = models.TextField(verbose_name="Query text", null=False, blank=False)

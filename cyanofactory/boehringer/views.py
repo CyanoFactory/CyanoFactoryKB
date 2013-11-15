@@ -6,18 +6,23 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
-from django.shortcuts import render_to_response
-import boehringer.models as models
-from django.template.context import RequestContext
 import re
+import boehringer.models as models
+from cyano.decorators import ajax_required
 from cyano.helpers import render_queryset_to_response
+from django.core.exceptions import ObjectDoesNotExist
+from django.http.response import HttpResponse, HttpResponseBadRequest
+from django.shortcuts import render_to_response
+from django.template.context import RequestContext
 from django.contrib.auth.decorators import login_required
+
 
 def legacy(request):
     return index(request, True)
 
+
 @login_required
-def index(request, legacy = None):
+def index(request, legacy=None):
     """
     """
     if not "items" in request.POST:
@@ -35,6 +40,8 @@ def index(request, legacy = None):
 
             if "#" in item:
                 item = item.split("#", 2)
+                if len(item[0]) == 0:
+                    continue
                 items.append([item[0], item[1]])
             else:
                 items.append([item, None])
@@ -81,6 +88,7 @@ def index(request, legacy = None):
     data['enzymes_hits'] = enzymes_hits
     data['metabolites_no_hits'] = len(metabolite_items) - metabolites_hits
     data['enzymes_no_hits'] = len(enzyme_items) - enzymes_hits
+    data['queries'] = models.Query.objects.filter(user=request.user.profile)
 
     if legacy:
         return render_to_response(
@@ -93,3 +101,54 @@ def index(request, legacy = None):
             data = data,
             template = "boehringer/index.html"
         )
+
+
+@ajax_required
+@login_required
+def index_ajax(request):
+    import json
+
+    pk = request.GET.get("pk", 0)
+    op = request.GET.get("op", "")
+
+    if not op in ["load", "delete", "save"]:
+        return HttpResponseBadRequest("Invalid op")
+
+    if op == "save":
+        name = request.GET.get("name", "")
+        query = request.GET.get("query", "")
+
+        if all(len(x) == 0 for x in [name, query]):
+            return HttpResponseBadRequest("Invalid name or query")
+
+        try:
+            query_obj = models.Query.objects.get(name=name, user=request.user.profile)
+            query_obj.query = query
+            query_obj.save()
+            created = False
+        except ObjectDoesNotExist:
+            query_obj = models.Query.objects.create(name=name, query=query, user=request.user.profile)
+            created = True
+
+        return HttpResponse(json.dumps(
+            {"name": query_obj.name,
+             "pk": query_obj.pk,
+             "created": created})
+        )
+
+    try:
+        pk = int(pk)
+    except ValueError:
+        return HttpResponseBadRequest("Bad pk")
+
+    try:
+        query = models.Query.objects.get(pk=pk, user=request.user.profile)
+    except ObjectDoesNotExist:
+        return HttpResponseBadRequest("No item found")
+
+    if op == "load":
+        return HttpResponse(json.dumps({"name": query.name, "query": query.query}))
+    elif op == "delete":
+        query.delete()
+        return HttpResponse("ok")
+

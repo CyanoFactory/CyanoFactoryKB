@@ -1,5 +1,5 @@
 LOCUS       NC_005230             103307 bp    DNA     circular CON 27-JUN-2013
-DEFINITION  Synechocystis sp. PCC 6803 plasmid pSYSA, complete sequence.
+DEFINITION  Synechocystis sp. PCC 6803 chromosome, complete sequence.
 ACCESSION   NC_005230
 VERSION     NC_005230.1  GI:38505668
 DBLINK      Project: 57659
@@ -36,7 +36,6 @@ FEATURES             Location/Qualifiers
                      /mol_type="genomic DNA"
                      /strain="PCC 6803"
                      /db_xref="taxon:1148"
-                     /plasmid="pSYSA"
                      /synonym="Synechocystis PCC6803"
      gene            complement(join(101524..103307,1..85))
                      /locus_tag="sll7106"

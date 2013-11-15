@@ -33,3 +33,6 @@ class Command(CyanoCommand):
  
         species_obj.name = options["name"]
         species_obj.save(revdetail)
+
+        from cyano.models import Pathway
+        Pathway.add_boehringer_pathway(species_obj, revdetail)

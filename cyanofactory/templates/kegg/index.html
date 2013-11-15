@@ -1,0 +1,133 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Kegg overview page
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+{% load filters %}
+
+{% block head_title %}{{ block.super }} :: KEGG Maps{% endblock %}
+{% block page_title %}KEGG Maps{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
+<script type="text/javascript">
+{% include "kegg/script.js" %}
+</script>
+
+{% endblock %}
+
+{% block extrastyles %}
+#listfilter .nofilters{
+	font-style:italic;
+	text-align:center;
+}
+
+#list{
+	width:100%;
+}
+#listfilter{
+	display:none;
+}
+
+#sidebar {
+	position:absolute;
+	right: -200px;
+	width: 200px;
+	margin: 0px -30px;
+	padding: 10px 10px;
+	border: 5px;
+	border:1px solid #3d80b3;
+	border-radius: 8px;
+    color: black;
+    font-weight: normal;
+}
+#search_box {
+	width: 100%;
+	border:1px solid #3d80b3;
+	border-radius:6px;
+}
+{% endblock %}
+
+{% block content %}
+<table id="list" style="position:relative;">
+{% if items %}
+<thead>
+    <tr>
+        <th colspan="2">
+            Search results
+        </th>
+    </tr>
+</thead>
+<tbody>
+    <tr>
+        <td colspan="2">
+            <a href="{% url "kegg.views.index" %}" title="Reset search filter">Only maps containing any of the EC numbers and/or keywords are listed. Click here to reset the map list</a>.
+        </td>
+    </tr>
+</tbody>
+<tbody class="spacing">
+    <tr><td colspan="2">&nbsp;</td></tr>
+</tbody>
+{% endif %}
+{% for key, value in groups.items %}
+<thead>
+	<tr>
+		<th>
+            {% if forloop.first %}
+            <div id="sidebar">
+                <form id="search_form" method="get">
+                      <p><b>Search:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using #. Searching for metabolites is not supported in the map list.<br><br>
+                      <textarea id="search_box" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
+                      <br>
+                      <input class="button" type="submit" value="Submit" />
+                      </p>
+                    </form>
+                    <form id="load_form" method="get">
+                        <p><b>Load</b> existing query:<br/>
+                        <select name="load" class="select" style="width:100%">
+                            {% for query in queries %}
+                            <option name="{{ query.pk }}">{{ query.name }}</option>
+                            {% endfor %}
+                        </select><br/>
+                        <input id="load_button" class="button" type="submit" value="Load" />
+                        <input id="delete_button" class="button" type="submit" value="Delete" />
+                        </p>
+                    </form>
+                    <form id="save_form" method="get">
+                        <p><b>Save</b> query:<br/>
+                        <input id="save_input" class="text" type="text" style="width:100%"/><br/>
+                        <input id="save_button" class="button" type="submit" value="Save" />
+                        </p>
+                    </form>
+            </div>
+            {% endif %}
+            WID
+        </th>
+		<th>Name</th>
+	</tr>
+</thead>
+<tbody>
+{% for object in value %}
+<tr>
+	<th><a href="{% url 'kegg.views.map_view' object.name %}?items={{ quote }}">{{ object.name }}</a></th>
+	<td><a href="{% url 'kegg.views.map_view' object.name %}?items={{ quote }}">{% autoescape off %}{{ object.title|truncatechars:80 }}{% endautoescape %}</a></td>
+</tr>
+{% endfor %}
+</tbody>
+<tbody class="spacing">
+    <tr><td colspan="2">&nbsp;</td></tr>
+</tbody>
+{% endfor %}
+</table>
+
+<div style="clear:both;"></div>
+{% endblock %}
