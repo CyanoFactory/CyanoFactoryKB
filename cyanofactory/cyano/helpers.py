@@ -1954,10 +1954,7 @@ def validate_model_unique(model, model_objects_data, all_obj_data=None, all_obj_
     
 def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2m=False):
     model = obj.__class__
-    
-    if obj.model_type_id is None:
-        obj.model_type = cmodels.TableMeta.get_by_model_name(obj._meta.object_name)
-    
+
     if issubclass(model, cmodels.Entry):
         fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
         
@@ -2070,10 +2067,10 @@ def readFasta(species_wid, filename, user):
                 return (False, 'File does not match FASTA format.')
             sequences[wid] += data[i].strip()    
     
-    #retrieve chromosomes
+    #retrieve chromosomes/plasmids
     for wid, sequence in sequences.iteritems():
         try:
-            chro = cmodels.Chromosome.objects.get(species__wid=species_wid, wid=wid)
+            chro = cmodels.Genome.objects.get(species__wid=species_wid, wid=wid)
         except ObjectDoesNotExist as error:
             error_messages.append(error.message)            
             continue        
@@ -2082,7 +2079,7 @@ def readFasta(species_wid, filename, user):
     
     #validate
     for wid, sequence in sequences.iteritems():
-        chro = cmodels.Chromosome.objects.get(species__wid=species_wid, wid=wid)
+        chro = cmodels.Genome.objects.get(species__wid=species_wid, wid=wid)
         chro.sequence = sequence
         try:
             chro.full_clean()
@@ -2095,7 +2092,7 @@ def readFasta(species_wid, filename, user):
         
     #save
     for wid, sequence in sequences.iteritems():    
-        chro = cmodels.Chromosome.objects.get(species__wid=species_wid, wid=wid)
+        chro = cmodels.Genome.objects.get(species__wid=species_wid, wid=wid)
         chro.sequence = sequence
         chro.full_clean()
         try:

@@ -30,11 +30,11 @@ class SBML(BioParser):
         total = len(self.compartments) + len(self.sbml_species) + len(self.reactions)
 
         # Compartment importer
-        for i, compartment in enumerate(self.compartments):                
-            wid = slugify(compartment.id)
+        for i, compartment in enumerate(self.compartments):
+            wid = slugify(compartment.getId())
             
-            if compartment.name:
-                name = compartment.name
+            if compartment.getName():
+                name = compartment.getName()
             else:
                 name = wid
 
@@ -55,9 +55,9 @@ class SBML(BioParser):
                 ##self.stderr.write("WARN: Species {} has invalid compartment {}".format(specie.id, specie.getCompartment()))
                 continue
                 
-            wid = slugify(specie.id)
-            if specie.name:
-                name = specie.name
+            wid = slugify(specie.getId())
+            if specie.getName():
+                name = specie.getName()
             else:
                 name = wid
             
@@ -76,9 +76,9 @@ class SBML(BioParser):
             sobj.species.add(self.species)
         
         for i, reaction in enumerate(self.reactions):
-            wid = slugify(reaction.id)
-            if reaction.name:
-                name = reaction.name
+            wid = slugify(reaction.getId())
+            if reaction.getName():
+                name = reaction.getName()
             else:
                 name = wid
                 
@@ -94,13 +94,13 @@ class SBML(BioParser):
             products = map(lambda i: reaction.getProduct(i), range(len(reaction.getListOfProducts())))
             
             for reactant in reactants:
-                if not self.model.getSpecies(reactant.species):
+                if not self.model.getSpecies(reactant.getSpecies()):
                     ##self.stderr.write("WARN: Reactant {} has invalid species {}".format(reactant.id, reactant.species))
                     break
             else:
                 # Validation of products
                 for product in products:
-                    if not self.model.getSpecies(product.species):
+                    if not self.model.getSpecies(product.getSpecies()):
                         ##self.stderr.write("WARN: Product {} has invalid species {}".format(product.id, product.species))
                         break
                 else:
@@ -111,7 +111,7 @@ class SBML(BioParser):
                 reaction_obj = cmodels.Reaction.objects.for_species(self.species).for_wid(wid, create = True)
                 
                 reaction_obj.name = name
-                reaction_obj.direction = 'r' if reaction.reversible else 'f'
+                reaction_obj.direction = 'r' if reaction.getReversible() else 'f'
                 reaction_obj.save(self.detail)
                 
                 for reactant in reactants:
@@ -121,9 +121,9 @@ class SBML(BioParser):
                     #    participant_obj = cmodels.ReactionStoichiometryParticipant(wid = wid)
                 
                     participant_obj = cmodels.ReactionStoichiometryParticipant()
-                    participant_obj.molecule = cmodels.Metabolite.objects.for_species(self.species).for_wid(slugify(reactant.species))
-                    participant_obj.coefficient = -reactant.stoichiometry
-                    participant_obj.compartment = cmodels.Compartment.objects.for_species(self.species).for_wid(slugify(self.model.getSpecies(reactant.species).compartment))
+                    participant_obj.molecule = cmodels.Metabolite.objects.for_species(self.species).for_wid(slugify(reactant.getSpecies()))
+                    participant_obj.coefficient = -reactant.getStoichiometry()
+                    participant_obj.compartment = cmodels.Compartment.objects.for_species(self.species).for_wid(slugify(self.model.getSpecies(reactant.getSpecies()).getCompartment()))
                     # TODO: EvidencedData needs Revisioning
                     participant_obj.detail = self.detail
                     participant_obj.save()
@@ -137,9 +137,9 @@ class SBML(BioParser):
                     #    participant_obj = cmodels.ReactionStoichiometryParticipant(wid = wid)
                 
                     participant_obj = cmodels.ReactionStoichiometryParticipant()
-                    participant_obj.molecule = cmodels.Metabolite.objects.for_species(self.species).for_wid(slugify(product.species))
-                    participant_obj.coefficient = product.stoichiometry
-                    participant_obj.compartment = cmodels.Compartment.objects.for_species(self.species).for_wid(slugify(self.model.getSpecies(product.species).compartment))
+                    participant_obj.molecule = cmodels.Metabolite.objects.for_species(self.species).for_wid(slugify(product.getSpecies()))
+                    participant_obj.coefficient = product.getStoichiometry()
+                    participant_obj.compartment = cmodels.Compartment.objects.for_species(self.species).for_wid(slugify(self.model.getSpecies(product.getSpecies()).getCompartment()))
                     # TODO: EvidencedData needs Revisioning
                     participant_obj.detail = self.detail
                     participant_obj.save()

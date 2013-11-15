@@ -12,17 +12,31 @@ Released under the MIT license
 '''
 
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
-from django.contrib.auth.models import User
-from cyano.models import UserProfile
+from django.contrib.auth.admin import UserAdmin, GroupAdmin
+from django.contrib.auth.models import User, Group
+import cyano.models as models
 
 ''' User profile admin '''
 class UserProfileInline(admin.StackedInline):
-	model = UserProfile
+    model = models.UserProfile
+
 
 class UserProfileAdmin(UserAdmin):
-	inlines = [ UserProfileInline, ]
+    inlines = [ UserProfileInline, ]
+
+
+class GroupProfileInline(admin.StackedInline):
+    model = models.GroupProfile
+
+
+class GroupProfileAdmin(GroupAdmin):
+    inlines = [ GroupProfileInline, ]
+
 
 ''' Register admins '''
 admin.site.unregister(User)
 admin.site.register(User, UserProfileAdmin)
+
+admin.site.unregister(Group)
+admin.site.register(Group, GroupProfileAdmin)
+
