@@ -39,6 +39,8 @@ class Command(BaseCommand):
         admin_user = User.objects.get(username="admin")
         admin_user.profile.affiliation = "Administrator account"
         admin_user.groups = [admin]
+        admin_user.is_staff = True
+        admin_user.is_superuser = True
         admin_user.profile.save()
         admin_user.save()
         

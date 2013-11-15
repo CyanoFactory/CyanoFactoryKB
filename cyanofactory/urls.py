@@ -5,8 +5,8 @@ URL patterns
 from django.conf.urls import patterns, include, url
 
 # enable the admin:
-#from django.contrib import admin
-#admin.autodiscover()
+from django.contrib import admin
+admin.autodiscover()
 
 # database crossreference resolver
 urlpatterns = patterns('db_xref.views',
@@ -14,10 +14,10 @@ urlpatterns = patterns('db_xref.views',
 )
 
 # admin interface
-#urlpatterns = patterns('',
-#	url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
-#	url(r'^admin/', include(admin.site.urls)),
-#)
+urlpatterns = patterns('',
+#   url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
+    url(r'^admin/', include(admin.site.urls)),
+)
 
 # boehringer map
 urlpatterns += patterns('boehringer.views',
