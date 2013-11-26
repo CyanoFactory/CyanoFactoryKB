@@ -1,6 +1,7 @@
 <?xml version="1.0" ?> 
 <dbxref>
 	<database>{{ database }}</database> 
-	<item>{{ item }}</item> 
-	<url>{{ url }}</url> 
-</dbxref>
+	<item>{{ item }}</item>
+    {% for url in urls %}<url>{{ url }}</url>{% if forloop.last %}
+</dbxref>{% endif %}
+    {% endfor %}

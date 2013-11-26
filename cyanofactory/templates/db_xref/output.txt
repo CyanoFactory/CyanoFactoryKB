@@ -1,1 +1,2 @@
-{{ url|safe }}
+{% for url in urls %}{{ url|safe }}
+{% endfor %}
