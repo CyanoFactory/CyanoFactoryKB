@@ -2480,7 +2480,7 @@ class FeaturePosition(EntryData):
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]
 
         return '%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
-            "Chromosome" if isinstance(self.chromosome, Chromosome) else "Plasmid",
+            self.chromosome.model_type.model_name,
             self.chromosome.get_absolute_url(species), self.chromosome.wid,
             self.coordinate, self.length, direction,
             format_sequence_as_html(self.get_sequence()))
@@ -2670,7 +2670,7 @@ class Gene(Molecule):
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]
 
         return '%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, G/C content: %.1f%%, Sequence: %s' % (
-            "Chromosome" if isinstance(self.chromosome, Chromosome) else "Plasmid",
+            self.chromosome.model_type.model_name,
             self.chromosome.get_absolute_url(species), self.chromosome.wid,
             self.coordinate, self.length, direction,
             self.get_gc_content() * 100,
@@ -4396,7 +4396,7 @@ class TranscriptionUnit(Molecule):
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.get_direction())][1]
 
         return '%s: <a href="%s">%s</a>, Coordinate: %s, Length: %s, Direction: %s, Sequence: %s' % (
-            "Chromosome" if isinstance(self.get_chromosome(), Chromosome) else "Plasmid",
+            self.get_chromosome().model_type.model_name,
             self.get_chromosome().get_absolute_url(species), self.get_chromosome().wid,
             self.get_coordinate(), self.get_length(), direction,
             format_sequence_as_html(self.get_sequence()))
@@ -4516,7 +4516,7 @@ class TranscriptionalRegulation(SpeciesComponent):
                 highlight_wid = [self.wid])
 
         txt = '%s<br/>%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
-            "Chromosome" if isinstance(chro, Chromosome) else "Plasmid",
+            chro.model_type.model_name,
             structure, chro.get_absolute_url(species), chro.wid,
             bs.coordinate, bs.length, direction,
             format_sequence_as_html(self.get_binding_site_sequence()))
