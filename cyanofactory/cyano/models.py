@@ -1930,91 +1930,80 @@ class Genome(Molecule):
 
         promoters = StringIO.StringIO()
         tfSites = StringIO.StringIO()
+
+        def draw_segment(coordinate, length, tip_title, tip_text, url):
+            iSegment = math.floor((coordinate - 1) / ntPerSegment)
+
+            x = segmentLeft + ((coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+            w = max(1, min(segmentLeft + segmentW, x + length / ntPerSegment * segmentW) - x)
+            y = chrTop + (iSegment + 1) * segmentHeight + 2 # Same
+
+            tip_title = tip_title.replace("'", "\'") # All same
+
+            return  '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
+                url, x, y, w, featureHeight, tip_title, tip_text)
+
         for tu in tus:
             if tu.promoter_35_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_35_coordinate
                 tu_length = tu.promoter_35_length
 
-                iSegment = math.floor((tu_coordinate - 1) / ntPerSegment)
-
-                x = segmentLeft + ((tu_coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                w = max(1, x1 - min(segmentLeft + segmentW, x1 + tu_length / ntPerSegment * segmentW))
-
-                y = chrTop + (iSegment + 1) * segmentHeight + 2
-
                 if tu.name:
                     tip_title = tu.name
                 else:
                     tip_title = tu.wid
-                tip_title = tip_title.replace("'", "\'")
+                tip_text = 'Promoter -35 box'
+                url = tu.get_absolute_url(species)
 
-                promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                    tu.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Promoter -35 box'))
+                promoters.write(draw_segment(tu_coordinate, tu_length, tip_title, tip_text, url))
 
             if tu.promoter_10_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_10_coordinate
                 tu_length = tu.promoter_10_length
 
-                iSegment = math.floor((tu_coordinate - 1) / ntPerSegment)
-
-                x = segmentLeft + ((tu_coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                w = max(1, x1 - min(segmentLeft + segmentW, x1 + tu_length / ntPerSegment * segmentW))
-
-                y = chrTop + (iSegment + 1) * segmentHeight + 2
-
                 if tu.name:
                     tip_title = tu.name
                 else:
                     tip_title = tu.wid
-                tip_title = tip_title.replace("'", "\'")
+                tip_text = 'Promoter -10 box'
+                url = tu.get_absolute_url(species)
 
-                promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                    tu.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Promoter -10 box'))
+                promoters.write(draw_segment(tu_coordinate, tu_length, tip_title, tip_text, url))
 
             for tr in tu.transcriptional_regulations.all():
                 if tr.binding_site is not None:
-                    iSegment = math.floor((tr.binding_site.coordinate - 1) / ntPerSegment)
-
-                    x = segmentLeft + ((tr.binding_site.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                    w = max(1, x1 - min(segmentLeft + segmentW, x1 + tr.binding_site.length / ntPerSegment * segmentW))
-
-                    y = chrTop + (iSegment + 1) * segmentHeight + 2
+                    tr_coordinate = tr.binding_site.coordinate
+                    tr_length = tr.binding_site.length
 
                     if tr.name:
                         tip_title = tr.name
                     else:
                         tip_title = tr.wid
-                    tip_title = tip_title.replace("'", "\'")
+                    tip_text = 'Transcription factor binding site'
+                    url = tr.get_absolute_url(species)
 
-                    tfSites.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                        tr.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Transcription factor binding site'))
+                    tfSites.write(draw_segment(tr_coordinate, tr_length, tip_title, tip_text, url))
 
         #features
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
         features = StringIO.StringIO()
 
         for feature in self.features.all():
-            iSegment = math.floor((feature.coordinate - 1) / ntPerSegment)
-
-            x = segmentLeft + ((feature.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-            w = max(1, x1 - min(segmentLeft + segmentW, x1 + feature.length / ntPerSegment * segmentW))
-
-            y = chrTop + (iSegment + 1) * segmentHeight + 2
-
-            if feature.chromosome_feature.type.all().count() > 0:
-                type_ = feature.chromosome_feature.type.all()[0].name
-            else:
-                type_ = ''
+            coordinate = feature.coordinate
+            length = feature.length
 
             if feature.chromosome_feature.name:
                 tip_title = feature.chromosome_feature.name
             else:
                 tip_title = feature.chromosome_feature.wid
-            tip_title = tip_title.replace("'", "\'")
 
-            features.write(
-                '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                    feature.chromosome_feature.get_absolute_url(species), x, y, w, featureHeight, tip_title, type_, ))
+            if feature.chromosome_feature.type.all().count() > 0:
+                type_ = feature.chromosome_feature.type.all()[0].name
+            else:
+                type_ = ''
+            url = feature.chromosome_feature.get_absolute_url(species)
+
+            features.write(draw_segment(coordinate, length, tip_title, type_, url))
 
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
             W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro.getvalue(), genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
