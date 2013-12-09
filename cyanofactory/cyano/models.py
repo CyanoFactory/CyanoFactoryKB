@@ -1932,7 +1932,7 @@ class Genome(Molecule):
                     else:
                         arrow_size = 5
 
-                    arrow_size = -arrow_size if gene.direction == "r" else arrow_size
+                    arrow_size = -arrow_size if gene.direction == "f" else arrow_size
 
                     context_dict.update({'x1': x1,
                                          'x2': x2,
