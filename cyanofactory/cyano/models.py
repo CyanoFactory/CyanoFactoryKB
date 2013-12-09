@@ -1932,16 +1932,36 @@ class Genome(Molecule):
         tfSites = StringIO.StringIO()
 
         def draw_segment(coordinate, length, tip_title, tip_text, url):
+            import itertools
+
             iSegment = math.floor((coordinate - 1) / ntPerSegment)
 
-            x = segmentLeft + ((coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-            w = max(1, min(segmentLeft + segmentW, x + length / ntPerSegment * segmentW) - x)
-            y = chrTop + (iSegment + 1) * segmentHeight + 2 # Same
+            formatstr = '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>'
+            tip_title = tip_title.replace("'", "\'")
 
-            tip_title = tip_title.replace("'", "\'") # All same
+            ret = []
 
-            return  '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                url, x, y, w, featureHeight, tip_title, tip_text)
+            w_drawn = 0
+            for i in itertools.count():
+                if i == 0:
+                    x = segmentLeft + ((coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                else:
+                    x = segmentLeft
+
+                w_needed = length / ntPerSegment * segmentW - w_drawn
+                w_space = segmentLeft + segmentW - x
+                y = chrTop + (iSegment + i + 1) * segmentHeight + 2
+                if w_space < w_needed:
+                    # Not enough space left on line
+                    w = max(1, w_space)
+                    w_drawn += w
+                    ret.append(formatstr % (url, x, y, w, featureHeight, tip_title, tip_text))
+                else:
+                    w = w_needed
+                    ret.append(formatstr % (url, x, y, w, featureHeight, tip_title, tip_text))
+                    break
+
+            return ret
 
         for tu in tus:
             if tu.promoter_35_coordinate is not None:
@@ -1955,7 +1975,7 @@ class Genome(Molecule):
                 tip_text = 'Promoter -35 box'
                 url = tu.get_absolute_url(species)
 
-                promoters.write(draw_segment(tu_coordinate, tu_length, tip_title, tip_text, url))
+                [promoters.write(item) for item in draw_segment(tu_coordinate, tu_length, tip_title, tip_text, url)]
 
             if tu.promoter_10_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_10_coordinate
@@ -1968,7 +1988,7 @@ class Genome(Molecule):
                 tip_text = 'Promoter -10 box'
                 url = tu.get_absolute_url(species)
 
-                promoters.write(draw_segment(tu_coordinate, tu_length, tip_title, tip_text, url))
+                [promoters.write(item) for item in draw_segment(tu_coordinate, tu_length, tip_title, tip_text, url)]
 
             for tr in tu.transcriptional_regulations.all():
                 if tr.binding_site is not None:
@@ -1982,7 +2002,7 @@ class Genome(Molecule):
                     tip_text = 'Transcription factor binding site'
                     url = tr.get_absolute_url(species)
 
-                    tfSites.write(draw_segment(tr_coordinate, tr_length, tip_title, tip_text, url))
+                    [tfSites.write(item) for item in draw_segment(tr_coordinate, tr_length, tip_title, tip_text, url)]
 
         #features
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
@@ -2003,7 +2023,7 @@ class Genome(Molecule):
                 type_ = ''
             url = feature.chromosome_feature.get_absolute_url(species)
 
-            features.write(draw_segment(coordinate, length, tip_title, type_, url))
+            [features.write(item) for item in draw_segment(coordinate, length, tip_title, type_, url)]
 
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
             W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro.getvalue(), genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
