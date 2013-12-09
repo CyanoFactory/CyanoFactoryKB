@@ -1896,7 +1896,7 @@ class Genome(Molecule):
 
                 if w_space < w_needed:
                     # Not enough space left on line
-                    print tip_title, "no fit"
+
                     w = max(1, w_space)
                     w_drawn += w
                     x2 = x1 + w
@@ -1906,32 +1906,48 @@ class Genome(Molecule):
                     else:
                         label = ''
 
-                    # render here
+                    arrow_size = 0
+                    if gene.direction == "r":
+                        if x1 + 5 > x2:
+                            arrow_size = x2 - x1
+                        else:
+                            arrow_size = 5
+
                     context_dict.update({'x1': x1,
                                          'x2': x2,
                                          'y1': y1,
                                          'y2': y2,
                                          'label': label,
-                                         'arrow': False
+                                         'arrow': i == 0 and gene.direction == "r",
+                                         'arrow_size': arrow_size
                                          })
                     ret.append(template.render(Context(context_dict)))
                 else:
-                    print tip_title, "fit"
                     w = w_needed
-                    print x1, w, y1, y2
                     x2 = x1 + w
                     if math.fabs(x2 - x1) > len(gene.wid) * 5:
                         label = gene.wid
                     else:
                         label = ''
-                    print "l:",label
-                    # render here
+
+                    if gene.direction == "f":
+                        if x2 - 5 < x1:
+                            arrow_size = x1 - x2
+                        else:
+                            arrow_size = -5
+                    else:
+                        if x1 + 5 > x2:
+                            arrow_size = x2 - x1
+                        else:
+                            arrow_size = 5
+
                     context_dict.update({'x1': x1,
                                          'x2': x2,
                                          'y1': y1,
                                          'y2': y2,
                                          'label': label,
-                                         'arrow': True
+                                         'arrow': gene.direction == "f" or i == 0,
+                                         'arrow_size': arrow_size
                                          })
                     ret.append(template.render(Context(context_dict)))
                     break
