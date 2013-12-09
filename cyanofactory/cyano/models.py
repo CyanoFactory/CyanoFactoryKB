@@ -1858,10 +1858,90 @@ class Genome(Molecule):
         iTUs = {}
         tus = []
 
+        def draw_gene(gene, tu):
+            import itertools
+
+            iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
+
+            tip_title = gene.name or gene.wid
+            tip_text = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name or tu.wid)
+
+            gene_abs_url = gene.get_absolute_url(species)
+
+            tip_title = tip_title.replace("'", "\'")
+            tip_text = tip_text.replace("'", "\'")
+
+            template = loader.get_template("cyano/genome/draw_gene.html")
+
+            context_dict = {'title': tip_title,
+                            'text': tip_text,
+                            'url': gene_abs_url,
+                            'color': iTu % len(colors)}
+
+            ret = []
+
+            w_drawn = 0
+            for i in itertools.count():
+                context_dict.update({'direction': gene.direction})
+
+                if i == 0:
+                    x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                else:
+                    x1 = segmentLeft
+
+                w_needed = gene.length / ntPerSegment * segmentW - w_drawn
+                w_space = segmentLeft + segmentW - x1
+                y2 = chrTop + (iSegment + i + 1) * segmentHeight - 2
+                y1 = y2 - geneHeight
+
+                if w_space < w_needed:
+                    # Not enough space left on line
+                    print tip_title, "no fit"
+                    w = max(1, w_space)
+                    w_drawn += w
+                    x2 = x1 + w
+
+                    if math.fabs(x2 - x1) > len(gene.wid) * 5:
+                        label = gene.wid
+                    else:
+                        label = ''
+
+                    # render here
+                    context_dict.update({'x1': x1,
+                                         'x2': x2,
+                                         'y1': y1,
+                                         'y2': y2,
+                                         'label': label,
+                                         'arrow': False
+                                         })
+                    ret.append(template.render(Context(context_dict)))
+                else:
+                    print tip_title, "fit"
+                    w = w_needed
+                    print x1, w, y1, y2
+                    x2 = x1 + w
+                    if math.fabs(x2 - x1) > len(gene.wid) * 5:
+                        label = gene.wid
+                    else:
+                        label = ''
+                    print "l:",label
+                    # render here
+                    context_dict.update({'x1': x1,
+                                         'x2': x2,
+                                         'y1': y1,
+                                         'y2': y2,
+                                         'label': label,
+                                         'arrow': True
+                                         })
+                    ret.append(template.render(Context(context_dict)))
+                    break
+
+            return ret
+
         for i, gene in enumerate(genesList):
             if len(gene.transcription_units.all()[:1]) == 1:
                 tu = gene.transcription_units.all()[:1][0]
-                if iTUs.has_key(tu.wid):
+                if tu.wid in iTUs:
                     iTu = iTUs[tu.wid]
                 else:
                     tus.append(tu)
@@ -1873,56 +1953,7 @@ class Genome(Molecule):
                 iTu = nTus
                 nTus += 1
 
-            iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
-
-            if gene.direction == 'f':
-                x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                x3 = min(segmentLeft + segmentW, x1 + gene.length / ntPerSegment * segmentW)
-                x2 = max(x1, x3 - 5)
-            else:
-                x3 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                x1 = min(segmentLeft + segmentW, x3 + gene.length / ntPerSegment * segmentW)
-                x2 = min(x1, x3 + 5)
-
-            y2 = chrTop + (iSegment + 1) * segmentHeight - 2
-            y1 = y2 - geneHeight
-
-            if math.fabs(x3 - x1) > len(gene.wid) * 5:
-                label = gene.wid
-            else:
-                label = ''
-
-            if gene.name:
-                tip_title = gene.name
-            else:
-                tip_title = gene.wid
-            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name or tu.wid)
-            tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
-
-            gene_abs_url = gene.get_absolute_url(species)
-
-            genes.write('<g>\
-                <a xlink:href="%s">\
-                    <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/>\
-                </a>\
-                <a xlink:href="%s">\
-                    <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\
-                </a>\
-                </g>' % (
-                gene_abs_url,
-                iTu % len(colors),
-                x1, y1,
-                x2, y1,
-                x3, (y1 + y2) / 2,
-                x2, y2,
-                x1, y2,
-                tip_title, tip_content,
-                gene_abs_url,
-                (x1 + x3) / 2, (y1 + y2) / 2 + 1,
-                tip_title, tip_content,
-                label,
-                ))
+            [genes.write(item) for item in draw_gene(gene, tu)]
 
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
@@ -1936,8 +1967,14 @@ class Genome(Molecule):
 
             iSegment = math.floor((coordinate - 1) / ntPerSegment)
 
-            formatstr = '<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>'
+            template = loader.get_template("cyano/genome/draw_feature.html")
+
             tip_title = tip_title.replace("'", "\'")
+
+            context_dict = {'h': featureHeight,
+                            'title': tip_title,
+                            'text': tip_text,
+                            'url': url}
 
             ret = []
 
@@ -1955,10 +1992,16 @@ class Genome(Molecule):
                     # Not enough space left on line
                     w = max(1, w_space)
                     w_drawn += w
-                    ret.append(formatstr % (url, x, y, w, featureHeight, tip_title, tip_text))
+                    context_dict.update({'x': x,
+                                         'y': y,
+                                         'w': w})
+                    ret.append(template.render(Context(context_dict)))
                 else:
                     w = w_needed
-                    ret.append(formatstr % (url, x, y, w, featureHeight, tip_title, tip_text))
+                    context_dict.update({'x': x,
+                                         'y': y,
+                                         'w': w})
+                    ret.append(template.render(Context(context_dict)))
                     break
 
             return ret
@@ -1968,10 +2011,7 @@ class Genome(Molecule):
                 tu_coordinate = tu.get_coordinate() + tu.promoter_35_coordinate
                 tu_length = tu.promoter_35_length
 
-                if tu.name:
-                    tip_title = tu.name
-                else:
-                    tip_title = tu.wid
+                tip_title = tu.name or tu.wid
                 tip_text = 'Promoter -35 box'
                 url = tu.get_absolute_url(species)
 
@@ -1981,10 +2021,7 @@ class Genome(Molecule):
                 tu_coordinate = tu.get_coordinate() + tu.promoter_10_coordinate
                 tu_length = tu.promoter_10_length
 
-                if tu.name:
-                    tip_title = tu.name
-                else:
-                    tip_title = tu.wid
+                tip_title = tu.name or tu.wid
                 tip_text = 'Promoter -10 box'
                 url = tu.get_absolute_url(species)
 
@@ -1995,10 +2032,7 @@ class Genome(Molecule):
                     tr_coordinate = tr.binding_site.coordinate
                     tr_length = tr.binding_site.length
 
-                    if tr.name:
-                        tip_title = tr.name
-                    else:
-                        tip_title = tr.wid
+                    tip_title = tr.name or tr.wid
                     tip_text = 'Transcription factor binding site'
                     url = tr.get_absolute_url(species)
 
@@ -2012,10 +2046,7 @@ class Genome(Molecule):
             coordinate = feature.coordinate
             length = feature.length
 
-            if feature.chromosome_feature.name:
-                tip_title = feature.chromosome_feature.name
-            else:
-                tip_title = feature.chromosome_feature.wid
+            tip_title = feature.chromosome_feature.name or feature.chromosome_feature.wid
 
             if feature.chromosome_feature.type.all().count() > 0:
                 type_ = feature.chromosome_feature.type.all()[0].name
