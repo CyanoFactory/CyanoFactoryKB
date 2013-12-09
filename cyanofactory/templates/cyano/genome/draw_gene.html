@@ -12,18 +12,18 @@ y2: bottom
                     {% if arrow %}
                         {% if direction == "f" %}
                             {{ x1 }},{{ y1 }}
-                            {{ x2|add:-5 }},{{ y1 }}
+                            {{ x2|add:arrow_size }},{{ y1 }}
                             {{ x2 }},{% widthratio y2|add:y1 2 1 %}
-                            {{ x2|add:-5 }},{{ y2 }}
+                            {{ x2|add:arrow_size }},{{ y2 }}
                             {{ x1 }},{{ y2 }}
                             {{ x1 }},{{ y1 }}
                         {% else %}
-                            {{ x1|add:5 }},{{ y1 }}
+                            {{ x1|add:arrow_size }},{{ y1 }}
                             {{ x2 }},{{ y1 }}
                             {{ x2 }},{{ y2 }}
-                            {{ x1|add:5 }},{{ y2 }}
+                            {{ x1|add:arrow_size }},{{ y2 }}
                             {{ x1 }},{% widthratio y1|add:y2 2 1 %}
-                            {{ x1|add:5 }},{{ y1 }}
+                            {{ x1|add:arrow_size }},{{ y1 }}
                         {% endif %}
                     {% else %}
                         {{ x1 }},{{ y1 }}
