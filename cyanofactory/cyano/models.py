@@ -13,6 +13,7 @@ Released under the MIT license
 
 from __future__ import unicode_literals
 
+import itertools
 import math
 import re
 import settings
@@ -1288,7 +1289,6 @@ class Entry(AbstractEntry):
     def save(self, revision_detail, *args, **kwargs):
         # Optimized to reduce number of database accesses to a minimum
 
-        from itertools import ifilter
         from cyano.helpers import slugify
 
         if self.wid != slugify(self.wid):
@@ -1318,7 +1318,7 @@ class Entry(AbstractEntry):
 
         fields = self._meta.fields
         # Remove primary keys and some fields that don't need revisioning:
-        fields = ifilter(lambda x: (not x.primary_key) and
+        fields = itertools.ifilter(lambda x: (not x.primary_key) and
                          (not x.name in ["detail", "created_detail"]), fields)
 
         for field in fields:
@@ -1859,8 +1859,6 @@ class Genome(Molecule):
         tus = []
 
         def draw_gene(gene, tu):
-            import itertools
-
             iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
 
             tip_title = gene.name or gene.wid
@@ -1974,8 +1972,6 @@ class Genome(Molecule):
         tfSites = StringIO.StringIO()
 
         def draw_segment(coordinate, length, tip_title, tip_text, url):
-            import itertools
-
             iSegment = math.floor((coordinate - 1) / ntPerSegment)
 
             template = loader.get_template("cyano/genome/draw_feature.html")
