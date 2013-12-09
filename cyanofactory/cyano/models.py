@@ -1907,11 +1907,10 @@ class Genome(Molecule):
                         label = ''
 
                     arrow_size = 0
-                    if gene.direction == "r":
-                        if x1 + 5 > x2:
-                            arrow_size = x2 - x1
-                        else:
-                            arrow_size = 5
+                    if gene.direction == "r" and x1 + 5 > x2:
+                        arrow_size = x2 - x1
+                    else:
+                        arrow_size = 5
 
                     context_dict.update({'x1': x1,
                                          'x2': x2,
@@ -1930,16 +1929,12 @@ class Genome(Molecule):
                     else:
                         label = ''
 
-                    if gene.direction == "f":
-                        if x2 - 5 < x1:
-                            arrow_size = x1 - x2
-                        else:
-                            arrow_size = -5
+                    if x2 - 5 < x1:
+                        arrow_size = abs(x1 - x2)
                     else:
-                        if x1 + 5 > x2:
-                            arrow_size = x2 - x1
-                        else:
-                            arrow_size = 5
+                        arrow_size = 5
+
+                    arrow_size = -arrow_size if gene.direction == "r" else arrow_size
 
                     context_dict.update({'x1': x1,
                                          'x2': x2,
