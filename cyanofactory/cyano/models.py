@@ -1896,7 +1896,7 @@ class Genome(Molecule):
                 tip_title = gene.name
             else:
                 tip_title = gene.wid
-            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name)
+            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name or tu.wid)
             tip_title = tip_title.replace("'", "\'")
             tip_content = tip_content.replace("'", "\'")
 
@@ -2124,7 +2124,7 @@ class Genome(Molecule):
                 tip_title = gene.name
             else:
                 tip_title = gene.wid
-            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name)
+            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name or tu.wid)
             tip_title = tip_title.replace("'", "\'")
             tip_content = tip_content.replace("'", "\'")
 
