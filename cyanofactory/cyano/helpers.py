@@ -2318,7 +2318,12 @@ def get_invalid_objects(species_id, validate_fields=False, validate_objects=True
                     })
         
     return errors
-    
+
+# via: http://stackoverflow.com/questions/2150108/
+def shift(l, n):
+    return l[n:] + l[:n]
+
+
 class EmpiricalFormula(dict):
     def __init__(self, *args, **kwargs):
         if len(args) > 0 and len(kwargs) > 0:

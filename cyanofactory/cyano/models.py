@@ -38,10 +38,10 @@ from django.template import loader, Context
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import m2m_changed
 
-from cyano.templatetags.templatetags import set_time_zone
-from cyano.cache import Cache
-from cyano.history import HistoryForeignKey as ForeignKey
-from cyano.history import HistoryManyToManyField as ManyToManyField
+from .templatetags.templatetags import set_time_zone
+from .cache import Cache
+from .history import HistoryForeignKey as ForeignKey
+from .history import HistoryManyToManyField as ManyToManyField
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from copy import deepcopy
 
@@ -1812,6 +1812,8 @@ class Genome(Molecule):
             return self.get_as_html_structure_local(species, is_user_anonymous, start_coordinate = start_coordinate, end_coordinate = end_coordinate, highlight_wid = highlight_wid)
 
     def get_as_html_structure_global(self, species, is_user_anonymous):
+        from .helpers import shift
+
         ntPerSegment = 1e4
         segmentHeight = 27
         geneHeight = 10
@@ -1821,6 +1823,8 @@ class Genome(Molecule):
         H = segmentHeight * nSegments
         segmentLeft = 35
         segmentW = W - 4 - segmentLeft
+        oneNtW = segmentW / ntPerSegment
+        segmentWLast = (self.length - ntPerSegment * (nSegments - 1)) * oneNtW
         chrTop = -12
 
         #style
@@ -1878,18 +1882,26 @@ class Genome(Molecule):
 
             ret = []
 
+            segments = shift(range(nSegments), int(iSegment))
+
             w_drawn = 0
-            for i in itertools.count():
+            for i in itertools.cycle(segments):
                 context_dict.update({'direction': gene.direction})
 
-                if i == 0:
+                if i == iSegment:
                     x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
                 else:
                     x1 = segmentLeft
 
                 w_needed = gene.length / ntPerSegment * segmentW - w_drawn
-                w_space = segmentLeft + segmentW - x1
-                y2 = chrTop + (iSegment + i + 1) * segmentHeight - 2
+
+                row = i + 1
+                if row == nSegments:
+                    w_space = segmentLeft + segmentWLast - x1
+                else:
+                    w_space = segmentLeft + segmentW - x1
+
+                y2 = chrTop + row * segmentHeight - 2
                 y1 = y2 - geneHeight
 
                 if w_space < w_needed:
@@ -1915,7 +1927,7 @@ class Genome(Molecule):
                                          'y1': y1,
                                          'y2': y2,
                                          'label': label,
-                                         'arrow': i == 0 and gene.direction == "r",
+                                         'arrow': i == iSegment and gene.direction == "r",
                                          'arrow_size': arrow_size
                                          })
                     ret.append(template.render(Context(context_dict)))
@@ -1939,7 +1951,7 @@ class Genome(Molecule):
                                          'y1': y1,
                                          'y2': y2,
                                          'label': label,
-                                         'arrow': gene.direction == "f" or i == 0,
+                                         'arrow': gene.direction == "f" or iSegment == 0,
                                          'arrow_size': arrow_size
                                          })
                     ret.append(template.render(Context(context_dict)))
@@ -1985,16 +1997,24 @@ class Genome(Molecule):
 
             ret = []
 
+            segments = shift(range(nSegments), int(iSegment))
+
             w_drawn = 0
-            for i in itertools.count():
-                if i == 0:
+            for i in itertools.cycle(segments):
+                if i == iSegment:
                     x = segmentLeft + ((coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
                 else:
                     x = segmentLeft
 
                 w_needed = length / ntPerSegment * segmentW - w_drawn
-                w_space = segmentLeft + segmentW - x
-                y = chrTop + (iSegment + i + 1) * segmentHeight + 2
+
+                row = i + 1
+                if row == nSegments:
+                    w_space = segmentLeft + segmentWLast - x
+                else:
+                    w_space = segmentLeft + segmentW - x
+
+                y = chrTop + (i + 1) * segmentHeight + 2
                 if w_space < w_needed:
                     # Not enough space left on line
                     w = max(1, w_space)
