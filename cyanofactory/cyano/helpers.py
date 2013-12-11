@@ -2448,3 +2448,8 @@ def get_verbose_name_for_field_by_name(model, field_name):
 
 def slugify(string):
     return re.sub(r"[^A-Za-z0-9_-]", "-", string)
+
+def overlaps(first, second):
+    """Tests if first overlaps with second"""
+    return first[0] <= second[0] <= first[1] or\
+           first[0] <= second[1] <= first[1]

@@ -1812,7 +1812,7 @@ class Genome(Molecule):
             return self.get_as_html_structure_local(species, is_user_anonymous, start_coordinate = start_coordinate, end_coordinate = end_coordinate, highlight_wid = highlight_wid)
 
     def get_as_html_structure_global(self, species, is_user_anonymous):
-        from .helpers import shift
+        from .helpers import shift, overlaps
 
         ntPerSegment = 1e4
         segmentHeight = 27
@@ -1826,6 +1826,8 @@ class Genome(Molecule):
         oneNtW = segmentW / ntPerSegment
         segmentWLast = (self.length - ntPerSegment * (nSegments - 1)) * oneNtW
         chrTop = -12
+        feature_draw = [[] for x in range(nSegments)]
+        row_offset = []
 
         #style
         colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08']
@@ -1838,14 +1840,6 @@ class Genome(Molecule):
             .chr text{fill:#222; text-anchor:end; alignment-baseline:middle; font-size:10px}\
             .chr line{stroke:#666; stroke-width:0.5px;}\
         '
-
-        chro = StringIO.StringIO()
-        for i in range(nSegments):
-            x1 = segmentLeft
-            x2 = segmentLeft + ((min(self.length, (i+1) * ntPerSegment) - 1) % ntPerSegment) / ntPerSegment * segmentW
-            y = chrTop + (i + 1) * segmentHeight
-            chro.write('<text x="%s" y="%s">%d</text>' % (segmentLeft - 2, y, i * ntPerSegment + 1))
-            chro.write('<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y))
 
         #genes
         geneStyle = '\
@@ -1901,7 +1895,7 @@ class Genome(Molecule):
                 else:
                     w_space = segmentLeft + segmentW - x1
 
-                y2 = chrTop + row * segmentHeight - 2
+                y2 = chrTop + row_offset[i] + geneHeight - 2
                 y1 = y2 - geneHeight
 
                 if w_space < w_needed:
@@ -1951,30 +1945,13 @@ class Genome(Molecule):
                                          'y1': y1,
                                          'y2': y2,
                                          'label': label,
-                                         'arrow': gene.direction == "f" or iSegment == 0,
+                                         'arrow': gene.direction == "f" or iSegment == i,
                                          'arrow_size': arrow_size
                                          })
                     ret.append(template.render(Context(context_dict)))
                     break
 
             return ret
-
-        for i, gene in enumerate(genesList):
-            if len(gene.transcription_units.all()[:1]) == 1:
-                tu = gene.transcription_units.all()[:1][0]
-                if tu.wid in iTUs:
-                    iTu = iTUs[tu.wid]
-                else:
-                    tus.append(tu)
-                    iTu = nTus
-                    iTUs[tu.wid] = iTu
-                    nTus += 1
-            else:
-                tu = None
-                iTu = nTus
-                nTus += 1
-
-            [genes.write(item) for item in draw_gene(gene, tu)]
 
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
@@ -1983,53 +1960,88 @@ class Genome(Molecule):
         promoters = StringIO.StringIO()
         tfSites = StringIO.StringIO()
 
-        def draw_segment(coordinate, length, tip_title, tip_text, url):
+        def preprocess_draw_segment(coordinate, length, tip_title, tip_text, url):
+            #print "Coord:", coordinate, "Len:", length
+
             iSegment = math.floor((coordinate - 1) / ntPerSegment)
-
-            template = loader.get_template("cyano/genome/draw_feature.html")
-
-            tip_title = tip_title.replace("'", "\'")
-
-            context_dict = {'h': featureHeight,
-                            'title': tip_title,
-                            'text': tip_text,
-                            'url': url}
-
-            ret = []
 
             segments = shift(range(nSegments), int(iSegment))
 
             w_drawn = 0
+            done = False
             for i in itertools.cycle(segments):
                 if i == iSegment:
-                    x = segmentLeft + ((coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                    x = (coordinate - 1) % ntPerSegment
                 else:
-                    x = segmentLeft
+                    x = 0
 
-                w_needed = length / ntPerSegment * segmentW - w_drawn
+                w_needed = length - w_drawn
+
+                #print "x:", x, "w_needed:", w_needed
 
                 row = i + 1
                 if row == nSegments:
-                    w_space = segmentLeft + segmentWLast - x
+                    w_space = ntPerSegment - x
                 else:
-                    w_space = segmentLeft + segmentW - x
+                    w_space = ntPerSegment - x
 
-                y = chrTop + (i + 1) * segmentHeight + 2
+                y = i
                 if w_space < w_needed:
                     # Not enough space left on line
                     w = max(1, w_space)
                     w_drawn += w
-                    context_dict.update({'x': x,
-                                         'y': y,
-                                         'w': w})
-                    ret.append(template.render(Context(context_dict)))
+                    #print "no fit"
                 else:
                     w = w_needed
+                    #print "fit"
+                    done = True
+
+                new_item = [x, x + w, tip_title, tip_text, url]
+                inserted = False
+                for row in feature_draw[i]:
+                    if any(overlaps(item, new_item) for item in row):
+                        continue
+                    # Space left -> insert
+                    #print "fits in row"
+                    row.append(new_item)
+                    inserted = True
+
+                if not inserted:
+                    # Create new row
+                    #print "new row"
+                    feature_draw[i].append([new_item])
+
+                if done:
+                    break
+
+        def draw_segment(i, row):
+            iSegment = math.floor((coordinate - 1) / ntPerSegment)
+
+            template = loader.get_template("cyano/genome/draw_feature.html")
+
+            ret = []
+
+            for j, subrow in enumerate(row):
+                for item in subrow:
+                    start, end, tip_title, tip_text, url = item
+
+                    tip_title = tip_title.replace("'", "\'")
+
+                    context_dict = {'h': featureHeight,
+                                    'title': tip_title,
+                                    'text': tip_text,
+                                    'url': url}
+
+                    x = segmentLeft + start * oneNtW
+                    w = (end - start) * oneNtW
+                    y = row_offset[i] + j * featureHeight
+                    print y
+
                     context_dict.update({'x': x,
                                          'y': y,
                                          'w': w})
+
                     ret.append(template.render(Context(context_dict)))
-                    break
 
             return ret
 
@@ -2069,7 +2081,7 @@ class Genome(Molecule):
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
         features = StringIO.StringIO()
 
-        for feature in self.features.all():
+        for feature in self.features.all().order_by("coordinate"):
             coordinate = feature.coordinate
             length = feature.length
 
@@ -2081,7 +2093,50 @@ class Genome(Molecule):
                 type_ = ''
             url = feature.chromosome_feature.get_absolute_url(species)
 
-            [features.write(item) for item in draw_segment(coordinate, length, tip_title, type_, url)]
+            preprocess_draw_segment(coordinate, length, tip_title, type_, url)
+
+            #[features.write(item) for item in draw_segment(coordinate, length, tip_title, type_, url)]
+
+        for i, row in enumerate(feature_draw):
+            if i == 0:
+                row_offset.append(chrTop + segmentHeight + 2)
+            else:
+                row_offset.append(chrTop + segmentHeight + 2 + len(feature_draw[i - 1]) * featureHeight + row_offset[-1])
+
+        for i, row in enumerate(feature_draw):
+            [features.write(item) for item in draw_segment(i, row)]
+
+        #for i, row in enumerate(feature_draw):
+        #    print i
+        #    for subrow in row:
+        #        print subrow
+
+        chro = StringIO.StringIO()
+        for i in range(nSegments):
+            x1 = segmentLeft
+            x2 = segmentLeft + ((min(self.length, (i+1) * ntPerSegment) - 1) % ntPerSegment) / ntPerSegment * segmentW
+            y = chrTop + row_offset[i] + geneHeight
+            chro.write('<text x="%s" y="%s">%d</text>' % (segmentLeft - 2, y, i * ntPerSegment + 1))
+            chro.write('<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y))
+
+        for i, gene in enumerate(genesList):
+            if len(gene.transcription_units.all()[:1]) == 1:
+                tu = gene.transcription_units.all()[:1][0]
+                if tu.wid in iTUs:
+                    iTu = iTUs[tu.wid]
+                else:
+                    tus.append(tu)
+                    iTu = nTus
+                    iTUs[tu.wid] = iTu
+                    nTus += 1
+            else:
+                tu = None
+                iTu = nTus
+                nTus += 1
+
+            [genes.write(item) for item in draw_gene(gene, tu)]
+
+        H = row_offset[-1] + len(feature_draw[-1]) * featureHeight
 
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
             W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro.getvalue(), genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
