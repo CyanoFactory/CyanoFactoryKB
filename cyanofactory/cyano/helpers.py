@@ -2450,6 +2450,6 @@ def slugify(string):
     return re.sub(r"[^A-Za-z0-9_-]", "-", string)
 
 def overlaps(first, second):
-    """Tests if first overlaps with second"""
-    return first[0] <= second[0] <= first[1] or\
-           first[0] <= second[1] <= first[1]
+    """Tests if first overlaps with second (with 1 pixel tolerance)"""
+    return first[0] - 1 < second[0] < first[1] + 1 or\
+           first[0] - 1 < second[1] < first[1] + 1

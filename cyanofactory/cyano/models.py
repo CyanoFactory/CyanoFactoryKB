@@ -1820,7 +1820,6 @@ class Genome(Molecule):
         featureHeight = 5
         nSegments = int(math.ceil(self.length / ntPerSegment))
         W = 636
-        H = segmentHeight * nSegments
         segmentLeft = 35
         segmentW = W - 4 - segmentLeft
         oneNtW = segmentW / ntPerSegment
@@ -2005,6 +2004,7 @@ class Genome(Molecule):
                     #print "fits in row"
                     row.append(new_item)
                     inserted = True
+                    break
 
                 if not inserted:
                     # Create new row
@@ -2034,7 +2034,7 @@ class Genome(Molecule):
 
                     x = segmentLeft + start * oneNtW
                     w = (end - start) * oneNtW
-                    y = row_offset[i] + j * featureHeight
+                    y = row_offset[i] + j * (featureHeight + 1)
                     print y
 
                     context_dict.update({'x': x,
@@ -2101,7 +2101,7 @@ class Genome(Molecule):
             if i == 0:
                 row_offset.append(chrTop + segmentHeight + 2)
             else:
-                row_offset.append(chrTop + segmentHeight + 2 + len(feature_draw[i - 1]) * featureHeight + row_offset[-1])
+                row_offset.append(chrTop + segmentHeight + 2 + len(feature_draw[i - 1]) * (featureHeight + 1) + row_offset[-1])
 
         for i, row in enumerate(feature_draw):
             [features.write(item) for item in draw_segment(i, row)]
@@ -2136,23 +2136,26 @@ class Genome(Molecule):
 
             [genes.write(item) for item in draw_gene(gene, tu)]
 
-        H = row_offset[-1] + len(feature_draw[-1]) * featureHeight
+        H = row_offset[-1] + len(feature_draw[-1]) * (featureHeight + 2)
 
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
             W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro.getvalue(), genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
 
     def get_as_html_structure_local(self, species, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None):
+        from .helpers import overlaps
+
         length = end_coordinate - start_coordinate + 1
 
         W = 636
         geneHeight = 20
         featureHeight = 10
-        H = 2 + geneHeight + 2 + 4 + 1 * (2 + featureHeight) + 2
 
         geneY = 2
         chrY = geneY + geneHeight + 4
         promoterY = chrY + 1 + 2
         featureY = promoterY
+
+        feature_draw = []
 
         #style
         colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08']
@@ -2188,6 +2191,8 @@ class Genome(Molecule):
         iTUs = {}
         tus = []
 
+        template = loader.get_template("cyano/genome/draw_gene.html")
+
         for i, gene in enumerate(genesList):
             if len(gene.transcription_units.all()[:1]) == 1:
                 tu = gene.transcription_units.all()[:1][0]
@@ -2203,18 +2208,18 @@ class Genome(Molecule):
                 iTu = nTus
                 nTus += 1
 
-            if gene.direction == 'f':
-                x1 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
-                x3 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
-                x2 = max(x1, x3 - 5)
+            x1 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
+            x2 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
+
+            if gene.direction == "r" and x1 + 5 > x2:
+                arrow_size = x2 - x1
             else:
-                x3 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
-                x1 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
-                x2 = min(x1, x3 + 5)
+                arrow_size = 5
+
+            arrow_size = -arrow_size if gene.direction == "f" else arrow_size
 
             x1 = max(chrL, min(chrR, x1))
             x2 = max(chrL, min(chrR, x2))
-            x3 = max(chrL, min(chrR, x3))
 
             y1 = geneY
             y2 = geneY + geneHeight
@@ -2228,43 +2233,37 @@ class Genome(Molecule):
                 strokeOpacity = 0.35
                 strokeWidth = 1
 
-            if math.fabs(x3 - x1) > len(gene.wid) * 5:
+            if math.fabs(x2 - x1) > len(gene.wid) * 5:
                 label = gene.wid
             else:
                 label = ''
 
-            if gene.name:
-                tip_title = gene.name
-            else:
-                tip_title = gene.wid
+            tip_title = gene.name or gene.wid
+
             tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name or tu.wid)
             tip_title = tip_title.replace("'", "\'")
             tip_content = tip_content.replace("'", "\'")
 
             gene_abs_url = gene.get_absolute_url(species)
 
-            genes.write('<g style="">\n\
-                <a xlink:href="%s">\n\
-                    <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="fill-opacity: %s; stroke-opacity: %s; stroke-width: %spx"/>\n\
-                </a>\n\
-                <a xlink:href="%s">\n\
-                    <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\n\
-                </a>\n\
-                </g>\n' % (
-                gene_abs_url,
-                iTu % len(colors),
-                x1, y1,
-                x2, y1,
-                x3, (y1 + y2) / 2,
-                x2, y2,
-                x1, y2,
-                tip_title, tip_content,
-                fillOpacity, strokeOpacity, strokeWidth,
-                gene_abs_url,
-                (x1 + x3) / 2, (y1 + y2) / 2 + 1,
-                tip_title, tip_content,
-                label,
-                ))
+            context_dict = {'title': tip_title,
+                            'text': tip_content,
+                            'url': gene_abs_url,
+                            'color': iTu % len(colors),
+                            'x1': x1,
+                            'x2': x2,
+                            'y1': y1,
+                            'y2': y2,
+                            'label': label,
+                            'direction': gene.direction,
+                            'arrow': True,
+                            'arrow_size': arrow_size,
+                            'fill_opacity': fillOpacity,
+                            'stroke_opacity': strokeOpacity,
+                            'stroke_width': strokeWidth
+                            }
+
+            genes.write(template.render(Context(context_dict)))
 
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
@@ -2272,78 +2271,85 @@ class Genome(Molecule):
 
         promoters = StringIO.StringIO()
         tfSites = StringIO.StringIO()
+
+        def preprocess_draw_segment(wid, coordinate, item_length, tip_title, tip_text, url):
+            if highlight_wid is None or wid in highlight_wid:
+                opacity = 1
+            else:
+                opacity = 0.25
+
+            x = chrL + float(coordinate - start_coordinate) / length * chrW
+            w = chrL + float(coordinate + item_length - 1 - start_coordinate) / length * chrW
+
+            x = max(chrL, min(chrR, x))
+            w = max(chrL, min(chrR, w)) - x
+
+            tip_title = tip_title.replace("'", "\'")
+            tip_text = tip_text.replace("'", "\'")
+
+            template = loader.get_template("cyano/genome/draw_feature.html")
+
+            ret = []
+
+            context_dict = {'h': featureHeight,
+                            'title': tip_title,
+                            'text': tip_text,
+                            'url': url,
+                            'x': x,
+                            'w': w,
+                            'opacity':opacity}
+
+            new_item = [x, x + w]
+            inserted = False
+            for i, row in enumerate(feature_draw):
+                if any(overlaps(item, new_item) for item in row):
+                    continue
+                # Space left -> insert
+                #print "fits in row"
+                row.append(new_item)
+                inserted = True
+                context_dict.update({
+                    'y': featureY + i * (featureHeight + 2)
+                })
+                break
+
+            if not inserted:
+                # Create new row
+                #print "new row"
+                context_dict.update({
+                    'y': featureY + len(feature_draw) * (featureHeight + 2)
+                })
+                feature_draw.append([new_item])
+
+            return template.render(Context(context_dict))
+
         for tu in tus:
             if tu.promoter_35_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_35_coordinate
                 tu_length = tu.promoter_35_length
 
                 if not (tu_coordinate > end_coordinate or tu_coordinate + tu_length - 1 < start_coordinate):
-                    x1 = chrL + float(tu_coordinate - start_coordinate) / length * chrW
-                    x2 = chrL + float(tu_coordinate + tu_length - 1 - start_coordinate) / length * chrW
+                    tip_title = tu.name or tu.wid
+                    url = tu.get_absolute_url(species)
 
-                    x1 = max(chrL, min(chrR, x1))
-                    x2 = max(chrL, min(chrR, x2))
-
-                    if highlight_wid is None or tu.wid in highlight_wid:
-                        opacity = 1
-                    else:
-                        opacity = 0.25
-
-                    if tu.name:
-                        tip_title = tu.name
-                    else:
-                        tip_title = tu.wid
-                    tip_title = tip_title.replace("'", "\'")
-
-                    promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                        tu.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Promoter -35 box', opacity))
+                    promoters.write(preprocess_draw_segment(tu.wid, tu_coordinate, tu_length, tip_title, 'Promoter -35 box', url))
 
             if tu.promoter_10_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_10_coordinate
                 tu_length = tu.promoter_10_length
 
                 if not (tu_coordinate > end_coordinate or tu_coordinate + tu_length - 1 < start_coordinate):
-                    x1 = chrL + float(tu_coordinate - start_coordinate) / length * chrW
-                    x2 = chrL + float(tu_coordinate + tu_length - 1 - start_coordinate) / length * chrW
+                    tip_title = tu.name or tu.wid
+                    url = tu.get_absolute_url(species)
 
-                    x1 = max(chrL, min(chrR, x1))
-                    x2 = max(chrL, min(chrR, x2))
-
-                    if highlight_wid is None or tu.wid in highlight_wid:
-                        opacity = 1
-                    else:
-                        opacity = 0.25
-
-                    if tu.name:
-                        tip_title = tu.name
-                    else:
-                        tip_title = tu.wid
-                    tip_title = tip_title.replace("'", "\'")
-
-                    promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                        tu.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Promoter -10 box', opacity))
+                    promoters.write(preprocess_draw_segment(tu.wid, tu_coordinate, tu_length, tip_title, 'Promoter -10 box', url))
 
             for tr in tu.transcriptional_regulations.all():
                 if tr.binding_site is not None and not (tr.binding_site.coordinate > end_coordinate or tr.binding_site.coordinate + tr.binding_site.length - 1 < start_coordinate):
-                    x1 = chrL + float(tr.binding_site.coordinate - start_coordinate) / length * chrW
-                    x2 = chrL + float(tr.binding_site.coordinate + tr.binding_site.length - 1 - start_coordinate) / length * chrW
+                    tip_title = tu.name or tu.wid
+                    url = tu.get_absolute_url(species)
 
-                    x1 = max(chrL, min(chrR, x1))
-                    x2 = max(chrL, min(chrR, x2))
-
-                    if highlight_wid is None or tr.wid in highlight_wid:
-                        opacity = 1
-                    else:
-                        opacity = 0.25
-
-                    if tr.name:
-                        tip_title = tr.name
-                    else:
-                        tip_title = tr.wid
-                    tip_title = tip_title.replace("'", "\'")
-
-                    tfSites.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                        tr.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Transcription factor binding site', opacity))
+                    tfSites.write(preprocess_draw_segment(tu.wid, tr.binding_site.coordinate, tr.binding_site.length, tip_title, 'Transcription factor binding site', url))
 
         #features
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
@@ -2353,30 +2359,17 @@ class Genome(Molecule):
             if feature.coordinate > end_coordinate or feature.coordinate + feature.length - 1 < start_coordinate:
                 continue
 
-            x1 = chrL + float(feature.coordinate - start_coordinate) / length * chrW
-            x2 = chrL + float(feature.coordinate + feature.length - 1 - start_coordinate) / length * chrW
-
-            x1 = max(chrL, min(chrR, x1))
-            x2 = max(chrL, min(chrR, x2))
+            tip_title = feature.chromosome_feature.name or feature.chromosome_feature.wid
+            url = feature.chromosome_feature.get_absolute_url(species)
 
             if feature.chromosome_feature.type.all().count() > 0:
                 type_ = feature.chromosome_feature.type.all()[0].name
             else:
                 type_ = ''
 
-            if highlight_wid is None or feature.chromosome_feature.wid in highlight_wid:
-                opacity = 1
-            else:
-                opacity = 0.25
+            features.write(preprocess_draw_segment(feature.chromosome_feature.wid, feature.coordinate, feature.length, tip_title, type_, url))
 
-            if feature.chromosome_feature.name:
-                tip_title = feature.chromosome_feature.name
-            else:
-                tip_title = feature.chromosome_feature.wid
-            tip_title = tip_title.replace("'", "\'")
-
-            features.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                feature.chromosome_feature.get_absolute_url(species), x1, featureY, x2 - x1, featureHeight, tip_title, type_, opacity))
+        H = 2 + geneHeight + 2 + 4 + 1 * (2 + len(feature_draw) * (featureHeight + 2)) + 2
 
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
             W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro, genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())

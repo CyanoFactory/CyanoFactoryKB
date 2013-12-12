@@ -3,7 +3,10 @@
           y="{{ y }}"
           width="{{ w }}"
           height="{{ h }}"
-          onmousemove="javascript: showToolTip(evt, '{{ title }}', '{{ text }}')"
-          onmouseout="javascript: hideToolTip(evt);">
+          onmousemove="javascript: showToolTip(evt, '{{ title }}', '{{ text }}');"
+          onmouseout="javascript: hideToolTip(evt);"
+          {% if opacity %}
+          style="opacity: {{ opacity }};"
+          {% endif %}>
     </rect>
 </a>
