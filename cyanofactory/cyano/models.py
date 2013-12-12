@@ -2007,8 +2007,6 @@ class Genome(Molecule):
                     break
 
         def draw_segment(i, row):
-            iSegment = math.floor((coordinate - 1) / ntPerSegment)
-
             template = loader.get_template("cyano/genome/draw_feature.html")
 
             ret = []
@@ -2086,13 +2084,11 @@ class Genome(Molecule):
 
             preprocess_draw_segment(coordinate, length, tip_title, type_, url)
 
-            #[features.write(item) for item in draw_segment(coordinate, length, tip_title, type_, url)]
-
         for i, row in enumerate(feature_draw):
             if i == 0:
                 row_offset.append(chrTop + segmentHeight + 2)
             else:
-                row_offset.append(chrTop + segmentHeight + 2 + len(feature_draw[i - 1]) * (featureHeight + 1) + row_offset[-1])
+                row_offset.append(chrTop + segmentHeight + 2 + (len(feature_draw[i - 1]) or 1) * (featureHeight + 1) + row_offset[-1])
 
         for i, row in enumerate(feature_draw):
             [features.write(item) for item in draw_segment(i, row)]
@@ -2258,7 +2254,7 @@ class Genome(Molecule):
         promoters = StringIO.StringIO()
         tfSites = StringIO.StringIO()
 
-        def preprocess_draw_segment(wid, coordinate, item_length, tip_title, tip_text, url):
+        def draw_segment(wid, coordinate, item_length, tip_title, tip_text, url):
             if highlight_wid is None or wid in highlight_wid:
                 opacity = 1
             else:
@@ -2316,7 +2312,7 @@ class Genome(Molecule):
                     tip_title = tu.name or tu.wid
                     url = tu.get_absolute_url(species)
 
-                    promoters.write(preprocess_draw_segment(tu.wid, tu_coordinate, tu_length, tip_title, 'Promoter -35 box', url))
+                    promoters.write(draw_segment(tu.wid, tu_coordinate, tu_length, tip_title, 'Promoter -35 box', url))
 
             if tu.promoter_10_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_10_coordinate
@@ -2326,14 +2322,14 @@ class Genome(Molecule):
                     tip_title = tu.name or tu.wid
                     url = tu.get_absolute_url(species)
 
-                    promoters.write(preprocess_draw_segment(tu.wid, tu_coordinate, tu_length, tip_title, 'Promoter -10 box', url))
+                    promoters.write(draw_segment(tu.wid, tu_coordinate, tu_length, tip_title, 'Promoter -10 box', url))
 
             for tr in tu.transcriptional_regulations.all():
                 if tr.binding_site is not None and not (tr.binding_site.coordinate > end_coordinate or tr.binding_site.coordinate + tr.binding_site.length - 1 < start_coordinate):
                     tip_title = tu.name or tu.wid
                     url = tu.get_absolute_url(species)
 
-                    tfSites.write(preprocess_draw_segment(tu.wid, tr.binding_site.coordinate, tr.binding_site.length, tip_title, 'Transcription factor binding site', url))
+                    tfSites.write(draw_segment(tu.wid, tr.binding_site.coordinate, tr.binding_site.length, tip_title, 'Transcription factor binding site', url))
 
         #features
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
@@ -2351,7 +2347,7 @@ class Genome(Molecule):
             else:
                 type_ = ''
 
-            features.write(preprocess_draw_segment(feature.chromosome_feature.wid, feature.coordinate, feature.length, tip_title, type_, url))
+            features.write(draw_segment(feature.chromosome_feature.wid, feature.coordinate, feature.length, tip_title, type_, url))
 
         H = 2 + geneHeight + 2 + 4 + 1 * (2 + len(feature_draw) * (featureHeight + 2)) + 2
 
