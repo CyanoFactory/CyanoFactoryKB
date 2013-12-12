@@ -1960,8 +1960,6 @@ class Genome(Molecule):
         tfSites = StringIO.StringIO()
 
         def preprocess_draw_segment(coordinate, length, tip_title, tip_text, url):
-            #print "Coord:", coordinate, "Len:", length
-
             iSegment = math.floor((coordinate - 1) / ntPerSegment)
 
             segments = shift(range(nSegments), int(iSegment))
@@ -1976,8 +1974,6 @@ class Genome(Molecule):
 
                 w_needed = length - w_drawn
 
-                #print "x:", x, "w_needed:", w_needed
-
                 row = i + 1
                 if row == nSegments:
                     w_space = ntPerSegment - x
@@ -1989,10 +1985,8 @@ class Genome(Molecule):
                     # Not enough space left on line
                     w = max(1, w_space)
                     w_drawn += w
-                    #print "no fit"
                 else:
                     w = w_needed
-                    #print "fit"
                     done = True
 
                 new_item = [x, x + w, tip_title, tip_text, url]
@@ -2001,14 +1995,12 @@ class Genome(Molecule):
                     if any(overlaps(item, new_item) for item in row):
                         continue
                     # Space left -> insert
-                    #print "fits in row"
                     row.append(new_item)
                     inserted = True
                     break
 
                 if not inserted:
                     # Create new row
-                    #print "new row"
                     feature_draw[i].append([new_item])
 
                 if done:
@@ -2035,7 +2027,6 @@ class Genome(Molecule):
                     x = segmentLeft + start * oneNtW
                     w = (end - start) * oneNtW
                     y = row_offset[i] + j * (featureHeight + 1)
-                    print y
 
                     context_dict.update({'x': x,
                                          'y': y,
@@ -2105,11 +2096,6 @@ class Genome(Molecule):
 
         for i, row in enumerate(feature_draw):
             [features.write(item) for item in draw_segment(i, row)]
-
-        #for i, row in enumerate(feature_draw):
-        #    print i
-        #    for subrow in row:
-        #        print subrow
 
         chro = StringIO.StringIO()
         for i in range(nSegments):
@@ -2305,7 +2291,6 @@ class Genome(Molecule):
                 if any(overlaps(item, new_item) for item in row):
                     continue
                 # Space left -> insert
-                #print "fits in row"
                 row.append(new_item)
                 inserted = True
                 context_dict.update({
@@ -2315,7 +2300,6 @@ class Genome(Molecule):
 
             if not inserted:
                 # Create new row
-                #print "new row"
                 context_dict.update({
                     'y': featureY + len(feature_draw) * (featureHeight + 2)
                 })
