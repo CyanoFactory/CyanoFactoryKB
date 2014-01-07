@@ -6,7 +6,6 @@ Released under the MIT license
 """
 from collections import OrderedDict
 
-from Bio import SeqIO
 from django.core.exceptions import ValidationError
 
 import cyano.models as cmodels
@@ -150,35 +149,63 @@ class EasyProt(BioParser):
         """
         :type sheet_jobs_params: openpyxl.worksheet.Worksheet
         """
-        # TODO: Testen of Job Title und ID bekannt sind in Export params
-        self.sheet_export_parameters["jobs"]
-        any(["FIXME job title","FIXME job id"] == x for x in self.sheet_export_parameters["jobs"])
         row = sheet_jobs_params.get_highest_row()
-        parse_jobs = False
+        parse_rounds = False
+        parse_mods = False
+        self.job_params["rounds"] = []
         for i in range(row):
             typ = sheet_jobs_params.cell(row=i, column=0).value
             value = sheet_jobs_params.cell(row=i, column=1).value
+            #print i, typ, value, self.job_params
 
-            typ = typ.lower()
+            if typ is not None:
+                typ = typ.lower()
 
-            if parse_jobs:
-                if typ.startswith("job"):
-                    value2 = sheet_jobs_params.cell(row=i, column=2).value
-                    self.export_parameters["jobs"].append([value, value2])
-                    continue
-                else:
-                    parse_jobs = False
+            if parse_rounds:
+                first_mod = False
+                if typ == "modifications":
+                    parse_mods = True
+                    first_mod = True
+                    for x in self.job_params["rounds"]:
+                        x[typ] = []
 
-            if typ == "easyprot version":
-                typ = "version"
-            elif typ == "#jobs":
-                parse_jobs = True
-                self.export_parameters["jobs"] = []
+                for j, x in enumerate(self.job_params["rounds"]):
+                    value = sheet_jobs_params.cell(row=i, column=1).value
+                    if value is not None:
+                        print "round end :/"
+                        parse_rounds = False
+                        break
+                    value = sheet_jobs_params.cell(row=i, column=j+2).value
+                    if parse_mods:
+                        new_typ = sheet_jobs_params.cell(row=i, column=0).value
+                        if not first_mod and new_typ is not None:
+                            parse_mods = False
+                            typ = new_typ.lower()
+                        else:
+                            x["modifications"].append(value)
+                    if not parse_mods:
+                        x[typ.lower()] = value
+
+            if typ is None:
+                # Could be start of rounds, check 3rd cell
+                typ = sheet_jobs_params.cell(row=i, column=2).value
+                if typ is not None and typ.startswith("Round"):
+                    parse_rounds = True
+                    print "parsing rounds"
+                    for x in range(100):
+                        typ = sheet_jobs_params.cell(row=i, column=x+2).value
+                        print typ, x
+                        if typ is None or not typ.startswith("Round"):
+                            break
+                        print "append awesome dictzzz"
+                        self.job_params["rounds"].append(_NoOverwriteDict())
                 continue
-            elif typ.startswith("job"):
-                raise ValidationError("Job outside of #Jobs list")
 
-            self.export_parameters[typ] = value
+            if typ == "job id":
+                if not any(value == job[1] for job in self.export_parameters["jobs"]):
+                    raise ValidationError("Unknown Job ID {}".format(value))
+
+            self.job_params[typ] = value
 
     def _parse_target_peptides(self, sheet_target_peptides):
         self._read_table(sheet_target_peptides, self.target_peptides_header, self.target_peptides)
