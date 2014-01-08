@@ -36,6 +36,8 @@ class EasyProt(BioParser):
         self.protein_details_header = []
         self.protein_summary = []
         self.protein_summary_header = []
+        self.quant_stats_info = OrderedDict()
+        self.quant_stats_info_complex = OrderedDict()
         self.mascat_quant_details_header = OrderedDict()
         self.mascat_quant_details = {}
         self.libra_quant_details_header = OrderedDict()
@@ -150,6 +152,7 @@ class EasyProt(BioParser):
         :type sheet_jobs_params: openpyxl.worksheet.Worksheet
         """
         row = sheet_jobs_params.get_highest_row()
+        cols = sheet_jobs_params.get_highest_column()
         parse_rounds = False
         parse_mods = False
         self.job_params["rounds"] = []
@@ -172,7 +175,6 @@ class EasyProt(BioParser):
                 for j, x in enumerate(self.job_params["rounds"]):
                     value = sheet_jobs_params.cell(row=i, column=1).value
                     if value is not None:
-                        print "round end :/"
                         parse_rounds = False
                         break
                     value = sheet_jobs_params.cell(row=i, column=j+2).value
@@ -191,13 +193,10 @@ class EasyProt(BioParser):
                 typ = sheet_jobs_params.cell(row=i, column=2).value
                 if typ is not None and typ.startswith("Round"):
                     parse_rounds = True
-                    print "parsing rounds"
-                    for x in range(100):
+                    for x in range(cols):
                         typ = sheet_jobs_params.cell(row=i, column=x+2).value
-                        print typ, x
                         if typ is None or not typ.startswith("Round"):
                             break
-                        print "append awesome dictzzz"
                         self.job_params["rounds"].append(_NoOverwriteDict())
                 continue
 
@@ -220,8 +219,73 @@ class EasyProt(BioParser):
         self._read_table(sheet_protein_summary, self.protein_summary_header, self.protein_summary)
 
     def _parse_quant_stats_info(self, sheet_quant_stats_info):
+        """
+        :type sheet_quant_stats_info: openpyxl.worksheet.Worksheet
+        """
+        # Parse downwards until cell(1) contains text
+        rows = sheet_quant_stats_info.get_highest_row()
+        cols = sheet_quant_stats_info.get_highest_column()
+        START = 0
+        PARSE_FIRST = 1
+        BETWEEN = 2
+        PARSE_LAST_HEADER = 3
+        PARSE_LAST_DATA = 4
+        section_type = START
+
+        for row in range(rows):
+            print self.quant_stats_info
+            print self.quant_stats_info_complex
+            if section_type == START:
+                if sheet_quant_stats_info.cell(row=row, column=1).value is not None:
+                    section_type = PARSE_FIRST
+                    for col in range(cols):
+                        value = sheet_quant_stats_info.cell(row=row, column=col+1).value
+                        if value is not None:
+                            self.quant_stats_info[value] = OrderedDict()
+            elif section_type == PARSE_FIRST:
+                if sheet_quant_stats_info.cell(row=row, column=0).value is None:
+                    section_type = BETWEEN
+                else:
+                    typ = sheet_quant_stats_info.cell(row=row, column=0).value
+                    for i, item in enumerate(self.quant_stats_info, start=1):
+                        item[typ] = sheet_quant_stats_info.cell(row=row, column=i).value
+            elif section_type == BETWEEN:
+                if sheet_quant_stats_info.cell(row=row, column=1).value is not None:
+                    section_type = PARSE_LAST_HEADER
+                    for col in range(cols)[::2]:
+                        value = sheet_quant_stats_info.cell(row=row, column=col+1).value
+                        if value is not None:
+                            self.quant_stats_info_complex[value] = OrderedDict()
+            elif section_type == PARSE_LAST_HEADER:
+                section_type = PARSE_LAST_DATA
+                for data, col in zip(self.quant_stats_info_complex, range(cols)[::2]):
+                    self.quant_stats_info_complex[data] = OrderedDict()
+                    self.quant_stats_info_complex[data][sheet_quant_stats_info.cell(row=row, column=col).value] = OrderedDict()
+                    self.quant_stats_info_complex[data][sheet_quant_stats_info.cell(row=row, column=col+1).value] = OrderedDict()
+            elif section_type == PARSE_LAST_DATA:
+                if sheet_quant_stats_info.cell(row=row, column=0).value is None:
+                    break
+                else:
+                    typ = sheet_quant_stats_info.cell(row=row, column=0).value
+                    for i, item in zip(range(len(data2))[::2], data2):
+                        val1 = sheet_quant_stats_info.cell(row=row, column=i+1).value
+                        val2 = sheet_quant_stats_info.cell(row=row, column=i+2).value
+                        it = iter(self.quant_stats_info_complex[typ])
+                        self.quant_stats_info_complex[typ][it.next()] = val1
+                        self.quant_stats_info_complex[typ][it.next()] = val2
+
         #self._read_table_with_annotation(sheet_quant_stats_info, self.quant_stats_info_header, self.quant_stats_info)
-        pass
+
+        # Strategy:
+        # Parse downwards until cell(1) contains text
+        #  - Create list with size of filled cells
+        # Parse downwards and add to list until cell(0) is empty
+        # Parse downwards until cell(1) contains text
+        #  - Create list with size of filled cells
+        #  - !!! Cells are connected, size 2 hardcoded
+        #  - Create sublist (2 elements per connected cell)
+        # Parse downwards and add to list until cell(0) is empty
+        # RETURN
 
     def _parse_mascat_quant_details(self, sheet_mascat_quant_details):
         self._read_table_with_annotation(sheet_mascat_quant_details, self.mascat_quant_details_header, self.mascat_quant_details)
@@ -230,6 +294,16 @@ class EasyProt(BioParser):
         self._read_table_with_annotation(sheet_libra_quant_details, self.libra_quant_details_header, self.libra_quant_details)
 
     def _parse_protein_expression(self, sheet_protein_expression):
+        # Strategy:
+        # Parse to the right until filled cell hit.
+        #  - Remember pos + 1
+        # Parse more to the right
+        #  - Remember pos + 1
+        # Read header in next lines
+        # Normal table scan
+        # When first cell empty and cell remembered from beg. filled:
+        #  - Goto strategy from beginning
+        # Do until col max reached -> RETURN
         pass
 
     def _read_table(self, sheet, header, values):
