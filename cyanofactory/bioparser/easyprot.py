@@ -233,7 +233,7 @@ class EasyProt(BioParser):
         section_type = START
 
         for row in range(rows):
-            print self.quant_stats_info
+            #print self.quant_stats_info
             print self.quant_stats_info_complex
             if section_type == START:
                 if sheet_quant_stats_info.cell(row=row, column=1).value is not None:
@@ -248,7 +248,8 @@ class EasyProt(BioParser):
                 else:
                     typ = sheet_quant_stats_info.cell(row=row, column=0).value
                     for i, item in enumerate(self.quant_stats_info, start=1):
-                        item[typ] = sheet_quant_stats_info.cell(row=row, column=i).value
+                        print item
+                        self.quant_stats_info[item][typ] = sheet_quant_stats_info.cell(row=row, column=i).value
             elif section_type == BETWEEN:
                 if sheet_quant_stats_info.cell(row=row, column=1).value is not None:
                     section_type = PARSE_LAST_HEADER
@@ -260,19 +261,19 @@ class EasyProt(BioParser):
                 section_type = PARSE_LAST_DATA
                 for data, col in zip(self.quant_stats_info_complex, range(cols)[::2]):
                     self.quant_stats_info_complex[data] = OrderedDict()
-                    self.quant_stats_info_complex[data][sheet_quant_stats_info.cell(row=row, column=col).value] = OrderedDict()
                     self.quant_stats_info_complex[data][sheet_quant_stats_info.cell(row=row, column=col+1).value] = OrderedDict()
+                    self.quant_stats_info_complex[data][sheet_quant_stats_info.cell(row=row, column=col+2).value] = OrderedDict()
             elif section_type == PARSE_LAST_DATA:
                 if sheet_quant_stats_info.cell(row=row, column=0).value is None:
                     break
                 else:
                     typ = sheet_quant_stats_info.cell(row=row, column=0).value
-                    for i, item in zip(range(len(data2))[::2], data2):
+                    for i, item in zip(range(len(self.quant_stats_info_complex)*2)[::2], self.quant_stats_info_complex):
                         val1 = sheet_quant_stats_info.cell(row=row, column=i+1).value
                         val2 = sheet_quant_stats_info.cell(row=row, column=i+2).value
-                        it = iter(self.quant_stats_info_complex[typ])
-                        self.quant_stats_info_complex[typ][it.next()] = val1
-                        self.quant_stats_info_complex[typ][it.next()] = val2
+                        it = iter(self.quant_stats_info_complex[item])
+                        self.quant_stats_info_complex[item][it.next()][typ] = val1
+                        self.quant_stats_info_complex[item][it.next()][typ] = val2
 
         #self._read_table_with_annotation(sheet_quant_stats_info, self.quant_stats_info_header, self.quant_stats_info)
 
