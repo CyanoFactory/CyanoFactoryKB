@@ -99,7 +99,7 @@ Released under the MIT license
 	{% for tmp in content %}
 		<th>Content</th>
 		<th>Value</th>
-		<th>Units</td>
+		<th>Units</th>
 		<th>&nbsp;</th>
 	{% endfor %}
 	</tr>
@@ -108,7 +108,6 @@ Released under the MIT license
 {% for tmp in contentRows %}
 	<tr>
 		{% for tmp2 in content %}
-		
 		{% if tmp2|length > forloop.parentloop.counter0 %}		
 			{% with val=tmp2|getattribute:forloop.parentloop.counter0 %}
 			<td class="

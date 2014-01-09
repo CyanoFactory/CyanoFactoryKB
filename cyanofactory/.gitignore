@@ -6,6 +6,5 @@ htmlcov/
 templates/search/indexes/*/*_text.txt
 xapian_index
 log/*
-migrations/
 
 /.idea

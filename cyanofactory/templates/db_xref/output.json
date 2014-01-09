@@ -1,5 +1,6 @@
 {
     "database": "{{ database }}",
     "item": "{{ item }}",
-    "url": "{{ url|safe }}"
-}
+    {% for url in urls %}"url": "{{ url|safe }}"{% if not forloop.last %},{% else %}
+}{% endif %}
+    {% endfor %}

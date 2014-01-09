@@ -16,6 +16,12 @@ Released under the MIT license
 	<meta http-equiv="Pragma" content="NO-CACHE" />
 </head>
 <body>
-	<a href="{{ url }}">{{ database }}:{{ item }}</a>
+<h1>{{ database }}:{{ item }}</h1>
+{% for url in urls %}
+	<a href="{{ url }}">{{ url }}</a>
+{% if not forloop.last %}
+    <br/>
+{% endif %}
+{% endfor %}
 </body>
 </html>

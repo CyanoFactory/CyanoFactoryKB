@@ -1,0 +1,56 @@
+{% comment %}
+Structure of coordinates:
+x1: left
+x2: right
+y1: top
+y2: bottom
+{% endcomment %}
+<g>
+    <a xlink:href="{{ url }}">
+        <polygon class="color-{{ color }}"
+                 points="
+                    {% if arrow %}
+                        {% if direction == "f" %}
+                            {{ x1 }},{{ y1 }}
+                            {{ x2|add:arrow_size }},{{ y1 }}
+                            {{ x2 }},{% widthratio y2|add:y1 2 1 %}
+                            {{ x2|add:arrow_size }},{{ y2 }}
+                            {{ x1 }},{{ y2 }}
+                            {{ x1 }},{{ y1 }}
+                        {% else %}
+                            {{ x1|add:arrow_size }},{{ y1 }}
+                            {{ x2 }},{{ y1 }}
+                            {{ x2 }},{{ y2 }}
+                            {{ x1|add:arrow_size }},{{ y2 }}
+                            {{ x1 }},{% widthratio y1|add:y2 2 1 %}
+                            {{ x1|add:arrow_size }},{{ y1 }}
+                        {% endif %}
+                    {% else %}
+                        {{ x1 }},{{ y1 }}
+                        {{ x2 }},{{ y1 }}
+                        {{ x2 }},{{ y2 }}
+                        {{ x1 }},{{ y2 }}
+                        {{ x1 }},{{ y1 }}
+                    {% endif %}"
+                 onmousemove="javascript: showToolTip(evt, '{{ title }}', '{{ text }}')"
+                 onmouseout="javascript: hideToolTip(evt);"
+                 {% if fill_opacity %}
+                 style="fill-opacity: {{ fill_opacity }};
+                 {% endif %}
+                 {% if stroke_opacity %}
+                 stroke-opacity: {{ stroke_opacity }};
+                 {% endif %}
+                 {% if stroke_width %}
+                 stroke-width: {{ stroke_width }}px"
+                 {% endif %}
+                >
+        </polygon>
+    </a>
+    <a xlink:href="{{ url }}">
+        <text x="{% widthratio x1|add:x2 2 1 %}"
+              y="{% widthratio y1|add:y2 2 1 %}"
+              onmousemove="javascript: showToolTip(evt, '{{ title }}', '{{ text }}')"
+              onmouseout="javascript: hideToolTip(evt);">{{ label }}
+        </text>
+    </a>
+</g>

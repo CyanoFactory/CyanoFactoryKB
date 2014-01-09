@@ -1,4 +1,4 @@
-{% extends "cyano/base.html" %}
+ {% extends "cyano/base.html" %}
 
 {% comment %}
 Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
@@ -18,6 +18,56 @@ Released under the MIT license
 {{ block.super }}
 <script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
 <script type="text/javascript" src="{% get_static_prefix %}boehringer/jquery-svgpan.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function() {
+    $("form#load_form").submit(function(e) {
+        e.preventDefault();
+    });
+
+    $("form#save_form").submit(function(e) {
+        e.preventDefault();
+        $.ajax({
+            url: "{% url "boehringer.views.index_ajax" %}",
+            context: document.body,
+            data: {
+                "op": "save",
+                "name": $("form#save_form input#save_input").val(),
+                "query": $("form#search_form textarea#search_box").val()
+            }
+        }).done(function(result) {
+            var json = jQuery.parseJSON(result);
+            var load_item = $("form#load_form select").children("select");
+            if (json.created) {
+                load_item.end().append('<option selected="selected" name="' + json.pk + '">' + json.name + '</option>');
+            }
+        });
+    });
+
+    $("form#load_form input#load_button").click(function(e) {
+        $.ajax({
+            url: "{% url "boehringer.views.index_ajax" %}",
+            context: document.body,
+            data: {"op": "load", "pk": $("form#load_form select").children(":selected").attr("name")}
+        }).done(function(result) {
+            var json = jQuery.parseJSON(result);
+            var search_box = $("form#search_form textarea#search_box");
+            search_box.val(json.query);
+            $("form#save_form input#save_input").val(json.name);
+        });
+    });
+
+    $("form#load_form input#delete_button").click(function(e) {
+        $.ajax({
+            url: "{% url "boehringer.views.index_ajax" %}",
+            context: document.body,
+            data: {"op": "delete", "pk": $("form#load_form select").children(":selected").attr("name")}
+        }).done(function(result) {
+            $("form#load_form select").children(":selected").remove();
+        });
+    });
+});
+</script>
 {% endblock %}
 
 {% block extrastyles %}
@@ -101,7 +151,7 @@ Released under the MIT license
 		<tr>
 			<td colspan="2" id="map_box">
 			<div id="sidebar">
-			<form method="post">
+			<form id="search_form" method="post">
 			{% csrf_token %}
 			  <p><b>Search:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using #.<br><br>
 			  <textarea id="search_box" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
@@ -109,6 +159,23 @@ Released under the MIT license
 			  <input class="button" type="submit" value="Submit" />
 			  </p>
 			</form>
+            <form id="load_form" method="get">
+                <p><b>Load</b> existing query:<br/>
+                <select name="load" class="select" style="width:100%">
+                    {% for query in queries %}
+                    <option name="{{ query.pk }}">{{ query.name }}</option>
+                    {% endfor %}
+                </select><br/>
+                <input id="load_button" class="button" type="submit" value="Load" />
+                <input id="delete_button" class="button" type="submit" value="Delete" />
+                </p>
+            </form>
+            <form id="save_form" method="get">
+                <p><b>Save</b> query:<br/>
+                <input id="save_input" class="text" type="text" style="width:100%"/><br/>
+                <input id="save_button" class="button" type="submit" value="Save" />
+                </p>
+            </form>
 
 			</div>
 			
