@@ -29,19 +29,13 @@ class EasyProt(BioParser):
         self.export_parameters = _NoOverwriteDict()
         self.job_params = _NoOverwriteDict()
         self.target_peptides = []
-        self.target_peptides_header = []
         self.decoy_peptides = []
-        self.decoy_peptides_header = []
         self.protein_details = []
-        self.protein_details_header = []
         self.protein_summary = []
-        self.protein_summary_header = []
         self.quant_stats_info = OrderedDict()
         self.quant_stats_info_complex = OrderedDict()
-        self.mascat_quant_details_header = OrderedDict()
-        self.mascat_quant_details = {}
-        self.libra_quant_details_header = OrderedDict()
-        self.libra_quant_details = {}
+        self.mascat_quant_details = []
+        self.libra_quant_details = []
         # PTM: Post Translational Modifications
 
     def parse(self, handle):
@@ -207,16 +201,16 @@ class EasyProt(BioParser):
             self.job_params[typ] = value
 
     def _parse_target_peptides(self, sheet_target_peptides):
-        self._read_table(sheet_target_peptides, self.target_peptides_header, self.target_peptides)
+        self._read_table(sheet_target_peptides, self.target_peptides)
 
     def _parse_decoy_peptides(self, sheet_decoy_peptides):
-        self._read_table(sheet_decoy_peptides, self.decoy_peptides_header, self.decoy_peptides)
+        self._read_table(sheet_decoy_peptides, self.decoy_peptides)
 
     def _parse_protein_details(self, sheet_protein_details):
-        self._read_table(sheet_protein_details, self.protein_details_header, self.protein_details)
+        self._read_table(sheet_protein_details, self.protein_details)
 
     def _parse_protein_summary(self, sheet_protein_summary):
-        self._read_table(sheet_protein_summary, self.protein_summary_header, self.protein_summary)
+        self._read_table(sheet_protein_summary, self.protein_summary)
 
     def _parse_quant_stats_info(self, sheet_quant_stats_info):
         """
@@ -289,10 +283,10 @@ class EasyProt(BioParser):
         # RETURN
 
     def _parse_mascat_quant_details(self, sheet_mascat_quant_details):
-        self._read_table_with_annotation(sheet_mascat_quant_details, self.mascat_quant_details_header, self.mascat_quant_details)
+        self._read_table_with_annotation(sheet_mascat_quant_details, self.mascat_quant_details)
 
     def _parse_libra_quant_details(self, sheet_libra_quant_details):
-        self._read_table_with_annotation(sheet_libra_quant_details, self.libra_quant_details_header, self.libra_quant_details)
+        self._read_table_with_annotation(sheet_libra_quant_details, self.libra_quant_details)
 
     def _parse_protein_expression(self, sheet_protein_expression):
         # Strategy:
@@ -307,49 +301,61 @@ class EasyProt(BioParser):
         # Do until col max reached -> RETURN
         pass
 
-    def _read_table(self, sheet, header, values):
+    def _read_table(self, sheet, data):
         """
         :type sheet: openpyxl.worksheet.Worksheet
-        :type header: list
-        :type values: list
+        :type data: list
         """
         cols = sheet.get_highest_column()
+        header = []
 
         for i in range(cols):
+            val = sheet.cell(row=0, column=i).value
+            if val is None:
+                break
             header.append(sheet.cell(row=0, column=i).value)
 
         # header omitted
         rows = sheet.get_highest_row() - 1
-        for i in range(rows):
-            values.append(map(lambda j: sheet.cell(row=i+1, column=j).value, range(cols)))
 
-    def _read_table_with_annotation(self, sheet, header, values):
+        for i in range(rows):
+            odict = OrderedDict()
+            for j in range(len(header)):
+                odict[header[j]] = sheet.cell(row=i+1, column=j).value
+            data.append(odict)
+
+    def _read_table_with_annotation(self, sheet, data):
         """
         :type sheet: openpyxl.worksheet.Worksheet
-        :type header: dict
-        :type values: dict
+        :type data: list
         """
         cols = sheet.get_highest_column()
+        header = []
 
         current_group = "main"
+        header_group = dict()
+        header_group[0] = current_group
 
         # Read header and group elements
         for i in range(cols):
-            current_group = sheet.cell(row=0, column=i).value or current_group
-            if not current_group in header:
-                header[current_group] = []
+            current_group = sheet.cell(row=0, column=i).value
+            if current_group is not None:
+                header_group[i+1] = current_group
+
             head = sheet.cell(row=1, column=i).value
-            header[current_group].append(head)
+            header.append(head)
 
         # header omitted, read values
         rows = sheet.get_highest_row() - 2
         for i in range(rows):
-            col_offset = 0
-            for head in header:
-                if not head in values:
-                    values[head] = []
-                values[head].append(map(lambda j: sheet.cell(row=i+2, column=j+col_offset).value, range(len(header[head]))))
-                col_offset += len(header[head])
+            odict = OrderedDict()
+
+            for j in range(len(header)):
+                if j in header_group:
+                    current_group = header_group[j]
+                    odict[current_group] = OrderedDict()
+                odict[current_group][header[j]] = sheet.cell(row=i+2, column=j).value
+            data.append(odict)
 
     @commit_on_success
     def apply(self):
