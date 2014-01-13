@@ -16,6 +16,7 @@ from __future__ import unicode_literals
 import itertools
 import math
 import re
+from django.db.models.fields import NullBooleanField
 import settings
 import subprocess
 import sys
@@ -218,6 +219,9 @@ options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('listing', 'concrete_entry_mode
 ''' BEGIN: validators '''
 def validate_dna_sequence(seq):
     validators.RegexValidator(regex=r'^[ACGT]+$', message='Enter a valid DNA sequence consisting of only the letters A, C, G, and T')(seq)
+
+def validate_protein_sequence(seq):
+    validators.RegexValidator(regex=r'^[ACDEFGHIKLMNPQRSTVWY]+$', message='Enter a valid Protein sequence consisting of only the letters A, C, D, E, F, G, H, I, K, L, M, N, P, Q, R, S, T, V, W and Y')(seq)
 
 def validate_kinetics(reaction, direction):
     if direction == 'f':
@@ -597,7 +601,7 @@ class GroupProfile(ProfileBase):
          if no permission object was found
         """
         allow, deny = self.get_permissions(entry)
-        if allow == None:
+        if allow is None:
             return None, None
         allow = all(perm in permissions for perm in allow)
         deny = all(perm in permissions for perm in deny)
@@ -1437,7 +1441,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
     cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
     publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publications')
-
+    parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
     #getters
 
     def delete(self, species, using=None):
@@ -2513,7 +2517,7 @@ class FeaturePosition(EntryData):
     Stores position data of a feature
     """
     chromosome_feature = ForeignKey(ChromosomeFeature, related_name = "positions", verbose_name="")
-    chromosome = ForeignKey(Genome, related_name='features', verbose_name='Chromosome or Plasmid')
+    chromosome = ForeignKey(SpeciesComponent, related_name='features', verbose_name='Chromosome, Plasmid or similiar')
     coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
     length = PositiveIntegerField(verbose_name='Length (nt)')
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
@@ -4690,9 +4694,6 @@ class Type(SpeciesComponent):
     #parent pointer
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_type', parent_link=True, verbose_name='Species component')
 
-    #additional fields
-    parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
-
     #getters
     def get_all_members(self, species):
         members = []
@@ -4952,6 +4953,86 @@ class PublicationReference(SpeciesComponent):
         verbose_name='Publication Reference'
         verbose_name_plural = 'Publication References'
         wid_unique = True
+
+class MassSpectrometryJob(SpeciesComponent):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_mass_spectrometry', parent_link=True, verbose_name='Species component')
+
+    #additional fields
+    #
+
+    #getters
+
+    #html formatting
+
+    #meta information
+    class Meta:
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': ['type']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+        ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references',  'created_detail', 'detail',
+        ]
+        facet_fields = ['type']
+        verbose_name = 'Mass Spectrometry Job'
+        verbose_name_plural = 'Mass Spectrometry Jobs'
+        wid_unique = False
+
+
+class Peptide(Protein):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_peptide', parent_link=True, verbose_name='Species component')
+
+    #additional fields
+    sequence = TextField(blank=True, default='', verbose_name='Sequence', validators=[validate_protein_sequence])
+    length = PositiveIntegerField(verbose_name='Length (nt)')
+    proteotypic = NullBooleanField(null=True, verbose_name='Proteotypic')
+    charge = IntegerField(verbose_name='Charge')
+    mass = FloatField(verbose_name='m/z')
+    zscore = FloatField(verbose_name='z-score')
+    retention_time = FloatField(verbose_name='Retention Time')
+
+    # Matched Proteins -> FK Protein?
+    # Target or Decoy via type
+
+    # SeqPTM via ChromosomeFeature
+
+    #getters
+
+    #html formatting
+
+    #meta information
+    class Meta:
+        concrete_entry_model = False
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': ['type']}),
+            ('Structure', {'fields': ['prosthetic_groups', 'chaperones', 'dna_footprint']}),
+            ('Regulation', {'fields': ['regulatory_rule']}),
+            ('Function', {'fields': [
+                {'verbose_name': 'Enzyme', 'name': 'enzyme_participants'},
+                {'verbose_name': 'Transcriptional regulation', 'name': 'transcriptional_regulations'},
+                {'verbose_name': 'Protein folding substrates', 'name': 'chaperone_substrates'},
+                {'verbose_name': 'Reaction participant', 'name':'reaction_stoichiometry_participants'},
+                {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
+                ]}),
+            ('Parameters', {'fields': ['parameters']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references', 'created_detail', 'detail'
+            ]
+        facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
+        verbose_name='Peptide'
+        verbose_name_plural = 'Peptides'
+        wid_unique = False
 
 ''' END: specific data types'''
 

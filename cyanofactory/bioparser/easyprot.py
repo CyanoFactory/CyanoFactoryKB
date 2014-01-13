@@ -363,6 +363,26 @@ class EasyProt(BioParser):
 
         self.species.save(self.detail)
 
+        ms_job = cmodels.MassSpectrometryJob.for_species(self.species).for_wid(self.export_parameters["jobs"][0][0], create=True)
+        ms_job.name = ms_job.wid
+        ms_job.save(self.detail)
+        ms_job.species.add(self.species)
+
+        # Create types 'Target-Peptide' and 'Decoy-Peptide' if missing
+        target_type = cmodels.Type.objects.for_wid("Target-Peptide", create=True)
+        decoy_type = cmodels.Type.objects.for_wid("Decoy-Peptide", create=True)
+
+        for item in self.target_peptides:
+            peptide = cmodels.Peptide.for_species(self.species).for_wid("???", create=True)
+
+            peptide.parent = ms_job
+            peptide.sequence = item["Sequence"]
+            peptide.proteotypic = item["Proteotypic"]
+            peptide.charge = item["Charge"]
+            peptide.mass = item["m/z"]
+            peptide.zscore = item["zscore"]
+            peptide.retention_time = item["RT"]
+
         if hasattr(self, "notify_progress"):
-            outstr = "Assigning KEGG pathways"
+            outstr = "Importing EasyProt file"
             self.notify_progress(current=len(cds_map.values()), total=len(cds_map.values()), message=outstr)
