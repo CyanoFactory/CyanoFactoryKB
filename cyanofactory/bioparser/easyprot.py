@@ -359,30 +359,60 @@ class EasyProt(BioParser):
 
     @commit_on_success
     def apply(self):
+        if hasattr(self, "notify_progress"):
+            outstr = "Importing EasyProt file"
+            self.notify_progress(current=0, total=1, message=outstr)
+
         self.detail.save()
 
         self.species.save(self.detail)
 
-        ms_job = cmodels.MassSpectrometryJob.for_species(self.species).for_wid(self.export_parameters["jobs"][0][0], create=True)
+        ms_job = cmodels.MassSpectrometryJob.objects.for_species(self.species).for_wid(slugify(self.export_parameters["jobs"][0][0]), create=True)
         ms_job.name = ms_job.wid
         ms_job.save(self.detail)
         ms_job.species.add(self.species)
 
         # Create types 'Target-Peptide' and 'Decoy-Peptide' if missing
         target_type = cmodels.Type.objects.for_wid("Target-Peptide", create=True)
+        target_type.save(self.detail)
+        target_type.species.add(self.species)
         decoy_type = cmodels.Type.objects.for_wid("Decoy-Peptide", create=True)
+        decoy_type.save(self.detail)
+        decoy_type.species.add(self.species)
 
-        for item in self.target_peptides:
-            peptide = cmodels.Peptide.for_species(self.species).for_wid("???", create=True)
+        full_len = len(self.target_peptides) + len(self.decoy_peptides)
+
+        for i, item in enumerate(self.target_peptides):
+            if hasattr(self, "notify_progress"):
+                outstr = "Importing Target Peptide"
+                self.notify_progress(current=i+1, total=full_len, message=outstr)
+            peptide = cmodels.Peptide.objects.for_species(self.species).for_wid("{}-{}".format(i+1, slugify(item["Matched Proteins"])), create=True)
 
             peptide.parent = ms_job
             peptide.sequence = item["Sequence"]
+            peptide.length = len(item["Sequence"])
             peptide.proteotypic = item["Proteotypic"]
             peptide.charge = item["Charge"]
             peptide.mass = item["m/z"]
             peptide.zscore = item["zscore"]
             peptide.retention_time = item["RT"]
+            peptide.save(self.detail)
+            peptide.type.add(target_type)
+            peptide.species.add(self.species)
 
-        if hasattr(self, "notify_progress"):
-            outstr = "Importing EasyProt file"
-            self.notify_progress(current=len(cds_map.values()), total=len(cds_map.values()), message=outstr)
+        for i, item in enumerate(self.decoy_peptides):
+            if hasattr(self, "notify_progress"):
+                outstr = "Importing Decoy Peptide"
+                self.notify_progress(current=len(self.target_peptides) + i+1, total=full_len, message=outstr)
+            peptide = cmodels.Peptide.objects.for_species(self.species).for_wid("{}-Decoy".format(i+1), create=True)
+
+            peptide.parent = ms_job
+            peptide.sequence = item["Sequence"]
+            peptide.length = len(item["Sequence"])
+            peptide.charge = item["Charge"]
+            peptide.mass = item["m/z"]
+            peptide.zscore = item["zscore"]
+            peptide.retention_time = item["RT"]
+            peptide.save(self.detail)
+            peptide.type.add(decoy_type)
+            peptide.species.add(self.species)

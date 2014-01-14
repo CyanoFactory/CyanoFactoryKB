@@ -1442,6 +1442,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
     cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
     publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publications')
     parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
+
     #getters
 
     def delete(self, species, using=None):
@@ -1763,7 +1764,7 @@ class Genome(Molecule):
 
         seq = self.sequence
 
-        value = 0;
+        value = 0
         for i in range(len(seq) - 1):
             value += ExtinctionCoefficient.pairwise_dna[seq[i]][seq[i+1]]
         value += ExtinctionCoefficient.pairwise_dna[seq[-1]][seq[0]]
@@ -2404,7 +2405,7 @@ class Genome(Molecule):
         SeqIO.write(record, genbank, "genbank")
         
         return genbank.getvalue()
-        
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -4964,6 +4965,19 @@ class MassSpectrometryJob(SpeciesComponent):
     #getters
 
     #html formatting
+    def get_as_html_target_peptide(self, species, is_user_anonymous):
+        try:
+            target_type = Type.objects.for_wid("Target-Peptide")
+            return "<br>".join(x.wid for x in self.children.for_species(species).filter(type=target_type))
+        except ObjectDoesNotExist:
+            pass
+
+    def get_as_html_decoy_peptide(self, species, is_user_anonymous):
+        try:
+            decoy_type = Type.objects.for_wid("Decoy-Peptide")
+            return "<br>".join(x.wid for x in self.children.for_species(species).filter(type=decoy_type))
+        except ObjectDoesNotExist:
+            pass
 
     #meta information
     class Meta:
@@ -4972,6 +4986,10 @@ class MassSpectrometryJob(SpeciesComponent):
             ('Type', {'fields': ['model_type']}),
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
             ('Classification', {'fields': ['type']}),
+            ('Mass Spectrometry', {'fields': [
+                {'verbose_name': 'Target Peptides', 'name': 'target_peptide'},
+                {'verbose_name': 'Decoy Peptides', 'name': 'decoy_peptide'}
+                ]}),
             ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
         ]
@@ -5005,15 +5023,22 @@ class Peptide(Protein):
     #getters
 
     #html formatting
+    def get_as_html_sequence(self, species, is_user_anonymous):
+        from cyano.helpers import format_sequence_as_html
+        return format_sequence_as_html(self.sequence)
 
     #meta information
     class Meta:
-        concrete_entry_model = False
+        concrete_entry_model = True
         fieldsets = [
             ('Type', {'fields': ['model_type']}),
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
             ('Classification', {'fields': ['type']}),
-            ('Structure', {'fields': ['prosthetic_groups', 'chaperones', 'dna_footprint']}),
+            ('Parent', {'fields': ['parent']}),
+            ('Structure', {'fields': [
+                'prosthetic_groups', 'chaperones', 'dna_footprint',
+                {'verbose_name': 'Sequence', 'name': 'sequence'},
+            ]}),
             ('Regulation', {'fields': ['regulatory_rule']}),
             ('Function', {'fields': [
                 {'verbose_name': 'Enzyme', 'name': 'enzyme_participants'},
