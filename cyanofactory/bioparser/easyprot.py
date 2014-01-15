@@ -5,6 +5,7 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 from collections import OrderedDict
+import re
 
 from django.core.exceptions import ValidationError
 
@@ -85,7 +86,7 @@ class EasyProt(BioParser):
             self._parse_libra_quant_details(sheet_libra_quant_details)
 
         sheet_protein_expression = workbook.get_sheet_by_name("Protein Expression 95%")
-        if sheet_protein_details is not None:
+        if sheet_protein_expression is not None:
             self._parse_protein_expression(sheet_protein_expression)
 
     @staticmethod
@@ -367,19 +368,46 @@ class EasyProt(BioParser):
 
         self.species.save(self.detail)
 
+        #self._import_export_parameters()
+        ms_job = self._import_jobs_params()
+
+        if self.target_peptides:
+            self._import_target_peptides(ms_job)
+
+        if self.decoy_peptides:
+            self._import_decoy_peptides(ms_job)
+        
+        if self.protein_details:
+            self._import_protein_details(ms_job)
+        
+        if self.protein_summary:
+            self._import_protein_summary(ms_job)
+
+        #if self.quant_stats_info:
+        #    self._parse_quant_stats_info(sheet_quant_stats_info)
+
+        #if self.mascat_quant_details:
+        #    self._parse_mascat_quant_details(sheet_mascat_quant_details)
+
+        #if self.libra_quant_details:
+        #    self._parse_libra_quant_details(sheet_libra_quant_details)
+
+        #if self.protein_expression:
+        #    self._parse_protein_expression(sheet_protein_expression)
+
+    def _import_jobs_params(self):
         ms_job = cmodels.MassSpectrometryJob.objects.for_species(self.species).for_wid(slugify(self.export_parameters["jobs"][0][0]), create=True)
         ms_job.name = ms_job.wid
         ms_job.save(self.detail)
         ms_job.species.add(self.species)
 
-        # Create types 'Target-Peptide' and 'Decoy-Peptide' if missing
+        return ms_job
+
+    def _import_target_peptides(self, ms_job):
         target_type = cmodels.Type.objects.for_wid("Target-Peptide", create=True)
         target_type.save(self.detail)
         target_type.species.add(self.species)
-        decoy_type = cmodels.Type.objects.for_wid("Decoy-Peptide", create=True)
-        decoy_type.save(self.detail)
-        decoy_type.species.add(self.species)
-
+        
         full_len = len(self.target_peptides) + len(self.decoy_peptides)
 
         for i, item in enumerate(self.target_peptides):
@@ -398,7 +426,19 @@ class EasyProt(BioParser):
             peptide.retention_time = item["RT"]
             peptide.save(self.detail)
             peptide.type.add(target_type)
+
+            for protein in item["Matched Proteins"]:
+                prot = cmodels.EntryBasicTextData.objects.get_or_create(value=protein)[0]
+                peptide.proteins.add(prot)
+
             peptide.species.add(self.species)
+
+    def _import_decoy_peptides(self, ms_job):
+        decoy_type = cmodels.Type.objects.for_wid("Decoy-Peptide", create=True)
+        decoy_type.save(self.detail)
+        decoy_type.species.add(self.species)
+
+        full_len = len(self.target_peptides) + len(self.decoy_peptides)
 
         for i, item in enumerate(self.decoy_peptides):
             if hasattr(self, "notify_progress"):
@@ -416,3 +456,53 @@ class EasyProt(BioParser):
             peptide.save(self.detail)
             peptide.type.add(decoy_type)
             peptide.species.add(self.species)
+
+    def _import_protein_details(self, ms_job):
+        for row in self.protein_details:
+            protein = cmodels.Protein.objects.for_species(self.species).for_wid(row["ID"], create=True)
+            """:type: cmodels.Protein"""
+
+            protein.sequence = row["Sequence"]
+            protein.sequence_ptm = row["Sequence + PTMs"]
+            coordinate, length = map(lambda x: int(x), row["Position (to mature prot.)"].split("-"))
+            protein.length = length - coordinate
+            protein.coordinate = coordinate
+            protein.proteotypic = row["Proteotypic"]
+            protein.zscore = row["z-score"]
+            protein.delta_mass = row["Delta Mass (ppm)"]
+            protein.mass = row["Experimental Mass (m/z)"]
+            protein.charge = row["Charge"]
+            protein.retention_time = row["Retention Time (min)"]
+            protein.theoretical_mass = row["Theoretical Mass (Da)"]
+            protein.missed_cleavages = row["Missed Cleavages"]
+
+    def _import_protein_summary(self, ms_job):
+        # Import the protein data from the file
+        for row in self.protein_summary:
+            protein = cmodels.Protein.objects.for_species(self.species).for_wid(row["ID"], create=True)
+            """:type: cmodels.Protein"""
+            protein.comments = row["Description"]
+
+            uniprot = cmodels.CrossReference.objects.get_or_create(source="UniProt", xid=row["AC"])[0]
+            protein.cross_references.add(uniprot)
+            protein.score = row["Protein Score"]
+            protein.coverage = row["% Coverage"]
+            protein.sequence = row["Protein Sequence"]
+            # #PSMs -> Peptide spectrum match -> Entries in Details
+            # #Peptides -> Count number of different sequences(?) in Details
+            # StringTable -> Sub-Prots
+            # StringTable -> Ambiguous Prots
+            protein.pi = row["Protein PI"]
+            protein.mass = row["Protein Mass"]
+
+            # Extract all GO terms splitted to a generator containing list
+            # [name, type (GO), identifier]
+            go_terms = (x.groups() for x in (re.match(r"^(.*) \((.*):(.*)\)$", x) for x in go.split(";") if x))
+            for name, typ, identifier in go_terms:
+                go = cmodels.CrossReference.objects.get_or_create(source=typ, xid=identifier)[0]
+                protein.cross_references.add(go)
+                # No field for name :/
+
+            protein.parent = ms_job
+            protein.save(self.detail)
+            protein.species.add(self.species)

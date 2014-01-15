@@ -986,6 +986,13 @@ class EntryTextData(EvidencedEntryData):
         verbose_name = 'Entry text data'
         verbose_name_plural = 'Entry text data'
 
+class EntryBasicTextData(EntryData):
+    value = TextField(blank=False, default='', verbose_name='Value')
+
+    class Meta:
+        verbose_name = "Entry basic text data"
+        verbose_name_plural = "Entry basic text data"
+
 #Complex entry data
 class BindingSite(EvidencedEntryData):
     coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
@@ -4966,18 +4973,26 @@ class MassSpectrometryJob(SpeciesComponent):
 
     #html formatting
     def get_as_html_target_peptide(self, species, is_user_anonymous):
+        results = []
         try:
             target_type = Type.objects.for_wid("Target-Peptide")
-            return "<br>".join(x.wid for x in self.children.for_species(species).filter(type=target_type))
         except ObjectDoesNotExist:
-            pass
+            return ""
+
+        for g in self.children.for_species(species).filter(type=target_type):
+            results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
+        return format_list_html(results, comma_separated=True)
 
     def get_as_html_decoy_peptide(self, species, is_user_anonymous):
+        results = []
         try:
             decoy_type = Type.objects.for_wid("Decoy-Peptide")
-            return "<br>".join(x.wid for x in self.children.for_species(species).filter(type=decoy_type))
         except ObjectDoesNotExist:
-            pass
+            return ""
+
+        for g in self.children.for_species(species).filter(type=decoy_type):
+            results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
+        return format_list_html(results, comma_separated=True)
 
     #meta information
     class Meta:
@@ -5001,7 +5016,6 @@ class MassSpectrometryJob(SpeciesComponent):
         verbose_name_plural = 'Mass Spectrometry Jobs'
         wid_unique = False
 
-
 class Peptide(Protein):
     #parent pointer
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_peptide', parent_link=True, verbose_name='Species component')
@@ -5014,6 +5028,7 @@ class Peptide(Protein):
     mass = FloatField(verbose_name='m/z')
     zscore = FloatField(verbose_name='z-score')
     retention_time = FloatField(verbose_name='Retention Time')
+    proteins = ManyToManyField(EntryBasicTextData, verbose_name='Proteins belonging to the Peptide', related_name='peptides')
 
     # Matched Proteins -> FK Protein?
     # Target or Decoy via type
@@ -5058,6 +5073,34 @@ class Peptide(Protein):
         verbose_name='Peptide'
         verbose_name_plural = 'Peptides'
         wid_unique = False
+
+
+class MassSpectrometryProtein(Protein):
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_protein', parent_link=True, verbose_name='Species component')
+
+    score = FloatField(verbose_name="Protein Score")
+    coverage = FloatField(verbose_name="% Coverage")
+    sequence = TextField(verbose_name='Sequence', validators=[validate_protein_sequence])
+    ambigious = ManyToManyField(EntryBasicTextData, verbose_name='Ambiguous Prots', related_name='ambigious')
+    sub = ManyToManyField(EntryBasicTextData, verbose_name='Sub-Prots', related_name='sub')
+    pi = FloatField(verbose_name="Protein PI")
+    protein_mass = FloatField(verbose_name="Protein Mass (Da)")
+
+
+class MassSpectrometryProteinDetail(EntryData):
+    protein = ForeignKey(MassSpectrometryProtein)
+    sequence = TextField(verbose_name='Sequence')
+    sequence_ptm = TextField(verbose_name='Sequence + PTMs')
+    coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
+    length = PositiveIntegerField(verbose_name='Length (nt)')
+    proteotypic = NullBooleanField(null=True, verbose_name='Proteotypic')
+    zscore = FloatField(verbose_name='zscore')
+    delta_mass = FloatField(verbose_name='Delta Mass (ppm)')
+    mass = FloatField(verbose_name='Experimental Mass (m/z)')
+    charge = IntegerField(verbose_name='Charge')
+    retention_time = IntegerField(verbose_name='Retention Time (min)')
+    theoretical_mass = FloatField(verbose_name='Theoretical Mass (Da)')
+    missed_cleavages = IntegerField(verbose_name='Missed Cleavages')
 
 ''' END: specific data types'''
 
