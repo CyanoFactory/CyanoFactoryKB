@@ -38,6 +38,8 @@ class EasyProt(BioParser):
         self.mascat_quant_details = []
         self.libra_quant_details = []
         # PTM: Post Translational Modifications
+        self.total = 0
+        self.current = 0
 
     def parse(self, handle):
         if hasattr(self, "notify_progress"):
@@ -88,6 +90,8 @@ class EasyProt(BioParser):
         sheet_protein_expression = workbook.get_sheet_by_name("Protein Expression 95%")
         if sheet_protein_expression is not None:
             self._parse_protein_expression(sheet_protein_expression)
+
+        self.total = self._calculate_max_len()
 
     @staticmethod
     def _add_to_dict(dictionary, key, value):
@@ -320,6 +324,10 @@ class EasyProt(BioParser):
         rows = sheet.get_highest_row() - 1
 
         for i in range(rows):
+            # Check if first col in row is empty and skip
+            if not sheet.cell(row=i+1, column=0).value:
+                continue
+
             odict = OrderedDict()
             for j in range(len(header)):
                 odict[header[j]] = sheet.cell(row=i+1, column=j).value
@@ -360,9 +368,11 @@ class EasyProt(BioParser):
 
     @commit_on_success
     def apply(self):
+        self.current = 0
+
         if hasattr(self, "notify_progress"):
-            outstr = "Importing EasyProt file"
-            self.notify_progress(current=0, total=1, message=outstr)
+            outstr = "EasyProt: Importing file"
+            self.notify_progress(current=0, total=self.total, message=outstr)
 
         self.detail.save()
 
@@ -377,11 +387,11 @@ class EasyProt(BioParser):
         if self.decoy_peptides:
             self._import_decoy_peptides(ms_job)
         
-        if self.protein_details:
-            self._import_protein_details(ms_job)
-        
         if self.protein_summary:
             self._import_protein_summary(ms_job)
+
+        if self.protein_details:
+            self._import_protein_details(ms_job)
 
         #if self.quant_stats_info:
         #    self._parse_quant_stats_info(sheet_quant_stats_info)
@@ -395,6 +405,21 @@ class EasyProt(BioParser):
         #if self.protein_expression:
         #    self._parse_protein_expression(sheet_protein_expression)
 
+    def _calculate_max_len(self):
+        total = 0
+
+        total += len(self.target_peptides)
+        total += len(self.decoy_peptides)
+        total += len(self.protein_details)
+        total += len(self.protein_summary)
+
+        #self.quant_stats_info = OrderedDict()
+        #self.quant_stats_info_complex = OrderedDict()
+        #self.mascat_quant_details = []
+        #self.libra_quant_details = []
+
+        return total
+
     def _import_jobs_params(self):
         ms_job = cmodels.MassSpectrometryJob.objects.for_species(self.species).for_wid(slugify(self.export_parameters["jobs"][0][0]), create=True)
         ms_job.name = ms_job.wid
@@ -407,13 +432,12 @@ class EasyProt(BioParser):
         target_type = cmodels.Type.objects.for_wid("Target-Peptide", create=True)
         target_type.save(self.detail)
         target_type.species.add(self.species)
-        
-        full_len = len(self.target_peptides) + len(self.decoy_peptides)
 
         for i, item in enumerate(self.target_peptides):
             if hasattr(self, "notify_progress"):
-                outstr = "Importing Target Peptide"
-                self.notify_progress(current=i+1, total=full_len, message=outstr)
+                outstr = "EasyProt: Importing Target Peptide ({})".format(item["Matched Proteins"])
+                self.current += 1
+                self.notify_progress(current=self.current, total=self.total, message=outstr)
             peptide = cmodels.Peptide.objects.for_species(self.species).for_wid("{}-{}".format(i+1, slugify(item["Matched Proteins"])), create=True)
 
             peptide.parent = ms_job
@@ -427,8 +451,8 @@ class EasyProt(BioParser):
             peptide.save(self.detail)
             peptide.type.add(target_type)
 
-            for protein in item["Matched Proteins"]:
-                prot = cmodels.EntryBasicTextData.objects.get_or_create(value=protein)[0]
+            for protein in item["Matched Proteins"].split(","):
+                prot = cmodels.EntryBasicTextData.objects.get_or_create(value=protein.strip())[0]
                 peptide.proteins.add(prot)
 
             peptide.species.add(self.species)
@@ -438,12 +462,12 @@ class EasyProt(BioParser):
         decoy_type.save(self.detail)
         decoy_type.species.add(self.species)
 
-        full_len = len(self.target_peptides) + len(self.decoy_peptides)
-
         for i, item in enumerate(self.decoy_peptides):
             if hasattr(self, "notify_progress"):
-                outstr = "Importing Decoy Peptide"
-                self.notify_progress(current=len(self.target_peptides) + i+1, total=full_len, message=outstr)
+                outstr = "EasyProt: Importing Decoy Peptide"
+                self.current += 1
+                self.notify_progress(current=self.current, total=self.total, message=outstr)
+
             peptide = cmodels.Peptide.objects.for_species(self.species).for_wid("{}-Decoy".format(i+1), create=True)
 
             peptide.parent = ms_job
@@ -459,50 +483,77 @@ class EasyProt(BioParser):
 
     def _import_protein_details(self, ms_job):
         for row in self.protein_details:
-            protein = cmodels.Protein.objects.for_species(self.species).for_wid(row["ID"], create=True)
-            """:type: cmodels.Protein"""
+            if hasattr(self, "notify_progress"):
+                outstr = "EasyProt: Importing Protein Details ({})".format(row["ID"])
+                self.current += 1
+                self.notify_progress(current=self.current, total=self.total, message=outstr)
 
-            protein.sequence = row["Sequence"]
-            protein.sequence_ptm = row["Sequence + PTMs"]
+            ref_protein = cmodels.MassSpectrometryProtein.objects.for_species(self.species).for_wid(slugify(row["ID"]))
+
             coordinate, length = map(lambda x: int(x), row["Position (to mature prot.)"].split("-"))
-            protein.length = length - coordinate
-            protein.coordinate = coordinate
-            protein.proteotypic = row["Proteotypic"]
-            protein.zscore = row["z-score"]
-            protein.delta_mass = row["Delta Mass (ppm)"]
-            protein.mass = row["Experimental Mass (m/z)"]
-            protein.charge = row["Charge"]
-            protein.retention_time = row["Retention Time (min)"]
-            protein.theoretical_mass = row["Theoretical Mass (Da)"]
-            protein.missed_cleavages = row["Missed Cleavages"]
+
+            cmodels.MassSpectrometryProteinDetail.objects.get_or_create(
+                protein=ref_protein,
+                sequence=row["Sequence"],
+                sequence_ptm=row["Sequence + PTMs"],
+                coordinate=coordinate,
+                length=length-coordinate,
+                proteotypic=row["Proteotypic"],
+                zscore=row["z-score"],
+                delta_mass=row["Delta Mass (ppm)"],
+                mass=row["Experimental Mass (m/z)"],
+                charge=row["Charge"],
+                retention_time=row["Retention Time (min)"],
+                theoretical_mass=row["Theoretical Mass (Da)"],
+                missed_cleavages=row["Missed Cleavages"]
+            )
 
     def _import_protein_summary(self, ms_job):
         # Import the protein data from the file
         for row in self.protein_summary:
-            protein = cmodels.Protein.objects.for_species(self.species).for_wid(row["ID"], create=True)
-            """:type: cmodels.Protein"""
+            if hasattr(self, "notify_progress"):
+                outstr = "EasyProt: Importing Protein Summary ({})".format(row["ID"])
+                self.current += 1
+                self.notify_progress(current=self.current, total=self.total, message=outstr)
+
+            protein = cmodels.MassSpectrometryProtein.objects.for_species(self.species).for_wid(slugify(row["ID"]), create=True)
+            """:type: cmodels.MassSpectrometryProtein"""
             protein.comments = row["Description"]
 
             uniprot = cmodels.CrossReference.objects.get_or_create(source="UniProt", xid=row["AC"])[0]
-            protein.cross_references.add(uniprot)
+
             protein.score = row["Protein Score"]
             protein.coverage = row["% Coverage"]
-            protein.sequence = row["Protein Sequence"]
+            protein.sequence = row["Protein Seq"]
+
             # #PSMs -> Peptide spectrum match -> Entries in Details
             # #Peptides -> Count number of different sequences(?) in Details
-            # StringTable -> Sub-Prots
-            # StringTable -> Ambiguous Prots
-            protein.pi = row["Protein PI"]
-            protein.mass = row["Protein Mass"]
 
-            # Extract all GO terms splitted to a generator containing list
-            # [name, type (GO), identifier]
-            go_terms = (x.groups() for x in (re.match(r"^(.*) \((.*):(.*)\)$", x) for x in go.split(";") if x))
-            for name, typ, identifier in go_terms:
-                go = cmodels.CrossReference.objects.get_or_create(source=typ, xid=identifier)[0]
-                protein.cross_references.add(go)
-                # No field for name :/
+            protein.pi = row["Protein PI"]
+            protein.mass = row["Protein Mass (Da)"]
 
             protein.parent = ms_job
             protein.save(self.detail)
+            protein.cross_references.add(uniprot)
+
+            # Extract all GO terms splitted to a generator containing list
+            # [name, type (GO), identifier]
+            go_term_row = row["GO terms"]
+            if go_term_row:
+                go_terms = (x.groups() for x in (re.match(r"^(.*) \((.*):(.*)\)$", x) for x in go_term_row.split(";") if x))
+                for name, typ, identifier in go_terms:
+                    go = cmodels.CrossReference.objects.get_or_create(source=typ, xid=identifier)[0]
+                    protein.cross_references.add(go)
+                    # No field for name :/
+
+            if row["#Ambiguous Prots"] > 0:
+                for amb_protein in row["Ambiguous Prots"].split(","):
+                    prot = cmodels.EntryBasicTextData.objects.get_or_create(value=amb_protein.strip())[0]
+                    protein.ambigious.add(prot)
+
+            if row["#Sub-Prots"] > 0:
+                for sub_protein in row["Sub-Prots"].split(","):
+                    prot = cmodels.EntryBasicTextData.objects.get_or_create(value=sub_protein.strip())[0]
+                    protein.sub.add(prot)
+
             protein.species.add(self.species)

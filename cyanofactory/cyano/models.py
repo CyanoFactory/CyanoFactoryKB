@@ -5070,13 +5070,13 @@ class Peptide(Protein):
             'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references', 'created_detail', 'detail'
             ]
         facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
-        verbose_name='Peptide'
+        verbose_name = 'Peptide'
         verbose_name_plural = 'Peptides'
         wid_unique = False
 
 
 class MassSpectrometryProtein(Protein):
-    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_protein', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_ms_protein', parent_link=True, verbose_name='Species component')
 
     score = FloatField(verbose_name="Protein Score")
     coverage = FloatField(verbose_name="% Coverage")
@@ -5084,16 +5084,47 @@ class MassSpectrometryProtein(Protein):
     ambigious = ManyToManyField(EntryBasicTextData, verbose_name='Ambiguous Prots', related_name='ambigious')
     sub = ManyToManyField(EntryBasicTextData, verbose_name='Sub-Prots', related_name='sub')
     pi = FloatField(verbose_name="Protein PI")
-    protein_mass = FloatField(verbose_name="Protein Mass (Da)")
+    mass = FloatField(verbose_name="Protein Mass (Da)")
+
+    class Meta:
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': ['type']}),
+            ('Parent', {'fields': ['parent']}),
+            ('Structure', {'fields': [
+                'prosthetic_groups', 'chaperones', 'dna_footprint',
+                {'verbose_name': 'Sequence', 'name': 'sequence'},
+            ]}),
+            ('Regulation', {'fields': ['regulatory_rule']}),
+            ('Function', {'fields': [
+                {'verbose_name': 'Enzyme', 'name': 'enzyme_participants'},
+                {'verbose_name': 'Transcriptional regulation', 'name': 'transcriptional_regulations'},
+                {'verbose_name': 'Protein folding substrates', 'name': 'chaperone_substrates'},
+                {'verbose_name': 'Reaction participant', 'name':'reaction_stoichiometry_participants'},
+                {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
+                ]}),
+            ('Parameters', {'fields': ['parameters']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references', 'created_detail', 'detail'
+            ]
+        facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
+        verbose_name = 'Mass Spectrometry Protein'
+        verbose_name_plural = 'Mass Spectrometry Proteins'
+        wid_unique = False
 
 
 class MassSpectrometryProteinDetail(EntryData):
-    protein = ForeignKey(MassSpectrometryProtein)
+    protein = ForeignKey(MassSpectrometryProtein, related_name="protein_details")
     sequence = TextField(verbose_name='Sequence')
     sequence_ptm = TextField(verbose_name='Sequence + PTMs')
     coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
     length = PositiveIntegerField(verbose_name='Length (nt)')
-    proteotypic = NullBooleanField(null=True, verbose_name='Proteotypic')
+    proteotypic = BooleanField(verbose_name='Proteotypic')
     zscore = FloatField(verbose_name='zscore')
     delta_mass = FloatField(verbose_name='Delta Mass (ppm)')
     mass = FloatField(verbose_name='Experimental Mass (m/z)')
