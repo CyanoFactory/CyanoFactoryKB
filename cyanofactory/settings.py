@@ -154,6 +154,7 @@ INSTALLED_APPS = (
     'bioparser',
     'boehringer',
     'kegg',
+    'stringdb',
 
     #helpers
     'django_dumpdb',

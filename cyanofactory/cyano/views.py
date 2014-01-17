@@ -1316,19 +1316,20 @@ def jobs(request, species = None):
     # Admins see all jobs
     is_admin = request.user.profile.is_admin()
 
-    if not res:
-        return chelpers.render_queryset_to_response_error(
-            request,
-            error = 503,
-            msg = "Server error or no worker available. Please report this to an administrator!",
-            msg_debug = message_debug
-        )
+    #if not res:
+    #    return chelpers.render_queryset_to_response_error(
+    #        request,
+    #        error = 503,
+    #        msg = "Server error or no worker available. Please report this to an administrator!",
+    #        msg_debug = message_debug
+    #    )
 
-    for v in res.values():
-        for job in v:
-            kwargs = literal_eval(job["kwargs"])
-            if is_admin or kwargs["user"] == request.user.pk or kwargs["user"] == request.user.username:
-                pending.append(kwargs)
+    if res:
+        for v in res.values():
+            for job in v:
+                kwargs = literal_eval(job["kwargs"])
+                if is_admin or kwargs["user"] == request.user.pk or kwargs["user"] == request.user.username:
+                    pending.append(kwargs)
 
     obj = TaskMeta.objects.all().order_by("pk")
     for o in obj:
