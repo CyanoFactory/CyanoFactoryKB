@@ -4994,6 +4994,13 @@ class MassSpectrometryJob(SpeciesComponent):
             results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
         return format_list_html(results, comma_separated=True)
 
+    def get_as_html_related_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for g in self.children.for_species(species).filter(model_type=TableMeta.get_by_model_name("MassSpectrometryProtein")):
+            results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
+        return format_list_html(results, comma_separated=True)
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -5003,8 +5010,9 @@ class MassSpectrometryJob(SpeciesComponent):
             ('Classification', {'fields': ['type']}),
             ('Mass Spectrometry', {'fields': [
                 {'verbose_name': 'Target Peptides', 'name': 'target_peptide'},
-                {'verbose_name': 'Decoy Peptides', 'name': 'decoy_peptide'}
-                ]}),
+                {'verbose_name': 'Decoy Peptides', 'name': 'decoy_peptide'},
+                {'verbose_name': 'Related Proteins', 'name': 'related_proteins'}
+            ]}),
             ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
         ]
@@ -5042,6 +5050,19 @@ class Peptide(Protein):
         from cyano.helpers import format_sequence_as_html
         return format_sequence_as_html(self.sequence)
 
+    def get_as_html_matched_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for matched_protein in self.proteins.all():
+            try:
+                res = Protein.objects.for_species(species).get(
+                    parent=MassSpectrometryJob.objects.all()[0], wid__startswith=matched_protein.value + "_")
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+            except ObjectDoesNotExist:
+                results.append(matched_protein.value)
+
+        return format_list_html(results, comma_separated=True)
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -5049,7 +5070,10 @@ class Peptide(Protein):
             ('Type', {'fields': ['model_type']}),
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
             ('Classification', {'fields': ['type']}),
-            ('Parent', {'fields': ['parent']}),
+            ('Related', {'fields': [
+                'parent',
+                {'verbose_name': 'Matched Proteins', 'name': 'matched_proteins'},
+            ]}),
             ('Structure', {'fields': [
                 'prosthetic_groups', 'chaperones', 'dna_footprint',
                 {'verbose_name': 'Sequence', 'name': 'sequence'},
@@ -5062,6 +5086,13 @@ class Peptide(Protein):
                 {'verbose_name': 'Reaction participant', 'name':'reaction_stoichiometry_participants'},
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}),
+            ('Statistics', {'fields': [
+                'proteotypic',
+                'charge',
+                'mass',
+                'zscore',
+                'retention_time',
+            ]}),
             ('Parameters', {'fields': ['parameters']}),
             ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
@@ -5081,10 +5112,41 @@ class MassSpectrometryProtein(Protein):
     score = FloatField(verbose_name="Protein Score")
     coverage = FloatField(verbose_name="% Coverage")
     sequence = TextField(verbose_name='Sequence', validators=[validate_protein_sequence])
-    ambigious = ManyToManyField(EntryBasicTextData, verbose_name='Ambiguous Prots', related_name='ambigious')
-    sub = ManyToManyField(EntryBasicTextData, verbose_name='Sub-Prots', related_name='sub')
+    ambiguous = ManyToManyField(EntryBasicTextData, verbose_name='Ambiguous Proteins', related_name='ambiguous')
+    sub = ManyToManyField(EntryBasicTextData, verbose_name='Sub-Proteins', related_name='sub')
     pi = FloatField(verbose_name="Protein PI")
     mass = FloatField(verbose_name="Protein Mass (Da)")
+
+    #html formatting
+    def get_as_html_sequence(self, species, is_user_anonymous):
+        from cyano.helpers import format_sequence_as_html
+        return format_sequence_as_html(self.sequence)
+
+    def get_as_html_ambiguous_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for ambiguous_protein in self.ambiguous.all():
+            try:
+                res = Protein.objects.for_species(species).get(
+                    parent=MassSpectrometryJob.objects.all()[0], wid__startswith=ambiguous_protein.value + "_")
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+            except ObjectDoesNotExist:
+                results.append(ambiguous_protein.value)
+
+        return format_list_html(results, comma_separated=True)
+
+    def get_as_html_sub_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for sub_protein in self.sub.all():
+            try:
+                res = Protein.objects.for_species(species).get(
+                    parent=MassSpectrometryJob.objects.all()[0], wid__startswith=sub_protein.value + "_")
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+            except ObjectDoesNotExist:
+                results.append(sub_protein.value)
+
+        return format_list_html(results, comma_separated=True)
 
     class Meta:
         concrete_entry_model = True
@@ -5092,7 +5154,11 @@ class MassSpectrometryProtein(Protein):
             ('Type', {'fields': ['model_type']}),
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
             ('Classification', {'fields': ['type']}),
-            ('Parent', {'fields': ['parent']}),
+            ('Related', {'fields': [
+                'parent',
+                {'verbose_name': 'Ambigious Proteins', 'name': 'ambiguous_proteins'},
+                {'verbose_name': 'Sun-Proteins', 'name': 'sub_proteins'},
+            ]}),
             ('Structure', {'fields': [
                 'prosthetic_groups', 'chaperones', 'dna_footprint',
                 {'verbose_name': 'Sequence', 'name': 'sequence'},
@@ -5105,12 +5171,18 @@ class MassSpectrometryProtein(Protein):
                 {'verbose_name': 'Reaction participant', 'name':'reaction_stoichiometry_participants'},
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}),
+            ('Statistics', {'fields': [
+                'score',
+                'coverage',
+                'pi',
+                'mass'
+            ]}),
             ('Parameters', {'fields': ['parameters']}),
             ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references', 'created_detail', 'detail'
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'score', 'coverage', 'pi', 'mass', 'sequence', 'comments', 'publication_references', 'created_detail', 'detail'
             ]
         facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
         verbose_name = 'Mass Spectrometry Protein'

@@ -549,7 +549,7 @@ class EasyProt(BioParser):
             if row["#Ambiguous Prots"] > 0:
                 for amb_protein in row["Ambiguous Prots"].split(","):
                     prot = cmodels.EntryBasicTextData.objects.get_or_create(value=amb_protein.strip())[0]
-                    protein.ambigious.add(prot)
+                    protein.ambiguous.add(prot)
 
             if row["#Sub-Prots"] > 0:
                 for sub_protein in row["Sub-Prots"].split(","):

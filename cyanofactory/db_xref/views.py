@@ -57,6 +57,10 @@ def dbxref(request, source, xid):
     database = source
     organism = xid
 
+    # Workaround for GO: Items need GO:-prefix
+    if database == "GO":
+        organism = "GO:" + organism
+
     data = {
         "database": database,
         "item": organism,
