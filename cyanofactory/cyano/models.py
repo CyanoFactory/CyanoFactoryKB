@@ -5112,6 +5112,7 @@ class MassSpectrometryProtein(Protein):
     score = FloatField(verbose_name="Protein Score")
     coverage = FloatField(verbose_name="% Coverage")
     sequence = TextField(verbose_name='Sequence', validators=[validate_protein_sequence])
+    length = PositiveIntegerField(verbose_name='Length (nt)')
     ambiguous = ManyToManyField(EntryBasicTextData, verbose_name='Ambiguous Proteins', related_name='ambiguous')
     sub = ManyToManyField(EntryBasicTextData, verbose_name='Sub-Proteins', related_name='sub')
     pi = FloatField(verbose_name="Protein PI")
@@ -5121,6 +5122,107 @@ class MassSpectrometryProtein(Protein):
     def get_as_html_sequence(self, species, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
         return format_sequence_as_html(self.sequence)
+
+    def get_as_html_structure(self, species, is_user_anonymous):
+        from .helpers import overlaps
+
+        length = self.length
+
+        W = 636
+        geneHeight = 20
+        featureHeight = 10
+
+        geneY = 2
+        chrY = geneY + geneHeight + 4
+        featureY = chrY + 1 + 2
+
+        start_coordinate = 0
+        end_coordinate = length
+
+        feature_draw = []
+
+        #style
+        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08']
+        style = ''
+        for i in range(len(colors)):
+            style += '.color-%s{fill:#%s; stroke: #%s;}' % (i, colors[i], colors[i], )
+
+        #chromosome
+        chrL = 4.5 * len('%s' % start_coordinate) + 4
+        chrR = W - 4.5 * len('%s' % end_coordinate) - 2 - 6
+        chrW = chrR - chrL
+
+        chrStyle = '\
+        .chr text{fill:#222; alignment-baseline:middle; font-size:10px}\
+        .chr line{stroke:#666; stroke-width:0.5px;}\
+        '
+
+        chro = '<text x="%s" y="%s" style="text-anchor:end;">%s</text><line x1="%s" x2="%s" y1="%s" y2="%s" /><text x="%s" y="%s" style="text-anchor:start;">%s</text>' % (
+            chrL - 4, chrY, start_coordinate,
+            chrL, chrR, chrY, chrY,
+            chrR + 2, chrY, end_coordinate)
+
+        def draw_segment(wid, coordinate, item_length, tip_title, tip_text, url):
+            opacity = 1
+
+            x = chrL + float(coordinate - start_coordinate) / length * chrW
+            w = chrL + float(coordinate + item_length - 1 - start_coordinate) / length * chrW
+
+            x = max(chrL, min(chrR, x))
+            w = max(chrL, min(chrR, w)) - x
+
+            tip_title = tip_title.replace("'", "\'")
+            tip_text = tip_text.replace("'", "\'")
+
+            template = loader.get_template("cyano/genome/draw_feature.html")
+
+            ret = []
+
+            context_dict = {'h': featureHeight,
+                            'title': tip_title,
+                            'text': tip_text,
+                            'url': url,
+                            'x': x,
+                            'w': w,
+                            'opacity':opacity}
+
+            new_item = [x, x + w]
+            inserted = False
+            for i, row in enumerate(feature_draw):
+                if any(overlaps(item, new_item) for item in row):
+                    continue
+                # Space left -> insert
+                row.append(new_item)
+                inserted = True
+                context_dict.update({
+                    'y': featureY + i * (featureHeight + 2)
+                })
+                break
+
+            if not inserted:
+                # Create new row
+                context_dict.update({
+                    'y': featureY + len(feature_draw) * (featureHeight + 2)
+                })
+                feature_draw.append([new_item])
+
+            return template.render(Context(context_dict))
+
+
+        #features
+        featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
+        features = StringIO.StringIO()
+
+        for feature in self.protein_details.all():
+            tip_title = feature.protein.name or feature.protein.wid
+            url = feature.protein.get_absolute_url(species)
+
+            features.write(draw_segment(feature.protein.wid, feature.coordinate, feature.length, tip_title, "", url))
+
+        H = 2 + geneHeight + 2 + 4 + 1 * (2 + len(feature_draw) * (featureHeight + 2)) + 2
+
+        return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s</style><g class="chr">%s</g><g class="features">%s</g></svg>' % (
+            W, H, W, H, style, chrStyle, featureStyle, chro, features.getvalue())
 
     def get_as_html_ambiguous_proteins(self, species, is_user_anonymous):
         results = []
@@ -5148,6 +5250,10 @@ class MassSpectrometryProtein(Protein):
 
         return format_list_html(results, comma_separated=True)
 
+    def get_as_html_protein_details(self, species, is_user_anonymous):
+        details = self.protein_details.all()
+        return "DEINE MUDDA"
+
     class Meta:
         concrete_entry_model = True
         fieldsets = [
@@ -5156,12 +5262,13 @@ class MassSpectrometryProtein(Protein):
             ('Classification', {'fields': ['type']}),
             ('Related', {'fields': [
                 'parent',
-                {'verbose_name': 'Ambigious Proteins', 'name': 'ambiguous_proteins'},
+                {'verbose_name': 'Ambiguous Proteins', 'name': 'ambiguous_proteins'},
                 {'verbose_name': 'Sun-Proteins', 'name': 'sub_proteins'},
             ]}),
             ('Structure', {'fields': [
                 'prosthetic_groups', 'chaperones', 'dna_footprint',
                 {'verbose_name': 'Sequence', 'name': 'sequence'},
+                {'verbose_name': 'Structure', 'name': 'structure'},
             ]}),
             ('Regulation', {'fields': ['regulatory_rule']}),
             ('Function', {'fields': [
@@ -5170,13 +5277,14 @@ class MassSpectrometryProtein(Protein):
                 {'verbose_name': 'Protein folding substrates', 'name': 'chaperone_substrates'},
                 {'verbose_name': 'Reaction participant', 'name':'reaction_stoichiometry_participants'},
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
-                ]}),
+            ]}),
             ('Statistics', {'fields': [
                 'score',
                 'coverage',
                 'pi',
                 'mass'
             ]}),
+            {'inline': 'protein_details'},
             ('Parameters', {'fields': ['parameters']}),
             ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
@@ -5204,6 +5312,31 @@ class MassSpectrometryProteinDetail(EntryData):
     retention_time = IntegerField(verbose_name='Retention Time (min)')
     theoretical_mass = FloatField(verbose_name='Theoretical Mass (Da)')
     missed_cleavages = IntegerField(verbose_name='Missed Cleavages')
+
+    class Meta:
+        verbose_name = "Mass Spectrometry Protein Detail"
+        verbose_name_plural = "Mass Spectrometry Protein Details"
+        fieldsets = [
+            ('Mass Spectrometry Details', {'fields': [
+                'sequence',
+                'sequence_ptm',
+                'proteotypic',
+                'zscore',
+                'delta_mass',
+                'mass',
+                'charge',
+                'retention_time',
+                'theoretical_mass',
+                'missed_cleavages'
+            #    {'verbose_name': 'Structure', 'name': 'structure'},
+            #    {'verbose_name': 'Sequence', 'name': 'sequence'},
+            #    {'verbose_name': 'Genes', 'name': 'genes'},
+            #    {'verbose_name': 'Transcription units', 'name': 'transcription_units'},
+            ]}),
+        ]
+        field_list = [
+            'id', 'chromosome_feature', 'chromosome', 'coordinate', 'length',
+        ]
 
 ''' END: specific data types'''
 

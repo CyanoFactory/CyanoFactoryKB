@@ -525,6 +525,7 @@ class EasyProt(BioParser):
             protein.score = row["Protein Score"]
             protein.coverage = row["% Coverage"]
             protein.sequence = row["Protein Seq"]
+            protein.length = len(protein.sequence)
 
             # #PSMs -> Peptide spectrum match -> Entries in Details
             # #Peptides -> Count number of different sequences(?) in Details
