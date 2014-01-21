@@ -5124,7 +5124,7 @@ class MassSpectrometryProtein(Protein):
         return format_sequence_as_html(self.sequence)
 
     def get_as_html_structure(self, species, is_user_anonymous):
-        from .helpers import overlaps
+        from .helpers import overlaps, create_detail_fieldset
 
         length = self.length
 
@@ -5162,8 +5162,10 @@ class MassSpectrometryProtein(Protein):
             chrL, chrR, chrY, chrY,
             chrR + 2, chrY, end_coordinate)
 
-        def draw_segment(wid, coordinate, item_length, tip_title, tip_text, url):
+        def draw_segment(feature):
             opacity = 1
+            coordinate = feature.coordinate
+            item_length = feature.length
 
             x = chrL + float(coordinate - start_coordinate) / length * chrW
             w = chrL + float(coordinate + item_length - 1 - start_coordinate) / length * chrW
@@ -5171,8 +5173,15 @@ class MassSpectrometryProtein(Protein):
             x = max(chrL, min(chrR, x))
             w = max(chrL, min(chrR, w)) - x
 
-            tip_title = tip_title.replace("'", "\'")
-            tip_text = tip_text.replace("'", "\'")
+            fieldsets = deepcopy(feature._meta.fieldsets)
+            fielddata = create_detail_fieldset(species, feature, fieldsets, False)
+
+            tip_title = fielddata[0][0]
+            tip_text = StringIO.StringIO()
+
+            for dataset in fielddata:
+                for item in dataset[1]["fields"]:
+                    tip_text.write("<br><b>" + item["verbose_name"] + "</b>: "+str(item["data"]))
 
             template = loader.get_template("cyano/genome/draw_feature.html")
 
@@ -5180,11 +5189,11 @@ class MassSpectrometryProtein(Protein):
 
             context_dict = {'h': featureHeight,
                             'title': tip_title,
-                            'text': tip_text,
-                            'url': url,
+                            'text': tip_text.getvalue(),
+                            'url': feature.protein.get_absolute_url(species),
                             'x': x,
                             'w': w,
-                            'opacity':opacity}
+                            'opacity': opacity}
 
             new_item = [x, x + w]
             inserted = False
@@ -5214,10 +5223,7 @@ class MassSpectrometryProtein(Protein):
         features = StringIO.StringIO()
 
         for feature in self.protein_details.all():
-            tip_title = feature.protein.name or feature.protein.wid
-            url = feature.protein.get_absolute_url(species)
-
-            features.write(draw_segment(feature.protein.wid, feature.coordinate, feature.length, tip_title, "", url))
+            features.write(draw_segment(feature))
 
         H = 2 + geneHeight + 2 + 4 + 1 * (2 + len(feature_draw) * (featureHeight + 2)) + 2
 
@@ -5328,10 +5334,6 @@ class MassSpectrometryProteinDetail(EntryData):
                 'retention_time',
                 'theoretical_mass',
                 'missed_cleavages'
-            #    {'verbose_name': 'Structure', 'name': 'structure'},
-            #    {'verbose_name': 'Sequence', 'name': 'sequence'},
-            #    {'verbose_name': 'Genes', 'name': 'genes'},
-            #    {'verbose_name': 'Transcription units', 'name': 'transcription_units'},
             ]}),
         ]
         field_list = [

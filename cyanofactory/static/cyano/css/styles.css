@@ -83,7 +83,7 @@ select.select{
 	font-weight:normal;
 	width:auto;
 	height:auto;
-	max-width:150px;
+	/*max-width:150px;*/
 	vertical-align:middle;
 	display:none;
 }
