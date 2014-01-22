@@ -2525,11 +2525,10 @@ class FeaturePosition(EntryData):
     Stores position data of a feature
     """
     chromosome_feature = ForeignKey(ChromosomeFeature, related_name = "positions", verbose_name="")
-    chromosome = ForeignKey(SpeciesComponent, related_name='features', verbose_name='Chromosome, Plasmid or similiar')
+    chromosome = ForeignKey(Genome, related_name='features', verbose_name='Chromosome or Plasmid')
     coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
     length = PositiveIntegerField(verbose_name='Length (nt)')
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
-
 
     def get_sequence(self, cache=False):
         if cache:
@@ -4979,7 +4978,7 @@ class MassSpectrometryJob(SpeciesComponent):
         except ObjectDoesNotExist:
             return ""
 
-        for g in self.children.for_species(species).filter(type=target_type):
+        for g in self.children.for_species(species).filter(type=target_type).order_by("wid"):
             results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
         return format_list_html(results, comma_separated=True)
 
@@ -4990,14 +4989,14 @@ class MassSpectrometryJob(SpeciesComponent):
         except ObjectDoesNotExist:
             return ""
 
-        for g in self.children.for_species(species).filter(type=decoy_type):
+        for g in self.children.for_species(species).filter(type=decoy_type).order_by("wid"):
             results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
         return format_list_html(results, comma_separated=True)
 
     def get_as_html_related_proteins(self, species, is_user_anonymous):
         results = []
 
-        for g in self.children.for_species(species).filter(model_type=TableMeta.get_by_model_name("MassSpectrometryProtein")):
+        for g in self.children.for_species(species).filter(model_type=TableMeta.get_by_model_name("MassSpectrometryProtein")).order_by("wid"):
             results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
         return format_list_html(results, comma_separated=True)
 
@@ -5256,10 +5255,6 @@ class MassSpectrometryProtein(Protein):
 
         return format_list_html(results, comma_separated=True)
 
-    def get_as_html_protein_details(self, species, is_user_anonymous):
-        details = self.protein_details.all()
-        return "DEINE MUDDA"
-
     class Meta:
         concrete_entry_model = True
         fieldsets = [
@@ -5339,6 +5334,8 @@ class MassSpectrometryProteinDetail(EntryData):
         field_list = [
             'id', 'chromosome_feature', 'chromosome', 'coordinate', 'length',
         ]
+
+
 
 ''' END: specific data types'''
 

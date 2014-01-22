@@ -1412,7 +1412,7 @@ def create_detail_fieldset(species, item, fieldsets, is_anonymous):
 def format_field_detail_view(species, obj, field_name, is_user_anonymous, history_id = None):
     if hasattr(obj, 'get_as_html_%s' % field_name):
         val = getattr(obj, 'get_as_html_%s' % field_name)(species, is_user_anonymous)
-        if isinstance(val, float) and val != 0. and val is not None:        
+        if isinstance(val, float) and val != 0. and val is not None:
             return ('%.' + str(int(math.ceil(max(0, -math.log10(abs(val)))+2))) + 'f') % val
         return val
     
