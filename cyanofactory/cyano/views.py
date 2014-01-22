@@ -267,11 +267,15 @@ def species(request, species):
         ])
         
         contentCol3.append([
-            [0, 'Processes', cmodels.Process.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Process'})],
+            [0, 'Processes', cmodels.Process.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Process'})],
         ])
         
         contentCol3.append([
             [0, 'States', cmodels.State.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
+        ])
+
+        contentCol3.append([
+            [0, "Mass Spectrometry Data", cmodels.MassSpectrometryJob.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'MassSpectrometryJob'})],
         ])
 
     sources = {

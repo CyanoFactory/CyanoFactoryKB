@@ -16,6 +16,7 @@ from __future__ import unicode_literals
 import itertools
 import math
 import re
+from django.db.models.fields import NullBooleanField
 import settings
 import subprocess
 import sys
@@ -218,6 +219,9 @@ options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('listing', 'concrete_entry_mode
 ''' BEGIN: validators '''
 def validate_dna_sequence(seq):
     validators.RegexValidator(regex=r'^[ACGT]+$', message='Enter a valid DNA sequence consisting of only the letters A, C, G, and T')(seq)
+
+def validate_protein_sequence(seq):
+    validators.RegexValidator(regex=r'^[ACDEFGHIKLMNPQRSTVWY]+$', message='Enter a valid Protein sequence consisting of only the letters A, C, D, E, F, G, H, I, K, L, M, N, P, Q, R, S, T, V, W and Y')(seq)
 
 def validate_kinetics(reaction, direction):
     if direction == 'f':
@@ -597,7 +601,7 @@ class GroupProfile(ProfileBase):
          if no permission object was found
         """
         allow, deny = self.get_permissions(entry)
-        if allow == None:
+        if allow is None:
             return None, None
         allow = all(perm in permissions for perm in allow)
         deny = all(perm in permissions for perm in deny)
@@ -981,6 +985,13 @@ class EntryTextData(EvidencedEntryData):
         ordering = ['value', 'units']
         verbose_name = 'Entry text data'
         verbose_name_plural = 'Entry text data'
+
+class EntryBasicTextData(EntryData):
+    value = TextField(blank=False, default='', verbose_name='Value')
+
+    class Meta:
+        verbose_name = "Entry basic text data"
+        verbose_name_plural = "Entry basic text data"
 
 #Complex entry data
 class BindingSite(EvidencedEntryData):
@@ -1437,6 +1448,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
     cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
     publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publications')
+    parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
 
     #getters
 
@@ -1759,7 +1771,7 @@ class Genome(Molecule):
 
         seq = self.sequence
 
-        value = 0;
+        value = 0
         for i in range(len(seq) - 1):
             value += ExtinctionCoefficient.pairwise_dna[seq[i]][seq[i+1]]
         value += ExtinctionCoefficient.pairwise_dna[seq[-1]][seq[0]]
@@ -2400,7 +2412,7 @@ class Genome(Molecule):
         SeqIO.write(record, genbank, "genbank")
         
         return genbank.getvalue()
-        
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -2517,7 +2529,6 @@ class FeaturePosition(EntryData):
     coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
     length = PositiveIntegerField(verbose_name='Length (nt)')
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
-
 
     def get_sequence(self, cache=False):
         if cache:
@@ -4690,9 +4701,6 @@ class Type(SpeciesComponent):
     #parent pointer
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_type', parent_link=True, verbose_name='Species component')
 
-    #additional fields
-    parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
-
     #getters
     def get_all_members(self, species):
         members = []
@@ -4952,6 +4960,382 @@ class PublicationReference(SpeciesComponent):
         verbose_name='Publication Reference'
         verbose_name_plural = 'Publication References'
         wid_unique = True
+
+class MassSpectrometryJob(SpeciesComponent):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_mass_spectrometry', parent_link=True, verbose_name='Species component')
+
+    #additional fields
+    #
+
+    #getters
+
+    #html formatting
+    def get_as_html_target_peptide(self, species, is_user_anonymous):
+        results = []
+        try:
+            target_type = Type.objects.for_wid("Target-Peptide")
+        except ObjectDoesNotExist:
+            return ""
+
+        for g in self.children.for_species(species).filter(type=target_type).order_by("wid"):
+            results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
+        return format_list_html(results, comma_separated=True)
+
+    def get_as_html_decoy_peptide(self, species, is_user_anonymous):
+        results = []
+        try:
+            decoy_type = Type.objects.for_wid("Decoy-Peptide")
+        except ObjectDoesNotExist:
+            return ""
+
+        for g in self.children.for_species(species).filter(type=decoy_type).order_by("wid"):
+            results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
+        return format_list_html(results, comma_separated=True)
+
+    def get_as_html_related_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for g in self.children.for_species(species).filter(model_type=TableMeta.get_by_model_name("MassSpectrometryProtein")).order_by("wid"):
+            results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
+        return format_list_html(results, comma_separated=True)
+
+    #meta information
+    class Meta:
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': ['type']}),
+            ('Mass Spectrometry', {'fields': [
+                {'verbose_name': 'Target Peptides', 'name': 'target_peptide'},
+                {'verbose_name': 'Decoy Peptides', 'name': 'decoy_peptide'},
+                {'verbose_name': 'Related Proteins', 'name': 'related_proteins'}
+            ]}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+        ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references',  'created_detail', 'detail',
+        ]
+        facet_fields = ['type']
+        verbose_name = 'Mass Spectrometry Job'
+        verbose_name_plural = 'Mass Spectrometry Jobs'
+        wid_unique = False
+
+class Peptide(Protein):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_peptide', parent_link=True, verbose_name='Species component')
+
+    #additional fields
+    sequence = TextField(blank=True, default='', verbose_name='Sequence', validators=[validate_protein_sequence])
+    length = PositiveIntegerField(verbose_name='Length (nt)')
+    proteotypic = NullBooleanField(null=True, verbose_name='Proteotypic')
+    charge = IntegerField(verbose_name='Charge')
+    mass = FloatField(verbose_name='m/z')
+    zscore = FloatField(verbose_name='z-score')
+    retention_time = FloatField(verbose_name='Retention Time')
+    proteins = ManyToManyField(EntryBasicTextData, verbose_name='Proteins belonging to the Peptide', related_name='peptides')
+
+    # Matched Proteins -> FK Protein?
+    # Target or Decoy via type
+
+    # SeqPTM via ChromosomeFeature
+
+    #getters
+
+    #html formatting
+    def get_as_html_sequence(self, species, is_user_anonymous):
+        from cyano.helpers import format_sequence_as_html
+        return format_sequence_as_html(self.sequence)
+
+    def get_as_html_matched_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for matched_protein in self.proteins.all():
+            try:
+                res = Protein.objects.for_species(species).get(
+                    parent=MassSpectrometryJob.objects.all()[0], wid__startswith=matched_protein.value + "_")
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+            except ObjectDoesNotExist:
+                results.append(matched_protein.value)
+
+        return format_list_html(results, comma_separated=True)
+
+    #meta information
+    class Meta:
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': ['type']}),
+            ('Related', {'fields': [
+                'parent',
+                {'verbose_name': 'Matched Proteins', 'name': 'matched_proteins'},
+            ]}),
+            ('Structure', {'fields': [
+                'prosthetic_groups', 'chaperones', 'dna_footprint',
+                {'verbose_name': 'Sequence', 'name': 'sequence'},
+            ]}),
+            ('Regulation', {'fields': ['regulatory_rule']}),
+            ('Function', {'fields': [
+                {'verbose_name': 'Enzyme', 'name': 'enzyme_participants'},
+                {'verbose_name': 'Transcriptional regulation', 'name': 'transcriptional_regulations'},
+                {'verbose_name': 'Protein folding substrates', 'name': 'chaperone_substrates'},
+                {'verbose_name': 'Reaction participant', 'name':'reaction_stoichiometry_participants'},
+                {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
+                ]}),
+            ('Statistics', {'fields': [
+                'proteotypic',
+                'charge',
+                'mass',
+                'zscore',
+                'retention_time',
+            ]}),
+            ('Parameters', {'fields': ['parameters']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references', 'created_detail', 'detail'
+            ]
+        facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
+        verbose_name = 'Peptide'
+        verbose_name_plural = 'Peptides'
+        wid_unique = False
+
+
+class MassSpectrometryProtein(Protein):
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_ms_protein', parent_link=True, verbose_name='Species component')
+
+    score = FloatField(verbose_name="Protein Score")
+    coverage = FloatField(verbose_name="% Coverage")
+    sequence = TextField(verbose_name='Sequence', validators=[validate_protein_sequence])
+    length = PositiveIntegerField(verbose_name='Length (nt)')
+    ambiguous = ManyToManyField(EntryBasicTextData, verbose_name='Ambiguous Proteins', related_name='ambiguous')
+    sub = ManyToManyField(EntryBasicTextData, verbose_name='Sub-Proteins', related_name='sub')
+    pi = FloatField(verbose_name="Protein PI")
+    mass = FloatField(verbose_name="Protein Mass (Da)")
+
+    #html formatting
+    def get_as_html_sequence(self, species, is_user_anonymous):
+        from cyano.helpers import format_sequence_as_html
+        return format_sequence_as_html(self.sequence)
+
+    def get_as_html_structure(self, species, is_user_anonymous):
+        from .helpers import overlaps, create_detail_fieldset
+
+        length = self.length
+
+        W = 636
+        geneHeight = 20
+        featureHeight = 10
+
+        geneY = 2
+        chrY = geneY + geneHeight + 4
+        featureY = chrY + 1 + 2
+
+        start_coordinate = 0
+        end_coordinate = length
+
+        feature_draw = []
+
+        #style
+        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08']
+        style = ''
+        for i in range(len(colors)):
+            style += '.color-%s{fill:#%s; stroke: #%s;}' % (i, colors[i], colors[i], )
+
+        #chromosome
+        chrL = 4.5 * len('%s' % start_coordinate) + 4
+        chrR = W - 4.5 * len('%s' % end_coordinate) - 2 - 6
+        chrW = chrR - chrL
+
+        chrStyle = '\
+        .chr text{fill:#222; alignment-baseline:middle; font-size:10px}\
+        .chr line{stroke:#666; stroke-width:0.5px;}\
+        '
+
+        chro = '<text x="%s" y="%s" style="text-anchor:end;">%s</text><line x1="%s" x2="%s" y1="%s" y2="%s" /><text x="%s" y="%s" style="text-anchor:start;">%s</text>' % (
+            chrL - 4, chrY, start_coordinate,
+            chrL, chrR, chrY, chrY,
+            chrR + 2, chrY, end_coordinate)
+
+        def draw_segment(feature):
+            opacity = 1
+            coordinate = feature.coordinate
+            item_length = feature.length
+
+            x = chrL + float(coordinate - start_coordinate) / length * chrW
+            w = chrL + float(coordinate + item_length - 1 - start_coordinate) / length * chrW
+
+            x = max(chrL, min(chrR, x))
+            w = max(chrL, min(chrR, w)) - x
+
+            fieldsets = deepcopy(feature._meta.fieldsets)
+            fielddata = create_detail_fieldset(species, feature, fieldsets, False)
+
+            tip_title = fielddata[0][0]
+            tip_text = StringIO.StringIO()
+
+            for dataset in fielddata:
+                for item in dataset[1]["fields"]:
+                    tip_text.write("<br><b>" + item["verbose_name"] + "</b>: "+str(item["data"]))
+
+            template = loader.get_template("cyano/genome/draw_feature.html")
+
+            ret = []
+
+            context_dict = {'h': featureHeight,
+                            'title': tip_title,
+                            'text': tip_text.getvalue(),
+                            'url': feature.protein.get_absolute_url(species),
+                            'x': x,
+                            'w': w,
+                            'opacity': opacity}
+
+            new_item = [x, x + w]
+            inserted = False
+            for i, row in enumerate(feature_draw):
+                if any(overlaps(item, new_item) for item in row):
+                    continue
+                # Space left -> insert
+                row.append(new_item)
+                inserted = True
+                context_dict.update({
+                    'y': featureY + i * (featureHeight + 2)
+                })
+                break
+
+            if not inserted:
+                # Create new row
+                context_dict.update({
+                    'y': featureY + len(feature_draw) * (featureHeight + 2)
+                })
+                feature_draw.append([new_item])
+
+            return template.render(Context(context_dict))
+
+
+        #features
+        featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
+        features = StringIO.StringIO()
+
+        for feature in self.protein_details.all():
+            features.write(draw_segment(feature))
+
+        H = 2 + geneHeight + 2 + 4 + 1 * (2 + len(feature_draw) * (featureHeight + 2)) + 2
+
+        return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s</style><g class="chr">%s</g><g class="features">%s</g></svg>' % (
+            W, H, W, H, style, chrStyle, featureStyle, chro, features.getvalue())
+
+    def get_as_html_ambiguous_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for ambiguous_protein in self.ambiguous.all():
+            try:
+                res = Protein.objects.for_species(species).get(
+                    parent=MassSpectrometryJob.objects.all()[0], wid__startswith=ambiguous_protein.value + "_")
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+            except ObjectDoesNotExist:
+                results.append(ambiguous_protein.value)
+
+        return format_list_html(results, comma_separated=True)
+
+    def get_as_html_sub_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for sub_protein in self.sub.all():
+            try:
+                res = Protein.objects.for_species(species).get(
+                    parent=MassSpectrometryJob.objects.all()[0], wid__startswith=sub_protein.value + "_")
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+            except ObjectDoesNotExist:
+                results.append(sub_protein.value)
+
+        return format_list_html(results, comma_separated=True)
+
+    class Meta:
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': ['type']}),
+            ('Related', {'fields': [
+                'parent',
+                {'verbose_name': 'Ambiguous Proteins', 'name': 'ambiguous_proteins'},
+                {'verbose_name': 'Sun-Proteins', 'name': 'sub_proteins'},
+            ]}),
+            ('Structure', {'fields': [
+                'prosthetic_groups', 'chaperones', 'dna_footprint',
+                {'verbose_name': 'Sequence', 'name': 'sequence'},
+                {'verbose_name': 'Structure', 'name': 'structure'},
+            ]}),
+            ('Regulation', {'fields': ['regulatory_rule']}),
+            ('Function', {'fields': [
+                {'verbose_name': 'Enzyme', 'name': 'enzyme_participants'},
+                {'verbose_name': 'Transcriptional regulation', 'name': 'transcriptional_regulations'},
+                {'verbose_name': 'Protein folding substrates', 'name': 'chaperone_substrates'},
+                {'verbose_name': 'Reaction participant', 'name':'reaction_stoichiometry_participants'},
+                {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
+            ]}),
+            ('Statistics', {'fields': [
+                'score',
+                'coverage',
+                'pi',
+                'mass'
+            ]}),
+            {'inline': 'protein_details'},
+            ('Parameters', {'fields': ['parameters']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'score', 'coverage', 'pi', 'mass', 'sequence', 'comments', 'publication_references', 'created_detail', 'detail'
+            ]
+        facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
+        verbose_name = 'Mass Spectrometry Protein'
+        verbose_name_plural = 'Mass Spectrometry Proteins'
+        wid_unique = False
+
+
+class MassSpectrometryProteinDetail(EntryData):
+    protein = ForeignKey(MassSpectrometryProtein, related_name="protein_details")
+    sequence = TextField(verbose_name='Sequence')
+    sequence_ptm = TextField(verbose_name='Sequence + PTMs')
+    coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
+    length = PositiveIntegerField(verbose_name='Length (nt)')
+    proteotypic = BooleanField(verbose_name='Proteotypic')
+    zscore = FloatField(verbose_name='zscore')
+    delta_mass = FloatField(verbose_name='Delta Mass (ppm)')
+    mass = FloatField(verbose_name='Experimental Mass (m/z)')
+    charge = IntegerField(verbose_name='Charge')
+    retention_time = IntegerField(verbose_name='Retention Time (min)')
+    theoretical_mass = FloatField(verbose_name='Theoretical Mass (Da)')
+    missed_cleavages = IntegerField(verbose_name='Missed Cleavages')
+
+    class Meta:
+        verbose_name = "Mass Spectrometry Protein Detail"
+        verbose_name_plural = "Mass Spectrometry Protein Details"
+        fieldsets = [
+            ('Mass Spectrometry Details', {'fields': [
+                'sequence',
+                'sequence_ptm',
+                'proteotypic',
+                'zscore',
+                'delta_mass',
+                'mass',
+                'charge',
+                'retention_time',
+                'theoretical_mass',
+                'missed_cleavages'
+            ]}),
+        ]
+        field_list = [
+            'id', 'chromosome_feature', 'chromosome', 'coordinate', 'length',
+        ]
+
+
 
 ''' END: specific data types'''
 

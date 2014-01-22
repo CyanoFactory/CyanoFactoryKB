@@ -56,3 +56,9 @@ class BioParser(object):
         This operation should be in a transaction.
         """
         raise NotImplementedError("Subclasses must implement me")
+
+
+def notify_progress_print(current, total, message):
+    percent = current * 100 / total
+    remaining = 100 - percent
+    print("[{}{}] - {}".format("*"*percent, " "*remaining, message))
