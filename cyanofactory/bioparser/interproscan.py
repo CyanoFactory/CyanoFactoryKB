@@ -22,6 +22,8 @@ class InterProScan(BioParser):
         self.protein_monomers_cf = OrderedDict()
         self.xrefs = OrderedDict()
         self.feature_positions = OrderedDict()
+        self.types = OrderedDict()
+        self.type_cache = {}
         self.total = 1
 
     def parse(self, handle):
@@ -29,7 +31,7 @@ class InterProScan(BioParser):
             self.notify_progress(current=0, total=1, message="Parsing InterProScan file...")
         
         xml = handle.read()
-        # Remove xmlns namespace, makes working with ElementTree more complecated
+        # Remove xmlns namespace, makes working with ElementTree more complicated
         xml = re.sub(' xmlns="[^"]+"', '', xml, count=1)
 
         root = ET.fromstring(xml)
@@ -63,6 +65,7 @@ class InterProScan(BioParser):
                     cf.comments = signature.get("desc") or ""
                     self.xrefs[wid] = []
                     self.protein_monomers_cf[protein_item].append(cf)
+                    self.types[wid] = match.tag.title()
 
                     for entry in signature.findall("entry"):
                         for xref in entry:
@@ -86,6 +89,10 @@ class InterProScan(BioParser):
     @commit_on_success
     def apply(self):
         self.detail.save()
+
+        match_type = cmodels.Type.objects.for_wid("Match-Type", create=True)
+        match_type.save(self.detail)
+        match_type.species.add()
 
         for i, values in enumerate(self.protein_monomers_cf.items()):
             protein_monomer, chromosome_feature = values
@@ -114,3 +121,16 @@ class InterProScan(BioParser):
                                                                       coordinate=fp["coordinate"],
                                                                       length=fp["length"],
                                                                       direction=fp["direction"])
+
+                if cf.wid in self.types:
+                    typ = self.types[cf.wid]
+                    if typ in self.type_cache:
+                        typ_obj = self.type_cache[typ]
+                    else:
+                        typ_obj = cmodels.Type.objects.for_wid(typ, create=True)
+                        typ_obj.parent = match_type
+                        typ_obj.save(self.detail)
+                        self.type_cache[typ] = typ_obj
+                    typ_obj.species.add(self.species)
+
+                    real_cf.type.add(typ_obj)
