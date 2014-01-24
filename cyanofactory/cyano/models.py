@@ -1841,7 +1841,7 @@ class Genome(Molecule):
         row_offset = []
 
         #style
-        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08']
+        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08', 'b33da6', '0acdcd', '0860e7']
         style = ''
         for i in range(len(colors)):
             style += '.color-%s{fill:#%s; stroke: #%s;}' % (i, colors[i], colors[i], )
@@ -1860,12 +1860,13 @@ class Genome(Molecule):
 
         genes = StringIO.StringIO()
 
-
         genesList = list(self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all())
 
         nTus = 0
         iTUs = {}
         tus = []
+
+        all_feature_type_pks = [None] + list(self.features.prefetch_related("chromosome_feature").values_list("chromosome_feature__type", flat=True).distinct())
 
         def draw_gene(gene, tu):
             iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
@@ -1933,7 +1934,8 @@ class Genome(Molecule):
                                          'y2': y2,
                                          'label': label,
                                          'arrow': i == iSegment and gene.direction == "r",
-                                         'arrow_size': arrow_size
+                                         'arrow_size': arrow_size,
+                                         'color': iTu % len(colors)
                                          })
                     ret.append(template.render(Context(context_dict)))
                 else:
@@ -1971,7 +1973,7 @@ class Genome(Molecule):
         promoters = StringIO.StringIO()
         tfSites = StringIO.StringIO()
 
-        def preprocess_draw_segment(coordinate, length, tip_title, tip_text, url):
+        def preprocess_draw_segment(coordinate, length, tip_title, typ, url):
             iSegment = math.floor((coordinate - 1) / ntPerSegment)
 
             segments = shift(range(nSegments), int(iSegment))
@@ -2001,7 +2003,7 @@ class Genome(Molecule):
                     w = w_needed
                     done = True
 
-                new_item = [x, x + w, tip_title, tip_text, url]
+                new_item = [x, x + w, tip_title, typ, url]
                 inserted = False
                 for row in feature_draw[i]:
                     if any(overlaps(item, new_item) for item in row):
@@ -2025,14 +2027,17 @@ class Genome(Molecule):
 
             for j, subrow in enumerate(row):
                 for item in subrow:
-                    start, end, tip_title, tip_text, url = item
+                    start, end, tip_title, typ, url = item
+                    tip_text = (typ.name or typ.wid) if typ else ''
 
                     tip_title = tip_title.replace("'", "\'")
+
 
                     context_dict = {'h': featureHeight,
                                     'title': tip_title,
                                     'text': tip_text,
-                                    'url': url}
+                                    'url': url,
+                                    'color': "#" + str(colors[all_feature_type_pks.index(typ.pk) % len(colors)])}
 
                     x = segmentLeft + start * oneNtW
                     w = (end - start) * oneNtW
@@ -2089,12 +2094,12 @@ class Genome(Molecule):
             tip_title = feature.chromosome_feature.name or feature.chromosome_feature.wid
 
             if feature.chromosome_feature.type.all().count() > 0:
-                type_ = feature.chromosome_feature.type.all()[0].name
+                typ = feature.chromosome_feature.type.all()[0]
             else:
-                type_ = ''
+                typ = None
             url = feature.chromosome_feature.get_absolute_url(species)
 
-            preprocess_draw_segment(coordinate, length, tip_title, type_, url)
+            preprocess_draw_segment(coordinate, length, tip_title, typ, url)
 
         for i, row in enumerate(feature_draw):
             if i == 0:
@@ -2152,7 +2157,7 @@ class Genome(Molecule):
         feature_draw = []
 
         #style
-        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08']
+        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08', 'b33da6', '0acdcd', '0860e7']
         style = ''
         for i in range(len(colors)):
             style += '.color-%s{fill:#%s; stroke: #%s;}' % (i, colors[i], colors[i], )
@@ -2184,6 +2189,8 @@ class Genome(Molecule):
         nTus = 0
         iTUs = {}
         tus = []
+
+        all_feature_type_pks = [None] + list(self.features.prefetch_related("chromosome_feature").values_list("chromosome_feature__type", flat=True).distinct())
 
         template = loader.get_template("cyano/genome/draw_gene.html")
 
@@ -2266,7 +2273,7 @@ class Genome(Molecule):
         promoters = StringIO.StringIO()
         tfSites = StringIO.StringIO()
 
-        def draw_segment(wid, coordinate, item_length, tip_title, tip_text, url):
+        def draw_segment(wid, coordinate, item_length, tip_title, typ, url):
             if highlight_wid is None or wid in highlight_wid:
                 opacity = 1
             else:
@@ -2279,7 +2286,7 @@ class Genome(Molecule):
             w = max(chrL, min(chrR, w)) - x
 
             tip_title = tip_title.replace("'", "\'")
-            tip_text = tip_text.replace("'", "\'")
+            tip_text = (typ.name or typ.wid) if typ else ''
 
             template = loader.get_template("cyano/genome/draw_feature.html")
 
@@ -2291,7 +2298,8 @@ class Genome(Molecule):
                             'url': url,
                             'x': x,
                             'w': w,
-                            'opacity':opacity}
+                            'opacity':opacity,
+                            'color': "#" + str(colors[all_feature_type_pks.index(typ.pk) % len(colors)])}
 
             new_item = [x, x + w]
             inserted = False
@@ -2355,9 +2363,9 @@ class Genome(Molecule):
             url = feature.chromosome_feature.get_absolute_url(species)
 
             if feature.chromosome_feature.type.all().count() > 0:
-                type_ = feature.chromosome_feature.type.all()[0].name
+                type_ = feature.chromosome_feature.type.all()[0]
             else:
-                type_ = ''
+                type_ = None
 
             features.write(draw_segment(feature.chromosome_feature.wid, feature.coordinate, feature.length, tip_title, type_, url))
 

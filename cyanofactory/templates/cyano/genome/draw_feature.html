@@ -3,10 +3,15 @@
           y="{{ y }}"
           width="{{ w }}"
           height="{{ h }}"
-          onmousemove="javascript: showToolTip(evt, '{{ title }}', '{{ text }}');"
-          onmouseout="javascript: hideToolTip(evt);"
+          onmousemove="showToolTip(evt, '{{ title }}', '{{ text }}');"
+          onmouseout="hideToolTip(evt);"
+          style="
+          {% if color %}
+          fill: {{ color }};
+          {% endif %}
           {% if opacity %}
-          style="opacity: {{ opacity }};"
-          {% endif %}>
+          opacity: {{ opacity }};
+          {% endif %}
+          ">
     </rect>
 </a>
