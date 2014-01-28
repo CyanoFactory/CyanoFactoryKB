@@ -35,7 +35,11 @@ class BioParser(object):
                 raise ValueError("Invalid username " + str(user))
 
         self.detail = RevisionDetail(user = self.user, reason = reason)
-    
+
+    def report_progress(self, current, total, message):
+        if hasattr(self, "notify_progress"):
+            self.notify_progress(current=current, total=total, message=message)
+
     def try_slugify(self, name, not_slug):
         slug = slugify(not_slug)
         

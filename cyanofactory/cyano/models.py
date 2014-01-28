@@ -2037,7 +2037,7 @@ class Genome(Molecule):
                                     'title': tip_title,
                                     'text': tip_text,
                                     'url': url,
-                                    'color': "#" + str(colors[all_feature_type_pks.index(typ.pk) % len(colors)])}
+                                    'color': "#" + str(colors[all_feature_type_pks.index(typ.pk if typ else None) % len(colors)])}
 
                     x = segmentLeft + start * oneNtW
                     w = (end - start) * oneNtW
@@ -2299,7 +2299,7 @@ class Genome(Molecule):
                             'x': x,
                             'w': w,
                             'opacity':opacity,
-                            'color': "#" + str(colors[all_feature_type_pks.index(typ.pk) % len(colors)])}
+                            'color': "#" + str(colors[all_feature_type_pks.index(typ.pk if typ else None) % len(colors)])}
 
             new_item = [x, x + w]
             inserted = False
