@@ -1824,7 +1824,12 @@ class Genome(Molecule):
             return self.get_as_html_structure_local(species, is_user_anonymous, start_coordinate = start_coordinate, end_coordinate = end_coordinate, highlight_wid = highlight_wid)
 
     def get_as_html_structure_global(self, species, is_user_anonymous):
+        import time
         from .helpers import shift, overlaps
+        from collections import namedtuple
+        from cyano.string_template import Loader as StringTemplateLoader
+
+        start = time.time()
 
         ntPerSegment = 1e4
         segmentHeight = 27
@@ -1839,6 +1844,10 @@ class Genome(Molecule):
         chrTop = -12
         feature_draw = [[] for x in range(nSegments)]
         row_offset = []
+        gene_template = loader.get_template("cyano/genome/draw_gene.html")
+        feature_template = StringTemplateLoader().load_template("cyano/genome/draw_feature.tmpl")[0]
+        fake_gene = Gene(model_type=TableMeta.get_by_model_name("Gene"))
+        fake_cf = ChromosomeFeature(model_type=TableMeta.get_by_model_name("ChromosomeFeature"))
 
         #style
         colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08', 'b33da6', '0acdcd', '0860e7']
@@ -1860,7 +1869,11 @@ class Genome(Molecule):
 
         genes = StringIO.StringIO()
 
-        genesList = list(self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all())
+        GeneTuple = namedtuple("GeneTuple", "name wid coordinate direction length transcription_units transcription_units__wid transcription_units__name")
+
+        genesList = map(GeneTuple._make, self.genes.values_list(
+            "name", "wid", "coordinate", "direction", "length",
+            "transcription_units", "transcription_units__wid", "transcription_units__name").all())
 
         nTus = 0
         iTUs = {}
@@ -1872,14 +1885,13 @@ class Genome(Molecule):
             iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
 
             tip_title = gene.name or gene.wid
-            tip_text = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name or tu.wid)
+            tip_text = 'Transcription unit: %s' % (tu or "(None)")
 
-            gene_abs_url = gene.get_absolute_url(species)
+            fake_gene.wid = gene.wid
+            gene_abs_url = fake_gene.get_absolute_url(species)
 
             tip_title = tip_title.replace("'", "\'")
             tip_text = tip_text.replace("'", "\'")
-
-            template = loader.get_template("cyano/genome/draw_gene.html")
 
             context_dict = {'title': tip_title,
                             'text': tip_text,
@@ -1891,6 +1903,7 @@ class Genome(Molecule):
             segments = shift(range(nSegments), int(iSegment))
 
             w_drawn = 0
+
             for i in itertools.cycle(segments):
                 context_dict.update({'direction': gene.direction})
 
@@ -1922,7 +1935,6 @@ class Genome(Molecule):
                     else:
                         label = ''
 
-                    arrow_size = 0
                     if gene.direction == "r" and x1 + 5 > x2:
                         arrow_size = x2 - x1
                     else:
@@ -1937,7 +1949,7 @@ class Genome(Molecule):
                                          'arrow_size': arrow_size,
                                          'color': iTu % len(colors)
                                          })
-                    ret.append(template.render(Context(context_dict)))
+                    ret.append(gene_template.render(Context(context_dict)))
                 else:
                     w = w_needed
                     x2 = x1 + w
@@ -1961,7 +1973,7 @@ class Genome(Molecule):
                                          'arrow': gene.direction == "f" or iSegment == i,
                                          'arrow_size': arrow_size
                                          })
-                    ret.append(template.render(Context(context_dict)))
+                    ret.append(gene_template.render(Context(context_dict)))
                     break
 
             return ret
@@ -1973,7 +1985,7 @@ class Genome(Molecule):
         promoters = StringIO.StringIO()
         tfSites = StringIO.StringIO()
 
-        def preprocess_draw_segment(coordinate, length, tip_title, typ, url):
+        def preprocess_draw_segment(coordinate, length, tip_title, typ_pk, typ, url):
             iSegment = math.floor((coordinate - 1) / ntPerSegment)
 
             segments = shift(range(nSegments), int(iSegment))
@@ -2003,7 +2015,7 @@ class Genome(Molecule):
                     w = w_needed
                     done = True
 
-                new_item = [x, x + w, tip_title, typ, url]
+                new_item = [x, x + w, tip_title, typ_pk, typ, url]
                 inserted = False
                 for row in feature_draw[i]:
                     if any(overlaps(item, new_item) for item in row):
@@ -2021,23 +2033,21 @@ class Genome(Molecule):
                     break
 
         def draw_segment(i, row):
-            template = loader.get_template("cyano/genome/draw_feature.html")
-
             ret = []
 
             for j, subrow in enumerate(row):
                 for item in subrow:
-                    start, end, tip_title, typ, url = item
-                    tip_text = (typ.name or typ.wid) if typ else ''
+                    start, end, tip_title, typ_pk, typ, url = item
+                    tip_text = typ
 
                     tip_title = tip_title.replace("'", "\'")
 
-
+                    color = "#" + str(colors[all_feature_type_pks.index(typ_pk) % len(colors)])
                     context_dict = {'h': featureHeight,
                                     'title': tip_title,
                                     'text': tip_text,
                                     'url': url,
-                                    'color': "#" + str(colors[all_feature_type_pks.index(typ.pk if typ else None) % len(colors)])}
+                                    'color': color}
 
                     x = segmentLeft + start * oneNtW
                     w = (end - start) * oneNtW
@@ -2047,10 +2057,13 @@ class Genome(Molecule):
                                          'y': y,
                                          'w': w})
 
-                    ret.append(template.render(Context(context_dict)))
+                    ret.append(feature_template.render(Context(context_dict)))
 
             return ret
 
+        print "begin", (time.time() - start)
+
+        start = time.time()
         for tu in tus:
             if tu.promoter_35_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_35_coordinate
@@ -2060,7 +2073,7 @@ class Genome(Molecule):
                 tip_text = 'Promoter -35 box'
                 url = tu.get_absolute_url(species)
 
-                [promoters.write(item) for item in draw_segment(tu_coordinate, tu_length, tip_title, tip_text, url)]
+                [promoters.write(item) for item in draw_segment(tu_coordinate, tu_length)]
 
             if tu.promoter_10_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_10_coordinate
@@ -2070,7 +2083,7 @@ class Genome(Molecule):
                 tip_text = 'Promoter -10 box'
                 url = tu.get_absolute_url(species)
 
-                [promoters.write(item) for item in draw_segment(tu_coordinate, tu_length, tip_title, tip_text, url)]
+                [promoters.write(item) for item in draw_segment(tu_coordinate, tu_length)]
 
             for tr in tu.transcriptional_regulations.all():
                 if tr.binding_site is not None:
@@ -2081,26 +2094,39 @@ class Genome(Molecule):
                     tip_text = 'Transcription factor binding site'
                     url = tr.get_absolute_url(species)
 
-                    [tfSites.write(item) for item in draw_segment(tr_coordinate, tr_length, tip_title, tip_text, url)]
+                    [tfSites.write(item) for item in draw_segment(tr_coordinate, tr_length)]
+
+        print "TU", (time.time() - start)
 
         #features
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
         features = StringIO.StringIO()
 
-        for feature in self.features.all().order_by("coordinate"):
-            coordinate = feature.coordinate
-            length = feature.length
+        start = time.time()
 
-            tip_title = feature.chromosome_feature.name or feature.chromosome_feature.wid
+        feature_values = self.features.all().order_by("coordinate").\
+            values("coordinate", "length",
+                   "chromosome_feature__name", "chromosome_feature__wid",
+                   "chromosome_feature__type", "chromosome_feature__type__name", "chromosome_feature__type__wid")
 
-            if feature.chromosome_feature.type.all().count() > 0:
-                typ = feature.chromosome_feature.type.all()[0]
+        for feature in feature_values:
+            coordinate = feature["coordinate"]
+            length = feature["length"]
+
+            tip_title = feature["chromosome_feature__name"] or feature["chromosome_feature__wid"]
+
+            if feature["chromosome_feature__type"]:
+                typ = feature["chromosome_feature__name"] or feature["chromosome_feature__wid"]
             else:
                 typ = None
-            url = feature.chromosome_feature.get_absolute_url(species)
+            fake_cf.wid = feature["chromosome_feature__wid"]
+            url = fake_cf.get_absolute_url(species)
 
-            preprocess_draw_segment(coordinate, length, tip_title, typ, url)
+            preprocess_draw_segment(coordinate, length, tip_title, feature["chromosome_feature__type"], typ, url)
 
+        print "feature", (time.time() - start)
+
+        start = time.time()
         for i, row in enumerate(feature_draw):
             if i == 0:
                 row_offset.append(chrTop + segmentHeight + 2)
@@ -2109,8 +2135,10 @@ class Genome(Molecule):
 
         for i, row in enumerate(feature_draw):
             [features.write(item) for item in draw_segment(i, row)]
+        print "feature write", (time.time() - start)
 
         chro = StringIO.StringIO()
+        start = time.time()
         for i in range(nSegments):
             x1 = segmentLeft
             x2 = segmentLeft + ((min(self.length, (i+1) * ntPerSegment) - 1) % ntPerSegment) / ntPerSegment * segmentW
@@ -2119,14 +2147,17 @@ class Genome(Molecule):
             chro.write('<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y))
 
         for i, gene in enumerate(genesList):
-            if len(gene.transcription_units.all()[:1]) == 1:
-                tu = gene.transcription_units.all()[:1][0]
-                if tu.wid in iTUs:
-                    iTu = iTUs[tu.wid]
+            if gene.transcription_units:
+                tu_wid = gene.transcription_units__wid
+                tu_name = gene.transcription_units__name
+
+                tu = tu_name or tu_wid
+
+                if tu_wid in iTUs:
+                    iTu = iTUs[tu_wid]
                 else:
-                    tus.append(tu)
                     iTu = nTus
-                    iTUs[tu.wid] = iTu
+                    iTUs[tu_wid] = iTu
                     nTus += 1
             else:
                 tu = None
@@ -2135,6 +2166,7 @@ class Genome(Molecule):
 
             [genes.write(item) for item in draw_gene(gene, tu)]
 
+        print "Genes", (time.time() - start)
         H = row_offset[-1] + len(feature_draw[-1]) * (featureHeight + 2)
 
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
@@ -2142,6 +2174,8 @@ class Genome(Molecule):
 
     def get_as_html_structure_local(self, species, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None):
         from .helpers import overlaps
+        import time
+        from cyano.string_template import Loader as StringTemplateLoader
 
         length = end_coordinate - start_coordinate + 1
 
@@ -2155,6 +2189,7 @@ class Genome(Molecule):
         featureY = promoterY
 
         feature_draw = []
+        feature_template = StringTemplateLoader().load_template("cyano/genome/draw_feature.tmpl")[0]
 
         #style
         colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08', 'b33da6', '0acdcd', '0860e7']
@@ -2194,6 +2229,7 @@ class Genome(Molecule):
 
         template = loader.get_template("cyano/genome/draw_gene.html")
 
+        start = time.time()
         for i, gene in enumerate(genesList):
             if len(gene.transcription_units.all()[:1]) == 1:
                 tu = gene.transcription_units.all()[:1][0]
@@ -2266,6 +2302,8 @@ class Genome(Molecule):
 
             genes.write(template.render(Context(context_dict)))
 
+        print "genes", (time.time() - start)
+
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
         tfSiteStyle = '.tfSites rect{fill:#%s; opacity:0.5}' % (colors[1], )
@@ -2288,8 +2326,6 @@ class Genome(Molecule):
             tip_title = tip_title.replace("'", "\'")
             tip_text = (typ.name or typ.wid) if typ else ''
 
-            template = loader.get_template("cyano/genome/draw_feature.html")
-
             ret = []
 
             context_dict = {'h': featureHeight,
@@ -2298,7 +2334,7 @@ class Genome(Molecule):
                             'url': url,
                             'x': x,
                             'w': w,
-                            'opacity':opacity,
+                            'opacity': opacity,
                             'color': "#" + str(colors[all_feature_type_pks.index(typ.pk if typ else None) % len(colors)])}
 
             new_item = [x, x + w]
@@ -2321,8 +2357,9 @@ class Genome(Molecule):
                 })
                 feature_draw.append([new_item])
 
-            return template.render(Context(context_dict))
+            return feature_template.render(Context(context_dict))
 
+        start = time.time()
         for tu in tus:
             if tu.promoter_35_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_35_coordinate
@@ -2351,11 +2388,22 @@ class Genome(Molecule):
 
                     tfSites.write(draw_segment(tu.wid, tr.binding_site.coordinate, tr.binding_site.length, tip_title, 'Transcription factor binding site', url))
 
+        print "TU", (time.time() - start)
         #features
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
         features = StringIO.StringIO()
 
-        for feature in self.features.all():
+        start = time.time()
+
+
+        #feature_values = self.features.all().order_by("coordinate").\
+        #    values("coordinate", "length",
+        #           "chromosome_feature__name", "chromosome_feature__wid",
+        #           "chromosome_feature__type", "chromosome_feature__type__name", "chromosome_feature__type__wid")
+
+        feature_values = self.features.filter(coordinate__lte=end_coordinate, coordinate__gte=start_coordinate + 1 - F("length")).prefetch_related('chromosome_feature', 'chromosome_feature__type').all()
+
+        for feature in feature_values:
             if feature.coordinate > end_coordinate or feature.coordinate + feature.length - 1 < start_coordinate:
                 continue
 
@@ -2368,6 +2416,8 @@ class Genome(Molecule):
                 type_ = None
 
             features.write(draw_segment(feature.chromosome_feature.wid, feature.coordinate, feature.length, tip_title, type_, url))
+
+        print "feature", (time.time() - start)
 
         H = 2 + geneHeight + 2 + 4 + 1 * (2 + len(feature_draw) * (featureHeight + 2)) + 2
 

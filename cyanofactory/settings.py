@@ -106,6 +106,8 @@ TEMPLATE_LOADERS = (
 
 MIDDLEWARE_CLASSES = (
     'cyano.middleware.RedirectAllowedHostMiddlware',
+    'johnny.middleware.LocalStoreClearMiddleware',
+    'johnny.middleware.QueryCacheMiddleware',
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
@@ -215,12 +217,13 @@ LOGGING = {
 
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'BACKEND': 'johnny.backends.locmem.LocMemCache',
         'LOCATION': 'cyano-cache',
         'TIMEOUT': 600,
         'OPTIONS': {
             'MAX_ENTRIES': 1000
-        }
+        },
+        'JOHNNY_CACHE': True,
     }
 }
 
