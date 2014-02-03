@@ -1844,7 +1844,7 @@ class Genome(Molecule):
         chrTop = -12
         feature_draw = [[] for x in range(nSegments)]
         row_offset = []
-        gene_template = loader.get_template("cyano/genome/draw_gene.html")
+        gene_template = StringTemplateLoader().load_template("cyano/genome/draw_gene.tmpl")[0]
         feature_template = StringTemplateLoader().load_template("cyano/genome/draw_feature.tmpl")[0]
         fake_gene = Gene(model_type=TableMeta.get_by_model_name("Gene"))
         fake_cf = ChromosomeFeature(model_type=TableMeta.get_by_model_name("ChromosomeFeature"))
@@ -1944,6 +1944,8 @@ class Genome(Molecule):
                                          'x2': x2,
                                          'y1': y1,
                                          'y2': y2,
+                                         'x_middle': (x1 + x2) / 2,
+                                         'y_middle': (y1 + y2) / 2,
                                          'label': label,
                                          'arrow': i == iSegment and gene.direction == "r",
                                          'arrow_size': arrow_size,
@@ -1969,6 +1971,8 @@ class Genome(Molecule):
                                          'x2': x2,
                                          'y1': y1,
                                          'y2': y2,
+                                         'x_middle': (x1 + x2) / 2,
+                                         'y_middle': (y1 + y2) / 2,
                                          'label': label,
                                          'arrow': gene.direction == "f" or iSegment == i,
                                          'arrow_size': arrow_size
@@ -2047,7 +2051,8 @@ class Genome(Molecule):
                                     'title': tip_title,
                                     'text': tip_text,
                                     'url': url,
-                                    'color': color}
+                                    'color': color,
+                                    'opacity': 1}
 
                     x = segmentLeft + start * oneNtW
                     w = (end - start) * oneNtW

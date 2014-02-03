@@ -1,0 +1,31 @@
+<g>
+    <a xlink:href="$url">
+        <polygon class="color-$color"
+                 points="
+                        $x1,$y1
+                        $x2,$y1
+                        $x2,$y2
+                        $x1,$y2
+                        $x1,$y1
+                 onmousemove="javascript: showToolTip(evt, '$title', '$text')"
+                 onmouseout="javascript: hideToolTip(evt);"
+                 {% if fill_opacity %}
+                 style="fill-opacity: {{ fill_opacity }};
+                 {% endif %}
+                 {% if stroke_opacity %}
+                 stroke-opacity: {{ stroke_opacity }};
+                 {% endif %}
+                 {% if stroke_width %}
+                 stroke-width: {{ stroke_width }}px"
+                 {% endif %}
+                >
+        </polygon>
+    </a>
+    <a xlink:href="$url">
+        <text x="$x_middle"
+              y="$y_middle"
+              onmousemove="javascript: showToolTip(evt, '$title', '$text')"
+              onmouseout="javascript: hideToolTip(evt);">$label
+        </text>
+    </a>
+</g>
