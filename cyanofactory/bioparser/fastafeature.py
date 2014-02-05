@@ -84,9 +84,9 @@ class FastaFeature(BioParser):
 
         self.species.save(self.detail)
 
-        cf = cmodels.ChromosomeFeature.objects.for_species(self.species).for_wid(self.feature_type, create=True)
-        cf.save(self.detail)
-        cf.species.add(self.species)
+        typ = cmodels.Type.objects.for_wid(self.feature_type, create=True)
+        typ.save(self.detail)
+        typ.species.add(self.species)
 
         for i, item in enumerate(self.data):
             wid = item["wid"]
@@ -96,6 +96,11 @@ class FastaFeature(BioParser):
             direction = "f" if start < end else "r"
             length = abs(end - start)
             coordinate = start if direction == "f" else end
+
+            cf = cmodels.ChromosomeFeature.objects.for_species(self.species).for_wid(wid, create=True)
+            cf.save(self.detail)
+            cf.type.add(typ)
+            cf.species.add(self.species)
 
             cmodels.FeaturePosition.objects.get_or_create(chromosome_feature=cf,
                                                           chromosome=self.chromosome,
