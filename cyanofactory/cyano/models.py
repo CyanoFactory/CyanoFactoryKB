@@ -1456,14 +1456,14 @@ class SpeciesComponent(AbstractSpeciesComponent):
         """
         Delete is referenced counted and only detached when at least one more item is left
         """
-        if self.species.count() > 1:
+        #if self.species.count() > 1:
             # Detach
-            # Todo revisioning
-            self.species.remove(species.pk)
-        else:
+        #    # Todo revisioning
+        self.species.remove(species.pk)
+        #else:
             # Delete
-            # Todo revisioning
-            super(SpeciesComponent, self).delete(using=using)
+        #    # Todo revisioning
+        #    super(SpeciesComponent, self).delete(using=using)
 
     #@permalink
     def get_absolute_url(self, species, history_id = None):
