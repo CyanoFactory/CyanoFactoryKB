@@ -1,4 +1,4 @@
-'''
+"""
 Whole-cell project settings
 
 Author: Jonathan Karr, jkarr@stanford.edu
@@ -11,7 +11,7 @@ Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
 Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
-'''
+"""
 
 import os
 from sys import argv
@@ -40,10 +40,6 @@ else:
 
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
 
-ADMINS = (
-#('Max Mustermann', 'doe@example.com'),
-)
-
 MANAGERS = ADMINS
 
 # Local time zone for this installation. Choices can be found here:
@@ -53,7 +49,7 @@ MANAGERS = ADMINS
 # timezone as the operating system.
 # If running in a Windows environment this must be set to the same as your
 # system time zone.
-TIME_ZONE = 'America/Los_Angeles'
+TIME_ZONE = 'Europe/London'
 
 # Language code for this installation. All choices can be found here:
 # http://www.i18nguy.com/unicode/language-identifiers.html
@@ -163,9 +159,11 @@ INSTALLED_APPS = (
     'djcelery',
     'haystack',
     'endless_pagination',
-    'django_nose',
     'south'
 )
+
+if UNIT_TEST_RUNNING:
+    INSTALLED_APPS += ('django_nose',)
 
 if DEBUG:
     INSTALLED_APPS += ('debug_toolbar',)
@@ -204,11 +202,6 @@ LOGGING = {
     'loggers': {
         'django.request': {
             'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'django.request': {
-            'handlers': ['console'],
             'level': 'ERROR',
             'propagate': True,
         },
