@@ -1470,7 +1470,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
         if history_id is None:
             return "%s/%s/%s/%s" % (settings.ROOT_URL, species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid)
         else:
-            return "%s/%s/%s/%s/history/%d" % (settings.ROOT_URL, species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid, history_id)
+            return "%s/%s/%s/%s/history/%s" % (settings.ROOT_URL, species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid, history_id)
 
     def get_all_references(self):
         return self.publication_references.all() | PublicationReference.objects.filter(evidence__species_component__id = self.id)
