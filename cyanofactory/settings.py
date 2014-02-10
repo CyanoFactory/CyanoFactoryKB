@@ -245,3 +245,4 @@ TEMPLATE_CONTEXT_PROCESSORS += (
 
 GOOGLE_SEARCH_ENABLED = False
 
+JOHNNY_TABLE_BLACKLIST = ["djcelery_crontabschedule", "djcelery_intervalschedule", "djcelery_periodictask", "djcelery_periodictasks", "djcelery_taskstate", "djcelery_workerstate", "celery_taskmeta", "celery_tasksetmeta"]
