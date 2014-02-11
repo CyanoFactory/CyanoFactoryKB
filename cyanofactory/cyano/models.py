@@ -2063,7 +2063,7 @@ class Genome(Molecule):
                                     'opacity': 1}
 
                     x = segmentLeft + start * oneNtW
-                    w = (end - start) * oneNtW
+                    w = max(3, (end - start) * oneNtW)
                     y = row_offset[i] + j * (featureHeight + 1)
 
                     context_dict.update({'x': x,
@@ -2319,7 +2319,7 @@ class Genome(Molecule):
             w = chrL + float(coordinate + item_length - 1 - start_coordinate) / length * chrW
 
             x = max(chrL, min(chrR, x))
-            w = max(chrL, min(chrR, w)) - x
+            w = max(3, max(chrL, min(chrR, w)) - x)
 
             tip_title = tip_title.replace("'", "\'")
             tip_text = (typ.name or typ.wid) if typ else ''
