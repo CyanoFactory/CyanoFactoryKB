@@ -94,7 +94,7 @@ class FastaFeature(BioParser):
             end = item["end"]
 
             direction = "f" if start < end else "r"
-            length = abs(end - start) + 1
+            length = abs(end - start)
             coordinate = start if direction == "f" else end
 
             cf = cmodels.ChromosomeFeature.objects.for_species(self.species).for_wid(wid, create=True)

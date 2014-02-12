@@ -1835,7 +1835,8 @@ class Genome(Molecule):
         feature_draw = [[] for x in range(nSegments)]
         row_offset = []
         gene_template = StringTemplateLoader().load_template("cyano/genome/draw_gene.tmpl")[0]
-        feature_template = StringTemplateLoader().load_template("cyano/genome/draw_feature.tmpl")[0]
+        feature_template_rect = StringTemplateLoader().load_template("cyano/genome/draw_feature_rect.tmpl")[0]
+        feature_template_triangle = StringTemplateLoader().load_template("cyano/genome/draw_feature_triangle.tmpl")[0]
         fake_gene = Gene(model_type=TableMeta.get_by_model_name("Gene"))
         fake_cf = ChromosomeFeature(model_type=TableMeta.get_by_model_name("ChromosomeFeature"))
 
@@ -2030,7 +2031,7 @@ class Genome(Molecule):
                 new_item = [x, x + w, tip_title, typ_pk, typ, url]
                 inserted = False
                 for row in feature_draw[i]:
-                    if any(overlaps(item, new_item) for item in row):
+                    if any(overlaps(item, new_item, 50) for item in row):
                         continue
                     # Space left -> insert
                     row.append(new_item)
@@ -2067,8 +2068,20 @@ class Genome(Molecule):
                     y = row_offset[i] + j * (featureHeight + 1)
 
                     context_dict.update({'x': x,
+                                         'x_middle': 0,
                                          'y': y,
                                          'w': w})
+
+                    if w <= 3:
+                        feature_template = feature_template_triangle
+                        context_dict.update({
+                            'h': y + featureHeight,
+                            'w': x + 3,
+                            'x': x - 3,
+                            'x_middle': x,
+                        })
+                    else:
+                        feature_template = feature_template_rect
 
                     ret.append(feature_template.render(Context(context_dict)))
 
@@ -2123,7 +2136,7 @@ class Genome(Molecule):
             tip_title = feature["chromosome_feature__name"] or feature["chromosome_feature__wid"]
 
             if feature["chromosome_feature__type"]:
-                typ = feature["chromosome_feature__name"] or feature["chromosome_feature__wid"]
+                typ = feature["chromosome_feature__type__name"] or feature["chromosome_feature__type__wid"]
             else:
                 typ = None
             fake_cf.wid = feature["chromosome_feature__wid"]
@@ -2190,7 +2203,8 @@ class Genome(Molecule):
         featureY = promoterY
 
         feature_draw = []
-        feature_template = StringTemplateLoader().load_template("cyano/genome/draw_feature.tmpl")[0]
+        feature_template_rect = StringTemplateLoader().load_template("cyano/genome/draw_feature_rect.tmpl")[0]
+        feature_template_triangle = StringTemplateLoader().load_template("cyano/genome/draw_feature_triangle.tmpl")[0]
 
         #style
         colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08', 'b33da6', '0acdcd', '0860e7']
@@ -2319,7 +2333,7 @@ class Genome(Molecule):
             w = chrL + float(coordinate + item_length - 1 - start_coordinate) / length * chrW
 
             x = max(chrL, min(chrR, x))
-            w = max(3, max(chrL, min(chrR, w)) - x)
+            w = max(chrL, min(chrR, w)) - x
 
             tip_title = tip_title.replace("'", "\'")
             tip_text = (typ.name or typ.wid) if typ else ''
@@ -2332,28 +2346,43 @@ class Genome(Molecule):
                             'url': url,
                             'x': x,
                             'w': w,
+                            'x_middle': 0,
                             'opacity': opacity,
                             'color': "#" + str(colors[all_feature_type_pks.index(typ.pk if typ else None) % len(colors)])}
 
             new_item = [x, x + w]
             inserted = False
+            y = 0
             for i, row in enumerate(feature_draw):
-                if any(overlaps(item, new_item) for item in row):
+                if any(overlaps(item, new_item, 5) for item in row):
                     continue
                 # Space left -> insert
                 row.append(new_item)
                 inserted = True
+                y = featureY + i * (featureHeight + 2)
                 context_dict.update({
-                    'y': featureY + i * (featureHeight + 2)
+                    'y': y
                 })
                 break
 
             if not inserted:
                 # Create new row
+                y = featureY + len(feature_draw) * (featureHeight + 2)
                 context_dict.update({
-                    'y': featureY + len(feature_draw) * (featureHeight + 2)
+                    'y': y
                 })
                 feature_draw.append([new_item])
+
+            if w <= 3:
+                feature_template = feature_template_triangle
+                context_dict.update({
+                    'h': y + featureHeight,
+                    'w': x + 3,
+                    'x': x - 3,
+                    'x_middle': x,
+                })
+            else:
+                feature_template = feature_template_rect
 
             return feature_template.render(Context(context_dict))
 
@@ -5233,8 +5262,6 @@ class MassSpectrometryProtein(Protein):
 
             template = loader.get_template("cyano/genome/draw_feature.html")
 
-            ret = []
-
             context_dict = {'h': featureHeight,
                             'title': tip_title,
                             'text': tip_text.getvalue(),
@@ -5246,7 +5273,7 @@ class MassSpectrometryProtein(Protein):
             new_item = [x, x + w]
             inserted = False
             for i, row in enumerate(feature_draw):
-                if any(overlaps(item, new_item) for item in row):
+                if any(overlaps(item, new_item, 5) for item in row):
                     continue
                 # Space left -> insert
                 row.append(new_item)
