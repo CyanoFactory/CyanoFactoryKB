@@ -1030,7 +1030,7 @@ def password_change_required(request, species=None):
     from django.contrib.auth.forms import AdminPasswordChangeForm
     
     if not request.user.profile.force_password_change:
-        HttpResponseRedirect(reverse("cyano.index"))
+        return HttpResponseRedirect(reverse("cyano.views.index"))
     
     context = chelpers.get_extra_context(
         species = species,
