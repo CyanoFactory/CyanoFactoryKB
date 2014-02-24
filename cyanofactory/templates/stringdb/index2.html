@@ -1,0 +1,223 @@
+{% comment %}
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="{{ LANGUAGE_CODE|default:"en-us" }}" xml:lang="{{ LANGUAGE_CODE|default:"en-us" }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>
+{% load static %}
+{% load templatetags %}
+<style>
+
+.node {
+  stroke: #fff;
+}
+
+.node text {
+  pointer-events: none;
+  stroke: #000;
+  stroke-width: .1px;
+  font-size: 1.0em;
+}
+
+.link {
+  stroke-opacity: .4;
+  stroke-width: 2
+}
+
+</style>
+<head>
+	<title>db_xref</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta http-equiv="Content-Language" content="en-us" />
+	<meta http-equiv="Cache-Control" content="NO-CACHE" />
+	<meta http-equiv="Pragma" content="NO-CACHE" />
+</head>
+<body>
+<h1>db_xref Webservice</h1>
+<p>
+This Webservice resolves Genbank db_xref items (e.g. {{ protid }}) into URLs.
+</p>
+<h2>
+Usage:</h2>
+<p>
+Pass the db_xref value as a path to the URL. Default action is a <i>redirect</i> to the corresponding website.</p>
+<p>
+This can be altered by passing a format (GET, <tt>?format=</tt>):<br />
+Supported formats:
+</p>
+<p>
+    <script src="{% get_static_prefix %}stringdb/d3/d3.v3.min.js"></script>
+    <script>
+
+    var width = 960,
+        height = 500;
+
+    var lcolor = d3.scale.linear()
+        .domain([0, 1, 180, 360, 540, 700, 900, 999, 1000])
+        .range(["white", "red", "orange", "yellow", "green", "purple", "navy", "blue", "black"]);
+
+    var ncolor = d3.scale.linear()
+        .domain([0, 115, 230, 460, 575, 690, 805, 920, 1035, 1150, 1265, 1380, 1400])
+        .range(["black", "darkcyan", "blue", "lightblue", "darkgreen", "green", "lightgreen", "gold", "yellow", "orange", "indianred", "red", "darkred"]);
+
+    var force = d3.layout.force()
+        .charge(-100)
+        .linkDistance(150)
+        .size([width, height]);
+
+    var svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height);
+
+    d3.json("{% get_static_prefix %}stringdb/protein_network/{{ protid }}.json", function(error, graph) {
+      force
+          .nodes(graph.nodes)
+          .links(graph.links)
+          .start();
+
+      var link = svg.selectAll(".link")
+          .data(graph.links)
+        .enter().append("line")
+          .attr("class", "link")
+          //.style("opacity", function(d) { return d.opacity; })
+          .style("stroke", function(d) {  return lcolor(d.score); })
+
+      var node = svg.selectAll(".node")
+          .data(graph.nodes)
+        .enter().append("g")
+          .attr("class", "node")
+          .attr("id", function(d) { return d.id; })
+          .call(force.drag)
+          .on("mouseover", nodeOver)
+          .on("mouseout", nodeOut);
+
+      node.append("svg:a")
+      /** Link zu jeweiligen Knoten setzen URL muss angepasst werden an verwendeten Ort**/
+          .attr("xlink:href", function(d) {return "http://127.0.0.1:8000/stringdb/interaction/"+d.id+"/"})
+      .append("svg:circle")
+          .attr("r", 5)
+          .style("fill", function(d) { return ncolor(d.hood); });
+
+      node.append("text")
+          .attr("dx", 12)
+          .attr("dy", ".35em")
+          .style("color", "black")
+          .text(function(d) { return d.name });
+
+      force.on("tick", function() {
+        link.attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; });
+
+        node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+        });
+    });
+
+    d3.select('#canvas')
+        .append("input")
+        .attr("type", "checkbox");
+
+    function getProps(object) {
+        var output = '';
+        for (property in object) {
+          output += '<b>' + property + '</b>: ' + object[property]+'<br> ';
+        }
+        return output;
+    }
+
+
+    function nodeOut() {
+        doHighlight(d3.select(this), false);
+    }
+
+    function nodeOver() {
+        doHighlight(d3.select(this), true);
+    }
+
+    /** Blendet alle links die nicht mit dem übergebenen Node verklnüpft sind ein oder aus. */
+    function doHighlight(node, hl) {
+        var nd = node.datum();
+        var opacity = hl ? 0 : 0.6;
+        var oopacity = hl ? 1 : 0.6;
+        var nodeRadius = hl ?  9 : 5;
+        var nodecolor = hl ? "lawngreen" : "white";
+        //var nwidth = hl ? ".5px" : ".1px";
+
+        // aus/einblenden aller lines die nicht an dem selektierten Node hängen
+        svg.selectAll(".link")
+            .filter(function(d) {  return d.source.index != nd.index && d.target.index != nd.index; })
+            .transition().duration(750).style("stroke-opacity", opacity);
+
+        svg.selectAll(".link")
+            .filter(function(d) {  return d.source.index == nd.index || d.target.index == nd.index; })
+            .transition().duration(750).style("stroke-opacity", oopacity);
+
+        node.select("circle")
+            .transition()
+            .duration(750)
+            .attr("r", nodeRadius)
+            .style("stroke", nodecolor);
+
+         // hideNodes(nd);
+    }
+
+
+    /** Blendet die nicht genutzten nodes aus (Funktioniert nocht nicht) */
+    function hideNodes(nd) {
+
+        var linksToHide = svg.selectAll(".link").filter(function(d) {  return d.source.index != nd.index && d.target.index != nd.index; }).datum();
+
+        var visibleLinks = svg.selectAll(".link").filter(function(d) {  return d.source.index == nd.index || d.target.index == nd.index; }).datum();
+
+        alert(visibleLinks);
+        var hideLinksNodes = new Array();
+        for (var i = linksToHide.length - 1; i >= 0; i--) {
+            var hideL = linksToHide[i];
+            hideLinksNodes.push(hideL.source.id);
+            hideLinksNodes.push(hideL.target.id);
+        };
+
+        var visibleLinksNode = new Array();
+        for (var i = visibleLinks.length - 1; i >= 0; i--) {
+            var visibleL = visibleLinks[i];
+            visibleLinksNode.push(visibleL.source.id);
+            visibleLinksNode.push(visibleL.target.id);
+        };
+
+        for (var i = visibleLinksNode.length - 1; i >= 0; i--) {
+            alert(visibleLinksNode[i]);
+        };
+
+
+    }
+    // // Make hashtable of ids in B
+    // var bIds = {}
+    // b.forEach(function(obj){
+    //     bIds[obj.id] = obj;
+    // });
+
+    // // Return all elements in A, unless in B
+    // return a.filter(function(obj){
+    //     return !(obj.id in bIds);
+    // });
+
+
+
+</script>
+</p>
+<p>
+Note that not all databases are supported yet. 
+</p>
+<p>
+<small>
+&copy; 2013 Gabriel Kind, Contact: <a href="mailto:gkind[at]hs-mittweida.de">gkind[at]hs-mittweida.de</a>
+</small>
+</p>
+
+</body>
+</html>

@@ -9,6 +9,7 @@
 from __future__ import unicode_literals
 
 from django.db import models
+import dbarray
 
 class Abstracts(models.Model):
     abstract_id = models.CharField(max_length=250)
@@ -169,7 +170,7 @@ class NodeNodeLinks(models.Model):
     node_type_b = models.IntegerField(null=True, blank=True)
     node_id_b = models.IntegerField()
     combined_score = models.SmallIntegerField(null=True, blank=True)
-    evidence_scores = models.TextField(blank=True) # This field type is a guess.
+    #evidence_scores = dbarray.IntegerArrayField()
     class Meta:
         db_table = 'node_node_links'
 

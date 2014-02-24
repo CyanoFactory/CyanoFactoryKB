@@ -1,98 +1,215 @@
- {% extends "cyano/base.html" %}
+{% extends "cyano/base.html" %}
 
 {% comment %}
+Kegg overview page
+
 Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
-Copyright (c) 2013 Roebbe Wuenschiers <wuenschi@hs-mittweida.de>
 Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 {% endcomment %}
 
 {% load static %}
+{% load templatetags %}
+{% load filters %}
 
-
-{% block head_title %}{{ block.super }} :: Biochemical Pathways{% endblock %}
-{% block page_title %}Biochemical Pathways - Annotated Map{% endblock %}
+{% block head_title %}{{ block.super }} :: Interaction: {{ prot_name }}{% endblock %}
+{% block page_title %} {{ prot_name }}{% endblock %}
 
 {% block head %}
 {{ block.super }}
-<script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
-
-<style>
-
-.node {
-  stroke: #fff;
-  stroke-width: 1.5px;
-}
-
-.node text {
-  pointer-events: none;
-  font: 10px sans-serif;
-}
-
-.link {
-  stroke: #999;
-  stroke-opacity: .6;
-}
-
-</style>
-<body>
-<script src="http://d3js.org/d3.v3.min.js"></script>
-<script>
-
-var width = 960,
-    height = 500;
-
-var color = d3.scale.category20();
-
-var force = d3.layout.force()
-    .charge(-100)
-    .linkDistance(50)
-    .size([width, height]);
-
-var svg = d3.select("body").append("svg")
-    .attr("width", width)
-    .attr("height", height);
-
-d3.json({{ data.url }}, function(error, graph) {
-  force
-      .nodes(graph.nodes)
-      .links(graph.links)
-      .start();
-
-  var link = svg.selectAll(".link")
-      .data(graph.links)
-    .enter().append("line")
-      .attr("class", "link")
-      .style("stroke-width", function(d) { return d.score/100; });
-
-
-  var node = svg.selectAll(".node")
-      .data(graph.nodes)
-	.enter().append("g")
-      .attr("class", "node")
-      .call(force.drag);
-
-  node.append("circle")
-      .attr("r", function(d) { return d.score/100;})
-      .style("fill", function(d) { return "hsl("+d.score/1000*360+",100%,50%"; })
-
-  node.append("text")
-	  .attr("dx", 12)
-      .attr("dy", ".35em")
-	  .style("color", "black")
-      .text(function(d) { return d.name });
-
-  force.on("tick", function() {
-    link.attr("x1", function(d) { return d.source.x; })
-        .attr("y1", function(d) { return d.source.y; })
-        .attr("x2", function(d) { return d.target.x; })
-        .attr("y2", function(d) { return d.target.y; });
-
-	node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
-
-  });
-});
-
+<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
+<script type="text/javascript">
+{% include "kegg/script.js" %}
 </script>
+
+{% endblock %}
+
+{% block extrastyles %}
+#listfilter .nofilters{
+	font-style:italic;
+	text-align:center;
+}
+
+#list{
+	width:100%;
+}
+#listfilter{
+	display:none;
+}
+
+#sidebar {
+	position:absolute;
+	right: -200px;
+	width: 200px;
+	margin: 0px -30px;
+	padding: 10px 10px;
+	border: 5px;
+	border:1px solid #3d80b3;
+	border-radius: 8px;
+    color: black;
+    font-weight: normal;
+}
+#search_box {
+	width: 100%;
+	border:1px solid #3d80b3;
+	border-radius:6px;
+}
+{% endblock %}
+
+{% block content %}
+    <style>
+        .node {
+          stroke: #fff;
+        }
+
+        .node text {
+          pointer-events: none;
+          stroke: #000;
+          stroke-width: .1px;
+          font-size: 1.0em;
+        }
+
+        .link {
+          stroke-opacity: .4;
+          stroke-width: 2
+        }
+    </style>
+    <script src="{% get_static_prefix %}stringdb/d3/d3.v3.min.js"></script>
+    <table id="detail" style="position:relative;">
+        <tbody class="data">
+
+            <script>
+                var width = 600,
+                    height = 400;
+
+                var lcolor = d3.scale.linear()
+                    .domain([0, 1, 180, 360, 540, 700, 900, 999, 1000])
+                    .range(["white", "red", "orange", "yellow", "green", "purple", "navy", "blue", "black"]);
+
+                var ncolor = d3.scale.linear()
+                    .domain([0, 115, 230, 460, 575, 690, 805, 920, 1035, 1150, 1265, 1380, 1400])
+                    .range(["black", "darkcyan", "blue", "lightblue", "darkgreen", "green", "lightgreen", "gold", "yellow", "orange", "indianred", "red", "darkred"]);
+
+                var force = d3.layout.force()
+                    .charge(-100)
+                    .linkDistance(150)
+                    .size([width, height]);
+
+                var svg = d3.select("#content").append("svg")
+                    .attr("width", width)
+                    .attr("height", height);
+
+                d3.json("{% get_static_prefix %}stringdb/protein_network/{{ protid }}.json", function(error, graph) {
+                  force
+                      .nodes(graph.nodes)
+                      .links(graph.links)
+                      .start();
+
+                  var link = svg.selectAll(".link")
+                      .data(graph.links)
+                    .enter().append("line")
+                      .attr("class", "link")
+                      //.style("opacity", function(d) { return d.opacity; })
+                      .style("stroke", function(d) {  return lcolor(d.score); })
+
+                  var node = svg.selectAll(".node")
+                      .data(graph.nodes)
+                    .enter().append("g")
+                      .attr("class", "node")
+                      .attr("id", function(d) { return d.id; })
+                      .call(force.drag)
+                      .on("mouseover", nodeOver)
+                      .on("mouseout", nodeOut);
+
+                  node.append("svg:a")
+                  /** Link zu jeweiligen Knoten setzen URL muss angepasst werden an verwendeten Ort**/
+                      .attr("xlink:href", function(d) {return "http://127.0.0.1:8000/stringdb/interaction/"+d.id+"/"})
+                  .append("svg:circle")
+                      .attr("r", 5)
+                      .style("fill", function(d) { return ncolor(d.hood); });
+
+                  node.append("text")
+                      .attr("dx", 12)
+                      .attr("dy", ".35em")
+                      .style("color", "black")
+                      .text(function(d) { return d.name });
+
+                  force.on("tick", function() {
+                    link.attr("x1", function(d) { return d.source.x; })
+                        .attr("y1", function(d) { return d.source.y; })
+                        .attr("x2", function(d) { return d.target.x; })
+                        .attr("y2", function(d) { return d.target.y; });
+
+                    node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+                    });
+                });
+
+                function getProps(object) {
+                    var output = '';
+                    for (property in object) {
+                      output += '<b>' + property + '</b>: ' + object[property]+'<br> ';
+                    }
+                    return output;
+                }
+
+
+                function nodeOut() {
+                    doHighlight(d3.select(this), false);
+                }
+
+                function nodeOver() {
+                    doHighlight(d3.select(this), true);
+                }
+
+                /** Blendet alle links die nicht mit dem übergebenen Node verklnüpft sind ein oder aus. */
+                function doHighlight(node, hl) {
+                    var nd = node.datum();
+                    var opacity = hl ? 0 : 0.6;
+                    var oopacity = hl ? 1 : 0.6;
+                    var nodeRadius = hl ?  9 : 5;
+                    var nodecolor = hl ? "lawngreen" : "white";
+                    //var nwidth = hl ? ".5px" : ".1px";
+
+                    // aus/einblenden aller lines die nicht an dem selektierten Node hängen
+                    svg.selectAll(".link")
+                        .filter(function(d) {  return d.source.index != nd.index && d.target.index != nd.index; })
+                        .transition().duration(750).style("stroke-opacity", opacity);
+
+                    svg.selectAll(".link")
+                        .filter(function(d) {  return d.source.index == nd.index || d.target.index == nd.index; })
+                        .transition().duration(750).style("stroke-opacity", oopacity);
+
+                    node.select("circle")
+                        .transition()
+                        .duration(750)
+                        .attr("r", nodeRadius)
+                        .style("stroke", nodecolor);
+                }
+            </script>
+        </tbody>
+
+        <tbody class="spacing">
+		    <tr><td colspan="2">&nbsp;</td></tr>
+	    </tbody>
+
+
+    </table>
+    <table id="detail">
+        <tbody class="data" style="position:relative;">
+            <tr>
+                <th>Protein</th>
+                <th>Score</th>
+            </tr>
+            {% for interact in interacts %}
+                <tr>
+                    <th><a href={% url "stringdb.views.checkInteraction" interact.node_id_b %}> {{ interact.preferred_name }}</a></th>
+                    <th>{{ interact.combined_score }}</th>
+                </tr>
+            {% endfor %}
+        </tbody>
+        <tbody class="spacing">
+                <tr><td colspan="2">&nbsp;</td></tr>
+        </tbody>
+    </table>
 {% endblock %}

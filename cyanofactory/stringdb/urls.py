@@ -1,7 +1,9 @@
 from django.conf.urls import patterns, url
-from stringdb.views import *
+from stringdb import views
 
 urlpatterns = patterns('',
-    url(r'^$', graph, name='index'),
-    url(r'^/graph$', graph, name='test')
+    #url(r'^$', proteingraph, name='graph'),
+    url(r'^graph$', views.proteingraph2json),
+    url(r'^index/$', views.index),
+    url(r'^interaction/(?P<id>\d+)/$', views.checkInteraction)
 )

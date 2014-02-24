@@ -1,0 +1,1 @@
+{"directed": false, "graph": [], "nodes": [{"name": "slr1192", "hood": 347, "id": 18070}, {"name": "slr7054", "hood": 0, "id": 18910}, {"name": "ssl7053", "hood": 1, "id": 19135}], "links": [{"opacity": 1, "source": 0, "score": 267, "target": 1}, {"opacity": 1, "source": 1, "score": 662, "target": 2}], "multigraph": false}

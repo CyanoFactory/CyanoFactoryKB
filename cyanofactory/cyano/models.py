@@ -48,6 +48,8 @@ from django.conf import settings
 
 from model_utils.managers import PassThroughManager
 
+from django.db import models
+
 from south.modelsinspector import add_introspection_rules
 add_introspection_rules([], ["^cyano\.history\.HistoryForeignKey"])
 add_introspection_rules([], ["^cyano\.history\.HistoryManyToManyField"])
@@ -5570,3 +5572,9 @@ def sub_rate_law(species):
         except:
             return match.group(0)
     return inner_method
+
+class ProteinComparison(models.Model):
+    wid = models.AutoField(primary_key=True)
+    protein_a = models.IntegerField()
+    protein_b = models.IntegerField()
+    equal_score = models.FloatField()
