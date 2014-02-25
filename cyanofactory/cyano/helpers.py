@@ -40,6 +40,7 @@ from django.http import Http404, HttpResponse
 from django.shortcuts import render_to_response
 from django.template import Context, RequestContext, loader
 from django.template.loader import get_template
+from django.template.defaultfilters import capfirst
 from django.utils import simplejson
 from django.utils.html import strip_tags
 
@@ -1349,10 +1350,69 @@ def objectToQuerySet(obj, model = None):
     #qs._result_cache.append(obj)
     return qs
 
+def create_detail_fieldset(species, item, fieldsets, is_anonymous):
+    model = item._meta.concrete_model
+
+    rmfieldsets = []
+    idx = 0
+    while idx < len(fieldsets):
+        rmfields = []
+
+        if isinstance(fieldsets[idx], dict):
+            inline_field = fieldsets[idx]['inline']
+            inline_field = getattr(item, inline_field)
+            del fieldsets[idx]
+
+            all_inline_fields = []
+
+            for ifield in inline_field.all():
+                sub_fieldsets = deepcopy(ifield._meta.concrete_model._meta.fieldsets)
+                fieldset_names = [x[0] for x in sub_fieldsets]
+                if 'Type' in fieldset_names:
+                    idx = fieldset_names.index('Type')
+                    del sub_fieldsets[idx]
+
+                extra_fields = create_detail_fieldset(species, ifield, sub_fieldsets, is_anonymous)
+                all_inline_fields += extra_fields
+
+            fieldsets = fieldsets[:idx] + all_inline_fields + fieldsets[idx:]
+            idx += len(all_inline_fields)
+            continue
+
+        fields = fieldsets[idx][1]['fields']
+        for idx2 in range(len(fields)):
+            if isinstance(fields[idx2], dict):
+                field_name = fields[idx2]['name']
+                verbose_name = fields[idx2]['verbose_name']
+            else:
+                field_name = fields[idx2]
+                field = model._meta.get_field_by_name(field_name)[0]
+                if isinstance(field, RelatedObject):
+                    verbose_name = capfirst(field.get_accessor_name())
+                else:
+                    verbose_name = field.verbose_name
+
+            data = format_field_detail_view(species, item, field_name, is_anonymous)
+            if (data is None) or (data == ''):
+                rmfields = [idx2] + rmfields
+
+            fieldsets[idx][1]['fields'][idx2] = {
+            'verbose_name': verbose_name.replace(" ", '&nbsp;').replace("-", "&#8209;"), 'data': data}
+        for idx2 in rmfields:
+            del fieldsets[idx][1]['fields'][idx2]
+        if len(fieldsets[idx][1]['fields']) == 0:
+            rmfieldsets = [idx] + rmfieldsets
+
+        idx += 1
+    for idx in rmfieldsets:
+        del fieldsets[idx]
+
+    return fieldsets
+
 def format_field_detail_view(species, obj, field_name, is_user_anonymous, history_id = None):
     if hasattr(obj, 'get_as_html_%s' % field_name):
         val = getattr(obj, 'get_as_html_%s' % field_name)(species, is_user_anonymous)
-        if isinstance(val, float) and val != 0. and val is not None:        
+        if isinstance(val, float) and val != 0. and val is not None:
             return ('%.' + str(int(math.ceil(max(0, -math.log10(abs(val)))+2))) + 'f') % val
         return val
     
@@ -2258,7 +2318,12 @@ def get_invalid_objects(species_id, validate_fields=False, validate_objects=True
                     })
         
     return errors
-    
+
+# via: http://stackoverflow.com/questions/2150108/
+def shift(l, n):
+    return l[n:] + l[:n]
+
+
 class EmpiricalFormula(dict):
     def __init__(self, *args, **kwargs):
         if len(args) > 0 and len(kwargs) > 0:
@@ -2383,3 +2448,10 @@ def get_verbose_name_for_field_by_name(model, field_name):
 
 def slugify(string):
     return re.sub(r"[^A-Za-z0-9_-]", "-", string)
+
+def overlaps(first, second):
+    """Tests if first overlaps with second (with 1 pixel tolerance)"""
+     # Overlap with right side or # Overlap with left side or first is in second
+    return first[0] - 1 < second[0] < first[1] + 1 or\
+           first[0] - 1 < second[1] < first[1] + 1 or\
+           (first[0] + 1 > second[0] and first[1] - 1 < second[1])
