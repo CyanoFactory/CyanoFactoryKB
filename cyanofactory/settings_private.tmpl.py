@@ -12,6 +12,10 @@ ROOT_URL = 'http://localhost:8000'
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
+ADMINS = (
+    #('Max Mustermann', 'doe@example.com'),
+)
+
 # URL prefix for static files.
 # If loading static files fails try prepending ROOT_URL
 STATIC_URL = '/static/'
@@ -34,7 +38,15 @@ SECRET_KEY = ''
 ALLOWED_HOSTS = ['localhost:8000']
 
 # Used by the redirect host middleware
-REDIRECT_URL = "https://cyanofactory.hs-mittweida.de"
+REDIRECT_URL = "https://example.com"
 
 # Login url to a broker for the job system
-BROKER_URL = 'amqp://user:password@cyanofactory.hs-mittweida.de:5672/cyanofactory-dev'
+BROKER_URL = 'amqp://user:password@example:5672/cyanofactory-dev'
+
+SERVER_EMAIL = "cyanofactory@example.com"
+DEFAULT_FROM_EMAIL = "cyanofactory@localhost"
+EMAIL_HOST = 'mail.example.com'
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+EMAIL_PORT = 25
+EMAIL_USE_SSL = True

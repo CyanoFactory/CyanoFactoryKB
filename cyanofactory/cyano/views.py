@@ -267,11 +267,15 @@ def species(request, species):
         ])
         
         contentCol3.append([
-            [0, 'Processes', cmodels.Process.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Process'})],
+            [0, 'Processes', cmodels.Process.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Process'})],
         ])
         
         contentCol3.append([
             [0, 'States', cmodels.State.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
+        ])
+
+        contentCol3.append([
+            [0, "Mass Spectrometry Data", cmodels.MassSpectrometryJob.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'MassSpectrometryJob'})],
         ])
 
     sources = {
@@ -577,40 +581,14 @@ def detail(request, species, model, item):
     
     if request.GET.get('format', 'html') == "html":
         #filter out type, metadata
-        fieldset_names = [x[0] for x in fieldsets]
+        fieldset_names = [x[0] for x in filter(lambda x: isinstance(x, tuple), fieldsets)]
         if 'Type' in fieldset_names:
             idx = fieldset_names.index('Type')
             del fieldsets[idx]
             
         #filter out empty fields
-        rmfieldsets = []
-        for idx in range(len(fieldsets)):
-            rmfields = []
-            for idx2 in range(len(fieldsets[idx][1]['fields'])):
-                if isinstance(fieldsets[idx][1]['fields'][idx2], dict):
-                    field_name = fieldsets[idx][1]['fields'][idx2]['name']
-                    verbose_name = fieldsets[idx][1]['fields'][idx2]['verbose_name']
-                else:
-                    field_name = fieldsets[idx][1]['fields'][idx2]
-                    field = model._meta.get_field_by_name(field_name)[0]
-                    if isinstance(field, RelatedObject):
-                        verbose_name = capfirst(field.get_accessor_name())
-                    else:
-                        verbose_name = field.verbose_name
-                    
-                data = chelpers.format_field_detail_view(species, item, field_name, request.user.is_anonymous())
-                if (data is None) or (data == ''):
-                    rmfields = [idx2] + rmfields
-                
-                fieldsets[idx][1]['fields'][idx2] = {'verbose_name': verbose_name.replace(" ", '&nbsp;').replace("-", "&#8209;"), 'data': data}
-            for idx2 in rmfields:
-                del fieldsets[idx][1]['fields'][idx2]
-            if len(fieldsets[idx][1]['fields']) == 0:
-                rmfieldsets = [idx] + rmfieldsets
-        for idx in rmfieldsets:
-            del fieldsets[idx]
-    
-    #form query set
+        fieldsets = chelpers.create_detail_fieldset(species, item, fieldsets, request.user.is_anonymous())
+
     qs = chelpers.objectToQuerySet(item, model = model)
 
     #render response
