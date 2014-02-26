@@ -69,3 +69,22 @@ def sbml(filename, wid, user, reason):
 
     return True
 
+@task(base = ReportingTask)
+def interproscan(filename, wid, user, reason):
+    from bioparser.interproscan import InterProScan
+
+    i = InterProScan(wid = wid, user = user, reason = reason)
+
+    handle_task(i, filename)
+
+    return True
+
+@task(base = ReportingTask)
+def fastafeature(filename, wid, user, reason, chromosome, feature_type):
+    from bioparser.fastafeature import FastaFeature
+
+    i = FastaFeature(wid=wid, user=user, reason=reason, chromosome=chromosome, feature_type=feature_type)
+
+    handle_task(i, filename)
+
+    return True
