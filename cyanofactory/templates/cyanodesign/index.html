@@ -1,0 +1,297 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Cyanodesign index page
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+{% load filters %}
+
+{% block head_title %}{{ block.super }} :: Cyanodesign{% endblock %}
+{% block page_title %}Cyanodesign{% endblock %}
+
+{% block head %}
+{{ block.super }}
+
+<script type="text/javascript">
+    var element_count = 0;
+
+    var enzymes = [];
+    var metabolites = {};
+
+    function Enzyme(name) {
+        this.name = name;
+        this.reversible = false;
+        this.substrates = [];
+        this.products = [];
+        this.constraints = [];
+        this.element_count = ++element_count;
+
+        this.toHTML = function() {
+            var textedit =
+                $("<input>")
+                    .addClass("textedit");
+            var combobox =
+                $("<select>")
+                    .append("<option>-&gt;</option>")
+                    .append("<option>&lt;-&gt;</option>")
+                    .append("</select>");
+            var checkbox =
+                $("<input>")
+                    .addClass("checkbox")
+                    .attr("type", "checkbox");
+            var spinner =
+                $("<input>")
+                    .addClass("spinner");
+
+            var element = $("<div>");
+            element.append(
+                    textedit.clone()
+                    .val(this.name)
+                    );
+            element.append(":");
+
+            this.substrates.forEach(function(value, index) {
+                /*spinner.clone()
+                    .attr("id", "min" + value.element_count)
+                    .val("");*/
+                element.append(textedit.clone().val(value.name));
+            });
+
+            element.append(combobox.clone());
+
+            this.products.forEach(function(value, index) {
+                /*spinner.clone()
+                    .attr("id", "min" + value.element_count)
+                    .val("");*/
+                element.append(textedit.clone().val(value.name));
+            });
+
+            element.append(checkbox.clone())
+                .attr('id', 'constrained' + this.element_count);
+            element.append("<label>Constraint</label>")
+                .attr('for', 'constrained' + this.element_count);
+
+            element.append(spinner.clone());
+            element.append(spinner.clone());
+
+/*
+                .append(
+                    $("<input>")
+                        .addClass("textedit")
+                        .attr('id', 'reaction' + this.element_count)
+                        .val(this.name)
+                )
+                .append(
+                    $("<input>")
+                        .addClass("checkbox")
+                        .attr('id', 'constrained' + this.element_count)
+                        .attr("type", "checkbox")
+                )
+                .append(
+                    $("<label>Constrains</label>")
+                        .attr('for', 'constrained' + this.element_count)
+                )
+                .append(
+                    $("<input>")
+                        .addClass("spinner")
+                        .attr("id", "min" + this.element_count)
+                        .val("")
+                ).append(
+                    $("<input>")
+                        .addClass("spinner")
+                        .attr("id", "max" + this.element_count)
+                )
+                .append(
+                    $("</div>")
+                );*/
+
+            element.append($("</div>"));
+
+            return element;
+        }
+    }
+
+    function Metabolite(name, external) {
+        this.external = external;
+        this.name = name;
+    }
+
+    function createMetabolites(reaction) {
+        var metabolite_fn = function(value) {
+            metabolites[value] = new Metabolite(value, false);
+        }
+
+        reaction["substrates"].forEach(metabolite_fn);
+        reaction["products"].forEach(metabolite_fn);
+    }
+
+    function createExternalMetabolites(external) {
+        var metabolite_fn = function(value) {
+            metabolites[value] = new Metabolite(value, true);
+        }
+        external.forEach(metabolite_fn);
+    }
+
+    function createEnzyme(reaction) {
+            /*"name": enzyme.name,
+            "stoichiometric": enzyme.stoic,
+            "substrates": enzyme.substrates,
+            "products": enzyme.products,
+            "reversible": enzyme.reversible,
+            "constraints": constr*/
+        var enzyme = new Enzyme(reaction["name"]);
+        enzyme.products = reaction.products.map(
+            function(value) {
+                return metabolites[value];
+            }
+        );
+        enzyme.substrates = reaction.substrates.map(
+            function(value) {
+                return metabolites[value];
+            }
+        );
+        enzyme.reversible = reaction.reversible;
+        return enzyme;
+    }
+
+    $(function () {
+        $( ".check" ).button();
+
+        $.ajax({
+            url: "{% url "cyanodesign.views.get_reactions" %}",
+            context: document.body,
+            async: false
+        }).done(function(x) {
+            x["enzymes"].forEach(function(value) {
+                //$('<div>' + this + '</div>').appendTo('#content')
+                //$('<li>' + value + '</li>').addClass("ui-widget-content").appendTo('#reactions');
+                createMetabolites(value);
+            });
+
+            createExternalMetabolites(x["external"]);
+
+            x["enzymes"].forEach(function(value) {
+                var enz = createEnzyme(value);
+                enz.toHTML().appendTo(".cyano-design-widget");
+                enzymes.push(enz);
+                $("<option></option>").text(enz.name).appendTo($("#cyano-design-objective-select"));
+            });
+        });
+
+        /*$("#catalog").accordion({
+            heightStyle: "content",
+            collapsible: true
+        });*/
+        /*$("#catalog li").draggable({
+            appendTo: "body",
+            helper: "clone"
+        });
+        $("#cart ol").droppable({
+            activeClass: "ui-state-default",
+            hoverClass: "ui-state-hover",
+            accept: ":not(.ui-sortable-helper)",
+            drop: function (event, ui) {
+                $(this).find(".placeholder").remove();
+                $("<li></li>").text(ui.draggable.text()).appendTo(this);
+            }
+        }).sortable({
+            items: "li:not(.placeholder)",
+            sort: function () {
+                // gets added unintentionally by droppable interacting with sortable
+                // using connectWithSortable fixes this, but doesn't allow you to customize active/hoverClass options
+                $(this).removeClass("ui-state-default");
+            }
+        });*/
+
+        // via https://stackoverflow.com/questions/4396042/
+        $("#selectable").bind("mousedown", function(e) {
+            e.metaKey = true;
+        }).selectable();
+
+        $( "#check1" ).position({
+            my: "right",
+            at: "right",
+            of: "#item1"
+        });
+
+        $(".spinner").spinner();
+        $(".checkbox").button();
+        $("input[type=submit], button")
+            .button()
+            .click(function( event ) {
+                event.preventDefault();
+            });
+        $("#design-submit").click(function(event) {
+            $.ajax({
+                url: "{% url "cyanodesign.views.simulate" %}",
+                context: document.body,
+                async: false,
+                data: {"name": "hihi"}
+            }).done(function(x) {
+                alert(x);
+            });
+        });
+    });
+</script>
+
+{% endblock %}
+
+{% block extrastyles %}
+#feedback { font-size: 1.4em; }
+#selectable .ui-selecting { background: #FECA40; }
+#selectable .ui-selected { background: #F39814; color: white; }
+#selectable { list-style-type: none; margin: 0; padding: 0; width: 60%; }
+#selectable li { margin: 3px; padding: 0.4em; font-size: 1.4em; height: 18px; }
+{% endblock %}
+
+{% block content %}
+
+<div class="cyano-design-widget">
+</div>
+
+<div class="cyano-design-objective">
+<select id="cyano-design-objective-select">
+</select>
+</div>
+
+<div class="cyano-design-submit">
+<input type="submit" id="design-submit" value="Simulate">
+</div>
+
+<div id="products">
+    <h1 class="ui-widget-header">Products</h1>
+
+    <div id="catalog" class="catalog">
+        <h2><a href="#">Reactions</a></h2>
+
+        <div id="reactions">
+            <ul id="selectable">
+                <li id="item1" class="ui-widget-content">Lolcat Shirt></li>
+                <li class="ui-widget-content">Cheezeburger Shirt</li>
+                <li class="ui-widget-content">Buckit Shirt</li>
+            </ul>
+        </div>
+
+             <input type="checkbox" id="check1" class="check"><label for="check1">External Metabolite</label>
+            <input type="checkbox" id="check2" class="check"><label for="check2">External Metabolite</label>
+            <input type="checkbox" id="check3" class="check"><label for="check3">External Metabolite</label>
+    </div>
+</div>
+<div id="cart">
+    <h1 class="ui-widget-header">Model</h1>
+
+    <div class="ui-widget-content">
+        <ol>
+            <li class="placeholder">Add your items here</li>
+        </ol>
+    </div>
+</div>
+
+{% endblock %}
