@@ -20,8 +20,6 @@ Released under the MIT license
 {{ block.super }}
 
 <script type="text/javascript">
-    var element_count = 0;
-
     var enzymes = [];
     var metabolites = {};
 
@@ -31,88 +29,21 @@ Released under the MIT license
         this.substrates = [];
         this.products = [];
         this.constraints = [];
-        this.element_count = ++element_count;
 
         this.toHTML = function() {
-            var textedit =
-                $("<input>")
-                    .addClass("textedit");
-            var combobox =
-                $("<select>")
-                    .append("<option>-&gt;</option>")
-                    .append("<option>&lt;-&gt;</option>")
-                    .append("</select>");
-            var checkbox =
-                $("<input>")
-                    .addClass("checkbox")
-                    .attr("type", "checkbox");
-            var spinner =
-                $("<input>")
-                    .addClass("spinner");
 
-            var element = $("<div>");
-            element.append(
-                    textedit.clone()
-                    .val(this.name)
-                    );
-            element.append(":");
-
-            this.substrates.forEach(function(value, index) {
-                /*spinner.clone()
-                    .attr("id", "min" + value.element_count)
-                    .val("");*/
-                element.append(textedit.clone().val(value.name));
-            });
-
-            element.append(combobox.clone());
-
-            this.products.forEach(function(value, index) {
-                /*spinner.clone()
-                    .attr("id", "min" + value.element_count)
-                    .val("");*/
-                element.append(textedit.clone().val(value.name));
-            });
-
-            element.append(checkbox.clone())
-                .attr('id', 'constrained' + this.element_count);
-            element.append("<label>Constraint</label>")
-                .attr('for', 'constrained' + this.element_count);
-
-            element.append(spinner.clone());
-            element.append(spinner.clone());
-
-/*
-                .append(
-                    $("<input>")
-                        .addClass("textedit")
-                        .attr('id', 'reaction' + this.element_count)
-                        .val(this.name)
-                )
-                .append(
-                    $("<input>")
-                        .addClass("checkbox")
-                        .attr('id', 'constrained' + this.element_count)
-                        .attr("type", "checkbox")
-                )
-                .append(
-                    $("<label>Constrains</label>")
-                        .attr('for', 'constrained' + this.element_count)
-                )
-                .append(
-                    $("<input>")
-                        .addClass("spinner")
-                        .attr("id", "min" + this.element_count)
-                        .val("")
-                ).append(
-                    $("<input>")
-                        .addClass("spinner")
-                        .attr("id", "max" + this.element_count)
-                )
-                .append(
-                    $("</div>")
-                );*/
-
-            element.append($("</div>"));
+            var element = $("<div>").addClass("cyano-reaction").data("object", this);
+            element.append(this.name + ": ");
+            element.append(this.substrates.map(
+                function(value) {
+                    return value.name;
+                }).join(" + "));
+            element.append(this.reversible ? " <-> " : " -> ");
+            element.append(this.products.map(
+                function(value) {
+                    return value.name;
+                }).join(" + "));
+            element.append("</div>");
 
             return element;
         }
@@ -185,31 +116,6 @@ Released under the MIT license
             });
         });
 
-        /*$("#catalog").accordion({
-            heightStyle: "content",
-            collapsible: true
-        });*/
-        /*$("#catalog li").draggable({
-            appendTo: "body",
-            helper: "clone"
-        });
-        $("#cart ol").droppable({
-            activeClass: "ui-state-default",
-            hoverClass: "ui-state-hover",
-            accept: ":not(.ui-sortable-helper)",
-            drop: function (event, ui) {
-                $(this).find(".placeholder").remove();
-                $("<li></li>").text(ui.draggable.text()).appendTo(this);
-            }
-        }).sortable({
-            items: "li:not(.placeholder)",
-            sort: function () {
-                // gets added unintentionally by droppable interacting with sortable
-                // using connectWithSortable fixes this, but doesn't allow you to customize active/hoverClass options
-                $(this).removeClass("ui-state-default");
-            }
-        });*/
-
         // via https://stackoverflow.com/questions/4396042/
         $("#selectable").bind("mousedown", function(e) {
             e.metaKey = true;
@@ -238,6 +144,122 @@ Released under the MIT license
                 alert(x);
             });
         });
+
+        /* Dialog */
+        var name = $("#name"),
+                email = $("#email"),
+                password = $("#password"),
+                allFields = $([]).add(name).add(email).add(password),
+                tips = $(".validateTips");
+
+        function updateTips(t) {
+            tips
+                    .text(t)
+                    .addClass("ui-state-highlight");
+            setTimeout(function () {
+                tips.removeClass("ui-state-highlight", 1500);
+            }, 500);
+        }
+
+        function checkLength(o, n, min, max) {
+            if (o.val().length > max || o.val().length < min) {
+                o.addClass("ui-state-error");
+                updateTips("Length of " + n + " must be between " +
+                        min + " and " + max + ".");
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        function checkRegexp(o, regexp, n) {
+            if (!( regexp.test(o.val()) )) {
+                o.addClass("ui-state-error");
+                updateTips(n);
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        $("#dialog-reaction").dialog({
+            autoOpen: false,
+            height: 300,
+            width: 350,
+            modal: true,
+            buttons: {
+                "Create an account": function () {
+                    var bValid = true;
+                    allFields.removeClass("ui-state-error");
+                    bValid = bValid && checkLength(name, "username", 3, 16);
+                    bValid = bValid && checkLength(email, "email", 6, 80);
+                    bValid = bValid && checkLength(password, "password", 5, 16);
+                    bValid = bValid && checkRegexp(name, /^[a-z]([0-9a-z_])+$/i, "Username may consist of a-z, 0-9, underscores, begin with a letter.");
+// From jquery.validate.js (by joern), contributed by Scott Gonzalez: http://projects.scottsplayground.com/email_address_validation/Valid = bValid && checkRegexp(password, /^([0-9a-zA-Z])+$/, "Password field only allow : a-z 0-9");
+                    if (bValid) {
+                        $("#users tbody").append("<tr>" +
+                                "<td>" + name.val() + "</td>" +
+                                "<td>" + email.val() + "</td>" +
+                                "<td>" + password.val() + "</td>" +
+                                "</tr>");
+                        $(this).dialog("close");
+                    }
+                },
+                Cancel: function () {
+                    $(this).dialog("close");
+                }
+            },
+            close: function () {
+                allFields.val("").removeClass("ui-state-error");
+            }
+        });
+        $("#dialog-metabolite").dialog({
+            autoOpen: false,
+            height: 300,
+            width: 350,
+            modal: true,
+            buttons: {
+                "OK": function () {
+                },
+                Cancel: function () {
+                    $(this).dialog("close");
+                }
+            },
+            close: function () {
+                allFields.val("").removeClass("ui-state-error");
+            }
+        });
+        $("#create-user")
+                .button()
+                .click(function () {
+                    $("#dialog-form").dialog("open");
+                });
+        $("div.cyano-reaction").click(function(event) {
+            var target = $(event.target);
+            var dialog = $("#dialog-reaction");
+
+            var item = target.data("object");
+            dialog.find("input.name").val(item.name);
+
+            var substrates = dialog.find("div#reaction-substrates");
+            var products = dialog.find("div#reaction-products");
+            $(substrates, products).text("");
+            item.substrates.forEach(function(item) {
+                $("<div></div>").text(item.name).data("object", item).appendTo(substrates);
+            });
+            item.products.forEach(function(item) {
+                $("<div></div>").text(item.name).data("object", item).appendTo(products);
+            });
+
+            dialog.dialog("open");
+        });
+        $("#dialog-reaction").on("click", "div#reaction-substrates,div#reaction-products", function(event) {
+            var dialog = $("#dialog-metabolite");
+            var item = $(event.target).data("object");
+            dialog.find("input.name").val(item.name);
+
+            dialog.dialog("open");
+        });
     });
 </script>
 
@@ -249,20 +271,77 @@ Released under the MIT license
 #selectable .ui-selected { background: #F39814; color: white; }
 #selectable { list-style-type: none; margin: 0; padding: 0; width: 60%; }
 #selectable li { margin: 3px; padding: 0.4em; font-size: 1.4em; height: 18px; }
+
+body { font-size: 62.5%; }
+input.text { margin-bottom:12px; width:95%; padding: .4em; }
+fieldset { padding:0; border:0; margin-top:25px; }
+div#users-contain { width: 350px; margin: 20px 0; }
+div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%; }
+div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
+.ui-dialog .ui-state-error { padding: .3em; }
+.validateTips { border: 1px solid transparent; padding: 0.3em; }
+
+div.cyano-reaction:hover {
+    background-color: #E3E3E3;
+    cursor: pointer;
+}
+
 {% endblock %}
 
 {% block content %}
+
+<div id="dialog-reaction" title="Create new user">
+    <p class="validateTips">All form fields are required.</p>
+
+    <form>
+        <fieldset>
+            <label for="name">Name</label>
+            <input type="text" name="name" id="name" class="name text ui-widget-content ui-corner-all">
+            <label for="substrates">Substrates</label>
+            <div id="reaction-substrates">
+
+            </div>
+            <input type="text" class="text ui-widget-content ui-corner-all">
+            <input type="text" class="text ui-widget-content ui-corner-all">
+            <label for="products">Products</label>
+            <div id="reaction-products"></div>
+            <input type="text" class="text ui-widget-content ui-corner-all">
+            <input type="text" class="text ui-widget-content ui-corner-all">
+            <label for="reversible">Reversible</label>
+            <input type="checkbox" name="reversible" id="reversible">
+            <label for="constrained">Constrained</label>
+            <input type="checkbox" name="constrained" id="constrained">
+            <label for="constrained_min">Min</label>
+            <input type="text" name="email" id="email" value="" class="text ui-widget-content ui-corner-all">
+            <label for="constrained_max">Max</label>
+            <input type="text" name="constrained_max" id="constrained_max" class="text ui-widget-content ui-corner-all">
+        </fieldset>
+    </form>
+</div>
+
+
+<div id="dialog-metabolite" title="Metabolite">
+    <form>
+        <fieldset>
+            <label for="name">Name</label>
+            <input type="text" name="name" id="name" class="name text ui-widget-content ui-corner-all">
+            <label for="external">External</label>
+            <input type="checkbox" name="external" id="external">
+        </fieldset>
+    </form>
+</div>
 
 <div class="cyano-design-widget">
 </div>
 
 <div class="cyano-design-objective">
-<select id="cyano-design-objective-select">
+Design objective: <select id="cyano-design-objective-select">
 </select>
 </div>
 
 <div class="cyano-design-submit">
 <input type="submit" id="design-submit" value="Simulate">
+<button id="create-user">Create new user</button>
 </div>
 
 <div id="products">

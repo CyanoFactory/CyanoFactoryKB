@@ -62,9 +62,9 @@ def proopdb(filename, wid, user, reason):
 @task(base = ReportingTask)
 def sbml(filename, wid, user, reason):
     from bioparser.sbml import SBML
-    
-    s = SBML(wid = wid, user = user, reason = reason)
-    
+
+    s = SBML(wid=wid, user=user, reason=reason)
+
     handle_task(s, filename)
 
     return True
