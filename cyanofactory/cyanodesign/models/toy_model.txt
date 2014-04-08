@@ -1,12 +1,12 @@
 -REACTIONS
 
 reac1 : 1.0 A_ext  -> 1.0 A 
-reac2 : 1.0 A  -> 1.0 B 
+reac2 : 1.0 A  <-> 1.0 B
 reac3 : 1.0 A  -> 1.0 C 
-reac4 : 1.0 B + 1.0 C  -> 1.0 D 
+reac4 : 1.0 B + 1.0 C  -> 1.5 D
 reac5 : 1.0 D  -> 1.0 D_ext 
 reac6 : 1.0 E_ext -> 1.0 E
-reac7 : 1.0 E -> 1.0 D
+reac7 : 2.0 E -> 1.0 D
 
 
 -CONSTRAINTS

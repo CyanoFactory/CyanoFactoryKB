@@ -22,27 +22,51 @@ Released under the MIT license
 <script type="text/javascript">
     var enzymes = [];
     var metabolites = {};
+    var dialog_metabolite;
+    var dialog_enzyme;
+    var cyano_design_objective_select;
+    var cyano_design_enzymes;
 
     function Enzyme(name) {
         this.name = name;
         this.reversible = false;
         this.substrates = [];
         this.products = [];
+        this.stoichiometric_substrates = [];
+        this.stoichiometric_products = [];
         this.constraints = [];
 
+        this.isConstrained = function() {
+            return this.constraints[1] !== null;
+        }
+
+        this.makeUnconstrained = function() {
+            this.constraints[0] = this.reversible ? null : 0;
+            this.constraints[1] = null;
+        }
+
         this.toHTML = function() {
+            var reac = function(substrates) {
+                return function(value, index) {
+                    var elem = substrates[index] + " ";
+                    if (value.external) {
+                        return elem + $("<span></span>").addClass("external-metabolite").text(value.name)[0].outerHTML;
+                    }
+                    return elem + value.name;
+                }
+            }
 
             var element = $("<div>").addClass("cyano-reaction").data("object", this);
             element.append(this.name + ": ");
-            element.append(this.substrates.map(
-                function(value) {
-                    return value.name;
-                }).join(" + "));
+            element.append(this.substrates.map(reac(this.stoichiometric_substrates)).join(" + "));
             element.append(this.reversible ? " <-> " : " -> ");
-            element.append(this.products.map(
-                function(value) {
-                    return value.name;
-                }).join(" + "));
+            element.append(this.products.map(reac(this.stoichiometric_products)).join(" + "));
+
+            if (this.isConstrained()) {
+                element.append(" [" + this.constraints[0] + ", " + this.constraints[1] + "]");
+            } else {
+                element.append(" <i>unconstrained</i>");
+            }
             element.append("</div>");
 
             return element;
@@ -52,6 +76,17 @@ Released under the MIT license
     function Metabolite(name, external) {
         this.external = external;
         this.name = name;
+
+        this.updateName = function(new_name) {
+            if (typeof metabolites[new_name] === 'undefined' ||
+                    metabolites[new_name] == this) {
+                delete metabolites[this.name];
+                this.name = new_name;
+                metabolites[this.name] = this;
+                return true;
+            }
+            return false;
+        }
     }
 
     function createMetabolites(reaction) {
@@ -78,21 +113,33 @@ Released under the MIT license
             "reversible": enzyme.reversible,
             "constraints": constr*/
         var enzyme = new Enzyme(reaction["name"]);
+
         enzyme.products = reaction.products.map(
             function(value) {
                 return metabolites[value];
             }
         );
+
         enzyme.substrates = reaction.substrates.map(
             function(value) {
                 return metabolites[value];
             }
         );
+
+        enzyme.stoichiometric_substrates = reaction.stoichiometric[0];
+        enzyme.stoichiometric_products = reaction.stoichiometric[1];
         enzyme.reversible = reaction.reversible;
+        enzyme.constraints = reaction.constraints;
+
         return enzyme;
     }
 
     $(function () {
+        dialog_metabolite = $("#dialog-metabolite");
+        dialog_enzyme = $("#dialog-reaction");
+        cyano_design_objective_select = $("#cyano-design-objective-select");
+        cyano_design_enzymes = $(".cyano-design-enzymes");
+
         $( ".check" ).button();
 
         $.ajax({
@@ -110,9 +157,9 @@ Released under the MIT license
 
             x["enzymes"].forEach(function(value) {
                 var enz = createEnzyme(value);
-                enz.toHTML().appendTo(".cyano-design-widget");
+                enz.toHTML().appendTo(cyano_design_enzymes);
                 enzymes.push(enz);
-                $("<option></option>").text(enz.name).appendTo($("#cyano-design-objective-select"));
+                $("<option></option>").text(enz.name).appendTo(cyano_design_objective_select);
             });
         });
 
@@ -152,8 +199,8 @@ Released under the MIT license
                 allFields = $([]).add(name).add(email).add(password),
                 tips = $(".validateTips");
 
-        function updateTips(t) {
-            tips
+        function updateTips(dialog, t) {
+            dialog.find($(".validateTips"))
                     .text(t)
                     .addClass("ui-state-highlight");
             setTimeout(function () {
@@ -161,10 +208,10 @@ Released under the MIT license
             }, 500);
         }
 
-        function checkLength(o, n, min, max) {
+        function checkLength(dialog, o, n, min, max) {
             if (o.val().length > max || o.val().length < min) {
                 o.addClass("ui-state-error");
-                updateTips("Length of " + n + " must be between " +
+                updateTips(dialog, "Length of " + n + " must be between " +
                         min + " and " + max + ".");
                 return false;
             } else {
@@ -172,36 +219,92 @@ Released under the MIT license
             }
         }
 
-        function checkRegexp(o, regexp, n) {
+        function checkPredicate(dialog, o, predicate, error) {
+            if (predicate(o.val)) {
+                return true;
+            } else {
+                updateTips(dialog, error);
+                return false;
+            }
+        }
+
+        function checkRegexp(dialog, o, regexp, n) {
             if (!( regexp.test(o.val()) )) {
                 o.addClass("ui-state-error");
-                updateTips(n);
+                updateTips(dialog, n);
                 return false;
             } else {
                 return true;
             }
         }
 
-        $("#dialog-reaction").dialog({
+        function updateEnzymeList() {
+            $(cyano_design_enzymes).text("");
+            $(cyano_design_objective_select).text("");
+
+            enzymes.forEach(function(value) {
+                value.toHTML().appendTo(cyano_design_enzymes);
+                $("<option></option>").text(value.name).appendTo(cyano_design_objective_select);
+            });
+        }
+
+        function showEnzymeDialog(enzyme) {
+            dialog_enzyme.data("object", enzyme);
+            dialog_enzyme.find("input.name").val(enzyme.name);
+            dialog_enzyme.find("#reversible").prop("checked", enzyme.reversible);
+
+            var substrates = dialog_enzyme.find("div#reaction-substrates");
+            var products = dialog_enzyme.find("div#reaction-products");
+            var constrained = dialog_enzyme.find("#constrained");
+            var constrained_min = dialog_enzyme.find("#constrained-min");
+            var constrained_max = dialog_enzyme.find("#constrained-max");
+
+            $(substrates).text("");
+            $(products).text("");
+            enzyme.substrates.forEach(function(item) {
+                $("<div></div>").text(item.name).addClass("cyano-metabolite").data("object", item).appendTo(substrates);
+            });
+            enzyme.products.forEach(function(item) {
+                $("<div></div>").text(item.name).addClass("cyano-metabolite").data("object", item).appendTo(products);
+            });
+
+            constrained.prop("checked", enzyme.isConstrained());
+            constrained_min.val(enzyme.constraints[0]);
+            constrained_max.val(enzyme.constraints[1]);
+
+            dialog_enzyme.dialog("open");
+        }
+
+        dialog_enzyme.dialog({
             autoOpen: false,
             height: 300,
             width: 350,
             modal: true,
             buttons: {
-                "Create an account": function () {
+                "OK": function () {
+                    var name = $(this).find(".name");
+                    var reversible = $(this).find("#reversible");
+                    var constrained = dialog_enzyme.find("#constrained");
+                    var constrained_min = dialog_enzyme.find("#constrained-min");
+                    var constrained_max = dialog_enzyme.find("#constrained-max");
+
                     var bValid = true;
                     allFields.removeClass("ui-state-error");
-                    bValid = bValid && checkLength(name, "username", 3, 16);
-                    bValid = bValid && checkLength(email, "email", 6, 80);
-                    bValid = bValid && checkLength(password, "password", 5, 16);
-                    bValid = bValid && checkRegexp(name, /^[a-z]([0-9a-z_])+$/i, "Username may consist of a-z, 0-9, underscores, begin with a letter.");
-// From jquery.validate.js (by joern), contributed by Scott Gonzalez: http://projects.scottsplayground.com/email_address_validation/Valid = bValid && checkRegexp(password, /^([0-9a-zA-Z])+$/, "Password field only allow : a-z 0-9");
+                    bValid &= checkRegexp($(this), name, /^[a-zA-Z0-9_]+$/, "Name must only contain A-Z, a-z, 0-9 and _");
+                    bValid &= checkLength($(this), name, "Name", 1, 50);
+
+                    // TODO: Test for numeric
+
                     if (bValid) {
-                        $("#users tbody").append("<tr>" +
-                                "<td>" + name.val() + "</td>" +
-                                "<td>" + email.val() + "</td>" +
-                                "<td>" + password.val() + "</td>" +
-                                "</tr>");
+                        var reaction = $(this).data("object");
+                        reaction.name = name.val();
+                        reaction.reversible = reversible.prop("checked");
+                        if (constrained.prop("checked")) {
+                            reaction.constraints[0] = constrained_min.val();
+                            reaction.constraints[1] = constrained_max.val();
+                        } else {
+                            reaction.makeUnconstrained();
+                        }
                         $(this).dialog("close");
                     }
                 },
@@ -211,15 +314,27 @@ Released under the MIT license
             },
             close: function () {
                 allFields.val("").removeClass("ui-state-error");
+                updateEnzymeList();
             }
         });
-        $("#dialog-metabolite").dialog({
+        dialog_metabolite.dialog({
             autoOpen: false,
             height: 300,
             width: 350,
             modal: true,
             buttons: {
                 "OK": function () {
+                    var name = $(this).find(".name");
+                    var external = $(this).find("#external");
+
+                    var valid = checkLength($(this), name, "Name", 1, 50);
+                    if (valid) {
+                        var metabolite = $(this).data("object");
+                        metabolite.updateName(name.val());
+                        metabolite.external = external.prop("checked");
+                        showEnzymeDialog(dialog_enzyme.data("object"));
+                        $(this).dialog("close");
+                    }
                 },
                 Cancel: function () {
                     $(this).dialog("close");
@@ -234,31 +349,16 @@ Released under the MIT license
                 .click(function () {
                     $("#dialog-form").dialog("open");
                 });
-        $("div.cyano-reaction").click(function(event) {
-            var target = $(event.target);
-            var dialog = $("#dialog-reaction");
-
-            var item = target.data("object");
-            dialog.find("input.name").val(item.name);
-
-            var substrates = dialog.find("div#reaction-substrates");
-            var products = dialog.find("div#reaction-products");
-            $(substrates, products).text("");
-            item.substrates.forEach(function(item) {
-                $("<div></div>").text(item.name).data("object", item).appendTo(substrates);
-            });
-            item.products.forEach(function(item) {
-                $("<div></div>").text(item.name).data("object", item).appendTo(products);
-            });
-
-            dialog.dialog("open");
+        cyano_design_enzymes.on("click", "div.cyano-reaction", function(event) {
+            showEnzymeDialog($(event.target).data("object"));
         });
-        $("#dialog-reaction").on("click", "div#reaction-substrates,div#reaction-products", function(event) {
-            var dialog = $("#dialog-metabolite");
+        dialog_enzyme.on("click", "div#reaction-substrates,div#reaction-products", function(event) {
             var item = $(event.target).data("object");
-            dialog.find("input.name").val(item.name);
+            dialog_metabolite.find("input.name").val(item.name);
+            dialog_metabolite.find("#external").prop("checked", item.external);
+            dialog_metabolite.data("object", item);
 
-            dialog.dialog("open");
+            dialog_metabolite.dialog("open");
         });
     });
 </script>
@@ -281,10 +381,12 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 .ui-dialog .ui-state-error { padding: .3em; }
 .validateTips { border: 1px solid transparent; padding: 0.3em; }
 
-div.cyano-reaction:hover {
+div.cyano-reaction:hover,div.cyano-metabolite:hover {
     background-color: #E3E3E3;
     cursor: pointer;
 }
+
+span.external-metabolite { color: blue }
 
 {% endblock %}
 
@@ -312,15 +414,17 @@ div.cyano-reaction:hover {
             <label for="constrained">Constrained</label>
             <input type="checkbox" name="constrained" id="constrained">
             <label for="constrained_min">Min</label>
-            <input type="text" name="email" id="email" value="" class="text ui-widget-content ui-corner-all">
+            <input type="text" name="email" id="constrained-min" value="" class="text ui-widget-content ui-corner-all">
             <label for="constrained_max">Max</label>
-            <input type="text" name="constrained_max" id="constrained_max" class="text ui-widget-content ui-corner-all">
+            <input type="text" name="constrained_max" id="constrained-max" class="text ui-widget-content ui-corner-all">
         </fieldset>
     </form>
 </div>
 
 
 <div id="dialog-metabolite" title="Metabolite">
+    <p class="validateTips">All form fields are required.</p>
+
     <form>
         <fieldset>
             <label for="name">Name</label>
@@ -331,7 +435,7 @@ div.cyano-reaction:hover {
     </form>
 </div>
 
-<div class="cyano-design-widget">
+<div class="cyano-design-enzymes">
 </div>
 
 <div class="cyano-design-objective">
