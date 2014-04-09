@@ -193,17 +193,6 @@ Released under the MIT license
             });
         });
 
-        // via https://stackoverflow.com/questions/4396042/
-        $("#selectable").bind("mousedown", function(e) {
-            e.metaKey = true;
-        }).selectable();
-
-        $( "#check1" ).position({
-            my: "right",
-            at: "right",
-            of: "#item1"
-        });
-
         $(".spinner").spinner();
         $(".checkbox").button();
         $("input[type=submit], button")
@@ -239,12 +228,6 @@ Released under the MIT license
             });
         });
 
-        /* Dialog */
-        var name = $("#name"),
-                email = $("#email"),
-                password = $("#password"),
-                allFields = $([]).add(name).add(email).add(password),
-                tips = $(".validateTips");
 
         function updateTips(dialog, t) {
             dialog.find($(".validateTips"))
@@ -509,6 +492,14 @@ Design objective: <select id="cyano-design-objective-select">
 <div class="cyano-design-submit">
 <input type="submit" id="design-submit" value="Simulate">
 <button id="create-user">Create new user</button>
+</div>
+
+<div id="products">
+    <h1 class="ui-widget-header">Results</h1>
+
+    <div id="simulation-result">
+        
+    </div>
 </div>
 
 {% endblock %}
