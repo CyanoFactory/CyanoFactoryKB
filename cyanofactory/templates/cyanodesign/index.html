@@ -26,6 +26,7 @@ Released under the MIT license
     var dialog_enzyme;
     var cyano_design_objective_select;
     var cyano_design_enzymes;
+    var constraints_div;
 
     function Enzyme(name) {
         this.name = name;
@@ -71,6 +72,30 @@ Released under the MIT license
 
             return element;
         }
+
+        this.toString = function() {
+             var reac = function(substrates) {
+                return function(value, index) {
+                    var elem = substrates[index] + " ";
+                    return elem + value.name;
+                }
+            }
+
+            var element = "";
+            element = element.concat(this.name + " : ");
+            element = element.concat(this.substrates.map(reac(this.stoichiometric_substrates)).join(" + "));
+            element = element.concat(this.reversible ? " <-> " : " -> ");
+            element = element.concat(this.products.map(reac(this.stoichiometric_products)).join(" + "));
+            return element;
+        }
+
+        this.constraintsToString = function() {
+            if (!this.isConstrained()) {
+                return "";
+            } else {
+                return this.name + " [" + this.constraints.join(", ") + "]";
+            }
+        }
     }
 
     function Metabolite(name, external) {
@@ -105,13 +130,17 @@ Released under the MIT license
         external.forEach(metabolite_fn);
     }
 
+    function getExternalMetabolites() {
+        var ext_metas = []
+        for (var m in metabolites) {
+            if (metabolites[m].external) {
+                ext_metas.push(m);
+            }
+        }
+        return ext_metas;
+    }
+
     function createEnzyme(reaction) {
-            /*"name": enzyme.name,
-            "stoichiometric": enzyme.stoic,
-            "substrates": enzyme.substrates,
-            "products": enzyme.products,
-            "reversible": enzyme.reversible,
-            "constraints": constr*/
         var enzyme = new Enzyme(reaction["name"]);
 
         enzyme.products = reaction.products.map(
@@ -139,6 +168,7 @@ Released under the MIT license
         dialog_enzyme = $("#dialog-reaction");
         cyano_design_objective_select = $("#cyano-design-objective-select");
         cyano_design_enzymes = $(".cyano-design-enzymes");
+        constraints_div = $("#constraints-min-max");
 
         $( ".check" ).button();
 
@@ -181,12 +211,29 @@ Released under the MIT license
             .click(function( event ) {
                 event.preventDefault();
             });
+          /*"name": enzyme.name,
+            "stoichiometric": enzyme.stoic,
+            "substrates": enzyme.substrates,
+            "products": enzyme.products,
+            "reversible": enzyme.reversible,
+            "constraints": constr*/
+        /*
+            data = design["enzymes"]
+    constr = design["constraints"]
+    ext = design["external"]
+    objective = design["objective"]
+         */
         $("#design-submit").click(function(event) {
             $.ajax({
                 url: "{% url "cyanodesign.views.simulate" %}",
                 context: document.body,
                 async: false,
-                data: {"name": "hihi"}
+                data: {
+                    "enzymes": JSON.stringify(enzymes.map(function(value) { return value.toString(); })),
+                    "constraints": JSON.stringify(enzymes.map(function(value) { return value.constraintsToString(); }).filter(function(value) { return value != ''; })),
+                    "external": JSON.stringify(getExternalMetabolites()),
+                    "objective": JSON.stringify([cyano_design_objective_select.val() + " 1"])
+                }
             }).done(function(x) {
                 alert(x);
             });
@@ -271,6 +318,12 @@ Released under the MIT license
             constrained.prop("checked", enzyme.isConstrained());
             constrained_min.val(enzyme.constraints[0]);
             constrained_max.val(enzyme.constraints[1]);
+
+            if (enzyme.isConstrained()) {
+                constraints_div.show();
+            } else {
+                constraints_div.hide();
+            }
 
             dialog_enzyme.dialog("open");
         }
@@ -360,6 +413,13 @@ Released under the MIT license
 
             dialog_metabolite.dialog("open");
         });
+        dialog_enzyme.find("#constrained:checkbox").change(function() {
+            if ($(this).is(":checked")) {
+                constraints_div.show();
+            } else {
+                constraints_div.hide();
+            }
+        });
     });
 </script>
 
@@ -413,10 +473,13 @@ span.external-metabolite { color: blue }
             <input type="checkbox" name="reversible" id="reversible">
             <label for="constrained">Constrained</label>
             <input type="checkbox" name="constrained" id="constrained">
-            <label for="constrained_min">Min</label>
-            <input type="text" name="email" id="constrained-min" value="" class="text ui-widget-content ui-corner-all">
-            <label for="constrained_max">Max</label>
-            <input type="text" name="constrained_max" id="constrained-max" class="text ui-widget-content ui-corner-all">
+            <div id="constraints-min-max">
+                <label for="constrained-min">Min</label>
+                <input type="text" name="email" id="constrained-min" value="" class="spinner text ui-widget-content ui-corner-all">
+                <label for="constrained-max">Max</label>
+                <input type="text" name="constrained_max" id="constrained-max" class="spinner text ui-widget-content ui-corner-all">
+            </div>
+            </div>
         </fieldset>
     </form>
 </div>
@@ -446,35 +509,6 @@ Design objective: <select id="cyano-design-objective-select">
 <div class="cyano-design-submit">
 <input type="submit" id="design-submit" value="Simulate">
 <button id="create-user">Create new user</button>
-</div>
-
-<div id="products">
-    <h1 class="ui-widget-header">Products</h1>
-
-    <div id="catalog" class="catalog">
-        <h2><a href="#">Reactions</a></h2>
-
-        <div id="reactions">
-            <ul id="selectable">
-                <li id="item1" class="ui-widget-content">Lolcat Shirt></li>
-                <li class="ui-widget-content">Cheezeburger Shirt</li>
-                <li class="ui-widget-content">Buckit Shirt</li>
-            </ul>
-        </div>
-
-             <input type="checkbox" id="check1" class="check"><label for="check1">External Metabolite</label>
-            <input type="checkbox" id="check2" class="check"><label for="check2">External Metabolite</label>
-            <input type="checkbox" id="check3" class="check"><label for="check3">External Metabolite</label>
-    </div>
-</div>
-<div id="cart">
-    <h1 class="ui-widget-header">Model</h1>
-
-    <div class="ui-widget-content">
-        <ol>
-            <li class="placeholder">Add your items here</li>
-        </ol>
-    </div>
 </div>
 
 {% endblock %}

@@ -39,6 +39,8 @@ def get_reactions(request):
 def calculate(request):
     enzymes = []
 
+
+
     # POST: reactions, constraints, external
 
     for reaction in reactions:
@@ -47,10 +49,24 @@ def calculate(request):
 
 @ajax_required
 def simulate(request):
-    model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model.txt")
+    data = json.loads(request.GET["enzymes"])
+    constr = json.loads(request.GET["constraints"])
+    ext = json.loads(request.GET["external"])
+    objective = json.loads(request.GET["objective"])
 
-    org = Metabolism(model)
-    fba = FBA(org)
+    print data
+    print constr
+    print ext
+    print objective
+
+    organism = Metabolism("model_name",
+                          reactions=data,
+                          constraints=constr,
+                          external=ext,
+                          objective=objective,
+                          fromfile=False)
+
+    fba = FBA(organism)
 
     return HttpResponse(fba)
 
