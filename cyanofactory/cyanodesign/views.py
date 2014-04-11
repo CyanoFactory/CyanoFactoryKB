@@ -1,5 +1,5 @@
 import json
-from django.http.response import HttpResponse
+from django.http.response import HttpResponse, HttpResponseBadRequest
 from cyano.decorators import ajax_required
 from PyNetMet.metabolism import *
 from PyNetMet.enzyme import *
@@ -16,7 +16,7 @@ def index(request):
 
 @ajax_required
 def get_reactions(request):
-    model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model.txt")
+    model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model2.txt")
 
     org = Metabolism(model)
 
@@ -32,8 +32,7 @@ def get_reactions(request):
             "constraints": constr
         })
 
-    return HttpResponse(json.dumps({"external": org.external, "enzymes": ret}), content_type="application/json")
-
+    return HttpResponse(json.dumps({"external": org.external, "enzymes": ret, "objective": org.objective}), content_type="application/json")
 
 @ajax_required
 def calculate(request):
@@ -49,24 +48,40 @@ def calculate(request):
 
 @ajax_required
 def simulate(request):
-    data = json.loads(request.GET["enzymes"])
-    constr = json.loads(request.GET["constraints"])
-    ext = json.loads(request.GET["external"])
-    objective = json.loads(request.GET["objective"])
+    if not all(x in request.GET for x in ["enzymes", "constraints", "external", "objective"]):
+        return HttpResponseBadRequest("Request incomplete")
 
-    print data
+    try:
+        data = json.loads(request.GET["enzymes"])
+        constr = json.loads(request.GET["constraints"])
+        ext = json.loads(request.GET["external"])
+        objective = json.loads(request.GET["objective"])
+    except ValueError:
+        return HttpResponseBadRequest("Invalid JSON data")
+
+    if not all(isinstance(x, list) for x in [data, constr, ext, objective]):
+        return HttpResponseBadRequest("Invalid data type")
+
+    string_type = map(lambda x: all(isinstance(y, basestring) for y in x), [data, constr, ext, objective])
+    if not all(x for x in string_type):
+        return HttpResponseBadRequest("Invalid data type")
+
+    print "\n".join(data)
     print constr
     print ext
     print objective
 
-    organism = Metabolism("model_name",
-                          reactions=data,
-                          constraints=constr,
-                          external=ext,
-                          objective=objective,
-                          fromfile=False)
+    try:
+        organism = Metabolism("model_name",
+                              reactions=data,
+                              constraints=constr,
+                              external=ext,
+                              objective=objective,
+                              fromfile=False)
 
-    fba = FBA(organism)
+        fba = FBA(organism)
+    except ValueError:
+        return HttpResponseBadRequest("Invalid data type")
 
     return HttpResponse(fba)
 
