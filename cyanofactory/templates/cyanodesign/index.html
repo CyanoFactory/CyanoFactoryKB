@@ -44,6 +44,7 @@ Released under the MIT license
         this.stoichiometric_substrates = [];
         this.stoichiometric_products = [];
         this.constraints = [0, null];
+        this.enabled = true;
 
         this.isConstrained = function() {
             return this.constraints[1] !== null;
@@ -65,6 +66,13 @@ Released under the MIT license
                 }
             }
 
+            var outer = $("<div></div");
+            var checkbox = $("<input>")
+                    .addClass("reaction-checkbox")
+                    .attr("type", "checkbox")
+                    .attr("checked", this.enabled)
+                    .data("object", this)
+                    .appendTo(outer);
             var element = $("<div>").addClass("cyano-reaction").data("object", this);
             element.append(this.name + ": ");
             element.append(this.substrates.map(reac(this.stoichiometric_substrates)).join(" + "));
@@ -77,8 +85,9 @@ Released under the MIT license
                 element.append(" <i>unconstrained</i>");
             }
             element.append("</div>");
+            element.appendTo(outer);
 
-            return element;
+            return outer;
         }
 
         this.toString = function() {
@@ -258,7 +267,7 @@ Released under the MIT license
                     .text(t)
                     .addClass("ui-state-highlight");
             setTimeout(function () {
-                tips.removeClass("ui-state-highlight", 1500);
+                //t.removeClass("ui-state-highlight", 1500);
             }, 500);
         }
 
@@ -283,7 +292,7 @@ Released under the MIT license
             }
         }
 
-        function checkBool(dialog, bool, error) {
+        function checkBool(dialog, o, bool, error) {
             if (bool) {
                 return true;
             } else {
@@ -371,7 +380,16 @@ Released under the MIT license
                     var constrained_max = dialog_enzyme.find("#constrained-max");
 
                     var bValid = true;
+
                     $(this).find("input").removeClass("ui-state-error");
+
+                    for (var i = 0; i < enzymes.length; ++i) {
+                        var enz = enzymes[i];
+                        if (name.val() == enz.name) {
+                             bValid &= checkBool($(this), name, enz == dialog_enzyme.data("object"), "Name already in use");
+                        }
+                    }
+
                     bValid &= checkRegexp($(this), name, /^[a-zA-Z0-9_]+$/, "Name must only contain A-Z, a-z, 0-9 and _");
                     bValid &= checkLength($(this), name, "Name", 1, 50);
 
@@ -379,7 +397,7 @@ Released under the MIT license
                         bValid &= checkRegexp($(this), constrained_min, /^\-?[0-9]+$/, "Min constraint must be numeric");
                         bValid &= checkRegexp($(this), constrained_max, /^\-?[0-9]+$/, "Max constraint must be numeric");
                         if (bValid) {
-                            bValid &= checkBool($(this), constrained_min <= constrained_max, "Min constraint > Max constraint");
+                            bValid &= checkBool($(this), constrained_min, constrained_min <= constrained_max, "Min constraint > Max constraint");
                         }
                     }
 
@@ -448,6 +466,7 @@ Released under the MIT license
                 "OK": function () {
                     var name = $(this).find($(".custom-combobox-input"));
                     var valid = checkLength($(this), name, "Name", 1, 50);
+
                     if (valid) {
                         var enzyme = $(this).data("object");
                         var isSubstrate = $(this).data("substrate");
@@ -506,6 +525,16 @@ Released under the MIT license
                 constraints_div.show();
             } else {
                 constraints_div.hide();
+            }
+        });
+        cyano_design_enzymes.on("change", ".reaction-checkbox:checkbox", function(event) {
+            var target = $(event.target);
+            target.enabled = $(event).is(":checked");
+            var reac = target.next();
+            if (target.enabled) {
+                reac.removeClass("cyano-reaction-disabled");
+            } else {
+                reac.addClass("cyano-reaction-disabled");
             }
         });
 
@@ -643,9 +672,18 @@ div#users-contain { width: 350px; margin: 20px 0; }
 div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%; }
 div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
 .ui-dialog .ui-state-error { padding: .3em; }
-.validateTips { border: 1px solid transparent; padding: 0.3em; }
+.validateTips { border: 1px solid transparent; padding: 0.3em }
+
+div.cyano-reaction {
+    display: inline;
+}
+
+div.cyano-reaction-disabled {
+    color: #BBBBBB;
+}
 
 div.cyano-reaction:hover,div.cyano-metabolite:hover {
+    display: inline;
     background-color: #E3E3E3;
     cursor: pointer;
 }
