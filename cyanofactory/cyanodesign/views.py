@@ -23,14 +23,16 @@ def get_reactions(request):
     ret = []
 
     for enzyme, constr in zip(org.enzymes, org.constr):
-        ret.append({
-            "name": enzyme.name,
-            "stoichiometric": enzyme.stoic,
-            "substrates": enzyme.substrates,
-            "products": enzyme.products,
-            "reversible": enzyme.reversible,
-            "constraints": constr
-        })
+        # Filter out auto-created external transport funcs
+        if not enzyme.name.endswith("_ext_transp"):
+            ret.append({
+                "name": enzyme.name,
+                "stoichiometric": enzyme.stoic,
+                "substrates": enzyme.substrates,
+                "products": enzyme.products,
+                "reversible": enzyme.reversible,
+                "constraints": constr
+            })
 
     return HttpResponse(json.dumps({"external": org.external, "enzymes": ret, "objective": org.objective}), content_type="application/json")
 
