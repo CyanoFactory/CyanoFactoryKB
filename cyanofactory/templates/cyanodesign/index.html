@@ -214,6 +214,13 @@ Released under the MIT license
 
         $( ".check" ).button();
 
+        // Array Remove - By John Resig (MIT Licensed)
+        Array.prototype.remove = function(from, to) {
+          var rest = this.slice((to || from) + 1 || this.length);
+          this.length = from < 0 ? this.length + from : from;
+          return this.push.apply(this, rest);
+        };
+
         $.ajax({
             url: "{% url "cyanodesign.views.get_reactions" %}",
             context: document.body,
@@ -323,19 +330,32 @@ Released under the MIT license
             $(cyano_design_enzymes).text("");
             $(cyano_design_objective_select).text("");
 
-            enzymes.forEach(function(value) {
-                value.toHTML().appendTo(cyano_design_enzymes);
-                $("<option></option>").text(value.name).appendTo(cyano_design_objective_select);
-            });
+            for (var i = 0; i < enzymes.length; ++i) {
+                var enzyme = enzymes[i];
+                if (typeof enzyme.backup != 'undefined') {
+                    enzymes[i] = enzyme.backup;
+                    enzyme = enzymes[i];
+                }
+                enzyme.toHTML().appendTo(cyano_design_enzymes);
+                $("<option></option>").text(enzyme.name).appendTo(cyano_design_objective_select);
+            }
         }
 
         function showEnzymeDialog(enzyme, create_new) {
-            if (create_new === undefined) {
+            if (typeof create_new == 'undefined') {
                 create_new = create_new_enzyme;
             }
             create_new_enzyme = create_new;
 
+            if (typeof enzyme == 'undefined') {
+                enzyme = dialog_enzyme.data("object");
+            } else {
+                enzyme.backup = jQuery.extend(true, {}, enzyme);
+            }
+
             dialog_enzyme.data("object", enzyme);
+            dialog_enzyme.data("substrates_del", []);
+            dialog_enzyme.data("products_del", []);
             dialog_enzyme.find("input.name").val(enzyme.name);
             dialog_enzyme.find("#reversible").prop("checked", enzyme.reversible);
 
@@ -349,8 +369,9 @@ Released under the MIT license
             $(products).text("");
 
             var each_func = function(target) {
-                return function(item) {
+                return function(item, value) {
                     var element = $("<div></div>");
+                    delete_button.clone().show().addClass("hoverable").data("count", value).appendTo(element);
                     var spinner = $("<input>").attr("type", "text").appendTo(element);
                     spinner.spinner();
                     $("<div></div>").text(item.name).addClass("cyano-metabolite").data("object", item).appendTo(element);
@@ -437,6 +458,7 @@ Released under the MIT license
 
                     if (bValid) {
                         var reaction = $(this).data("object");
+                        reaction.backup = undefined;
                         reaction.name = name.val();
                         reaction.reversible = reversible.prop("checked");
                         if (constrained.prop("checked")) {
@@ -524,7 +546,7 @@ Released under the MIT license
                             enzyme.products.push(metabolites[idx]);
                             enzyme.stoichiometric_products.push(1);
                         }
-                        showEnzymeDialog(dialog_enzyme.data("object"));
+                        showEnzymeDialog(undefined);
                         $(this).dialog("close");
                     }
                 },
@@ -579,6 +601,18 @@ Released under the MIT license
                 reac.addClass("cyano-reaction-disabled");
             }
         });
+        dialog_enzyme.find("#reaction-substrates").on("click", ".delete-button", function(event) {
+            var target = $(event.target);
+            var index = target.data("count");
+            dialog_enzyme.data("substrates_del").push(index);
+            target.parent().remove();
+        })
+dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(event) {
+            var target = $(event.target);
+            var index = target.data("count");
+            dialog_enzyme.data("products_del").push(index);
+            target.parent().remove();
+        })
 
         $.widget("custom.combobox", {
             _create: function () {
@@ -775,8 +809,8 @@ span.external-metabolite { color: blue }
 
 {% block content %}
 
-<img src="{% static "public/img/delete.png" %}" id="delete-button" alt="Delete"/>
-<img src="{% static "public/img/add.png" %}" id="add-button" alt="Add"/>
+<img src="{% static "public/img/delete.png" %}" id="delete-button" class="delete-button" alt="Delete"/>
+<img src="{% static "public/img/add.png" %}" id="add-button" class="add-button" alt="Add"/>
 
 
 <div id="dialog-reaction" title="Edit Reaction">
@@ -793,12 +827,12 @@ span.external-metabolite { color: blue }
             <div id="reaction-products"></div>
             <img src="{% static "public/img/add.png" %}" id="add-product-button" class="hoverable" alt="Add"/>
             <div>
-                <label for="reversible">Reversible</label>
                 <input type="checkbox" name="reversible" id="reversible">
+                <label for="reversible">Reversible</label>
             </div>
             <div>
-                <label for="constrained">Constrained</label>
                 <input type="checkbox" name="constrained" id="constrained">
+                <label for="constrained">Constrained</label>
             </div>
             <div id="constraints-min-max">
                 <div>
