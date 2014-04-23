@@ -125,7 +125,7 @@ TEMPLATE_DIRS = (
 )
 
 HAYSTACK_SITECONF = 'cyano.search_indexes'
-HAYSTACK_SEARCH_ENGINE = 'xapian'
+HAYSTACK_SEARCH_ENGINE = 'dummy'
 HAYSTACK_XAPIAN_PATH = os.path.join(os.path.dirname(__file__), 'xapian_index')
 
 djcelery.setup_loader()
@@ -148,6 +148,7 @@ INSTALLED_APPS = (
     'public',
     #'biosql',
     'cyano',
+    'cyanodesign',
     'db_xref',
     #'biowarehouse',
     'bioparser',

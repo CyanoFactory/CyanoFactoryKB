@@ -246,6 +246,7 @@ Released under the MIT license
 
         $(".spinner").spinner();
         $(".checkbox").button();
+        $(".validateTips").hide();
         $("input[type=submit], button")
             .button()
             .click(function( event ) {
@@ -277,6 +278,7 @@ Released under the MIT license
 
 
         function updateTips(dialog, t) {
+            dialog.find($(".validateTips").show());
             dialog.find($(".validateTips"))
                     .text(t)
                     .addClass("ui-state-highlight");
@@ -445,7 +447,7 @@ Released under the MIT license
                         bValid &= checkRegexp($(this), constrained_min, numeric, "Min constraint must be numeric");
                         bValid &= checkRegexp($(this), constrained_max, numeric, "Max constraint must be numeric");
                         if (bValid) {
-                            bValid &= checkBool($(this), constrained_min, constrained_min <= constrained_max, "Min constraint > Max constraint");
+                            bValid &= checkBool($(this), constrained_min, constrained_min.val() <= constrained_max.val(), "Min constraint > Max constraint");
                         }
                     }
 
@@ -489,6 +491,7 @@ Released under the MIT license
             close: function () {
                 $(this).find("input").removeClass("ui-state-error");
                 updateEnzymeList();
+                $(".validateTips").hide();
             }
         });
 
@@ -517,6 +520,7 @@ Released under the MIT license
             },
             close: function () {
                 $(this).find("input").removeClass("ui-state-error");
+                $(".validateTips").hide();
             }
         });
 
@@ -556,6 +560,8 @@ Released under the MIT license
             },
             close: function () {
                 $(this).find("input").removeClass("ui-state-error");
+                $(".validateTips").hide();
+                $(this).find(".creationState").text("");
             }
         });
         $("#create-user")
@@ -639,9 +645,10 @@ dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(
                         .tooltip({
                             tooltipClass: "ui-state-highlight"
                         });
-                        /*.data("ui-autocomplete")._renderItem = function(ul, item) {
-                            return $("<li>").append("<i>" + item.value.name + "</i>").appendTo(ul);
-                        };*/
+                /*this.input.data("ui-autocomplete")._renderItem = function(ul, item) {
+                    $("<li>").append("<i>" + item.label + "</i>").appendTo(ul);
+                    return ul;
+                };*/
                 this._on(this.input, {
                     autocompleteselect: function (event, ui) {
                         ui.item.option.selected = true;
@@ -683,14 +690,16 @@ dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(
             },
             _source: function (request, response) {
                 var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
-                response(metabolites.map(function (value) {
+                response(metabolites.filter(function (value) {
                     var text = value.name;
-                    if (!request.term || matcher.test(text))
-                        return {
-                            label: text,
-                            value: text,
-                            option: this
-                        };
+                    return true;
+                    return !request.term || matcher.test(text);
+                }).map(function(value) {
+                    return {
+                        label: value.name,
+                        value: value.name,
+                        option: this
+                    };
                 }));
             },
             _removeIfInvalid: function (event, ui) {
@@ -814,18 +823,22 @@ span.external-metabolite { color: blue }
 
 
 <div id="dialog-reaction" title="Edit Reaction">
-    <p class="validateTips">All form fields are required.</p>
+    <p class="validateTips"></p>
 
     <form>
         <fieldset>
             <label for="name">Name</label>
             <input type="text" name="name" id="name" class="name text ui-widget-content ui-corner-all">
-            <label for="substrates">Substrates</label>
-            <div id="reaction-substrates"></div>
-            <img src="{% static "public/img/add.png" %}" id="add-substrate-button" class="hoverable" alt="Add"/>
-            <label for="products">Products</label>
-            <div id="reaction-products"></div>
-            <img src="{% static "public/img/add.png" %}" id="add-product-button" class="hoverable" alt="Add"/>
+            <div>
+                <label for="substrates">Substrates</label>
+                <div id="reaction-substrates"></div>
+                <img src="{% static "public/img/add.png" %}" id="add-substrate-button" class="hoverable" alt="Add"/>
+            </div>
+            <div>
+                <label for="products">Products</label>
+                <div id="reaction-products"></div>
+                <img src="{% static "public/img/add.png" %}" id="add-product-button" class="hoverable" alt="Add"/>
+            </div>
             <div>
                 <input type="checkbox" name="reversible" id="reversible">
                 <label for="reversible">Reversible</label>
@@ -849,7 +862,8 @@ span.external-metabolite { color: blue }
 </div>
 
 <div id="dialog-add-metabolite" title="Add Metabolite">
-    <p class="validateTips">Select existing metabolite or create new one.</p>
+    <p>Select an existing metabolite or create a new one by providing a new name.</p>
+    <p class="validateTips"></p>
     <form>
         <fieldset>
             <select id="metabolite-combobox">
@@ -860,7 +874,8 @@ span.external-metabolite { color: blue }
 </div>
 
 <div id="dialog-edit-metabolite" title="Edit Metabolite">
-    <p class="validateTips">All form fields are required.</p>
+    <p>The metabolite is modified in all reactions.</p>
+    <p class="validateTips"></p>
 
     <form>
         <fieldset>
