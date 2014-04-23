@@ -76,6 +76,11 @@ select.select{
 	color:#222;
 }
 
+#header,#footer,#tooltip {
+    border: 1px solid rgb(170, 170, 170);
+    background: url("images/ui-bg_highlight-soft_75_cccccc_1x100.png") repeat-x scroll 50% 50% rgb(204, 204, 204);
+}
+
 #tooltip {	
 	position:absolute;
     padding: 5px 5px;
