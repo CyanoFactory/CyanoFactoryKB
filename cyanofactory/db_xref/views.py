@@ -40,22 +40,38 @@ def dbxref(request, source, xid):
     :return:
        Website -- ``db_xref/output.format``
     """
+    import db_xref
+    import os
+    import urlparse
+    import urllib
+    from suds.client import Client
+
+    # via https://stackoverflow.com/questions/11687478/
+    def path2url(path):
+        return urlparse.urljoin('file:', urllib.pathname2url(path))
+
+    client = Client(path2url(os.path.abspath(db_xref.__path__[0]) + "/MiriamWebServices.xml"))
+
     _format = request.GET.get('format', 'redirect')
     
     database = source
     organism = xid
-    
+
+    # Workaround for GO: Items need GO:-prefix
+    if database == "GO" and organism[:3] != "GO:":
+        organism = "GO:" + organism
+
     data = {
-        "database" : database,
-        "item" : organism,
-        "url" : get_database_url(database, organism)
+        "database": database,
+        "item": organism,
+        "urls": client.service.getLocations(client.service.getURI(database, organism))
     }
     
     template = "db_xref/output." + _format
 
     do_error = False
     
-    if len(data["url"]) == 0:
+    if len(data["urls"]) == 0:
         # Unsupported DB
         do_error = True
 
@@ -68,10 +84,10 @@ def dbxref(request, source, xid):
     elif _format == "html":
         mimetype = "text/html"
     elif _format == "redirect":
-        if len(data["url"]) == 0:
+        if len(data["urls"]) == 0:
             data["error"] = "Unsupported Database " + database
         else:
-            return redirect(data["url"])
+            return redirect(data["urls"][0])
     else:
         do_error = True
         data["error"] = "Unknown format " + _format
@@ -82,11 +98,11 @@ def dbxref(request, source, xid):
         c = Context(data)
         return HttpResponseBadRequest(
             t.render(c),
-            mimetype = 'text/html; charset=UTF-8',
-            content_type = 'text/html; charset=UTF-8')
+            mimetype='text/html; charset=UTF-8',
+            content_type='text/html; charset=UTF-8')
 
     status = 400 if do_error else 200
 
     t = loader.get_template(template)
     c = Context(data)
-    return HttpResponse(t.render(c), mimetype = mimetype, status = status)
+    return HttpResponse(t.render(c), mimetype=mimetype, status=status)

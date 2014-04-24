@@ -1,0 +1,17 @@
+<a xlink:href="{{ url }}">
+    <rect x="{{ x }}"
+          y="{{ y }}"
+          width="{{ w }}"
+          height="{{ h }}"
+          onmousemove="showToolTip(evt, '{{ title }}', '{{ text }}');"
+          onmouseout="hideToolTip(evt);"
+          style="
+          {% if color %}
+          fill: {{ color }};
+          {% endif %}
+          {% if opacity %}
+          opacity: {{ opacity }};
+          {% endif %}
+          ">
+    </rect>
+</a>

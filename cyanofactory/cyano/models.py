@@ -13,9 +13,10 @@ Released under the MIT license
 
 from __future__ import unicode_literals
 
+import itertools
 import math
 import re
-import settings
+from django.db.models.fields import NullBooleanField
 import subprocess
 import sys
 from datetime import datetime
@@ -37,12 +38,13 @@ from django.template import loader, Context
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import m2m_changed
 
-from cyano.templatetags.templatetags import set_time_zone
-from cyano.cache import Cache
-from cyano.history import HistoryForeignKey as ForeignKey
-from cyano.history import HistoryManyToManyField as ManyToManyField
+from .templatetags.templatetags import set_time_zone
+from .cache import Cache
+from .history import HistoryForeignKey as ForeignKey
+from .history import HistoryManyToManyField as ManyToManyField
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from copy import deepcopy
+from django.conf import settings
 
 from model_utils.managers import PassThroughManager
 
@@ -217,6 +219,9 @@ options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('listing', 'concrete_entry_mode
 ''' BEGIN: validators '''
 def validate_dna_sequence(seq):
     validators.RegexValidator(regex=r'^[ACGT]+$', message='Enter a valid DNA sequence consisting of only the letters A, C, G, and T')(seq)
+
+def validate_protein_sequence(seq):
+    validators.RegexValidator(regex=r'^[ACDEFGHIKLMNPQRSTVWY]+$', message='Enter a valid Protein sequence consisting of only the letters A, C, D, E, F, G, H, I, K, L, M, N, P, Q, R, S, T, V, W and Y')(seq)
 
 def validate_kinetics(reaction, direction):
     if direction == 'f':
@@ -596,7 +601,7 @@ class GroupProfile(ProfileBase):
          if no permission object was found
         """
         allow, deny = self.get_permissions(entry)
-        if allow == None:
+        if allow is None:
             return None, None
         allow = all(perm in permissions for perm in allow)
         deny = all(perm in permissions for perm in deny)
@@ -981,6 +986,13 @@ class EntryTextData(EvidencedEntryData):
         verbose_name = 'Entry text data'
         verbose_name_plural = 'Entry text data'
 
+class EntryBasicTextData(EntryData):
+    value = TextField(blank=False, default='', verbose_name='Value')
+
+    class Meta:
+        verbose_name = "Entry basic text data"
+        verbose_name_plural = "Entry basic text data"
+
 #Complex entry data
 class BindingSite(EvidencedEntryData):
     coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
@@ -1288,7 +1300,6 @@ class Entry(AbstractEntry):
     def save(self, revision_detail, *args, **kwargs):
         # Optimized to reduce number of database accesses to a minimum
 
-        from itertools import ifilter
         from cyano.helpers import slugify
 
         if self.wid != slugify(self.wid):
@@ -1318,7 +1329,7 @@ class Entry(AbstractEntry):
 
         fields = self._meta.fields
         # Remove primary keys and some fields that don't need revisioning:
-        fields = ifilter(lambda x: (not x.primary_key) and
+        fields = itertools.ifilter(lambda x: (not x.primary_key) and
                          (not x.name in ["detail", "created_detail"]), fields)
 
         for field in fields:
@@ -1437,6 +1448,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
     cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
     publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publications')
+    parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
 
     #getters
 
@@ -1444,28 +1456,21 @@ class SpeciesComponent(AbstractSpeciesComponent):
         """
         Delete is referenced counted and only detached when at least one more item is left
         """
-        if self.species.count() > 1:
+        #if self.species.count() > 1:
             # Detach
-            # Todo revisioning
-            self.species.remove(species.pk)
-        else:
+        #    # Todo revisioning
+        self.species.remove(species.pk)
+        #else:
             # Delete
-            # Todo revisioning
-            super(SpeciesComponent, self).delete(using=using)
+        #    # Todo revisioning
+        #    super(SpeciesComponent, self).delete(using=using)
 
-    @permalink
+    #@permalink
     def get_absolute_url(self, species, history_id = None):
-        dic = {'species_wid': species.wid,
-               'model_type': TableMeta.get_by_id(self.model_type_id).model_name,
-               'wid': self.wid}
-
         if history_id is None:
-            view = 'cyano.views.detail'
+            return "%s/%s/%s/%s" % (settings.ROOT_URL, species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid)
         else:
-            view = 'cyano.views.history_detail'
-            dic['detail_id'] = history_id
-
-        return view, (), dic
+            return "%s/%s/%s/%s/history/%s" % (settings.ROOT_URL, species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid, history_id)
 
     def get_all_references(self):
         return self.publication_references.all() | PublicationReference.objects.filter(evidence__species_component__id = self.id)
@@ -1710,10 +1715,10 @@ class Protein(Molecule):
 
                 if all_obj_data_by_model is None:
                     species_id = Species.objects.values('id').get(wid=obj_data['species'])['id']
-                    for obj in Chromosome.objects.values('length').filter(species__id=species_id):
+                    for obj in Genome.objects.values('length').filter(species__id=species_id):
                         chr_lens.append(obj['length'])
                 else:
-                    for obj in all_obj_data_by_model['Chromosome']:
+                    for obj in all_obj_data_by_model['Genome']:
                         if isinstance(obj, Entry):
                             chr_lens.append(obj.length)
                         else:
@@ -1728,9 +1733,9 @@ class Protein(Molecule):
 BEGIN: Specific data types 
 '''
 
-class Chromosome(Molecule):
+class Genome(Molecule):
     #parent pointer
-    parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_chromosome', parent_link=True, verbose_name='Molecule')
+    parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_genome', parent_link=True, verbose_name='Molecule')
 
     #additional fields
     sequence = TextField(blank=True, default='', verbose_name='Sequence', validators=[validate_dna_sequence])
@@ -1748,7 +1753,10 @@ class Chromosome(Molecule):
         return float(seq.count('G') + seq.count('C')) / float(len(seq))
 
     def get_transcription_units(self):
-        return list(set([g.transcription_units.all()[0] for g in self.genes.all()]))
+        all_tu_pks = self.genes.all().values_list("transcription_units", flat=True)
+        all_tu = TranscriptionUnit.objects.filter(pk__in = all_tu_pks).distinct()
+
+        return all_tu
 
     #http://www.owczarzy.net/extinct.htm
     def get_extinction_coefficient(self):
@@ -1756,7 +1764,7 @@ class Chromosome(Molecule):
 
         seq = self.sequence
 
-        value = 0;
+        value = 0
         for i in range(len(seq) - 1):
             value += ExtinctionCoefficient.pairwise_dna[seq[i]][seq[i+1]]
         value += ExtinctionCoefficient.pairwise_dna[seq[-1]][seq[0]]
@@ -1809,19 +1817,31 @@ class Chromosome(Molecule):
             return self.get_as_html_structure_local(species, is_user_anonymous, start_coordinate = start_coordinate, end_coordinate = end_coordinate, highlight_wid = highlight_wid)
 
     def get_as_html_structure_global(self, species, is_user_anonymous):
+        from .helpers import shift, overlaps
+        from collections import namedtuple
+        from cyano.string_template import Loader as StringTemplateLoader
+
         ntPerSegment = 1e4
         segmentHeight = 27
         geneHeight = 10
         featureHeight = 5
         nSegments = int(math.ceil(self.length / ntPerSegment))
         W = 636
-        H = segmentHeight * nSegments
         segmentLeft = 35
         segmentW = W - 4 - segmentLeft
+        oneNtW = segmentW / ntPerSegment
+        segmentWLast = (self.length - ntPerSegment * (nSegments - 1)) * oneNtW
         chrTop = -12
+        feature_draw = [[] for x in range(nSegments)]
+        row_offset = []
+        gene_template = StringTemplateLoader().load_template("cyano/genome/draw_gene.tmpl")[0]
+        feature_template_rect = StringTemplateLoader().load_template("cyano/genome/draw_feature_rect.tmpl")[0]
+        feature_template_triangle = StringTemplateLoader().load_template("cyano/genome/draw_feature_triangle.tmpl")[0]
+        fake_gene = Gene(model_type=TableMeta.get_by_model_name("Gene"))
+        fake_cf = ChromosomeFeature(model_type=TableMeta.get_by_model_name("ChromosomeFeature"))
 
         #style
-        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08']
+        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08', 'b33da6', '0acdcd', '0860e7']
         style = ''
         for i in range(len(colors)):
             style += '.color-%s{fill:#%s; stroke: #%s;}' % (i, colors[i], colors[i], )
@@ -1832,14 +1852,6 @@ class Chromosome(Molecule):
             .chr line{stroke:#666; stroke-width:0.5px;}\
         '
 
-        chro = StringIO.StringIO()
-        for i in range(nSegments):
-            x1 = segmentLeft
-            x2 = segmentLeft + ((min(self.length, (i+1) * ntPerSegment) - 1) % ntPerSegment) / ntPerSegment * segmentW
-            y = chrTop + (i + 1) * segmentHeight
-            chro.write('<text x="%s" y="%s">%d</text>' % (segmentLeft - 2, y, i * ntPerSegment + 1))
-            chro.write('<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y))
-
         #genes
         geneStyle = '\
             .genes g polygon{stroke-width:1px; fill-opacity:0.5;}\
@@ -1848,78 +1860,136 @@ class Chromosome(Molecule):
 
         genes = StringIO.StringIO()
 
+        GeneTuple = namedtuple("GeneTuple", "name wid coordinate direction length transcription_units transcription_units__wid transcription_units__name")
 
-        genesList = list(self.genes.prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all())
+        genesList = map(GeneTuple._make, self.genes.values_list(
+            "name", "wid", "coordinate", "direction", "length",
+            "transcription_units", "transcription_units__wid", "transcription_units__name").all())
 
         nTus = 0
         iTUs = {}
         tus = []
 
-        for i, gene in enumerate(genesList):
-            if len(gene.transcription_units.all()[:1]) == 1:
-                tu = gene.transcription_units.all()[:1][0]
-                if iTUs.has_key(tu.wid):
-                    iTu = iTUs[tu.wid]
-                else:
-                    tus.append(tu)
-                    iTu = nTus
-                    iTUs[tu.wid] = iTu
-                    nTus += 1
-            else:
-                tu = None
-                iTu = nTus
-                nTus += 1
+        all_feature_type_pks = [None] + list(self.features.prefetch_related("chromosome_feature").values_list("chromosome_feature__type", flat=True).distinct())
 
+        def draw_gene(gene, tu):
             iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
 
-            if gene.direction == 'f':
-                x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                x3 = min(segmentLeft + segmentW, x1 + gene.length / ntPerSegment * segmentW)
-                x2 = max(x1, x3 - 5)
-            else:
-                x3 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                x1 = min(segmentLeft + segmentW, x3 + gene.length / ntPerSegment * segmentW)
-                x2 = min(x1, x3 + 5)
+            tip_title = gene.name or gene.wid
+            tip_text = 'Transcription unit: %s' % (tu or "(None)")
 
-            y2 = chrTop + (iSegment + 1) * segmentHeight - 2
-            y1 = y2 - geneHeight
+            fake_gene.wid = gene.wid
+            gene_abs_url = fake_gene.get_absolute_url(species)
 
-            if math.fabs(x3 - x1) > len(gene.wid) * 5:
-                label = gene.wid
-            else:
-                label = ''
-
-            if gene.name:
-                tip_title = gene.name
-            else:
-                tip_title = gene.wid
-            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name)
             tip_title = tip_title.replace("'", "\'")
-            tip_content = tip_content.replace("'", "\'")
+            tip_text = tip_text.replace("'", "\'")
 
-            gene_abs_url = gene.get_absolute_url(species)
+            context_dict = {'title': tip_title,
+                            'text': tip_text,
+                            'url': gene_abs_url,
+                            'color': iTu % len(colors)}
 
-            genes.write('<g>\
-                <a xlink:href="%s">\
-                    <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/>\
-                </a>\
-                <a xlink:href="%s">\
-                    <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\
-                </a>\
-                </g>' % (
-                gene_abs_url,
-                iTu % len(colors),
-                x1, y1,
-                x2, y1,
-                x3, (y1 + y2) / 2,
-                x2, y2,
-                x1, y2,
-                tip_title, tip_content,
-                gene_abs_url,
-                (x1 + x3) / 2, (y1 + y2) / 2 + 1,
-                tip_title, tip_content,
-                label,
-                ))
+            ret = []
+
+            segments = shift(range(nSegments), int(iSegment))
+
+            w_drawn = 0
+
+            for i in itertools.cycle(segments):
+                context_dict.update({'direction': gene.direction})
+
+                if i == iSegment:
+                    x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                else:
+                    x1 = segmentLeft
+
+                w_needed = gene.length / ntPerSegment * segmentW - w_drawn
+
+                row = i + 1
+                if row == nSegments:
+                    w_space = segmentLeft + segmentWLast - x1
+                else:
+                    w_space = segmentLeft + segmentW - x1
+
+                y2 = chrTop + row_offset[i] + geneHeight - 2
+                y1 = y2 - geneHeight
+
+                if w_space < w_needed:
+                    # Not enough space left on line
+
+                    w = max(1, w_space)
+                    w_drawn += w
+                    x2 = x1 + w
+
+                    if math.fabs(x2 - x1) > len(gene.wid) * 5:
+                        label = gene.wid
+                    else:
+                        label = ''
+
+                    if gene.direction == "f" or iSegment == i:
+                        if gene.direction == "r" and x1 + 5 > x2:
+                            arrow_size = x2 - x1
+                        else:
+                            arrow_size = 5
+
+                        if gene.direction == "f":
+                            x1_arrow = x1
+                            x2_arrow = x2
+                        else:
+                            x1_arrow = x1 + arrow_size
+                            x2_arrow = x2
+                    else:
+                        x1_arrow, x2_arrow = x1, x2
+
+                    context_dict.update({'x1': x1,
+                                         'x2': x2,
+                                         'y1': y1,
+                                         'y2': y2,
+                                         'x1_arrow': x1_arrow,
+                                         'x2_arrow': x2_arrow,
+                                         'x_middle': (x1 + x2) / 2,
+                                         'y_middle': (y1 + y2) / 2,
+                                         'label': label,
+                                         'color': iTu % len(colors)
+                                         })
+                    ret.append(gene_template.render(Context(context_dict)))
+                else:
+                    w = w_needed
+                    x2 = x1 + w
+                    if math.fabs(x2 - x1) > len(gene.wid) * 5:
+                        label = gene.wid
+                    else:
+                        label = ''
+
+                    if gene.direction == "f" or iSegment == i:
+                        if x2 - 5 < x1:
+                            arrow_size = abs(x1 - x2)
+                        else:
+                            arrow_size = 5
+
+                        if gene.direction == "f":
+                            x1_arrow = x1
+                            x2_arrow = x2 - arrow_size
+                        else:
+                            x1_arrow = x1 + arrow_size
+                            x2_arrow = x2
+                    else:
+                        x1_arrow, x2_arrow = x1, x2
+
+                    context_dict.update({'x1': x1,
+                                         'x2': x2,
+                                         'y1': y1,
+                                         'y2': y2,
+                                         'x1_arrow': x1_arrow,
+                                         'x2_arrow': x2_arrow,
+                                         'x_middle': (x1 + x2) / 2,
+                                         'y_middle': (y1 + y2) / 2,
+                                         'label': label,
+                                         })
+                    ret.append(gene_template.render(Context(context_dict)))
+                    break
+
+            return ret
 
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
@@ -1927,109 +1997,217 @@ class Chromosome(Molecule):
 
         promoters = StringIO.StringIO()
         tfSites = StringIO.StringIO()
+
+        def preprocess_draw_segment(coordinate, length, tip_title, typ_pk, typ, url):
+            iSegment = math.floor((coordinate - 1) / ntPerSegment)
+
+            segments = shift(range(nSegments), int(iSegment))
+
+            w_drawn = 0
+            done = False
+            for i in itertools.cycle(segments):
+                if i == iSegment:
+                    x = (coordinate - 1) % ntPerSegment
+                else:
+                    x = 0
+
+                w_needed = length - w_drawn
+
+                row = i + 1
+                if row == nSegments:
+                    w_space = ntPerSegment - x
+                else:
+                    w_space = ntPerSegment - x
+
+                y = i
+                if w_space < w_needed:
+                    # Not enough space left on line
+                    w = max(1, w_space)
+                    w_drawn += w
+                else:
+                    w = w_needed
+                    done = True
+
+                new_item = [x, x + w, tip_title, typ_pk, typ, url]
+                inserted = False
+                for row in feature_draw[i]:
+                    if any(overlaps(item, new_item, 50) for item in row):
+                        continue
+                    # Space left -> insert
+                    row.append(new_item)
+                    inserted = True
+                    break
+
+                if not inserted:
+                    # Create new row
+                    feature_draw[i].append([new_item])
+
+                if done:
+                    break
+
+        def draw_segment(i, row):
+            ret = []
+
+            for j, subrow in enumerate(row):
+                for item in subrow:
+                    start, end, tip_title, typ_pk, typ, url = item
+                    tip_text = typ
+
+                    tip_title = tip_title.replace("'", "\'")
+
+                    color = "#" + str(colors[all_feature_type_pks.index(typ_pk) % len(colors)])
+                    context_dict = {'h': featureHeight,
+                                    'title': tip_title,
+                                    'text': tip_text,
+                                    'url': url,
+                                    'color': color,
+                                    'opacity': 1}
+
+                    x = segmentLeft + start * oneNtW
+                    w = max(3, (end - start) * oneNtW)
+                    y = row_offset[i] + j * (featureHeight + 1)
+
+                    context_dict.update({'x': x,
+                                         'x_middle': 0,
+                                         'y': y,
+                                         'w': w})
+
+                    if w <= 3:
+                        feature_template = feature_template_triangle
+                        context_dict.update({
+                            'h': y + featureHeight,
+                            'w': x + 3,
+                            'x': x - 3,
+                            'x_middle': x,
+                        })
+                    else:
+                        feature_template = feature_template_rect
+
+                    ret.append(feature_template.render(Context(context_dict)))
+
+            return ret
+
         for tu in tus:
             if tu.promoter_35_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_35_coordinate
                 tu_length = tu.promoter_35_length
 
-                iSegment = math.floor((tu_coordinate - 1) / ntPerSegment)
+                tip_title = tu.name or tu.wid
+                tip_text = 'Promoter -35 box'
+                url = tu.get_absolute_url(species)
 
-                x = segmentLeft + ((tu_coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                w = max(1, x1 - min(segmentLeft + segmentW, x1 + tu_length / ntPerSegment * segmentW))
-
-                y = chrTop + (iSegment + 1) * segmentHeight + 2
-
-                if tu.name:
-                    tip_title = tu.name
-                else:
-                    tip_title = tu.wid
-                tip_title = tip_title.replace("'", "\'")
-
-                promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                    tu.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Promoter -35 box'))
+                [promoters.write(item) for item in draw_segment(tu_coordinate, tu_length)]
 
             if tu.promoter_10_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_10_coordinate
                 tu_length = tu.promoter_10_length
 
-                iSegment = math.floor((tu_coordinate - 1) / ntPerSegment)
+                tip_title = tu.name or tu.wid
+                tip_text = 'Promoter -10 box'
+                url = tu.get_absolute_url(species)
 
-                x = segmentLeft + ((tu_coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                w = max(1, x1 - min(segmentLeft + segmentW, x1 + tu_length / ntPerSegment * segmentW))
-
-                y = chrTop + (iSegment + 1) * segmentHeight + 2
-
-                if tu.name:
-                    tip_title = tu.name
-                else:
-                    tip_title = tu.wid
-                tip_title = tip_title.replace("'", "\'")
-
-                promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                    tu.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Promoter -10 box'))
+                [promoters.write(item) for item in draw_segment(tu_coordinate, tu_length)]
 
             for tr in tu.transcriptional_regulations.all():
                 if tr.binding_site is not None:
-                    iSegment = math.floor((tr.binding_site.coordinate - 1) / ntPerSegment)
+                    tr_coordinate = tr.binding_site.coordinate
+                    tr_length = tr.binding_site.length
 
-                    x = segmentLeft + ((tr.binding_site.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-                    w = max(1, x1 - min(segmentLeft + segmentW, x1 + tr.binding_site.length / ntPerSegment * segmentW))
+                    tip_title = tr.name or tr.wid
+                    tip_text = 'Transcription factor binding site'
+                    url = tr.get_absolute_url(species)
 
-                    y = chrTop + (iSegment + 1) * segmentHeight + 2
-
-                    if tr.name:
-                        tip_title = tr.name
-                    else:
-                        tip_title = tr.wid
-                    tip_title = tip_title.replace("'", "\'")
-
-                    tfSites.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                        tr.get_absolute_url(species), x, y, w, featureHeight, tip_title, 'Transcription factor binding site'))
+                    [tfSites.write(item) for item in draw_segment(tr_coordinate, tr_length)]
 
         #features
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
         features = StringIO.StringIO()
 
-        for feature in self.features.all():
-            iSegment = math.floor((feature.coordinate - 1) / ntPerSegment)
 
-            x = segmentLeft + ((feature.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
-            w = max(1, x1 - min(segmentLeft + segmentW, x1 + feature.length / ntPerSegment * segmentW))
+        feature_values = self.features.all().order_by("coordinate").\
+            values("coordinate", "length",
+                   "chromosome_feature__name", "chromosome_feature__wid",
+                   "chromosome_feature__type", "chromosome_feature__type__name", "chromosome_feature__type__wid")
 
-            y = chrTop + (iSegment + 1) * segmentHeight + 2
+        for feature in feature_values:
+            coordinate = feature["coordinate"]
+            length = feature["length"]
 
-            if feature.type.all().count() > 0:
-                type_ = feature.type.all()[0].name
+            tip_title = feature["chromosome_feature__name"] or feature["chromosome_feature__wid"]
+
+            if feature["chromosome_feature__type"]:
+                typ = feature["chromosome_feature__type__name"] or feature["chromosome_feature__type__wid"]
             else:
-                type_ = ''
+                typ = None
+            fake_cf.wid = feature["chromosome_feature__wid"]
+            url = fake_cf.get_absolute_url(species)
 
-            if feature.name:
-                tip_title = feature.name
+            preprocess_draw_segment(coordinate, length, tip_title, feature["chromosome_feature__type"], typ, url)
+
+        for i, row in enumerate(feature_draw):
+            if i == 0:
+                row_offset.append(chrTop + segmentHeight + 2)
             else:
-                tip_title = feature.wid
-            tip_title = tip_title.replace("'", "\'")
+                row_offset.append(chrTop + segmentHeight + 2 + (len(feature_draw[i - 1]) or 1) * (featureHeight + 1) + row_offset[-1])
 
-            features.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);"/></a>' % (
-                feature.get_absolute_url(species), x, y, w, featureHeight, tip_title, type_, ))
+        for i, row in enumerate(feature_draw):
+            [features.write(item) for item in draw_segment(i, row)]
+
+        chro = StringIO.StringIO()
+
+        for i in range(nSegments):
+            x1 = segmentLeft
+            x2 = segmentLeft + ((min(self.length, (i+1) * ntPerSegment) - 1) % ntPerSegment) / ntPerSegment * segmentW
+            y = chrTop + row_offset[i] + geneHeight
+            chro.write('<text x="%s" y="%s">%d</text>' % (segmentLeft - 2, y, i * ntPerSegment + 1))
+            chro.write('<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y))
+
+        for i, gene in enumerate(genesList):
+            if gene.transcription_units:
+                tu_wid = gene.transcription_units__wid
+                tu_name = gene.transcription_units__name
+
+                tu = tu_name or tu_wid
+
+                if tu_wid in iTUs:
+                    iTu = iTUs[tu_wid]
+                else:
+                    iTu = nTus
+                    iTUs[tu_wid] = iTu
+                    nTus += 1
+            else:
+                tu = None
+                iTu = nTus
+                nTus += 1
+
+            [genes.write(item) for item in draw_gene(gene, tu)]
+
+        H = row_offset[-1] + len(feature_draw[-1]) * (featureHeight + 2)
 
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
             W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro.getvalue(), genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
 
     def get_as_html_structure_local(self, species, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None):
+        from .helpers import overlaps
+        from cyano.string_template import Loader as StringTemplateLoader
+
         length = end_coordinate - start_coordinate + 1
 
         W = 636
         geneHeight = 20
         featureHeight = 10
-        H = 2 + geneHeight + 2 + 4 + 1 * (2 + featureHeight) + 2
 
         geneY = 2
         chrY = geneY + geneHeight + 4
         promoterY = chrY + 1 + 2
         featureY = promoterY
 
+        feature_draw = []
+        feature_template_rect = StringTemplateLoader().load_template("cyano/genome/draw_feature_rect.tmpl")[0]
+        feature_template_triangle = StringTemplateLoader().load_template("cyano/genome/draw_feature_triangle.tmpl")[0]
+
         #style
-        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08']
+        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08', 'b33da6', '0acdcd', '0860e7']
         style = ''
         for i in range(len(colors)):
             style += '.color-%s{fill:#%s; stroke: #%s;}' % (i, colors[i], colors[i], )
@@ -2062,6 +2240,10 @@ class Chromosome(Molecule):
         iTUs = {}
         tus = []
 
+        all_feature_type_pks = [None] + list(self.features.prefetch_related("chromosome_feature").values_list("chromosome_feature__type", flat=True).distinct())
+
+        template = loader.get_template("cyano/genome/draw_gene.html")
+
         for i, gene in enumerate(genesList):
             if len(gene.transcription_units.all()[:1]) == 1:
                 tu = gene.transcription_units.all()[:1][0]
@@ -2077,18 +2259,18 @@ class Chromosome(Molecule):
                 iTu = nTus
                 nTus += 1
 
-            if gene.direction == 'f':
-                x1 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
-                x3 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
-                x2 = max(x1, x3 - 5)
+            x1 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
+            x2 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
+
+            if gene.direction == "r" and x1 + 5 > x2:
+                arrow_size = x2 - x1
             else:
-                x3 = chrL + float(gene.coordinate - start_coordinate) / length * chrW
-                x1 = chrL + float(gene.coordinate + gene.length - 1 - start_coordinate) / length * chrW
-                x2 = min(x1, x3 + 5)
+                arrow_size = 5
+
+            arrow_size = -arrow_size if gene.direction == "f" else arrow_size
 
             x1 = max(chrL, min(chrR, x1))
             x2 = max(chrL, min(chrR, x2))
-            x3 = max(chrL, min(chrR, x3))
 
             y1 = geneY
             y2 = geneY + geneHeight
@@ -2102,43 +2284,37 @@ class Chromosome(Molecule):
                 strokeOpacity = 0.35
                 strokeWidth = 1
 
-            if math.fabs(x3 - x1) > len(gene.wid) * 5:
+            if math.fabs(x2 - x1) > len(gene.wid) * 5:
                 label = gene.wid
             else:
                 label = ''
 
-            if gene.name:
-                tip_title = gene.name
-            else:
-                tip_title = gene.wid
-            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name)
+            tip_title = gene.name or gene.wid
+
+            tip_content = 'Transcription unit: %s' % ("(None)" if tu is None else tu.name or tu.wid)
             tip_title = tip_title.replace("'", "\'")
             tip_content = tip_content.replace("'", "\'")
 
             gene_abs_url = gene.get_absolute_url(species)
 
-            genes.write('<g style="">\n\
-                <a xlink:href="%s">\n\
-                    <polygon class="color-%s" points="%s,%s %s,%s %s,%s %s,%s %s,%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="fill-opacity: %s; stroke-opacity: %s; stroke-width: %spx"/>\n\
-                </a>\n\
-                <a xlink:href="%s">\n\
-                    <text x="%s" y="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);">%s</text>\n\
-                </a>\n\
-                </g>\n' % (
-                gene_abs_url,
-                iTu % len(colors),
-                x1, y1,
-                x2, y1,
-                x3, (y1 + y2) / 2,
-                x2, y2,
-                x1, y2,
-                tip_title, tip_content,
-                fillOpacity, strokeOpacity, strokeWidth,
-                gene_abs_url,
-                (x1 + x3) / 2, (y1 + y2) / 2 + 1,
-                tip_title, tip_content,
-                label,
-                ))
+            context_dict = {'title': tip_title,
+                            'text': tip_content,
+                            'url': gene_abs_url,
+                            'color': iTu % len(colors),
+                            'x1': x1,
+                            'x2': x2,
+                            'y1': y1,
+                            'y2': y2,
+                            'label': label,
+                            'direction': gene.direction,
+                            'arrow': True,
+                            'arrow_size': arrow_size,
+                            'fill_opacity': fillOpacity,
+                            'stroke_opacity': strokeOpacity,
+                            'stroke_width': strokeWidth
+                            }
+
+            genes.write(template.render(Context(context_dict)))
 
         #promoters
         promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
@@ -2146,111 +2322,124 @@ class Chromosome(Molecule):
 
         promoters = StringIO.StringIO()
         tfSites = StringIO.StringIO()
+
+        def draw_segment(wid, coordinate, item_length, tip_title, typ, url):
+            if highlight_wid is None or wid in highlight_wid:
+                opacity = 1
+            else:
+                opacity = 0.25
+
+            x = chrL + float(coordinate - start_coordinate) / length * chrW
+            w = chrL + float(coordinate + item_length - 1 - start_coordinate) / length * chrW
+
+            x = max(chrL, min(chrR, x))
+            w = max(chrL, min(chrR, w)) - x
+
+            tip_title = tip_title.replace("'", "\'")
+            tip_text = (typ.name or typ.wid) if typ else ''
+
+            ret = []
+
+            context_dict = {'h': featureHeight,
+                            'title': tip_title,
+                            'text': tip_text,
+                            'url': url,
+                            'x': x,
+                            'w': w,
+                            'x_middle': 0,
+                            'opacity': opacity,
+                            'color': "#" + str(colors[all_feature_type_pks.index(typ.pk if typ else None) % len(colors)])}
+
+            new_item = [x, x + w]
+            inserted = False
+            y = 0
+            for i, row in enumerate(feature_draw):
+                if any(overlaps(item, new_item, 5) for item in row):
+                    continue
+                # Space left -> insert
+                row.append(new_item)
+                inserted = True
+                y = featureY + i * (featureHeight + 2)
+                context_dict.update({
+                    'y': y
+                })
+                break
+
+            if not inserted:
+                # Create new row
+                y = featureY + len(feature_draw) * (featureHeight + 2)
+                context_dict.update({
+                    'y': y
+                })
+                feature_draw.append([new_item])
+
+            if w <= 3:
+                feature_template = feature_template_triangle
+                context_dict.update({
+                    'h': y + featureHeight,
+                    'w': x + 3,
+                    'x': x - 3,
+                    'x_middle': x,
+                })
+            else:
+                feature_template = feature_template_rect
+
+            return feature_template.render(Context(context_dict))
+
         for tu in tus:
             if tu.promoter_35_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_35_coordinate
                 tu_length = tu.promoter_35_length
 
                 if not (tu_coordinate > end_coordinate or tu_coordinate + tu_length - 1 < start_coordinate):
-                    x1 = chrL + float(tu_coordinate - start_coordinate) / length * chrW
-                    x2 = chrL + float(tu_coordinate + tu_length - 1 - start_coordinate) / length * chrW
+                    tip_title = tu.name or tu.wid
+                    url = tu.get_absolute_url(species)
 
-                    x1 = max(chrL, min(chrR, x1))
-                    x2 = max(chrL, min(chrR, x2))
-
-                    if highlight_wid is None or tu.wid in highlight_wid:
-                        opacity = 1
-                    else:
-                        opacity = 0.25
-
-                    if tu.name:
-                        tip_title = tu.name
-                    else:
-                        tip_title = tu.wid
-                    tip_title = tip_title.replace("'", "\'")
-
-                    promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                        tu.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Promoter -35 box', opacity))
+                    promoters.write(draw_segment(tu.wid, tu_coordinate, tu_length, tip_title, 'Promoter -35 box', url))
 
             if tu.promoter_10_coordinate is not None:
                 tu_coordinate = tu.get_coordinate() + tu.promoter_10_coordinate
                 tu_length = tu.promoter_10_length
 
                 if not (tu_coordinate > end_coordinate or tu_coordinate + tu_length - 1 < start_coordinate):
-                    x1 = chrL + float(tu_coordinate - start_coordinate) / length * chrW
-                    x2 = chrL + float(tu_coordinate + tu_length - 1 - start_coordinate) / length * chrW
+                    tip_title = tu.name or tu.wid
+                    url = tu.get_absolute_url(species)
 
-                    x1 = max(chrL, min(chrR, x1))
-                    x2 = max(chrL, min(chrR, x2))
-
-                    if highlight_wid is None or tu.wid in highlight_wid:
-                        opacity = 1
-                    else:
-                        opacity = 0.25
-
-                    if tu.name:
-                        tip_title = tu.name
-                    else:
-                        tip_title = tu.wid
-                    tip_title = tip_title.replace("'", "\'")
-
-                    promoters.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                        tu.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Promoter -10 box', opacity))
+                    promoters.write(draw_segment(tu.wid, tu_coordinate, tu_length, tip_title, 'Promoter -10 box', url))
 
             for tr in tu.transcriptional_regulations.all():
                 if tr.binding_site is not None and not (tr.binding_site.coordinate > end_coordinate or tr.binding_site.coordinate + tr.binding_site.length - 1 < start_coordinate):
-                    x1 = chrL + float(tr.binding_site.coordinate - start_coordinate) / length * chrW
-                    x2 = chrL + float(tr.binding_site.coordinate + tr.binding_site.length - 1 - start_coordinate) / length * chrW
+                    tip_title = tu.name or tu.wid
+                    url = tu.get_absolute_url(species)
 
-                    x1 = max(chrL, min(chrR, x1))
-                    x2 = max(chrL, min(chrR, x2))
-
-                    if highlight_wid is None or tr.wid in highlight_wid:
-                        opacity = 1
-                    else:
-                        opacity = 0.25
-
-                    if tr.name:
-                        tip_title = tr.name
-                    else:
-                        tip_title = tr.wid
-                    tip_title = tip_title.replace("'", "\'")
-
-                    tfSites.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                        tr.get_absolute_url(species), x1, promoterY, x2 - x1, featureHeight, tip_title, 'Transcription factor binding site', opacity))
+                    tfSites.write(draw_segment(tu.wid, tr.binding_site.coordinate, tr.binding_site.length, tip_title, 'Transcription factor binding site', url))
 
         #features
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
         features = StringIO.StringIO()
 
-        for feature in self.features.all():
+        #feature_values = self.features.all().order_by("coordinate").\
+        #    values("coordinate", "length",
+        #           "chromosome_feature__name", "chromosome_feature__wid",
+        #           "chromosome_feature__type", "chromosome_feature__type__name", "chromosome_feature__type__wid")
+
+        feature_values = self.features.filter(coordinate__lte=end_coordinate, coordinate__gte=start_coordinate + 1 - F("length")).prefetch_related('chromosome_feature', 'chromosome_feature__type').all()
+
+        for feature in feature_values:
             if feature.coordinate > end_coordinate or feature.coordinate + feature.length - 1 < start_coordinate:
                 continue
 
-            x1 = chrL + float(feature.coordinate - start_coordinate) / length * chrW
-            x2 = chrL + float(feature.coordinate + feature.length - 1 - start_coordinate) / length * chrW
+            tip_title = feature.chromosome_feature.name or feature.chromosome_feature.wid
+            url = feature.chromosome_feature.get_absolute_url(species)
 
-            x1 = max(chrL, min(chrR, x1))
-            x2 = max(chrL, min(chrR, x2))
-
-            if feature.type.all().count() > 0:
-                type_ = feature.type.all()[0].name
+            if feature.chromosome_feature.type.all().count() > 0:
+                type_ = feature.chromosome_feature.type.all()[0]
             else:
-                type_ = ''
+                type_ = None
 
-            if highlight_wid is None or feature.wid in highlight_wid:
-                opacity = 1
-            else:
-                opacity = 0.25
+            features.write(draw_segment(feature.chromosome_feature.wid, feature.coordinate, feature.length, tip_title, type_, url))
 
-            if feature.name:
-                tip_title = feature.name
-            else:
-                tip_title = feature.wid
-            tip_title = tip_title.replace("'", "\'")
-
-            features.write('<a xlink:href="%s"><rect x="%s" y="%s" width="%s" height="%s" onmousemove="javascript: showToolTip(evt, \'%s\', \'%s\')" onmouseout="javascript: hideToolTip(evt);" style="opacity: %s;"/></a>' % (
-                feature.get_absolute_url(species), x1, featureY, x2 - x1, featureHeight, tip_title, type_, opacity))
+        H = 2 + geneHeight + 2 + 4 + 1 * (2 + len(feature_draw) * (featureHeight + 2)) + 2
 
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
             W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro, genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
@@ -2301,7 +2490,7 @@ class Chromosome(Molecule):
         SeqIO.write(record, genbank, "genbank")
         
         return genbank.getvalue()
-        
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -2327,25 +2516,98 @@ class Chromosome(Molecule):
             'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'sequence', 'length', 'comments', 'publication_references', 'created_detail', 'detail'
             ]
         facet_fields = ['type']
-        verbose_name='Chromosome'
-        verbose_name_plural = 'Chromosomes'
+        verbose_name = 'Genome'
+        verbose_name_plural = 'Genome'
         wid_unique = False
 
         def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['sequence'] is not None and obj_data['sequence'] != '' and len(obj_data['sequence']) != obj_data['length']:
                 raise ValidationError({'length': 'Length of sequence property must match length property'})
 
+class Chromosome(Genome):
+    #parent pointer
+    parent_ptr_genome = OneToOneField(Genome, related_name='child_ptr_chromosome', parent_link=True, verbose_name='Genome')
+
+    #meta information
+    class Meta:
+        fieldsets = Genome._meta.fieldsets
+        field_list = Genome._meta.field_list
+        facet_fields = Genome._meta.facet_fields
+
+        concrete_entry_model = True
+        verbose_name = 'Chromosome'
+        verbose_name_plural = 'Chromosomes'
+        wid_unique = False
+
+class Plasmid(Genome):
+    #parent pointer
+    parent_ptr_genome = OneToOneField(Genome, related_name='child_ptr_plasmid', parent_link=True, verbose_name='Genome')
+
+    #meta information
+    class Meta:
+        fieldsets = Genome._meta.fieldsets
+        field_list = Genome._meta.field_list
+        facet_fields = Genome._meta.facet_fields
+
+        concrete_entry_model = True
+        verbose_name = 'Plasmid'
+        verbose_name_plural = 'Plasmids'
+        wid_unique = False
+
 class ChromosomeFeature(SpeciesComponent):
     #parent pointer
-    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_chromosome_feature', parent_link=True, verbose_name='Species component')
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_chromosome_feature',
+                                                 parent_link=True, verbose_name='Species component')
 
     #additional fields
-    chromosome = ForeignKey(Chromosome, related_name='features', verbose_name='Chromosome')
+    #positions = reverse relation
+
+    #meta information
+    class Meta:
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': ['type']}),
+            {'inline': 'positions'},
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'},
+                                     {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+        ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'comments', 'publication_references', 'created_detail', 'detail'
+        ]
+        facet_fields = ['type',] #ToDo 'positions.chromosome', 'positions.direction']
+        verbose_name = 'Chromosome feature'
+        verbose_name_plural = 'Chromosome features'
+        wid_unique = False
+
+        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+            if all_obj_data is None:
+                chro = Genome.objects.get(species__wid=obj_data['species'], wid=obj_data['genome'])
+            else:
+                chro = all_obj_data[obj_data['genome']]
+
+            if isinstance(chro, Entry):
+                chr_len = chro.length
+            else:
+                chr_len = chro['length']
+
+            if obj_data['coordinate'] > chr_len:
+                raise ValidationError({'coordinate': 'Coordinate must be less then chromosome length.'})
+            if obj_data['length'] > chr_len:
+                raise ValidationError({'length': 'Length must be less then chromosome length.'})
+
+class FeaturePosition(EntryData):
+    """
+    Stores position data of a feature
+    """
+    chromosome_feature = ForeignKey(ChromosomeFeature, related_name = "positions", verbose_name="")
+    chromosome = ForeignKey(Genome, related_name='features', verbose_name='Chromosome or Plasmid')
     coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
     length = PositiveIntegerField(verbose_name='Length (nt)')
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
 
-    #getters
     def get_sequence(self, cache=False):
         if cache:
             chromosome_key = "chromosome/%s" % self.chromosome_id
@@ -2362,44 +2624,47 @@ class ChromosomeFeature(SpeciesComponent):
         genes = []
         for g in self.chromosome.genes.all():
             if (
-                g.coordinate <= self.coordinate                   and g.coordinate + g.length - 1 >= self.coordinate
-                ) or (
-                g.coordinate <= self.coordinate + self.length - 1 and g.coordinate + g.length - 1 >= self.coordinate + self.length - 1
-                ) or (
-                g.coordinate >= self.coordinate                   and g.coordinate + g.length - 1 <= self.coordinate + self.length - 1
-                ):
+                        g.coordinate <= self.coordinate <= 1 - g.length + g.coordinate
+            ) or (
+                        g.coordinate <= self.coordinate + self.length - 1 <= 1 - g.length + g.coordinate
+            ) or (
+                        g.coordinate >= self.coordinate and g.coordinate + g.length - 1 <= self.coordinate + self.length - 1
+            ):
                 genes.append(g)
         return genes
 
     def get_transcription_units(self):
         tus = []
-        for tu in self.chromosome.get_transcription_units():
+        chr_tus = self.chromosome.get_transcription_units().prefetch_related("genes")
+
+        for tu in chr_tus:
             coordinate = tu.get_coordinate()
             length = tu.get_length()
             if (
-                coordinate <= self.coordinate                   and coordinate + length - 1 >= self.coordinate
-                ) or (
-                coordinate <= self.coordinate + self.length - 1 and coordinate + length - 1 >= self.coordinate + self.length - 1
-                ) or (
-                coordinate >= self.coordinate                   and coordinate + length - 1 <= self.coordinate + self.length - 1
-                ):
+                        coordinate <= self.coordinate <= 1 - length + coordinate
+            ) or (
+                        coordinate <= self.coordinate + self.length - 1 <= 1 - length + coordinate
+            ) or (
+                        coordinate >= self.coordinate and coordinate + length - 1 <= self.coordinate + self.length - 1
+            ):
                 tus.append(tu)
         return tus
 
     #html formatting
     def get_as_html_structure(self, species, is_user_anonymous):
-        return self.chromosome.get_as_html_structure(is_user_anonymous,
-            zoom = 1,
-            start_coordinate = self.coordinate - 500,
-            end_coordinate = self.coordinate + self.length + 500,
-            highlight_wid = [self.wid])
+        return self.chromosome.get_as_html_structure(species, is_user_anonymous,
+                                                     zoom=1,
+                                                     start_coordinate=self.coordinate - 500,
+                                                     end_coordinate=self.coordinate + self.length + 500,
+                                                     highlight_wid=[self.chromosome_feature.wid])
 
     def get_as_html_sequence(self, species, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
 
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]
 
-        return 'Chromosome: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
+        return '%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
+            self.chromosome.model_type.model_name,
             self.chromosome.get_absolute_url(species), self.chromosome.wid,
             self.coordinate, self.length, direction,
             format_sequence_as_html(self.get_sequence()))
@@ -2419,45 +2684,20 @@ class ChromosomeFeature(SpeciesComponent):
     def get_as_fasta(self, species):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
 
-    #meta information
     class Meta:
-        concrete_entry_model = True
+        verbose_name = "Feature Position"
+        verbose_name_plural = "Feature Positions"
         fieldsets = [
-            ('Type', {'fields': ['model_type']}),
-            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
-            ('Classification', {'fields': ['type']}),
             ('Structure', {'fields': [
                 {'verbose_name': 'Structure', 'name': 'structure'},
                 {'verbose_name': 'Sequence', 'name': 'sequence'},
                 {'verbose_name': 'Genes', 'name': 'genes'},
                 {'verbose_name': 'Transcription units', 'name': 'transcription_units'},
-                ]}),
-            ('Comments', {'fields': ['comments', 'publication_references']}),
-            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
-            ]
+            ]}),
+        ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'chromosome', 'coordinate', 'length', 'direction', 'comments', 'publication_references', 'created_detail', 'detail'
-            ]
-        facet_fields = ['type', 'chromosome', 'direction']
-        verbose_name='Chromosome feature'
-        verbose_name_plural = 'Chromosome features'
-        wid_unique = False
-
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            if all_obj_data is None:
-                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
-            else:
-                chro = all_obj_data[obj_data['chromosome']]
-
-            if isinstance(chro, Entry):
-                chr_len = chro.length
-            else:
-                chr_len = chro['length']
-
-            if obj_data['coordinate'] > chr_len:
-                raise ValidationError({'coordinate': 'Coordinate must be less then chromosome length.'})
-            if obj_data['length'] > chr_len:
-                raise ValidationError({'length': 'Length must be less then chromosome length.'})
+            'id', 'chromosome_feature', 'chromosome', 'coordinate', 'length',
+        ]
 
 class Compartment(SpeciesComponent):
     #parent pointer
@@ -2522,7 +2762,7 @@ class Gene(Molecule):
 
     #additional fields
     symbol = CharField(max_length=255, blank=True, default='', verbose_name='Symbol')
-    chromosome = ForeignKey(Chromosome, related_name='genes', verbose_name='Chromosome')
+    chromosome = ForeignKey(Genome, related_name='genes', verbose_name='Chromosome or Plasmid')
     coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
     length = PositiveIntegerField(verbose_name='Length (nt)')
     direction = CharField(max_length=10, choices=CHOICES_DIRECTION, verbose_name='Direction')
@@ -2613,7 +2853,8 @@ class Gene(Molecule):
 
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]
 
-        return 'Chromosome: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, G/C content: %.1f%%, Sequence: %s' % (
+        return '%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, G/C content: %.1f%%, Sequence: %s' % (
+            self.chromosome.model_type.model_name,
             self.chromosome.get_absolute_url(species), self.chromosome.wid,
             self.coordinate, self.length, direction,
             self.get_gc_content() * 100,
@@ -2706,7 +2947,7 @@ class Gene(Molecule):
         #chromosome coordinate, length
         def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
-                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
+                chro = Genome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
                 chro = all_obj_data[obj_data['chromosome']]
 
@@ -3196,8 +3437,7 @@ class Pathway(SpeciesComponent):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references',
-            'type',
+            'id', 'name', 'synonyms', 'cross_references',
             'comments',
             'publication_references',
             'created_detail', 'detail'
@@ -4291,16 +4531,18 @@ class TranscriptionUnit(Molecule):
 
         if cache:
             chromosome_key = "chromosome/%s" % chro[0]
-            chromosome = Cache.try_get(chromosome_key, lambda: Chromosome.objects.get(pk=chro[0]), 60)
+            chromosome = Cache.try_get(chromosome_key, lambda: Genome.objects.get(pk=chro[0]), 60)
         else:
-            chromosome = Chromosome.objects.get(pk=chro[0])
+            chromosome = Genome.objects.get(pk=chro[0])
         return chromosome
 
     def get_coordinate(self):
-        return self.genes.all().aggregate(Min('coordinate'))['coordinate__min']
+        # Callee can use prefetch_related for speedup
+        return min(map(lambda gene: gene.coordinate, self.genes.all()))
 
     def get_length(self):
-        return max(self.genes.extra(select={"end_coordinate": "(coordinate + length - 1)"}).values('end_coordinate'))['end_coordinate'] - self.get_coordinate() + 1
+        # Callee can use prefetch_related for speedup
+        return max(map(lambda gene: gene.coordinate + gene.length - 1 - self.get_coordinate() + 1, self.genes.all()))
 
     def get_direction(self):
         direction = list(set([g[0] for g in self.genes.values_list('direction').all()]))
@@ -4337,7 +4579,8 @@ class TranscriptionUnit(Molecule):
 
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.get_direction())][1]
 
-        return 'Chromosome: <a href="%s">%s</a>, Coordinate: %s, Length: %s, Direction: %s, Sequence: %s' % (
+        return '%s: <a href="%s">%s</a>, Coordinate: %s, Length: %s, Direction: %s, Sequence: %s' % (
+            self.get_chromosome().model_type.model_name,
             self.get_chromosome().get_absolute_url(species), self.get_chromosome().wid,
             self.get_coordinate(), self.get_length(), direction,
             format_sequence_as_html(self.get_sequence()))
@@ -4456,7 +4699,8 @@ class TranscriptionalRegulation(SpeciesComponent):
                 end_coordinate = bs.coordinate + bs.length + 500,
                 highlight_wid = [self.wid])
 
-        txt = '%s<br/>Chromosome: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
+        txt = '%s<br/>%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
+            chro.model_type.model_name,
             structure, chro.get_absolute_url(species), chro.wid,
             bs.coordinate, bs.length, direction,
             format_sequence_as_html(self.get_binding_site_sequence()))
@@ -4516,7 +4760,7 @@ class TranscriptionalRegulation(SpeciesComponent):
 
             #chr length
             if all_obj_data is None:
-                chro = Chromosome.objects.get(species__wid=obj_data['species'], wid=chr_wid)
+                chro = Genome.objects.get(species__wid=obj_data['species'], wid=chr_wid)
             else:
                 chro = all_obj_data[chr_wid]
             if isinstance(chro, Entry):
@@ -4534,9 +4778,6 @@ class TranscriptionalRegulation(SpeciesComponent):
 class Type(SpeciesComponent):
     #parent pointer
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_type', parent_link=True, verbose_name='Species component')
-
-    #additional fields
-    parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
 
     #getters
     def get_all_members(self, species):
@@ -4797,6 +5038,380 @@ class PublicationReference(SpeciesComponent):
         verbose_name='Publication Reference'
         verbose_name_plural = 'Publication References'
         wid_unique = True
+
+class MassSpectrometryJob(SpeciesComponent):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_mass_spectrometry', parent_link=True, verbose_name='Species component')
+
+    #additional fields
+    #
+
+    #getters
+
+    #html formatting
+    def get_as_html_target_peptide(self, species, is_user_anonymous):
+        results = []
+        try:
+            target_type = Type.objects.for_wid("Target-Peptide")
+        except ObjectDoesNotExist:
+            return ""
+
+        for g in self.children.for_species(species).filter(type=target_type).order_by("wid"):
+            results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
+        return format_list_html(results, comma_separated=True)
+
+    def get_as_html_decoy_peptide(self, species, is_user_anonymous):
+        results = []
+        try:
+            decoy_type = Type.objects.for_wid("Decoy-Peptide")
+        except ObjectDoesNotExist:
+            return ""
+
+        for g in self.children.for_species(species).filter(type=decoy_type).order_by("wid"):
+            results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
+        return format_list_html(results, comma_separated=True)
+
+    def get_as_html_related_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for g in self.children.for_species(species).filter(model_type=TableMeta.get_by_model_name("MassSpectrometryProtein")).order_by("wid"):
+            results.append('<a href="%s">%s</a>' % (g.get_absolute_url(species), g.wid))
+        return format_list_html(results, comma_separated=True)
+
+    #meta information
+    class Meta:
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': ['type']}),
+            ('Mass Spectrometry', {'fields': [
+                {'verbose_name': 'Target Peptides', 'name': 'target_peptide'},
+                {'verbose_name': 'Decoy Peptides', 'name': 'decoy_peptide'},
+                {'verbose_name': 'Related Proteins', 'name': 'related_proteins'}
+            ]}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+        ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references',  'created_detail', 'detail',
+        ]
+        facet_fields = ['type']
+        verbose_name = 'Mass Spectrometry Job'
+        verbose_name_plural = 'Mass Spectrometry Jobs'
+        wid_unique = False
+
+class Peptide(Protein):
+    #parent pointer
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_peptide', parent_link=True, verbose_name='Species component')
+
+    #additional fields
+    sequence = TextField(blank=True, default='', verbose_name='Sequence', validators=[validate_protein_sequence])
+    length = PositiveIntegerField(verbose_name='Length (nt)')
+    proteotypic = NullBooleanField(null=True, verbose_name='Proteotypic')
+    charge = IntegerField(verbose_name='Charge')
+    mass = FloatField(verbose_name='m/z')
+    zscore = FloatField(verbose_name='z-score')
+    retention_time = FloatField(verbose_name='Retention Time')
+    proteins = ManyToManyField(EntryBasicTextData, verbose_name='Proteins belonging to the Peptide', related_name='peptides')
+
+    # Matched Proteins -> FK Protein?
+    # Target or Decoy via type
+
+    # SeqPTM via ChromosomeFeature
+
+    #getters
+
+    #html formatting
+    def get_as_html_sequence(self, species, is_user_anonymous):
+        from cyano.helpers import format_sequence_as_html
+        return format_sequence_as_html(self.sequence)
+
+    def get_as_html_matched_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for matched_protein in self.proteins.all():
+            try:
+                res = Protein.objects.for_species(species).get(
+                    parent=MassSpectrometryJob.objects.all()[0], wid__startswith=matched_protein.value + "_")
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+            except ObjectDoesNotExist:
+                results.append(matched_protein.value)
+
+        return format_list_html(results, comma_separated=True)
+
+    #meta information
+    class Meta:
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': ['type']}),
+            ('Related', {'fields': [
+                'parent',
+                {'verbose_name': 'Matched Proteins', 'name': 'matched_proteins'},
+            ]}),
+            ('Structure', {'fields': [
+                'prosthetic_groups', 'chaperones', 'dna_footprint',
+                {'verbose_name': 'Sequence', 'name': 'sequence'},
+            ]}),
+            ('Regulation', {'fields': ['regulatory_rule']}),
+            ('Function', {'fields': [
+                {'verbose_name': 'Enzyme', 'name': 'enzyme_participants'},
+                {'verbose_name': 'Transcriptional regulation', 'name': 'transcriptional_regulations'},
+                {'verbose_name': 'Protein folding substrates', 'name': 'chaperone_substrates'},
+                {'verbose_name': 'Reaction participant', 'name':'reaction_stoichiometry_participants'},
+                {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
+                ]}),
+            ('Statistics', {'fields': [
+                'proteotypic',
+                'charge',
+                'mass',
+                'zscore',
+                'retention_time',
+            ]}),
+            ('Parameters', {'fields': ['parameters']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references', 'created_detail', 'detail'
+            ]
+        facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
+        verbose_name = 'Peptide'
+        verbose_name_plural = 'Peptides'
+        wid_unique = False
+
+
+class MassSpectrometryProtein(Protein):
+    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_ms_protein', parent_link=True, verbose_name='Species component')
+
+    score = FloatField(verbose_name="Protein Score")
+    coverage = FloatField(verbose_name="% Coverage")
+    sequence = TextField(verbose_name='Sequence', validators=[validate_protein_sequence])
+    length = PositiveIntegerField(verbose_name='Length (nt)')
+    ambiguous = ManyToManyField(EntryBasicTextData, verbose_name='Ambiguous Proteins', related_name='ambiguous')
+    sub = ManyToManyField(EntryBasicTextData, verbose_name='Sub-Proteins', related_name='sub')
+    pi = FloatField(verbose_name="Protein PI")
+    mass = FloatField(verbose_name="Protein Mass (Da)")
+
+    #html formatting
+    def get_as_html_sequence(self, species, is_user_anonymous):
+        from cyano.helpers import format_sequence_as_html
+        return format_sequence_as_html(self.sequence)
+
+    def get_as_html_structure(self, species, is_user_anonymous):
+        from .helpers import overlaps, create_detail_fieldset
+
+        length = self.length
+
+        W = 636
+        geneHeight = 20
+        featureHeight = 10
+
+        geneY = 2
+        chrY = geneY + geneHeight + 4
+        featureY = chrY + 1 + 2
+
+        start_coordinate = 0
+        end_coordinate = length
+
+        feature_draw = []
+
+        #style
+        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08']
+        style = ''
+        for i in range(len(colors)):
+            style += '.color-%s{fill:#%s; stroke: #%s;}' % (i, colors[i], colors[i], )
+
+        #chromosome
+        chrL = 4.5 * len('%s' % start_coordinate) + 4
+        chrR = W - 4.5 * len('%s' % end_coordinate) - 2 - 6
+        chrW = chrR - chrL
+
+        chrStyle = '\
+        .chr text{fill:#222; alignment-baseline:middle; font-size:10px}\
+        .chr line{stroke:#666; stroke-width:0.5px;}\
+        '
+
+        chro = '<text x="%s" y="%s" style="text-anchor:end;">%s</text><line x1="%s" x2="%s" y1="%s" y2="%s" /><text x="%s" y="%s" style="text-anchor:start;">%s</text>' % (
+            chrL - 4, chrY, start_coordinate,
+            chrL, chrR, chrY, chrY,
+            chrR + 2, chrY, end_coordinate)
+
+        def draw_segment(feature):
+            opacity = 1
+            coordinate = feature.coordinate
+            item_length = feature.length
+
+            x = chrL + float(coordinate - start_coordinate) / length * chrW
+            w = chrL + float(coordinate + item_length - 1 - start_coordinate) / length * chrW
+
+            x = max(chrL, min(chrR, x))
+            w = max(chrL, min(chrR, w)) - x
+
+            fieldsets = deepcopy(feature._meta.fieldsets)
+            fielddata = create_detail_fieldset(species, feature, fieldsets, False)
+
+            tip_title = fielddata[0][0]
+            tip_text = StringIO.StringIO()
+
+            for dataset in fielddata:
+                for item in dataset[1]["fields"]:
+                    tip_text.write("<br><b>" + item["verbose_name"] + "</b>: "+str(item["data"]))
+
+            template = loader.get_template("cyano/genome/draw_feature.html")
+
+            context_dict = {'h': featureHeight,
+                            'title': tip_title,
+                            'text': tip_text.getvalue(),
+                            'url': feature.protein.get_absolute_url(species),
+                            'x': x,
+                            'w': w,
+                            'opacity': opacity}
+
+            new_item = [x, x + w]
+            inserted = False
+            for i, row in enumerate(feature_draw):
+                if any(overlaps(item, new_item, 5) for item in row):
+                    continue
+                # Space left -> insert
+                row.append(new_item)
+                inserted = True
+                context_dict.update({
+                    'y': featureY + i * (featureHeight + 2)
+                })
+                break
+
+            if not inserted:
+                # Create new row
+                context_dict.update({
+                    'y': featureY + len(feature_draw) * (featureHeight + 2)
+                })
+                feature_draw.append([new_item])
+
+            return template.render(Context(context_dict))
+
+
+        #features
+        featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
+        features = StringIO.StringIO()
+
+        for feature in self.protein_details.all():
+            features.write(draw_segment(feature))
+
+        H = 2 + geneHeight + 2 + 4 + 1 * (2 + len(feature_draw) * (featureHeight + 2)) + 2
+
+        return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s</style><g class="chr">%s</g><g class="features">%s</g></svg>' % (
+            W, H, W, H, style, chrStyle, featureStyle, chro, features.getvalue())
+
+    def get_as_html_ambiguous_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for ambiguous_protein in self.ambiguous.all():
+            try:
+                res = Protein.objects.for_species(species).get(
+                    parent=MassSpectrometryJob.objects.all()[0], wid__startswith=ambiguous_protein.value + "_")
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+            except ObjectDoesNotExist:
+                results.append(ambiguous_protein.value)
+
+        return format_list_html(results, comma_separated=True)
+
+    def get_as_html_sub_proteins(self, species, is_user_anonymous):
+        results = []
+
+        for sub_protein in self.sub.all():
+            try:
+                res = Protein.objects.for_species(species).get(
+                    parent=MassSpectrometryJob.objects.all()[0], wid__startswith=sub_protein.value + "_")
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+            except ObjectDoesNotExist:
+                results.append(sub_protein.value)
+
+        return format_list_html(results, comma_separated=True)
+
+    class Meta:
+        concrete_entry_model = True
+        fieldsets = [
+            ('Type', {'fields': ['model_type']}),
+            ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
+            ('Classification', {'fields': ['type']}),
+            ('Related', {'fields': [
+                'parent',
+                {'verbose_name': 'Ambiguous Proteins', 'name': 'ambiguous_proteins'},
+                {'verbose_name': 'Sun-Proteins', 'name': 'sub_proteins'},
+            ]}),
+            ('Structure', {'fields': [
+                'prosthetic_groups', 'chaperones', 'dna_footprint',
+                {'verbose_name': 'Sequence', 'name': 'sequence'},
+                {'verbose_name': 'Structure', 'name': 'structure'},
+            ]}),
+            ('Regulation', {'fields': ['regulatory_rule']}),
+            ('Function', {'fields': [
+                {'verbose_name': 'Enzyme', 'name': 'enzyme_participants'},
+                {'verbose_name': 'Transcriptional regulation', 'name': 'transcriptional_regulations'},
+                {'verbose_name': 'Protein folding substrates', 'name': 'chaperone_substrates'},
+                {'verbose_name': 'Reaction participant', 'name':'reaction_stoichiometry_participants'},
+                {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
+            ]}),
+            ('Statistics', {'fields': [
+                'score',
+                'coverage',
+                'pi',
+                'mass'
+            ]}),
+            {'inline': 'protein_details'},
+            ('Parameters', {'fields': ['parameters']}),
+            ('Comments', {'fields': ['comments', 'publication_references']}),
+            ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
+            ]
+        field_list = [
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'score', 'coverage', 'pi', 'mass', 'sequence', 'comments', 'publication_references', 'created_detail', 'detail'
+            ]
+        facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
+        verbose_name = 'Mass Spectrometry Protein'
+        verbose_name_plural = 'Mass Spectrometry Proteins'
+        wid_unique = False
+
+
+class MassSpectrometryProteinDetail(EntryData):
+    protein = ForeignKey(MassSpectrometryProtein, related_name="protein_details")
+    sequence = TextField(verbose_name='Sequence')
+    sequence_ptm = TextField(verbose_name='Sequence + PTMs')
+    coordinate = PositiveIntegerField(verbose_name='Coordinate (nt)')
+    length = PositiveIntegerField(verbose_name='Length (nt)')
+    proteotypic = BooleanField(verbose_name='Proteotypic')
+    zscore = FloatField(verbose_name='zscore')
+    delta_mass = FloatField(verbose_name='Delta Mass (ppm)')
+    mass = FloatField(verbose_name='Experimental Mass (m/z)')
+    charge = IntegerField(verbose_name='Charge')
+    retention_time = IntegerField(verbose_name='Retention Time (min)')
+    theoretical_mass = FloatField(verbose_name='Theoretical Mass (Da)')
+    missed_cleavages = IntegerField(verbose_name='Missed Cleavages')
+
+    class Meta:
+        verbose_name = "Mass Spectrometry Protein Detail"
+        verbose_name_plural = "Mass Spectrometry Protein Details"
+        fieldsets = [
+            ('Mass Spectrometry Details', {'fields': [
+                'sequence',
+                'sequence_ptm',
+                'proteotypic',
+                'zscore',
+                'delta_mass',
+                'mass',
+                'charge',
+                'retention_time',
+                'theoretical_mass',
+                'missed_cleavages'
+            ]}),
+        ]
+        field_list = [
+            'id', 'chromosome_feature', 'chromosome', 'coordinate', 'length',
+        ]
+
+
 
 ''' END: specific data types'''
 

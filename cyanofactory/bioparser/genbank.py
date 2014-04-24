@@ -17,9 +17,9 @@ class Genbank(BioParser):
     def __init__(self, wid, user, reason, chromosome, name):
         super(Genbank, self).__init__(wid, user, reason)
         
-        if chromosome is None:
+        if not chromosome:
             raise ValueError("chromosome argument is mandatory")
-        if name is None:
+        if not name:
             raise ValueError("name argument is mandatory")
         
         self.chromosome = self.try_slugify("Chromosome", chromosome)
@@ -37,8 +37,12 @@ class Genbank(BioParser):
             self.annotation = record.annotations
 
             self.species.comments = ""
-    
-            if record.description != None:
+
+            self.is_chromosome = True
+
+            if record.description is not None:
+                if "plasmid" in record.description.lower():
+                    self.is_chromosome = False
                 self.species.comments = record.description
             
             if "comment" in self.annotation:
@@ -47,6 +51,11 @@ class Genbank(BioParser):
             self.species.genetic_code = ''
 
             self.record = record
+
+            if len(record.features) > 0:
+                if record.features[0].type == "source":
+                    if "plasmid" in record.features[0].qualifiers:
+                        self.is_chromosome = False
             
             # Genbank files only have one record
             break
@@ -56,8 +65,9 @@ class Genbank(BioParser):
         self.detail.save()
         
         self.species.save(self.detail)
-        
-        chromosome = cmodels.Chromosome.objects.for_species(self.species).for_wid(self.chromosome, create=True)
+
+        obj = cmodels.Chromosome if self.is_chromosome else cmodels.Plasmid
+        chromosome = obj.objects.for_species(self.species).for_wid(self.chromosome, create=True)
         chromosome.name = self.name
         chromosome.sequence = str(self.record.seq) # Cast needed, otherwise revision-compare fails!
         chromosome.length = len(self.record.seq)
@@ -71,7 +81,7 @@ class Genbank(BioParser):
                 for x in xref:
                     if ":" in x:
                         source, xid = x.split(":")
-                        x, _ = cmodels.CrossReference.objects.get_or_create(source = source, xid = xid)
+                        x, _ = cmodels.CrossReference.objects.get_or_create(source=source, xid=xid)
                         chromosome.cross_references.add(x)
     
         if "references" in self.annotation:
@@ -125,6 +135,15 @@ class Genbank(BioParser):
             chromosome.cross_references.add(xref)
         
         features = self.record.features
+
+        if len(features) > 0:
+            if features[0].type == "source":
+                if "db_xref" in features[0].qualifiers:
+                    for xref in features[0].qualifiers["db_xref"]:
+                        if ":" in xref:
+                            source, xid = xref.split(":")
+                            xref, _ = cmodels.CrossReference.objects.get_or_create(source=source, xid=xid)
+                            chromosome.cross_references.add(xref)
         
         gene_features = filter(lambda x : x.type == "gene", features)
         cds_features = filter(lambda x : x.type in ["CDS", "ncRNA", "rRNA", "tmRNA", "tRNA"], features)

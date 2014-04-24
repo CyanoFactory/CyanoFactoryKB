@@ -1,0 +1,23 @@
+<g>
+    <a xlink:href="$url">
+        <polygon class="color-$color"
+                 points="
+                        $x1_arrow,$y1
+                        $x2_arrow,$y1
+                        $x2,$y_middle
+                        $x2_arrow,$y2
+                        $x1_arrow,$y2
+                        $x1,$y_middle
+                 onmousemove="javascript: showToolTip(evt, '$title', '$text')"
+                 onmouseout="javascript: hideToolTip(evt);"
+                >
+        </polygon>
+    </a>
+    <a xlink:href="$url">
+        <text x="$x_middle"
+              y="$y_middle"
+              onmousemove="javascript: showToolTip(evt, '$title', '$text')"
+              onmouseout="javascript: hideToolTip(evt);">$label
+        </text>
+    </a>
+</g>

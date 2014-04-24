@@ -5,23 +5,33 @@ URL patterns
 from django.conf.urls import patterns, include, url
 
 # enable the admin:
-#from django.contrib import admin
-#admin.autodiscover()
-
-# database crossreference resolver
-urlpatterns = patterns('db_xref.views',
-    url(r'^dbxref/', include("db_xref.urls")),
-)
+from django.contrib import admin
+admin.autodiscover()
 
 # admin interface
-#urlpatterns = patterns('',
-#	url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
-#	url(r'^admin/', include(admin.site.urls)),
-#)
+urlpatterns = patterns('',
+#   url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
+    url(r'^admin/', include(admin.site.urls)),
+)
 
 # boehringer map
 urlpatterns += patterns('boehringer.views',
     url(r'^boehringer/', include("boehringer.urls")),
+)
+
+# kegg maps
+urlpatterns += patterns('kegg.views',
+    url(r'^kegg/', include("kegg.urls")),
+)
+
+
+# database crossreference resolver
+urlpatterns += patterns('db_xref.views',
+    url(r'^dbxref/', include("db_xref.urls")),
+)
+
+urlpatterns += patterns('cyanodesign.views',
+    url(r'^design/', include("cyanodesign.urls")),
 )
 
 # authentication

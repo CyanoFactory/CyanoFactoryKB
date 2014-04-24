@@ -14,13 +14,13 @@ class BioParser(object):
     """
 
     def __init__(self, wid = None, user = None, reason = ""):
-        if wid is None:
+        if not wid:
             raise ValueError("wid argument is mandatory")
         
-        if user is None:
+        if not user:
             raise ValueError("user argument is mandatory")
         
-        if reason is None or len(reason) == 0:
+        if not reason or len(reason) == 0:
             raise ValueError("reason is mandatory")
         
         self.wid = self.try_slugify("Wid", wid)
@@ -35,7 +35,11 @@ class BioParser(object):
                 raise ValueError("Invalid username " + str(user))
 
         self.detail = RevisionDetail(user = self.user, reason = reason)
-    
+
+    def report_progress(self, current, total, message):
+        if hasattr(self, "notify_progress"):
+            self.notify_progress(current=current, total=total, message=message)
+
     def try_slugify(self, name, not_slug):
         slug = slugify(not_slug)
         
@@ -56,3 +60,9 @@ class BioParser(object):
         This operation should be in a transaction.
         """
         raise NotImplementedError("Subclasses must implement me")
+
+
+def notify_progress_print(current, total, message):
+    percent = current * 100 / total
+    remaining = 100 - percent
+    print("[{}{}] - {}".format("*"*percent, " "*remaining, message))
