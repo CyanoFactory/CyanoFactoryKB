@@ -142,8 +142,9 @@ Released under the MIT license
 			<li class="spacer"/>
 			<li><a href="#">Tools</a>
 				<ul>
-				<li><a href="{% url "boehringer.views.index" %}">Biochemical Pathways</a></li>
-                <li><a href="{% url "kegg.views.index" %}">KEGG Pathways</a></li>
+				<li><a href="{% url "boehringer.views.index" %}" title="Biochemical Pathways">Biochemical Pathways</a></li>
+                <li><a href="{% url "kegg.views.index" %}" title="KEGG Pathways">KEGG Pathways</a></li>
+                <li><a href="{% url "cyanodesign.views.index" %}" title="CyanoDesign">CyanoDesign</a></li>
 				</ul>
 			</li>
 			{% if request.user.is_authenticated %}

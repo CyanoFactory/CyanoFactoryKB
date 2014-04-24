@@ -1,19 +1,21 @@
 import json
+from django.contrib.auth.decorators import login_required
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from cyano.decorators import ajax_required
 from PyNetMet.metabolism import *
-from PyNetMet.enzyme import *
 from PyNetMet.fba import *
 from django.conf import settings
 from cyano.helpers import render_queryset_to_response
 
 
+@login_required
 def index(request):
     data = {}
     
     return render_queryset_to_response(request, template="cyanodesign/index.html", data=data)
 
 
+@login_required
 @ajax_required
 def get_reactions(request):
     model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model2.txt")
@@ -36,18 +38,8 @@ def get_reactions(request):
 
     return HttpResponse(json.dumps({"external": org.external, "enzymes": ret, "objective": org.objective}), content_type="application/json")
 
-@ajax_required
-def calculate(request):
-    enzymes = []
 
-
-
-    # POST: reactions, constraints, external
-
-    for reaction in reactions:
-        enzymes.append(Enzyme(reaction))
-
-
+@login_required
 @ajax_required
 def simulate(request):
     if not all(x in request.GET for x in ["enzymes", "constraints", "external", "objective"]):
