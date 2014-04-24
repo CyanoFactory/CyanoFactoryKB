@@ -14,13 +14,13 @@ class BioParser(object):
     """
 
     def __init__(self, wid = None, user = None, reason = ""):
-        if wid is None:
+        if not wid:
             raise ValueError("wid argument is mandatory")
         
-        if user is None:
+        if not user:
             raise ValueError("user argument is mandatory")
         
-        if reason is None or len(reason) == 0:
+        if not reason or len(reason) == 0:
             raise ValueError("reason is mandatory")
         
         self.wid = self.try_slugify("Wid", wid)

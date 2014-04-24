@@ -31,9 +31,9 @@ class FastaFeature(BioParser):
     def __init__(self, wid, user, reason, chromosome, feature_type):
         super(FastaFeature, self).__init__(wid, user, reason)
 
-        if chromosome is None:
+        if not chromosome:
             raise ValueError("chromosome argument is mandatory")
-        if feature_type is None:
+        if not feature_type:
             raise ValueError("feature_type argument is mandatory")
 
         self.chromosome = cmodels.Genome.objects.for_species(self.species).for_wid(self.try_slugify("Chromosome", chromosome))
@@ -92,12 +92,14 @@ class FastaFeature(BioParser):
             wid = item["wid"]
             start = item["start"]
             end = item["end"]
+            description = item["description"]
 
             direction = "f" if start < end else "r"
             length = abs(end - start)
             coordinate = start if direction == "f" else end
 
             cf = cmodels.ChromosomeFeature.objects.for_species(self.species).for_wid(wid, create=True)
+            cf.comments = description
             cf.save(self.detail)
             cf.type.add(typ)
             cf.species.add(self.species)
