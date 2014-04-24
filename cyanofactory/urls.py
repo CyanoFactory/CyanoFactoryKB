@@ -30,6 +30,10 @@ urlpatterns += patterns('db_xref.views',
     url(r'^dbxref/', include("db_xref.urls")),
 )
 
+urlpatterns += patterns('cyanodesign.views',
+    url(r'^design/', include("cyanodesign.urls")),
+)
+
 # authentication
 urlpatterns += patterns('',
     url(r'^account/', include('django.contrib.auth.urls'))

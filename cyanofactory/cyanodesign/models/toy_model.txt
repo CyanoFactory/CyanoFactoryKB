@@ -1,0 +1,33 @@
+-REACTIONS
+
+reac1 : 1.0 A_ext  -> 1.0 A 
+reac2 : 1.0 A  <-> 1.0 B
+reac3 : 1.0 A  -> 1.0 C 
+reac4 : 1.0 B + 1.0 C  -> 1.5 D
+reac5 : 1.0 D  -> 1.0 D_ext 
+reac6 : 1.0 E_ext -> 1.0 E
+reac7 : 2.0 E -> 1.0 D
+
+
+-CONSTRAINTS
+
+
+reac1 [0, 10]
+reac6 [0, 3]
+
+
+-EXTERNAL METABOLITES
+
+
+A_ext
+D_ext
+E_ext
+
+
+-OBJ
+
+reac5 1 1
+
+-DESIGNOBJ
+
+reac6 1 1
