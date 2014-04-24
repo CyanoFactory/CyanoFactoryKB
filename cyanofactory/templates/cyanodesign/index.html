@@ -27,6 +27,7 @@ Released under the MIT license
     var dialog_metabolite_edit;
     var dialog_enzyme;
     var dialog_metabolite_add;
+    var dialog_progressbar;
     var cyano_design_objective_select;
     var cyano_design_enzymes;
     var constraints_div;
@@ -201,6 +202,7 @@ Released under the MIT license
         dialog_metabolite_edit = $("#dialog-edit-metabolite");
         dialog_enzyme = $("#dialog-reaction");
         dialog_metabolite_add = $("#dialog-add-metabolite");
+        dialog_progressbar = $("#dialog-progressbar");
         cyano_design_objective_select = $("#cyano-design-objective-select");
         cyano_design_enzymes = $(".cyano-design-enzymes");
         constraints_div = $("#constraints-min-max");
@@ -221,29 +223,6 @@ Released under the MIT license
           return this.push.apply(this, rest);
         };
 
-        $.ajax({
-            url: "{% url "cyanodesign.views.get_reactions" %}",
-            context: document.body,
-            async: false
-        }).done(function(x) {
-            x["enzymes"].forEach(function(value) {
-                //$('<div>' + this + '</div>').appendTo('#content')
-                //$('<li>' + value + '</li>').addClass("ui-widget-content").appendTo('#reactions');
-                createMetabolites(value);
-            });
-
-            createExternalMetabolites(x["external"]);
-
-            x["enzymes"].forEach(function(value) {
-                var enz = createEnzyme(value);
-                enz.toHTML().appendTo(cyano_design_enzymes);
-                enzymes.push(enz);
-                $("<option></option>").text(enz.name).appendTo(cyano_design_objective_select);
-            });
-
-            cyano_design_objective_select.val(x.objective[0].split(" ")[0])
-        });
-
         $(".spinner").spinner();
         $(".checkbox").button();
         $(".validateTips").hide();
@@ -257,7 +236,9 @@ Released under the MIT license
             $.ajax({
                 url: "{% url "cyanodesign.views.simulate" %}",
                 context: document.body,
-                async: false,
+                beforeSend: function() {
+                    dialog_progressbar.dialog("open");
+                },
                 data: {
                     "enzymes": JSON.stringify(
                             enzymes.
@@ -273,6 +254,7 @@ Released under the MIT license
             }).done(function(x) {
                 simulation_result.text("");
                 $("<pre></pre>").text(x).appendTo(simulation_result);
+                dialog_progressbar.dialog("close");
             });
         });
 
@@ -619,6 +601,17 @@ dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(
             dialog_enzyme.data("products_del").push(index);
             target.parent().remove();
         })
+        dialog_progressbar.dialog({
+            autoOpen: false,
+            height: 'auto',
+            width: 350,
+            modal: true,
+            closeOnEscape: false,
+            dialogClass: "no-close"
+        });
+        var pbar = dialog_progressbar.find("#progressbar");
+        pbar.progressbar();
+        pbar.progressbar( "option", "value", false );
 
         $.widget("custom.combobox", {
             _create: function () {
@@ -738,6 +731,34 @@ dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(
         $("#toggle").click(function () {
             metabolite_combobox.toggle();
         });
+
+        $.ajax({
+            url: "{% url "cyanodesign.views.get_reactions" %}",
+            context: document.body,
+            beforeSend: function() {
+                dialog_progressbar.dialog("open");
+            }
+        }).done(function(x) {
+            x["enzymes"].forEach(function(value) {
+                //$('<div>' + this + '</div>').appendTo('#content')
+                //$('<li>' + value + '</li>').addClass("ui-widget-content").appendTo('#reactions');
+                createMetabolites(value);
+            });
+
+            createExternalMetabolites(x["external"]);
+
+            x["enzymes"].forEach(function(value) {
+                var enz = createEnzyme(value);
+                enz.toHTML().appendTo(cyano_design_enzymes);
+                enzymes.push(enz);
+                $("<option></option>").text(enz.name).appendTo(cyano_design_objective_select);
+            });
+
+            if (x.objective.length > 0) {
+                cyano_design_objective_select.val(x.objective[0].split(" ")[0])
+            }
+            dialog_progressbar.dialog("close");
+        });
     });
 </script>
 
@@ -758,6 +779,10 @@ div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%;
 div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
 .ui-dialog .ui-state-error { padding: .3em; }
 .validateTips { border: 1px solid transparent; padding: 0.3em }
+
+.no-close .ui-dialog-titlebar-close {
+    display: none;
+}
 
 div.cyano-reaction {
     display: inline;
@@ -813,6 +838,10 @@ span.external-metabolite { color: blue }
     overflow-y: auto;
     /* prevent horizontal scrollbar */
     overflow-x: hidden;
+}
+
+.ui-progressbar-value {
+    background: rgb(61, 128, 179);
 }
 {% endblock %}
 
@@ -885,6 +914,10 @@ span.external-metabolite { color: blue }
             <input type="checkbox" name="external" id="external">
         </fieldset>
     </form>
+</div>
+
+<div id="dialog-progressbar" title="Please wait...">
+<div id="progressbar"></div>
 </div>
 
 <div class="cyano-design-enzymes">
