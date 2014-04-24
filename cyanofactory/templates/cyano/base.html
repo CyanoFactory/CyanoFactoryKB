@@ -37,7 +37,7 @@ Released under the MIT license
 	
 	<!-- style -->
 	{% if not is_pdf %}
-	<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}public/css/jquery-ui-1.8.23.custom.css" />
+	<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}public/css/jquery-ui-1.10.4.custom.min.css" />
 	<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}public/css/PTSans.min.css" />
 	{% endif %}
 	<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/styles.css" />
@@ -51,8 +51,8 @@ Released under the MIT license
 	<link rel="icon" type="image/png" href="{% get_static_prefix %}cyano/favicon.png">	
 	
 	<!-- javascript -->
-	<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
-	<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-ui-1.8.23.custom.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.11.0.min.js"></script>
+	<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-ui-1.10.4.custom.min.js"></script>
 	<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.min.js"></script>
 	<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.axislabels.min.js"></script>
 	<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.pie.min.js"></script>
@@ -79,12 +79,12 @@ Released under the MIT license
 </head>
 <body>
 	<!-- header -->
-	<div id="header" class="ui-widget-header">
+	<div id="header">
 		<div class="title"><a href="{% if species %}{% url "cyano.views.species" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}">{{ species.name }}</a></div>
 		<div class="banner"><a href="{% if species %}{% url "cyano.views.species" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}"><img src="{% get_static_prefix %}cyano/img/banner.png" /></a></div>
 		<div class="search">
 			{% if species %}
-			<form name="search" action="{% url "cyano.views.search" species_wid=species.wid %}" method="get">
+			<!--<form name="search" action="{% url "cyano.views.search" species_wid=species.wid %}" method="get">
 				<table cellpadding="0" cellspacing="0">
 				<tr>
 					<td><input name="q" type="text" 
@@ -104,7 +104,7 @@ Released under the MIT license
 					{% endif %} 
 					<td></td>
 				</table>
-			</form>
+			</form>-->
 			{% endif %}
 		</div>
 		
@@ -142,8 +142,9 @@ Released under the MIT license
 			<li class="spacer"/>
 			<li><a href="#">Tools</a>
 				<ul>
-				<li><a href="{% url "boehringer.views.index" %}">Biochemical Pathways</a></li>
-                <li><a href="{% url "kegg.views.index" %}">KEGG Pathways</a></li>
+				<li><a href="{% url "boehringer.views.index" %}" title="Biochemical Pathways">Biochemical Pathways</a></li>
+                <li><a href="{% url "kegg.views.index" %}" title="KEGG Pathways">KEGG Pathways</a></li>
+                <li><a href="{% url "cyanodesign.views.index" %}" title="CyanoDesign">CyanoDesign</a></li>
 				</ul>
 			</li>
 			{% if request.user.is_authenticated %}
@@ -224,7 +225,7 @@ Released under the MIT license
 	</div>
 		
 	<!-- footer -->
-	<div id="footer" class="ui-widget-header">
+	<div id="footer">
 		<div class="left">
 		</div>
 		
@@ -268,6 +269,6 @@ Released under the MIT license
 	<div id="modal"></div>
 
 	<!-- tooltip -->
-	<div id="tooltip" class="ui-widget-header ui-corner-all"></div>
+	<div id="tooltip" class="ui-corner-all"></div>
 </body>
 </html>

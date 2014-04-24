@@ -2449,9 +2449,9 @@ def get_verbose_name_for_field_by_name(model, field_name):
 def slugify(string):
     return re.sub(r"[^A-Za-z0-9_-]", "-", string)
 
-def overlaps(first, second):
-    """Tests if first overlaps with second (with 1 pixel tolerance)"""
+def overlaps(first, second, tolerance=0):
+    """Tests if first overlaps with second (with optional amount pixel tolerance)"""
      # Overlap with right side or # Overlap with left side or first is in second
-    return first[0] - 1 < second[0] < first[1] + 1 or\
-           first[0] - 1 < second[1] < first[1] + 1 or\
-           (first[0] + 1 > second[0] and first[1] - 1 < second[1])
+    return first[0] - tolerance < second[0] < first[1] + tolerance or\
+           first[0] - tolerance < second[1] < first[1] + tolerance or\
+           (first[0] + tolerance > second[0] and first[1] - tolerance < second[1])

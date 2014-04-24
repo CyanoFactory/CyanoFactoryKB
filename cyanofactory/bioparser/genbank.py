@@ -17,9 +17,9 @@ class Genbank(BioParser):
     def __init__(self, wid, user, reason, chromosome, name):
         super(Genbank, self).__init__(wid, user, reason)
         
-        if chromosome is None:
+        if not chromosome:
             raise ValueError("chromosome argument is mandatory")
-        if name is None:
+        if not name:
             raise ValueError("name argument is mandatory")
         
         self.chromosome = self.try_slugify("Chromosome", chromosome)

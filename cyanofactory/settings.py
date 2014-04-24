@@ -125,7 +125,7 @@ TEMPLATE_DIRS = (
 )
 
 HAYSTACK_SITECONF = 'cyano.search_indexes'
-HAYSTACK_SEARCH_ENGINE = 'xapian'
+HAYSTACK_SEARCH_ENGINE = 'dummy'
 HAYSTACK_XAPIAN_PATH = os.path.join(os.path.dirname(__file__), 'xapian_index')
 
 djcelery.setup_loader()
@@ -148,6 +148,7 @@ INSTALLED_APPS = (
     'public',
     #'biosql',
     'cyano',
+    'cyanodesign',
     'db_xref',
     #'biowarehouse',
     'bioparser',
@@ -245,3 +246,4 @@ TEMPLATE_CONTEXT_PROCESSORS += (
 
 GOOGLE_SEARCH_ENABLED = False
 
+JOHNNY_TABLE_BLACKLIST = ["djcelery_crontabschedule", "djcelery_intervalschedule", "djcelery_periodictask", "djcelery_periodictasks", "djcelery_taskstate", "djcelery_workerstate", "celery_taskmeta", "celery_tasksetmeta"]

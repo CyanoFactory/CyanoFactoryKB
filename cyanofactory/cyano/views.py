@@ -958,7 +958,7 @@ def importData(request, species=None):
 
 @login_required
 @resolve_to_objects
-@permission_required(perm.READ_NORMAL)
+@permission_required(perm.WRITE_NORMAL)
 @commit_on_success
 def importSpeciesData(request, species=None):
     data = {}
@@ -1030,7 +1030,7 @@ def password_change_required(request, species=None):
     from django.contrib.auth.forms import AdminPasswordChangeForm
     
     if not request.user.profile.force_password_change:
-        HttpResponseRedirect(reverse("cyano.index"))
+        return HttpResponseRedirect(reverse("cyano.views.index"))
     
     context = chelpers.get_extra_context(
         species = species,
@@ -1044,6 +1044,7 @@ def password_change_required(request, species=None):
 @resolve_to_objects
 def login(request, species=None):
     from django.contrib.auth.views import login as djlogin
+    from urllib import unquote
 
     msg = request.GET.get("message", "")
 
@@ -1052,7 +1053,7 @@ def login(request, species=None):
         request=request,
     )
 
-    context['message'] = msg[:50]
+    context['message'] = unquote(msg)[:50]
 
     return djlogin(request, extra_context = context)
 
