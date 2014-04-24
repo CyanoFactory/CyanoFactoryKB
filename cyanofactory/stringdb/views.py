@@ -1,5 +1,7 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse
 from django.shortcuts import render_to_response
+from cyano.decorators import ajax_required
 from stringdb.models import Proteins, NodeNodeLinks, ProteinsOrthgroups
 import networkx as nx
 import json
@@ -8,19 +10,33 @@ import os
 from cyano.models import ProteinComparison
 from cyano.helpers import render_queryset_to_response
 
-# Create your views here.
 
-def checkInteraction(request, id):
-   # json_file = proteingraph(id)
-    interactions = listInteractions(id)
+def checkInteraction(request, protID, limit=10):
+
+    json_file = proteingraph(protID, limit)
+    interactions = listInteractions(protID)
+    prot = Proteins.objects.get(protein_id=protID).annotation
+    if prot.__contains__(";"):
+        name, rest = prot.split(";", 1)
+    else:
+        name = prot
+
+    if request.is_ajax():
+        template = "stringdb/list_page.html"
+    else:
+        template = "stringdb/index.html"
     return render_queryset_to_response(
         request=request,
-        template="stringdb/index.html",
+        template=template,
         data={
-            'protid': id,
-            'prot_name': Proteins.objects.get(protein_id=id).preferred_name,
-            'interacts': interactions
-            #'json': json_file
+            'protid': protID,
+            'prot_name': Proteins.objects.get(protein_id=protID).preferred_name,
+            'interacts': interactions,
+            'name': name,
+            'list': ["Homology", "Experiment", "Database", "Textmining",
+                     "Genfusion", "Coocurence", "Neighborhood", "Coexpression"],
+            'json': json_file,
+            'limit': limit
         }
     )
 
@@ -41,37 +57,48 @@ def index(request):
     count = proteincount
     return HttpResponse("Min: " + str(linkcount_min) + " Max: " + str(linkcount_max))
 
+@ajax_required
+def onlygraph(request, protID, limit):
+    json = proteingraph(protID, limit)
+    return HttpResponse(json)
 
-def proteingraph(protein_id):
-    print protein_id
+def proteingraph(protein_id, limit):
+    #print protein_id
     protein = Proteins.objects.get(protein_id=protein_id)
     G = nx.Graph()
-    interactions = NodeNodeLinks.objects.filter(node_id_a=protein.protein_id).order_by('-combined_score')[:10]
+    interactions = NodeNodeLinks.objects.filter(node_id_a=protein.protein_id).order_by('-combined_score')[:limit]
     #interactions = NodeNodeLinks.objects.filter(node_id_a=prot.protein_id)
-    G.add_node(protein.protein_id, name=protein.preferred_name, hood=0)
-    print protein.preferred_name
-    print "Anzahl"+str(len(interactions))
-    print "Suche nach Interaktionspartnern"
+    G.add_node(protein.protein_id, name=protein.preferred_name, hood=0, geneid=protein.protein_external_id)
     for i in interactions:
-        # print "ID - {}".format(i.node_id_b)
-        print "Betrachte Partner"
         linked = i.node_id_b
         G.add_node(linked, name=Proteins.objects.get(protein_id=linked).preferred_name, hood=len(
-            NodeNodeLinks.objects.filter(node_id_a=linked).order_by('-combined_score')))
-        G.add_edge(protein.protein_id, linked, score=i.combined_score, opacity=1)
+            NodeNodeLinks.objects.filter(node_id_a=linked).order_by('-combined_score')), geneid=Proteins.objects.get(protein_id=linked).protein_external_id)
+        scores = getInteractType(
+            NodeNodeLinks.objects.get(node_id_a=protein.protein_id, node_id_b=linked).evidence_scores)
+        G.add_edge(protein.protein_id, linked, score=i.combined_score,
+                   Homology=scores["Homology"], Experiment=scores["Experiment"],
+                   Database=scores["Database"], Textmining=scores["Textmining"],
+                   Genfusion=scores["Genfusion"], Coocurence=scores["Coocurence"],
+                   Neighborhood=scores["Neighborhood"], Coexpression=scores["Coexpression"])
+
+    ''' Looking at each Protein and connecting them, if they interact'''
     for i in interactions:
-        # print "ID 1 - {}".format(i.node_id_b)
         for a in interactions:
-            #print "ID 2 - {}".format(a.node_id_b)
             if not a.node_id_b == i.node_id_b:
-                #if not (NodeNodeLinks.objects.get(node_id_a=i.node_id_b, node_id_b=a.node_id_b).count() == 0):
                 if not (G.has_edge(a.node_id_b, i.node_id_b)):
-                    if NodeNodeLinks.objects.filter(node_id_a=i.node_id_b, node_id_b=a.node_id_b).count() != 0:
+                    try:
                         link = NodeNodeLinks.objects.get(node_id_a=i.node_id_b, node_id_b=a.node_id_b)
-                        G.add_edge(i.node_id_b, a.node_id_b, score=link.combined_score, opacity=0.2)
-    print "Schreibe Datei"
+                        scores = getInteractType(link.evidence_scores)
+                        G.add_edge(i.node_id_b, a.node_id_b, score=link.combined_score,
+                                   Homology=scores["Homology"], Experiment=scores["Experiment"],
+                                   Database=scores["Database"], Textmining=scores["Textmining"],
+                                   Genfusion=scores["Genfusion"], Coocurence=scores["Coocurence"],
+                                   Neighborhood=scores["Neighborhood"], Coexpression=scores["Coexpression"])
+                    except ObjectDoesNotExist:
+                        pass
+
     d = json_graph.node_link_data(G)
-    json_file = json.dump(d)
+    json_file = json.dumps(d)
     return json_file
 
 
@@ -89,27 +116,21 @@ def proteingraph2json(request):
     for prot in proteins:
         counter += 1
         if not os.path.isfile("cyanofactory/stringdb/protein_network/" + str(prot.protein_id) + ".json"):
-            #print "Lade Protein"
-            #print "Erstelle Graph"
             print str(counter) + " - " + str(len(proteins))
             G = nx.Graph()
             interactions = NodeNodeLinks.objects.filter(node_id_a=prot.protein_id).order_by('-combined_score')[:10]
-            #interactions = NodeNodeLinks.objects.filter(node_id_a=prot.protein_id)
             G.add_node(prot.protein_id, name=prot.preferred_name, hood=0)
             print prot.preferred_name
-            #print "Suche nach Interaktionspartnern"
             for i in interactions:
-                # print "ID - {}".format(i.node_id_b)
                 linked = i.node_id_b
                 G.add_node(linked, name=Proteins.objects.get(protein_id=linked).preferred_name, hood=len(
                     NodeNodeLinks.objects.filter(node_id_a=linked).order_by('-combined_score')))
                 G.add_edge(prot.protein_id, linked, score=i.combined_score, opacity=1)
+
+            ''' Looking at each Protein and connecting them, if they interact'''
             for i in interactions:
-                # print "ID 1 - {}".format(i.node_id_b)
                 for a in interactions:
-                    #print "ID 2 - {}".format(a.node_id_b)
                     if not a.node_id_b == i.node_id_b:
-                        #if not (NodeNodeLinks.objects.get(node_id_a=i.node_id_b, node_id_b=a.node_id_b).count() == 0):
                         if not (G.has_edge(a.node_id_b, i.node_id_b)):
                             if NodeNodeLinks.objects.filter(node_id_a=i.node_id_b, node_id_b=a.node_id_b).count() != 0:
                                 link = NodeNodeLinks.objects.get(node_id_a=i.node_id_b, node_id_b=a.node_id_b)
@@ -194,8 +215,48 @@ def getwholenetwork(request):
 def listInteracts(request, proteinid):
     linked_proteins = NodeNodeLinks.objects.filter(node_a_id=proteinid).order_by("-combined_score")
 
+
 def listInteractions(protID):
     interactions = NodeNodeLinks.objects.filter(node_id_a=protID).order_by("-combined_score")
     for interact in interactions:
+        interactType = getInteractType(interact.evidence_scores)
         interact.preferred_name = Proteins.objects.get(protein_id=interact.node_id_b).preferred_name
+        prot = Proteins.objects.get(protein_id=interact.node_id_b).annotation
+
+        if prot.__contains__(";"):
+            name, rest = prot.split(";", 1)
+        else:
+            name = prot
+        interact.annotation = name
+        interact.evidence = interactType
     return interactions
+
+
+def getInteractType(scores):
+    interactType = {"Homology": 0,
+                    "Experiment": 0,
+                    "Database": 0,
+                    "Textmining": 0,
+                    "Genfusion": 0,
+                    "Coocurence": 0,
+                    "Neighborhood": 0,
+                    "Coexpression": 0}
+    for score in scores:
+        scoretype = int(score[0])
+        if scoretype == 5:
+            interactType["Homology"] = score[1]
+        elif scoretype == 7 or scoretype == 8:
+            interactType["Coexpression"] = score[1]
+        elif scoretype == 8 or scoretype == 9:
+            interactType["Experiment"] = score[1]
+        elif scoretype == 10 or scoretype == 11:
+            interactType["Database"] = score[1]
+        elif scoretype == 12 or scoretype == 13:
+            interactType["Textmining"] = score[1]
+        elif scoretype == 14 or scoretype == 1 or scoretype == 2:
+            interactType["Neighborhood"] = score[1]
+        elif scoretype == 15 or scoretype == 3:
+            interactType["Genfusion"] = score[1]
+        elif scoretype == 16 or scoretype == 4:
+            interactType["Coocurence"] = score[1]
+    return interactType

@@ -5,5 +5,7 @@ urlpatterns = patterns('',
     #url(r'^$', proteingraph, name='graph'),
     url(r'^graph$', views.proteingraph2json),
     url(r'^index/$', views.index),
-    url(r'^interaction/(?P<id>\d+)/$', views.checkInteraction)
+    url(r'^interaction/(?P<protID>\d+)/$', views.checkInteraction),
+    url(r'^interaction/(?P<protID>\d+)_(?P<limit>\d+)/$', views.checkInteraction),
+    url(r'^interaction/ajax_(?P<protID>\d+)_(?P<limit>\d+)/$', views.onlygraph)
 )
