@@ -60,10 +60,10 @@ def simulate(request):
     if not all(x for x in string_type):
         return HttpResponseBadRequest("Invalid data type")
 
-    print "\n".join(data)
-    print constr
-    print ext
-    print objective
+    #print "\n".join(data)
+    #print constr
+    #print ext
+    #print objective
 
     try:
         organism = Metabolism("model_name",

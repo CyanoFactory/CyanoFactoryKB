@@ -255,6 +255,10 @@ Released under the MIT license
                 simulation_result.text("");
                 $("<pre></pre>").text(x).appendTo(simulation_result);
                 dialog_progressbar.dialog("close");
+            }).error(function(x) {
+                simulation_result.text("");
+                $("<pre></pre>").text(x.status + " " + x.statusText + ": " + x.responseText).appendTo(simulation_result);
+                dialog_progressbar.dialog("close");
             });
         });
 
