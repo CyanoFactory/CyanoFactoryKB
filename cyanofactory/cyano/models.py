@@ -16,6 +16,7 @@ from __future__ import unicode_literals
 import itertools
 import math
 import re
+from django.contrib.contenttypes.generic import GenericForeignKey
 from django.db.models.fields import NullBooleanField
 import subprocess
 import sys
@@ -857,7 +858,7 @@ class TableMetaManyToMany(Model):
 class RevisionDetail(Model):
     user = ForeignKey(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
     date = DateTimeField(default=datetime.now, verbose_name = "Modificiation date")
-    reason = CharField(max_length=255, blank=True, default='', verbose_name='Reason for edit')
+    reason = TextField(blank=True, default='', verbose_name='Reason for edit')
 
 class Revision(Model):
     """To allow reverting of edits all edit operations are stored in this table.
@@ -871,11 +872,11 @@ class Revision(Model):
         * ``column``: Table and column where the modification occured
         * ``new_value``: New value in the cell of the column
     """
-    current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False, auto_created = True)
-    detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions', editable = False, null = True)
+    current = GenericForeignKey()
+    object_id = IntegerField(blank=True, null=True, db_index=True, verbose_name="Current version of entry")
+    detail = ForeignKey(RevisionDetail, verbose_name='Details about operation', related_name='revisions', editable=False, null=True)
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
-    column = ForeignKey(TableMetaColumn, verbose_name = 'Table and column where the modification occured', related_name = '+')
-    new_value = TextField(blank = True, null = True)
+    new_data = TextField(blank=True, null=True)
 
     def __unicode__(self):
         return str(self.current)
@@ -1308,8 +1309,8 @@ class Entry(AbstractEntry):
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
 
-    created_detail = ForeignKey(RevisionDetail, verbose_name='Entry created revision', related_name='entry_created_detail', editable = False)
-    detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry', related_name='entry_detail', editable = False)
+    #created_detail = ForeignKey(RevisionDetail, verbose_name='Entry created revision', related_name='entry_created_detail', editable = False)
+    #detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry', related_name='entry_detail', editable = False)
 
     def __unicode__(self):
         return self.wid
@@ -1324,18 +1325,24 @@ class Entry(AbstractEntry):
         # Optimized to reduce number of database accesses to a minimum
 
         from cyano.helpers import slugify
+        from django.core import serializers
+        import json
 
         if self.wid != slugify(self.wid):
             # Slugify the WID
             raise ValidationError("Wid must be slug!")
 
         if self.pk is not None:
+            # Update item
+            action = "U"
+
             # can this be optimized? Probably not
             old_item = self._meta.concrete_model.objects.get(pk = self.pk)
             super(Entry, self).save(*args, **kwargs)
         else:
             # New entry (no primary key)
             # The latest entry is not revisioned to save space (and time)
+            action = "I"
             cache_model_type = TableMeta.get_by_model_name(self._meta.object_name)
             self.created_detail = revision_detail
             self.detail = revision_detail
@@ -1391,6 +1398,24 @@ class Entry(AbstractEntry):
             # Don't update the detail when actually nothing changed for that entry
             self.detail = revision_detail
             Revision.objects.bulk_create(save_list)
+
+    def create_revision(self, revision_detail):
+        # TODO :/
+
+        revision = Revision(current_id=self.pk, object_id=self.pk, detail_id=revision_detail.pk)
+        revision.current = self
+        revision.object_id = self.pk
+        revision.detail = revision_detail
+
+        # Fetch previous version
+        revs = Revision.objects.filter(object_id=self.pk)
+
+        if len(revs) == 0:
+            # New object
+            revision.action = "I"
+
+
+        pass
 
     #html formatting
     def get_as_html_synonyms(self, species, is_user_anonymous):
