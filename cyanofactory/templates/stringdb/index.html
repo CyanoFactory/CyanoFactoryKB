@@ -18,7 +18,6 @@ Released under the MIT license
 
 {% block head %}
 {{ block.super }}
-<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
 <script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless.js"></script>
 <script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless_on_scroll.js"></script>
 <script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
@@ -87,6 +86,20 @@ Released under the MIT license
     margin-top: 20px;
     }
 
+.ui-progressbar-value {
+        background: rgb(61, 128, 179);
+    }
+
+    .no-close .ui-dialog-titlebar-close {
+        display: none;
+    }
+
+.overlay {
+    fill: none;
+    pointer-events: all;
+}
+
+
 {% endblock %}
 
 {% block content %}
@@ -105,89 +118,21 @@ Released under the MIT license
     </div>
 
     <script src="{% get_static_prefix %}stringdb/d3/d3.v3.min.js"></script>
+
+
+    <div id="dialog-progressbar" title="Please wait...">
+    <div id="progressbar"></div>
+    </div>
+
+
+
+
     <div id="javascriptcontainer" class="javascriptcontainer">
 
         <script>
-            var width = 800,
-                height = 400;
-
-            var lcolor = d3.scale.linear()
-                .domain([0, 1, 180, 360, 540, 700, 900, 999, 1000])
-                .range(["white", "red", "orange", "yellow", "green", "purple", "blue", "navy", "black"]);
-
-            var ncolor = d3.scale.linear()
-                .domain([0, 115, 230, 460, 575, 690, 805, 920, 1035, 1150, 1265, 1380, 1400])
-                .range(["black", "darkcyan", "blue", "lightblue", "darkgreen", "green", "lightgreen", "gold", "yellow", "orange", "indianred", "red", "darkred"]);
-
-            var force = d3.layout.force()
-                    .charge(calculateCharge())
-                    .friction(0.6)
-                    .size([width, height]);
-
-            var protamount = +{{ limit }};
-
-            var svg = d3.select(".javascriptcontainer").append("svg")
-                    .attr("width", width)
-                    .attr("height", height)
-                    .append("g");
-
-            /** Generate Network */
-            update('{{ json|safe }}');
 
             /** Generate Checkboxes */
             createCheckboxes();
-
-            function getProps(object) {
-                var output = '';
-                for (property in object) {
-                  output += '<b>' + property + '</b>: ' + object[property]+'<br> ';
-                }
-                return output;
-            }
-
-
-            function nodeOut() {
-                doHighlight(d3.select(this), false);
-            }
-
-
-            function nodeOver() {
-                doHighlight(d3.select(this), true);
-            }
-
-            /** Highlight all links which are bounded with selected Node and hide all others*/
-            function doHighlight(node, hl) {
-                var nd = node.datum();
-                var opacity = hl ? 0.05 : 0.4;
-                var oopacity = hl ? 1 : 0.4;
-                var nodeopacity = hl ? 0 : 1;
-                var nodeoopacity = hl ? 1 : 0;
-                var nodesize = calculateNodesize();
-                var fontsize = calculateTextSize();
-                var font = hl ? fontsize+fontsize/2 : fontsize;
-                var nodeRadius = hl ?  nodesize+nodesize/2: nodesize;
-                var nodecolor = hl ? "lawngreen" : "white";
-                //var nwidth = hl ? ".5px" : ".1px";
-
-                /** show/hide all links which are not connected with the selected node */
-                svg.selectAll(".link")
-                        .filter(function(d) {  return d.source.index != nd.index && d.target.index != nd.index; })
-                        .transition().duration(750).style("stroke-opacity", opacity);
-
-                svg.selectAll(".link")
-                        .filter(function(d) {  return d.source.index == nd.index || d.target.index == nd.index; })
-                        .transition().duration(750).style("stroke-opacity", oopacity);
-
-                node.select("circle")
-                    .transition()
-                    .duration(750)
-                    .attr("r", nodeRadius)
-                    .style("stroke", nodecolor);
-                node.select("text")
-                    .transition()
-                    .duration(750)
-                    .style("font-size", ""+font+"px");
-            }
 
             /** Create checkboxes with given list items and checks the status of these checkboxes */
             function createCheckboxes(){
@@ -220,40 +165,203 @@ Released under the MIT license
                         })
             }
 
-            /** Creates Buttons for Selecting Size of Network - NOT WORKING CORRECT*/
-            function createButtons(){
-                d3.select(".buttoncontainer").selectAll("div")
-                        .data(["-10", "-5", "-1", "+1", "+5", "+10"])
-                        .enter()
-                        .append("div")
-                        .attr("class", "buttoncontainer_field")
-                        .append("label")
-                        .each(function (d) {
-                            d3.select(this).append("input")
-                                    .attr("type", "button")
-                                    .attr("id", function(d) {
-                                        return d;
-                                    })
-                                    .attr("value", function (d) {
-                                        return d;
-                                    })
-                            .onclick(expandNetwork(d));
-                        })
+            var dialog_progressbar = $("#dialog-progressbar");
+
+            dialog_progressbar.dialog({
+                autoOpen: false,
+                height: 100,
+                width: 350,
+                modal: true,
+                closeOnEscape: false,
+                dialogClass: "no-close"
+            });
+            var pbar = dialog_progressbar.find("#progressbar");
+            pbar.progressbar();
+            pbar.progressbar( "option", "value", false );
+
+            var width = 800,
+                height = 400;
+
+            var lcolor = d3.scale.linear()
+                .domain([0, 1, 180, 360, 540, 700, 900, 999, 1000])
+                .range(["white", "red", "orange", "yellow", "green", "purple", "blue", "navy", "black"]);
+
+            var ncolor = d3.scale.linear()
+                .domain([0, 115, 230, 460, 575, 690, 805, 920, 1035, 1150, 1265, 1380, 1400])
+                .range(["black", "darkcyan", "blue", "lightblue", "darkgreen", "green", "lightgreen", "gold", "yellow", "orange", "indianred", "red", "darkred"]);
+
+            var force = d3.layout.force()
+                    .charge(calculateCharge())
+                    .gravity(0.9)
+                    .friction(0.9)
+                    .size([width, height]);
+
+            var protamount = +{{ limit }};
+
+            var svg = d3.select(".javascriptcontainer").append("svg")
+                    .attr("width", width)
+                    .attr("height", height)
+                    .attr("pointer-events","all")
+                    /** Zoom feature disabled, conflict with drag */
+
+                    //.call(d3.behavior.zoom().on("zoom", zoomed))
+                    .append("svg:g");
+
+
+            //svg.append("svg:rect")
+            //        .attr("class", "overlay")
+            //        .attr("width", width)
+            //        .attr("height", height)
+            //        .attr("fill", "white");
+
+            function zoomed(){
+                svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
             }
 
-            /** Changing the opacity of each link depending on link stats using checkBoxes() */
-            function filterLinks(){
-                var transition = 1000;
-                d3.selectAll(".link")
-                        .filter(function (d) {
-                            return checkBoxes(d);
-                        })
-                        .transition().duration(transition).style("opacity", 0);
-                d3.selectAll(".link")
-                        .filter(function (d) {
-                            return !checkBoxes(d);
-                        })
-                        .transition().duration(transition).style("opacity", 1);
+            /** Generate Network */
+            update('{{ json|safe }}');
+
+            /** Creating Interaction-Network */
+            function update(json){
+
+                svg.selectAll(".link")
+                        .remove();
+                svg.selectAll(".node")
+                        .remove();
+
+                /** calling interaction information*/
+                var myjson = json
+
+                var nodesize = calculateNodesize();
+                var textsize = ""+calculateTextSize()+"px";
+
+                graph = JSON.parse(myjson);
+
+                var nodes = graph.nodes;
+                var links = graph.links;
+
+                force
+                    .nodes(nodes)
+                    .links(links)
+                    .linkDistance(function (d) {
+                          return calculateLinkDistance(d, graph.links);
+                      })
+                    .start();
+
+                var link = svg.selectAll("line")
+                        .data(graph.links)
+                    .enter().append("line")
+                        .attr("class", "link")
+                        .attr("stroke-width", calculateLinkThikness())
+                        .style("stroke", function(d) { return lcolor(d.score);});
+
+                var drag = force.drag();
+                      //.on("dragstart", dragstart);
+
+                var node = svg.selectAll(".node")
+                        .data(graph.nodes)
+                    .enter().append("g")
+                        .attr("class", "node")
+                        .attr("id", function(d) { return d.id; })
+                        .call(drag)
+                        .attr("transform", function(d) { return "translate(" + d + ")"; })
+                        .on("mouseover", nodeOver)
+                        .on("mouseout", nodeOut)
+                        .on("dbclick", dragstop);
+
+                node.append("svg:a")
+                /** #### NEEDS TO BE MODIFIED #### Link to each Node **/
+                        .attr("xlink:href", function(d) {return "http://127.0.0.1:8000/stringdb/interaction/"+d.id+"/"})
+                    .append("svg:circle")
+                        .attr("r", nodesize)
+                        .style("fill", function(d) { return ncolor(d.hood); });
+
+                node.append("text")
+                    .attr("dx", ""+(nodesize+7-0.7)+"")
+                    .attr("dy", ".35em")
+                    .style("color", "black")
+                    .style("font-size", textsize)
+                    .text(function(d) { return d.name });
+
+
+                force.on("tick", function() {
+                var qtree = d3.geom.quadtree(nodes),
+                      i = 0,
+                      n = nodes.length;
+
+                while (++i < n) qtree.visit(collide(nodes[i]));
+
+                link.attr("x1", function(d) { return d.source.x; })
+                    .attr("y1", function(d) { return d.source.y; })
+                    .attr("x2", function(d) { return d.target.x; })
+                    .attr("y2", function(d) { return d.target.y; });
+
+                node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+                    .attr("cx", function(d) { return d.x = Math.max(nodesize, Math.min(width - (nodesize), d.x)); })
+                    .attr("cy", function(d) { return d.y = Math.max(nodesize, Math.min(height - (nodesize), d.y)); });
+                });
+            }
+
+            function nodeOut() {
+                doHighlight(d3.select(this), false);
+            }
+
+            function nodeOver() {
+                doHighlight(d3.select(this), true);
+            }
+
+            /** Highlight all links which are bounded with selected Node and hide all others*/
+            function doHighlight(node, hl) {
+                var nd = node.datum();
+                var opacity = hl ? 0 : 0.4;
+                var oopacity = hl ? 1 : 0.4;
+                var nodeopacity = hl ? 0 : 1;
+                var nodeoopacity = hl ? 1 : 0;
+                var nodesize = calculateNodesize();
+                var fontsize = calculateTextSize();
+                var font = hl ? fontsize+Math.exp(1/fontsize*15) : fontsize;
+                var nodeRadius = hl ?  nodesize+nodesize/2: nodesize;
+                var nodecolor = hl ? "lawngreen" : "white";
+                //var nwidth = hl ? ".5px" : ".1px";
+
+                /** show/hide all links which are not connected with the selected node */
+                svg.selectAll(".link")
+                        .filter(function(d) {  return d.source.index != nd.index && d.target.index != nd.index; })
+                        .transition().duration(750).style("stroke-opacity", opacity);
+
+                svg.selectAll(".link")
+                        .filter(function(d) {  return d.source.index == nd.index || d.target.index == nd.index; })
+                        .transition().duration(750).style("stroke-opacity", oopacity);
+
+                node.select("circle")
+                    .transition()
+                    .duration(750)
+                    .attr("r", nodeRadius)
+                    .style("stroke", nodecolor);
+                node.select("text")
+                    .transition()
+                    .duration(750)
+                    .style("font-size", ""+font+"px");
+            }
+
+            /** Expanding/Contract the Network based on the Klicked Button */
+            function expandNetwork(d){
+                var nnumber = +d;
+                var amount = protamount + nnumber;
+                protamount = amount
+                if(amount != 0){
+                    var text = "{% url "stringdb.views.onlygraph" %}?protid={{ protid }}&amount="+amount;
+                    $.ajax({url:text,
+                         beforeSend: function() {
+                            dialog_progressbar.dialog("open")},
+                         success:function(result){
+                            update(result);
+                            dialog_progressbar.dialog("close");
+                         }});
+                }
+                else{
+                    alert("Not possible")
+                }
             }
 
             /** Checking if selected link has stats for the selected Checkbox*/
@@ -275,118 +383,29 @@ Released under the MIT license
                 return hide
             }
 
+             /** Changing the opacity of each link depending on link stats, using checkBoxes() */
+            function filterLinks(){
+                var transition = 1000;
+                d3.selectAll(".link")
+                        .filter(function (d) {
+                            return checkBoxes(d);
+                        })
+                        .transition().duration(transition).style("opacity", 0);
+                d3.selectAll(".link")
+                        .filter(function (d) {
+                            return !checkBoxes(d);
+                        })
+                        .transition().duration(transition).style("opacity", 1);
+            }
+
             /** dragging nodes ends with pin the node to specific place */
             function dragstart(d){
                 d3.select(this).classed("fixed", d.fixed = true)
             }
 
-            /** unpinning node */
+            /** unpinning node ### NOT IN USE AT THIS MOMENT ### */
             function dragstop(d){
                 d3.select(this).classed("fixed", d.fixed = false);
-            }
-
-            function expandNetwork(d){
-                var nnumber = +d;
-                var amount = protamount + nnumber;
-                protamount = amount
-                if(amount != 0){
-                    var text = "http://127.0.0.1:8000/stringdb/interaction/ajax_{{ protid }}_"+amount+"/";
-                    $.ajax({url:text, success:function(result){update(result)}});
-                    $("#buttoncontainer").children.prop('disabled', true);
-                }
-                else{
-                    alert("Not possible")
-                }
-            }
-
-            /** Creating Interaction-Network */
-            function update(json){
-                svg.selectAll(".link")
-                        .remove();
-                svg.selectAll(".node")
-                        .remove();
-
-                /** calling interaction information*/
-                var myjson = json
-
-                var nodesize = calculateNodesize();
-                var textsize = ""+calculateTextSize()+"px";
-
-                graph = JSON.parse(myjson);
-
-                var linkNodes = [];
-
-                graph.links.forEach(function(link) {
-                    linkNodes.push({
-                        source: graph.nodes[link.source],
-                        target: graph.nodes[link.target]
-                        });
-                    });
-
-                  force
-                      .nodes(graph.nodes.concat(linkNodes))
-                      .links(graph.links)
-                      .linkDistance(function (d) {
-                              return calculateLinkDistance(d, graph.links);
-                          })
-                      .start();
-
-                  var link = svg.selectAll(".link")
-                      .data(graph.links)
-                    .enter().append("line")
-                          .attr("class", "link")
-                          .attr("stroke-width", calculateLinkThikness())
-                          .style("stroke", function(d) { return lcolor(d.score);});
-
-                  var drag = force.drag()
-                          .on("dragstart", dragstart);
-
-                  var node = svg.selectAll(".node")
-                      .data(graph.nodes)
-                    .enter().append("g")
-                      .attr("class", "node")
-                      .attr("id", function(d) { return d.id; })
-                      .call(drag)
-                      .on("mouseover", nodeOver)
-                      .on("mouseout", nodeOut)
-                      .on("dbclick", dragstop);
-
-                  node.append("svg:a")
-                  /** #### NEEDS TO BE MODIFIED #### Link to each Node **/
-                      .attr("xlink:href", function(d) {return "http://127.0.0.1:8000/stringdb/interaction/"+d.id+"/"})
-                  .append("svg:circle")
-                      .attr("r", nodesize)
-                      .style("fill", function(d) { return ncolor(d.hood); });
-
-                  node.append("text")
-                      .attr("dx", ""+(nodesize+7-0.7)+"")
-                      .attr("dy", ".35em")
-                      .style("color", "black")
-                      .style("font-size", textsize)
-                      .text(function(d) { return d.name });
-
-
-                  var linkNode = svg.selectAll(".link-node")
-                      .data(linkNodes)
-
-                  force.on("tick", function() {
-
-                    var q = d3.geom.quadtree(node),
-                        i = 0,
-                        n = node.length;
-                    while (++i < n) q.visit(collide(nodes[i]));
-
-                    link.attr("x1", function(d) { return d.source.x; })
-                        .attr("y1", function(d) { return d.source.y; })
-                        .attr("x2", function(d) { return d.target.x; })
-                        .attr("y2", function(d) { return d.target.y; });
-
-                    node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-                        .attr("cx", function(d) { return d.x = Math.max(nodesize, Math.min(width - (nodesize*2), d.x)); })
-                        .attr("cy", function(d) { return d.y = Math.max(nodesize, Math.min(height - (nodesize*2), d.y)); });
-                    linkNode.attr("cx", function(d) { return d.x = (d.source.x + d.target.x) * 0.5; })
-                        .attr("cy", function(d) { return d.y = (d.source.y + d.target.y) * 0.5; });
-                    });
             }
 
             /** dynamical calculation of Distance between nodes, using the score Value of each link */
@@ -398,10 +417,10 @@ Released under the MIT license
                     mean = mean + scorev;
                 }
                 mean = mean/links.length;
-                var k1 = 60;
+                var k1 = 160;
                 var unscaledDistance = (1/alink.score)*mean*k1;
-                var k2 = 30
-                var scaledDistance = unscaledDistance/(protamount/k2);
+                var k2 = 400
+                var scaledDistance = unscaledDistance/(Math.exp(protamount/k2));
                 return scaledDistance;
             }
 
@@ -412,7 +431,7 @@ Released under the MIT license
 
             /** dynamical calculation of Nodesize */
             function calculateNodesize(){
-                return 1/protamount*50;
+                return 1/protamount*80;
             }
 
             /** dynamical calculation Linkstrengt */
@@ -421,34 +440,55 @@ Released under the MIT license
             }
 
             function calculateTextSize(){
-                return 1/protamount*100
+                return 1/protamount*150
             }
 
             /** Calculating Collision between nodes an prevent node overlapping*/
             function collide(node) {
-                var r = node.radius + 16,
-                    nx1 = node.x - r,
-                    nx2 = node.x + r,
-                    ny1 = node.y - r,
-                    ny2 = node.y + r;
-                return function(quad, x1, y1, x2, y2) {
-                    if (quad.point && (quad.point !== node)) {
-                    var x = node.x - quad.point.x,
-                        y = node.y - quad.point.y,
-                        l = Math.sqrt(x * x + y * y),
-                        r = node.radius + quad.point.radius;
+                var r = calculateNodesize()*2,
+                nx1 = node.x - r,
+                nx2 = node.x + r,
+                ny1 = node.y - r,
+                ny2 = node.y + r;
+                return function(quad, x1, y1, x2, y2){
+                    if (quad.point && (quad.point !== node)){
+
+                        var x = node.x - quad.point.x,
+                            y = node.y - quad.point.y,
+                            l = Math.sqrt(x * x + y * y),
+                            r =  calculateNodesize()*6;
                         if (l < r) {
-                            l = (l - r) / l * .5;
+                            l = (l - r) / l * 0.5;
                             node.x -= x *= l;
                             node.y -= y *= l;
                             quad.point.x += x;
                             quad.point.y += y;
                         }
                     }
-                return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+                    return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
                 };
             }
 
+            /** Creates Buttons for Selecting Size of Network - NOT WORKING CORRECT, NOT ENABLED*/
+            function createButtons(){
+                d3.select(".buttoncontainer").selectAll("div")
+                        .data(["-10", "-5", "-1", "+1", "+5", "+10"])
+                        .enter()
+                        .append("div")
+                        .attr("class", "buttoncontainer_field")
+                        .append("label")
+                        .each(function (d) {
+                            d3.select(this).append("input")
+                                    .attr("type", "button")
+                                    .attr("id", function(d) {
+                                        return d;
+                                    })
+                                    .attr("value", function (d) {
+                                        return d;
+                                    })
+                            .onclick(expandNetwork(d));
+                        })
+            }
         </script>
     </div>
 

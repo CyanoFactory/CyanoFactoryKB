@@ -7,5 +7,5 @@ urlpatterns = patterns('',
     url(r'^index/$', views.index),
     url(r'^interaction/(?P<protID>\d+)/$', views.checkInteraction),
     url(r'^interaction/(?P<protID>\d+)_(?P<limit>\d+)/$', views.checkInteraction),
-    url(r'^interaction/ajax_(?P<protID>\d+)_(?P<limit>\d+)/$', views.onlygraph)
+    url(r'^interaction/ajax/$', views.onlygraph)
 )

@@ -12,7 +12,6 @@ from cyano.helpers import render_queryset_to_response
 
 
 def checkInteraction(request, protID, limit=10):
-
     json_file = proteingraph(protID, limit)
     interactions = listInteractions(protID)
     prot = Proteins.objects.get(protein_id=protID).annotation
@@ -58,8 +57,8 @@ def index(request):
     return HttpResponse("Min: " + str(linkcount_min) + " Max: " + str(linkcount_max))
 
 @ajax_required
-def onlygraph(request, protID, limit):
-    json = proteingraph(protID, limit)
+def onlygraph(request):
+    json = proteingraph(request.GET["protid"], request.GET["amount"])
     return HttpResponse(json)
 
 def proteingraph(protein_id, limit):
