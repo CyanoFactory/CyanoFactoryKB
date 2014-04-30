@@ -1,0 +1,53 @@
+<script>
+$(function() {
+    var nucleotides = $("span.nucleotide");
+    var proteins = $("span.protein");
+
+    nucleotides.each(function(index, self) {
+        $(self).data("index", index);
+    });
+    proteins.each(function(index, self) {
+        $(self).data("index", index);
+    });
+
+    nucleotides.hover(function() {
+        $(this).addClass("highlight");
+        $(proteins[$(this).data("index")]).addClass("highlight");
+    },
+    function() {
+        $(this).removeClass("highlight");
+        $(proteins[$(this).data("index")]).removeClass("highlight");
+    });
+
+    proteins.hover(function() {
+        $(this).addClass("highlight");
+        $(nucleotides[$(this).data("index")]).addClass("highlight");
+    },
+    function() {
+        $(this).removeClass("highlight");
+        $(nucleotides[$(this).data("index")]).removeClass("highlight");
+    });
+});
+</script>
+<div class="sequence">
+    <div>
+    {% for num in numbers %}
+    {{ num }}<br/>{% if sequence.0.1 %}<br/>{% endif %}
+    {% endfor %}
+    </div>
+    <div>
+    {% for seq in sequence %}
+    {% for codon in seq.0 %}<span class="nucleotide">{{ codon }}</span>{% endfor %}
+    <br/>
+    {% if seq.1 %}
+    {% for as in seq.1 %}<span class="protein">{{ as }}&nbsp;&nbsp;</span>{% endfor %}
+    <br/>
+    {% endif %}
+    {% endfor %}
+    </div>
+    <div>
+    {% for num in numbers %}
+    {% if forloop.last %}{{ sequence_length }}{% else %}{{ num|add:line_length|add:-1 }}{% endif %}<br/>{% if sequence.0.1 %}<br/>{% endif %}
+    {% endfor %}
+    </div>
+</div>

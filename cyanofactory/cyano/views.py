@@ -754,7 +754,7 @@ def edit(request, species, model = None, item = None, action='edit'):
     error_messages = {}
     if request.method == 'POST':
         with transaction.commit_on_success():
-            submitted_data = chelpers.get_edit_form_data(model, request.POST, user = request.user.profile)
+            submitted_data = chelpers.get_edit_form_data(model, request.POST, user=request.user.profile)
             
             data = submitted_data
             data['id'] = obj.id
@@ -787,7 +787,7 @@ def edit(request, species, model = None, item = None, action='edit'):
                 chelpers.validate_model_objects(model, data)
                 chelpers.validate_model_unique(model, [data])
                 
-                #save                
+                #save
                 obj = chelpers.save_object_data(species, obj, data, {}, request.user, save=False, save_m2m=False)
                 obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=False)
                 obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=True)

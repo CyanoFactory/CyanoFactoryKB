@@ -52,7 +52,8 @@ from openpyxl.style import NumberFormat, Border, Color, HashableObject, Alignmen
 from cyano.templatetags.templatetags import ceil
 import cyano.models as cmodels
 
-from Bio import SeqIO, Seq, SeqFeature
+from Bio import SeqIO, SeqFeature
+from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import IUPAC
 from Bio.Alphabet.IUPAC import IUPACUnambiguousDNA
@@ -2096,23 +2097,34 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
         
     #return obj
     return obj
-    
-def format_sequence_as_html(sequence, lineLen=50):
-    htmlL = ''
-    htmlC = ''
-    htmlR = ''
-    
-    for i in range(int(ceil(float(len(sequence)) / float(lineLen)))):
-        htmlL += '%s<br/>' % (i * lineLen + 1, )
-        htmlC += '%s<br/>' % sequence[i*lineLen:(i + 1) * lineLen]
-        htmlR += '%s<br/>' % (min(len(sequence), (i + 1) * lineLen), )
-    
-    return '<div class="sequence"><div>%s</div><div>%s</div><div>%s</div></div>' % (htmlL, htmlC, htmlR)
-    
+
+
+def format_sequence_as_html(species, sequence, lineLen=60, show_protein_seq=False):
+    # Split sequence in lists of size lineLen
+    line = [sequence[i:i+lineLen] for i in range(0, len(sequence), lineLen)]
+    # Split lists in list of codons (len 3)
+    line = map(lambda x: [x[i:i+3] for i in range(0, len(x), 3)], line)
+
+    if show_protein_seq:
+        # Convert to protein seq and split in lists of size lineLen/3
+        prot_seq = unicode(Seq(sequence, IUPAC.unambiguous_dna).translate(table=species.genetic_code))
+        prot_line = [prot_seq[i:i+lineLen/3] for i in range(0, len(prot_seq), lineLen/3)]
+    else:
+        prot_line = ([] for x in range(len(line)))
+
+    nums = range(1, len(sequence), lineLen)
+
+    c = Context({'sequence': zip(line, prot_line), 'protein_sequence': prot_line, 'numbers': nums, 'line_length': lineLen, 'sequence_length': len(sequence)})
+    template = loader.get_template("cyano/fields/sequence.html")
+    rendered = template.render(c)
+
+    return rendered
+
+
 def readFasta(species_wid, filename, user):
     error_messages = []
     
-    f = open(filename, 'r')    
+    f = open(filename, 'r')
     data = f.readlines()
     f.close()
     

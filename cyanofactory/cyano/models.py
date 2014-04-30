@@ -1776,7 +1776,7 @@ class Genome(Molecule):
     #html formatting
     def get_as_html_sequence(self, species, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
-        return format_sequence_as_html(self.sequence)
+        return format_sequence_as_html(species, self.sequence, show_protein_seq=True)
 
     def get_as_html_diff_sequence(self, species, new_obj, is_user_anonymouse):
             from Bio import pairwise2
@@ -2347,6 +2347,8 @@ class Genome(Molecule):
                             'x': x,
                             'w': w,
                             'x_middle': 0,
+                            'coordinate': coordinate,
+                            'length': item_length,
                             'opacity': opacity,
                             'color': "#" + str(colors[all_feature_type_pks.index(typ.pk if typ else None) % len(colors)])}
 
@@ -2444,6 +2446,9 @@ class Genome(Molecule):
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
             W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro, genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
 
+    def get_as_html_new_structure(self, species, is_user_anonymous):
+        return "xxx"
+
     def get_as_html_genes(self, species, is_user_anonymous):
         return ""
         results = []
@@ -2500,6 +2505,7 @@ class Genome(Molecule):
             ('Classification', {'fields': ['type']}),
             ('Sequence', {'fields': [
                 {'verbose_name': 'Structure', 'name': 'structure'},
+                {'verbose_name': 'New structure', 'name': 'new_structure'},
                 {'verbose_name': 'Extinction coefficient <br/>(260 nm, 25C, pH 7.0)', 'name': 'extinction_coefficient'},
                 {'verbose_name': 'pI', 'name': 'pi'},
                 ]}),
@@ -2667,7 +2673,7 @@ class FeaturePosition(EntryData):
             self.chromosome.model_type.model_name,
             self.chromosome.get_absolute_url(species), self.chromosome.wid,
             self.coordinate, self.length, direction,
-            format_sequence_as_html(self.get_sequence()))
+            format_sequence_as_html(species, self.get_sequence(), show_protein_seq=True))
 
     def get_as_html_genes(self, species, is_user_anonymous):
         results = []
@@ -2858,7 +2864,7 @@ class Gene(Molecule):
             self.chromosome.get_absolute_url(species), self.chromosome.wid,
             self.coordinate, self.length, direction,
             self.get_gc_content() * 100,
-            format_sequence_as_html(self.get_sequence()))
+            format_sequence_as_html(species, self.get_sequence(), show_protein_seq=True))
 
     def get_as_fasta(self, species):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
@@ -3981,7 +3987,7 @@ class ProteinMonomer(Protein):
     #html formatting
     def get_as_html_sequence(self, species, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
-        return format_sequence_as_html(self.get_sequence(species))
+        return format_sequence_as_html(species, self.get_sequence(species))
 
     def get_as_html_signal_sequence(self, species, is_user_anonymous):
         ss = self.signal_sequence
@@ -4583,7 +4589,7 @@ class TranscriptionUnit(Molecule):
             self.get_chromosome().model_type.model_name,
             self.get_chromosome().get_absolute_url(species), self.get_chromosome().wid,
             self.get_coordinate(), self.get_length(), direction,
-            format_sequence_as_html(self.get_sequence()))
+            format_sequence_as_html(species, self.get_sequence(), show_protein_seq=True))
 
     def get_as_html_transcriptional_regulations(self, species, is_user_anonymous):
         results = []
@@ -4693,7 +4699,7 @@ class TranscriptionalRegulation(SpeciesComponent):
 
         chro = self.transcription_unit.get_chromosome()
 
-        structure = chr.get_as_html_structure(is_user_anonymous,
+        structure = chr.get_as_html_structure(species, is_user_anonymous,
                 zoom = 1,
                 start_coordinate = bs.coordinate - 500,
                 end_coordinate = bs.coordinate + bs.length + 500,
@@ -4703,7 +4709,7 @@ class TranscriptionalRegulation(SpeciesComponent):
             chro.model_type.model_name,
             structure, chro.get_absolute_url(species), chro.wid,
             bs.coordinate, bs.length, direction,
-            format_sequence_as_html(self.get_binding_site_sequence()))
+            format_sequence_as_html(species, self.get_binding_site_sequence(), show_protein_seq=True))
 
         return format_with_evidence(obj = bs, txt = txt)
 
@@ -5125,7 +5131,7 @@ class Peptide(Protein):
     #html formatting
     def get_as_html_sequence(self, species, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
-        return format_sequence_as_html(self.sequence)
+        return format_sequence_as_html(species, self.sequence, show_protein_seq=True)
 
     def get_as_html_matched_proteins(self, species, is_user_anonymous):
         results = []
@@ -5198,7 +5204,7 @@ class MassSpectrometryProtein(Protein):
     #html formatting
     def get_as_html_sequence(self, species, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
-        return format_sequence_as_html(self.sequence)
+        return format_sequence_as_html(species, self.sequence)
 
     def get_as_html_structure(self, species, is_user_anonymous):
         from .helpers import overlaps, create_detail_fieldset
