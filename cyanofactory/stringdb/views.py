@@ -62,6 +62,10 @@ def onlygraph(request):
     return HttpResponse(json)
 
 def proteingraph(protein_id, limit):
+    maxhood = 0
+    minhood = 10000
+    maxScore = 0
+    minScore = 1000
     #print protein_id
     protein = Proteins.objects.get(protein_id=protein_id)
     G = nx.Graph()
@@ -70,8 +74,8 @@ def proteingraph(protein_id, limit):
     G.add_node(protein.protein_id, name=protein.preferred_name, hood=0, geneid=protein.protein_external_id)
     for i in interactions:
         linked = i.node_id_b
-        G.add_node(linked, name=Proteins.objects.get(protein_id=linked).preferred_name, hood=len(
-            NodeNodeLinks.objects.filter(node_id_a=linked).order_by('-combined_score')), geneid=Proteins.objects.get(protein_id=linked).protein_external_id)
+        hoodsize = len(NodeNodeLinks.objects.filter(node_id_a=linked))
+        G.add_node(linked, name=Proteins.objects.get(protein_id=linked).preferred_name, hood=hoodsize, geneid=Proteins.objects.get(protein_id=linked).protein_external_id)
         scores = getInteractType(
             NodeNodeLinks.objects.get(node_id_a=protein.protein_id, node_id_b=linked).evidence_scores)
         G.add_edge(protein.protein_id, linked, score=i.combined_score,
@@ -79,6 +83,10 @@ def proteingraph(protein_id, limit):
                    Database=scores["Database"], Textmining=scores["Textmining"],
                    Genfusion=scores["Genfusion"], Coocurence=scores["Coocurence"],
                    Neighborhood=scores["Neighborhood"], Coexpression=scores["Coexpression"])
+        maxhood = hoodsize if maxhood < hoodsize else maxhood
+        minhood = hoodsize if minhood > hoodsize else minhood
+        maxScore = i.combined_score if maxScore < i.combined_score else maxScore
+        minScore = i.combined_score if minScore > i.combined_score else minScore
 
     ''' Looking at each Protein and connecting them, if they interact'''
     for i in interactions:
@@ -93,12 +101,33 @@ def proteingraph(protein_id, limit):
                                    Database=scores["Database"], Textmining=scores["Textmining"],
                                    Genfusion=scores["Genfusion"], Coocurence=scores["Coocurence"],
                                    Neighborhood=scores["Neighborhood"], Coexpression=scores["Coexpression"])
+                        maxScore = link.combined_score if maxScore < link.combined_score else maxScore
+                        minScore = link.combined_score if minScore > link.combined_score else minScore
                     except ObjectDoesNotExist:
                         pass
 
     d = json_graph.node_link_data(G)
     json_file = json.dumps(d)
+    json_file = calcColorRange(json_file, maxhood, minhood, maxScore, minScore)
     return json_file
+
+def calcColorRange(jsonFile, maxHood, minHood, maxScore, minScore):
+    colorrangeNode = (maxHood-minHood)/4
+    colorrangeLink = (maxScore-minScore)/4
+
+    linkcolor = '"linkcolor": [{"color": "red", "value": '+str(minScore)+'}, ' \
+                                '{"color": "yellow", "value": '+str(minScore+colorrangeLink)+'}, ' \
+                                '{"color": "green", "value": '+str(minScore+(colorrangeLink*2))+'}, ' \
+                                '{"color": "navy", "value": '+str(maxScore)+'}]'
+    nodecolor = '"nodecolor": [{"color": "black", "value": 0}, ' \
+                                '{"color": "blue", "value": '+str(minHood)+'}, ' \
+                                '{"color": "green", "value": '+str(minHood+colorrangeNode)+'}, ' \
+                                '{"color": "yellow", "value": '+str(minHood+(colorrangeNode*2))+'}, ' \
+                                '{"color": "red", "value": '+str(maxHood)+'}]'
+    jsonFile = jsonFile[:-1]+', '+linkcolor+', '+nodecolor+'}'
+    return jsonFile
+
+
 
 
 '''

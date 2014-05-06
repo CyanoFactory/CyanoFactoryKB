@@ -21,6 +21,7 @@ Released under the MIT license
 <script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless.js"></script>
 <script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless_on_scroll.js"></script>
 <script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
+<script src="{% get_static_prefix %}stringdb/d3/d3.v3.min.js"></script>
 <script type="text/javascript">
 {% include "kegg/script.js" %}
 </script>
@@ -75,61 +76,76 @@ Released under the MIT license
 
 #buttoncontainer > .buttoncontainer_field {display:inline;}
 
+#checkboxcontainer{
+    margin-left: 15px;
+    }
+
 #buttoncontainer{
     margin-top: 8px;
+    margin-left: 15px;
+    float: left;
     }
 #javascriptcontainer{
-	width: 100%;
-	border:1px solid #3d80b3;
     border-radius: 8px;
-    margin-bottom: 20px;
-    margin-top: 20px;
+    }
+#helpbox{
+    margin-top: 15px;
+    float: right;
     }
 
 .ui-progressbar-value {
-        background: rgb(61, 128, 179);
+    background: rgb(61, 128, 179);
     }
 
     .no-close .ui-dialog-titlebar-close {
-        display: none;
+    display: none;
     }
-
+#networkvisualization{
+	border:1px solid #3d80b3;
+    margin-bottom: 20px;
+    }
 .overlay {
     fill: none;
     pointer-events: all;
-}
+    }
 
+.tablediv{
+    text-align: center;
+    vertical-align: middle;
+    }
+.tablediv table{
+    text-align: center;
+    }
 
 {% endblock %}
 
 {% block content %}
 
-    {% comment %}
-        div für Checkboxen
-    {% endcomment %}
-    <div id="checkboxcontainer" class="checkboxcontainer"></div>
-    <div id="buttoncontainer" class="buttoncontainer">
-        <input name="-10" type="button" class="demo" value=-10 onclick="expandNetwork(value)"/>
-        <input name="-5" type="button" class="demo" value=-5 onclick="expandNetwork(value)"/>
-        <input name="-1" type="button" class="demo" value=-1 onclick="expandNetwork(value)"/>
-        <input name="+1" type="button" class="demo" value=+1 onclick="expandNetwork(value)"/>
-        <input name="+5" type="button" class="demo" value=+5 onclick="expandNetwork(value)"/>
-        <input name="+10" type="button" class="demo" value=+10 onclick="expandNetwork(value)"/>
+    <div id="networkvisualization">
+        <div id="dialog-progressbar" title="Please wait...">
+        <div id="progressbar"></div>
+        </div>
+
+         <div id="checkboxcontainer" class="checkboxcontainer">
+            <h3>Select Source</h3>
+        </div>
+        <div id="helpbox" class="helpbox">
+        </div>
+        <div id="buttoncontainer" class="buttoncontainer">
+            <h3>Add/Remove Proteins</h3>
+            <input name="-10" type="button" class="demo" value=-10 onclick="expandNetwork(value)"/>
+            <input name="-5" type="button" class="demo" value=-5 onclick="expandNetwork(value)"/>
+            <input name="-1" type="button" class="demo" value=-1 onclick="expandNetwork(value)"/>
+            <input name="+1" type="button" class="demo" value=+1 onclick="expandNetwork(value)"/>
+            <input name="+5" type="button" class="demo" value=+5 onclick="expandNetwork(value)"/>
+            <input name="+10" type="button" class="demo" value=+10 onclick="expandNetwork(value)"/>
+        </div>
+
+        <div id="javascriptcontainer" class="javascriptcontainer">
+        </div>
     </div>
 
-    <script src="{% get_static_prefix %}stringdb/d3/d3.v3.min.js"></script>
-
-
-    <div id="dialog-progressbar" title="Please wait...">
-    <div id="progressbar"></div>
-    </div>
-
-
-
-
-    <div id="javascriptcontainer" class="javascriptcontainer">
-
-        <script>
+    <script>
 
             /** Generate Checkboxes */
             createCheckboxes();
@@ -182,13 +198,151 @@ Released under the MIT license
             var width = 800,
                 height = 400;
 
+
+            /** Generate Network */
+            var jsonfile = '{{ json|safe }}';
+
+            /** 2 fache parsen abstellen */
+            var help = JSON.parse(jsonfile),
+                ldomainlist = new Array,
+                ndomainlist = new Array,
+                nrangelist = new Array,
+                lrangelist = new Array;
+
+            for (var i in help.linkcolor){
+            ldomainlist.push(help.linkcolor[i].value);
+            lrangelist.push(help.linkcolor[i].color);
+            };
+            for (var i in help.nodecolor){
+                ndomainlist.push(help.nodecolor[i].value);
+                nrangelist.push(help.nodecolor[i].color);
+            }
+
             var lcolor = d3.scale.linear()
-                .domain([0, 1, 180, 360, 540, 700, 900, 999, 1000])
-                .range(["white", "red", "orange", "yellow", "green", "purple", "blue", "navy", "black"]);
+                .domain(ldomainlist)
+                .range(lrangelist);
 
             var ncolor = d3.scale.linear()
-                .domain([0, 115, 230, 460, 575, 690, 805, 920, 1035, 1150, 1265, 1380, 1400])
-                .range(["black", "darkcyan", "blue", "lightblue", "darkgreen", "green", "lightgreen", "gold", "yellow", "orange", "indianred", "red", "darkred"]);
+                .domain(ndomainlist)
+                .range(nrangelist);
+
+            var helpwidth = 200;
+            var helpheight = 100;
+            var helplegend = d3.select(".helpbox").append("svg")
+                    .attr("width", helpwidth)
+                    .attr("height", helpheight);
+
+            drawhelp(jsonfile);
+
+            function drawhelp(help){
+
+                help = JSON.parse(help);
+                ldomainlist = new Array;
+                ndomainlist = new Array;
+                nrangelist = new Array;
+                lrangelist = new Array;
+
+                helplegend.selectAll("text").remove();
+
+                for (var i in help.linkcolor){
+                    ldomainlist.push(help.linkcolor[i].value);
+                    lrangelist.push(help.linkcolor[i].color);
+                };
+                for (var i in help.nodecolor){
+                    ndomainlist.push(help.nodecolor[i].value);
+                    nrangelist.push(help.nodecolor[i].color);
+                }
+
+                lcolor = d3.scale.linear()
+                    .domain(ldomainlist)
+                    .range(lrangelist);
+
+                ncolor = d3.scale.linear()
+                    .domain(ndomainlist)
+                    .range(nrangelist);
+
+                    helplegend.selectAll("rect").remove();
+                    helplegend.selectAll("circle").remove();
+
+                var fontsize = "10px",
+                rectx = 90,
+                recty = 40,
+                rectwidth = 20,
+                rectheight = 5,
+                stepsize = 15,
+                rectexty = recty+5,
+                rectextx = rectx + 27;
+
+                var rects = helplegend.selectAll("rect")
+                        .data(help.linkcolor)
+                        .enter()
+                            .append("g");
+
+                rects.append("rect")
+                    .attr("width", rectwidth)
+                    .attr("height", rectheight)
+                    .attr("y", function(){
+                            var result = recty;
+                            recty += stepsize;
+                            return result;
+                        })
+                    .attr("x", rectx)
+                    .attr("fill", function (d){ return d.color});
+
+                rects.append("text")
+                        .attr("x", rectextx)
+                        .attr("y", function(){
+                            var result = rectexty;
+                            rectexty += 15;
+                            return result;})
+                        .style("color", "black")
+                        .style("font-size", fontsize)
+                        .text(function(d) {return d.value == 0 ? "" : "... "+d.value});
+
+                var circley = 25,
+                    circlex = 10,
+                    radius = 5,
+                    dxtext = circlex+10,
+                    dytext = circley+3;
+
+                var circls = helplegend.selectAll("circle")
+                        .data(help.nodecolor)
+                        .enter().append("g");
+
+                circls.append("circle")
+                        .attr("cy", function () {
+                                var result = circley;
+                                circley += 15;
+                                return result;
+                            })
+                        .attr("cx", circlex)
+                        .attr("r", radius)
+                        .attr("fill", function(d) {return d.color});
+
+                circls.append("text")
+                        .attr("dx", dxtext)
+                        .attr("dy", function () {
+                                var result = dytext;
+                                dytext += 15;
+                                return result;
+                            })
+                        .style("color", "black")
+                        .style("font-size", fontsize)
+                        .text(function (d){ return d.value == 0 ? "selected" : "... " + d.value })
+
+                var legendNode = helplegend.append("text")
+                            .attr("x", 5)
+                            .attr("y", 10)
+                            .style("font-size", "10px")
+                            .text("Nr. of Interaction-Partner");
+
+                var legendLink = helplegend.append("text")
+                            .attr("x", 90)
+                            .attr("y", 30)
+                            .style("font-size", "10px")
+                            .text("Interaction-Score");
+
+            }
 
             var force = d3.layout.force()
                     .charge(calculateCharge())
@@ -218,24 +372,22 @@ Released under the MIT license
                 svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
             }
 
-            /** Generate Network */
-            update('{{ json|safe }}');
+            update(jsonfile);
 
             /** Creating Interaction-Network */
             function update(json){
+
+                drawhelp(json)
 
                 svg.selectAll(".link")
                         .remove();
                 svg.selectAll(".node")
                         .remove();
 
-                /** calling interaction information*/
-                var myjson = json
-
                 var nodesize = calculateNodesize();
                 var textsize = ""+calculateTextSize()+"px";
 
-                graph = JSON.parse(myjson);
+                var graph = JSON.parse(json);
 
                 var nodes = graph.nodes;
                 var links = graph.links;
@@ -255,8 +407,8 @@ Released under the MIT license
                         .attr("stroke-width", calculateLinkThikness())
                         .style("stroke", function(d) { return lcolor(d.score);});
 
-                var drag = force.drag();
-                      //.on("dragstart", dragstart);
+                var drag = force.drag()
+                      .on("dragstart", dragstart);
 
                 var node = svg.selectAll(".node")
                         .data(graph.nodes)
@@ -355,7 +507,8 @@ Released under the MIT license
                          beforeSend: function() {
                             dialog_progressbar.dialog("open")},
                          success:function(result){
-                            update(result);
+                            jsonfile = result;
+                            update(jsonfile);
                             dialog_progressbar.dialog("close");
                          }});
                 }
@@ -490,23 +643,24 @@ Released under the MIT license
                         })
             }
         </script>
-    </div>
 
-    </table>
-    <table id="detail">
-        <tbody class="data" style="position:relative;">
-            <tr>
-                <th>Protein</th>
-                <th>Name</th>
-                {% for key in list %}
-                    <th>{{ key }}</th>
-                {% endfor %}
-                <th>Score</th>
-            </tr>
-        {% include "stringdb/list_page.html" %}
-        </tbody>
-        <tbody class="spacing">
-                <tr><td colspan="2">&nbsp;</td></tr>
-        </tbody>
-    </table>
+    <div id="tablediv" class="tablediv">
+        </table>
+            <table id="detail">
+                <tbody class="data" style="position:relative;">
+                    <tr>
+                        <th>Protein</th>
+                        <th>Name</th>
+                        {% for key in list %}
+                            <th>{{ key }}</th>
+                        {% endfor %}
+                        <th>Score</th>
+                    </tr>
+                {% include "stringdb/list_page.html" %}
+                </tbody>
+                <tbody class="spacing">
+                        <tr><td colspan="2">&nbsp;</td></tr>
+                </tbody>
+            </table>
+        </div>
 {% endblock %}
