@@ -563,9 +563,17 @@ select.select{
 #detail tbody.data tr:last-child th:last-child, #detail tbody.data tr:last-child td:last-child{
 	border-bottom-right-radius:6px;
 }
+#detail tbody.data tr:first-child th:first-child{
+    border-radius: 6px 0px 0px 0px;
+}
+#detail tbody.data tr:first-child th:last-child{
+    border-radius: 0px 6px 0px 0px;
+}
+#detail tbody.data tr:first-child th:only-child{
+    border-radius: 6px 6px 0px 0px;
+}
 #detail tbody.data tr:first-child th{
 	background:#3d80b3;
-    border-radius: 6px 6px 0px 0px;
     color:white;
 	border:1px solid #3d80b3;
 	padding:2px;	
@@ -632,7 +640,8 @@ select.select{
 }
 #form .block h1, #login .block h1{
 	border: 1px solid #3d80b3;
-	border-top-left-radius:6px;
+
+    border-top-left-radius:6px;
 	border-top-right-radius:6px;
 	background:#3d80b3;
 	color:white;

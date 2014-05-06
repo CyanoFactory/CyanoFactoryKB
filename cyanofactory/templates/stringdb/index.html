@@ -1,9 +1,9 @@
 {% extends "cyano/base.html" %}
 
 {% comment %}
-Kegg overview page
+Protein-Interaction Page
 
-Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>,  Eric Zuchantke <ezuchant@hs-mitteida.de>
 Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
@@ -108,15 +108,15 @@ Released under the MIT license
     fill: none;
     pointer-events: all;
     }
-
-.tablediv{
+#content table th, #content table td {
+    padding-right: 10px;
     text-align: center;
+}
+#detail tbody tr th, #detail tbody tr td {
+    padding-left: 2px;
+    padding-right: 2px;
     vertical-align: middle;
-    }
-.tablediv table{
-    text-align: center;
-    }
-
+}
 {% endblock %}
 
 {% block content %}
@@ -647,7 +647,7 @@ Released under the MIT license
     <div id="tablediv" class="tablediv">
         </table>
             <table id="detail">
-                <tbody class="data" style="position:relative;">
+                <tbody class="data">
                     <tr>
                         <th>Protein</th>
                         <th>Name</th>
