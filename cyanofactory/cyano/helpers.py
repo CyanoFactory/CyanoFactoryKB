@@ -33,7 +33,8 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import get_app, get_models
-from django.db.models.fields import AutoField, BigIntegerField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField, BooleanField, NullBooleanField, DecimalField, FloatField, CharField, CommaSeparatedIntegerField, EmailField, FilePathField, GenericIPAddressField, IPAddressField, SlugField, URLField, TextField, DateField, DateTimeField, TimeField, NOT_PROVIDED
+from django.db.models.fields import AutoField, BigIntegerField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField, BooleanField, NullBooleanField, DecimalField, FloatField, CharField, CommaSeparatedIntegerField, EmailField, FilePathField, GenericIPAddressField, IPAddressField, SlugField, URLField, TextField, DateField, DateTimeField, TimeField, NOT_PROVIDED, \
+    FieldDoesNotExist
 from django.db.models.fields.related import OneToOneField, RelatedObject, ManyToManyField, ForeignKey
 from django.db.models.query import EmptyQuerySet
 from django.http import Http404, HttpResponse
@@ -1416,8 +1417,11 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
         if isinstance(val, float) and val != 0. and val is not None:
             return ('%.' + str(int(math.ceil(max(0, -math.log10(abs(val)))+2))) + 'f') % val
         return val
-    
-    field = obj.__class__._meta.get_field_by_name(field_name)[0]
+
+    try:
+        field = obj.__class__._meta.get_field_by_name(field_name)[0]
+    except FieldDoesNotExist:
+        return None
     value = getattr(obj, field_name)
     
     if isinstance(field, RelatedObject):
@@ -1512,7 +1516,6 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
     else:
         return value
 
-    return ''
         
 def get_history(species, obj, detail_id):
     #return cmodels.Revision.objects.filter(current = obj, detail__lte = detail_id, table = TableMeta.get_by_model(field.model), column = get_column_index(field)).order_by("-detail")[0].new_value + " (current: " + str(value) + ")"

@@ -12,6 +12,7 @@ Released under the MIT license
 """
 
 import os
+from django.template.context import Context
 import settings
 import tempfile
 from copy import deepcopy
@@ -36,7 +37,8 @@ import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
 from cyano.decorators import resolve_to_objects, permission_required
 from django.db.transaction import commit_on_success
-from django.http.response import HttpResponseRedirect
+from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse
+
 
 def index(request):
     return chelpers.render_queryset_to_response(
@@ -602,6 +604,26 @@ def detail(request, species, model, item):
             'fieldsets': fieldsets,
             'message': request.GET.get('message', ''),
             })
+
+
+@resolve_to_objects
+@permission_required(perm.READ_NORMAL)
+def detail_field(request, species, model, item):
+    from django.template import loader
+
+    if request.GET.get('name') is None:
+        return HttpResponseBadRequest("Unknown field")
+
+    output = chelpers.format_field_detail_view(species, item, request.GET.get('name'), request.user.is_anonymous())
+
+    if output is None:
+        return HttpResponseBadRequest("Unknown field")
+
+    template = loader.get_template("cyano/field.html")
+    c = Context({'data': output})
+    rendered = template.render(c)
+
+    return HttpResponse(rendered)
 
 @resolve_to_objects
 @permission_required(perm.READ_HISTORY)

@@ -90,6 +90,7 @@ urlpatterns = patterns('cyano.views',
 
     url(r'^' + _species_wid_model_type + r'/$', 'listing'),
     url(r'^' + _species_wid_model_type_wid + r'/$', 'detail'),
+    url(r'^' + _species_wid_model_type_wid + r'/field/$', 'detail_field'),
 
     url(r'^$', 'index'),
 )

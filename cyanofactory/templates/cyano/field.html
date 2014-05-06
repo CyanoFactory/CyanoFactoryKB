@@ -1,0 +1,8 @@
+{% if not request.is_ajax %}
+<head>
+    <title>CyanoFactory KB</title>
+
+    {% include "cyano/base_head.html" %}
+</head>
+{% endif %}
+{{ data|safe }}
