@@ -102,6 +102,7 @@ Released under the MIT license
     }
 #networkvisualization{
 	border:1px solid #3d80b3;
+    border-radius: 10px;
     margin-bottom: 20px;
     }
 .overlay {
@@ -145,7 +146,7 @@ Released under the MIT license
         </div>
     </div>
 
-    <script>
+    <script id="network">
 
             /** Generate Checkboxes */
             createCheckboxes();
@@ -232,9 +233,9 @@ Released under the MIT license
                     .attr("width", helpwidth)
                     .attr("height", helpheight);
 
-            drawhelp(jsonfile);
+            drawhelp(jsonfile, []);
 
-            function drawhelp(help){
+            function drawhelp(help, lDomainList){
 
                 help = JSON.parse(help);
                 ldomainlist = new Array;
@@ -251,6 +252,13 @@ Released under the MIT license
                 for (var i in help.nodecolor){
                     ndomainlist.push(help.nodecolor[i].value);
                     nrangelist.push(help.nodecolor[i].color);
+                }
+
+                if(lDomainList.length != 0){
+                    ldomainlist = lDomainList;
+                    for (var i in lDomainList){
+                        help.linkcolor[i].value = Math.round(lDomainList[i]);
+                    }
                 }
 
                 lcolor = d3.scale.linear()
@@ -347,7 +355,7 @@ Released under the MIT license
             var force = d3.layout.force()
                     .charge(calculateCharge())
                     .gravity(0.9)
-                    .friction(0.9)
+                    .friction(0.2)
                     .size([width, height]);
 
             var protamount = +{{ limit }};
@@ -360,7 +368,6 @@ Released under the MIT license
 
                     //.call(d3.behavior.zoom().on("zoom", zoomed))
                     .append("svg:g");
-
 
             //svg.append("svg:rect")
             //        .attr("class", "overlay")
@@ -377,7 +384,7 @@ Released under the MIT license
             /** Creating Interaction-Network */
             function update(json){
 
-                drawhelp(json)
+                drawhelp(json, [])
 
                 svg.selectAll(".link")
                         .remove();
@@ -452,6 +459,8 @@ Released under the MIT license
                     .attr("cx", function(d) { return d.x = Math.max(nodesize, Math.min(width - (nodesize), d.x)); })
                     .attr("cy", function(d) { return d.y = Math.max(nodesize, Math.min(height - (nodesize), d.y)); });
                 });
+
+                filterLinks();
             }
 
             function nodeOut() {
@@ -517,6 +526,68 @@ Released under the MIT license
                 }
             }
 
+            /** Changing the opacity of each link depending on link stats, using checkBoxes() */
+            function filterLinks(){
+                var listchecked = isCheckboxChecked(),
+                    singleList = new Array();
+
+                var transition = 1000;
+                d3.selectAll(".link")
+                        .filter(function (d) {
+                            return checkBoxes(d);
+                        })
+                        .transition().duration(transition).style("opacity", 0);
+                var passedlinks = d3.selectAll(".link")
+                        .filter(function (d) {
+                            return !checkBoxes(d);
+                        })
+                        .transition().duration(transition).style("opacity", 1)
+                        .each(function (d){
+                            var scoreList = new Array();
+                            {% for key in list %}
+                                if (d.{{ key }} != 0 && listchecked.indexOf('{{ key }}') != -1) {scoreList.push(d.{{ key }})};
+                            {% endfor %}
+                            if(scoreList != 0){
+                                var comboscore = 1;
+                                for(var i in scoreList){
+                                    comboscore *= ((1000-scoreList[i])/1000).toFixed(3);
+                                }
+                                var result = (1-comboscore).toFixed(3);
+                                result*=1000;
+                                singleList.push(result);
+                                d.filterscore = result;
+                            }
+                            console.log("ScoreList "+scoreList);
+
+                            return true;
+                        });
+                if(singleList != 0){
+                    var min = Math.min.apply(Math, singleList),
+                        max = Math.max.apply(Math, singleList),
+                        range = (max - min)/4;
+                    drawhelp(jsonfile , [min, min+range, max-range, max]);
+                    passedlinks.style("stroke", function(d) {
+                        console.log(singleList, [min, min+range, max-range, max], d.score, lcolor(d.score));
+                        return lcolor(d.filterscore);});
+                }
+                else{
+                    drawhelp(jsonfile , []);
+                    passedlinks.style("stroke", function(d) { return lcolor(d.score);});
+                }
+            }
+
+            function isCheckboxChecked(){
+                var listchecked = new Array
+                var boxes = d3.selectAll("input")
+                        .each(function (d) {
+                            if (this.checked){
+                                listchecked.push(d)
+                                console.log(d);
+                            }
+                        });
+                return listchecked;
+            }
+
             /** Checking if selected link has stats for the selected Checkbox*/
             function checkBoxes(alink){
                 var hide = false;
@@ -534,21 +605,6 @@ Released under the MIT license
                             return false;
                         })
                 return hide
-            }
-
-             /** Changing the opacity of each link depending on link stats, using checkBoxes() */
-            function filterLinks(){
-                var transition = 1000;
-                d3.selectAll(".link")
-                        .filter(function (d) {
-                            return checkBoxes(d);
-                        })
-                        .transition().duration(transition).style("opacity", 0);
-                d3.selectAll(".link")
-                        .filter(function (d) {
-                            return !checkBoxes(d);
-                        })
-                        .transition().duration(transition).style("opacity", 1);
             }
 
             /** dragging nodes ends with pin the node to specific place */
@@ -620,6 +676,24 @@ Released under the MIT license
                     }
                     return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
                 };
+            }
+
+            function calcComboScore(scoreList){
+                var comboscore = 1;
+
+                for(var score in scoreList){
+                    comboscore = comboscore*(1-score/1000);
+                }
+                return comboscore;
+            }
+
+            function updateLegendCheckbox(allScores){
+                var min = Math.min(allScores),
+                    max = Math.max(allScores),
+                    range = (max - min)/4;
+
+                var list = [min, min+range, max-range, max];
+                return list;
             }
 
             /** Creates Buttons for Selecting Size of Network - NOT WORKING CORRECT, NOT ENABLED*/

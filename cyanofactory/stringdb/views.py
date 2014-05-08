@@ -9,6 +9,7 @@ from networkx.readwrite import json_graph
 import os
 from cyano.models import ProteinComparison
 from cyano.helpers import render_queryset_to_response
+import re
 
 
 def checkInteraction(request, protID, limit=10):
@@ -117,13 +118,15 @@ def calcColorRange(jsonFile, maxHood, minHood, maxScore, minScore):
 
     linkcolor = '"linkcolor": [{"color": "red", "value": '+str(minScore)+'}, ' \
                                 '{"color": "yellow", "value": '+str(minScore+colorrangeLink)+'}, ' \
-                                '{"color": "green", "value": '+str(minScore+(colorrangeLink*2))+'}, ' \
+                                '{"color": "green", "value": '+str(maxScore-colorrangeLink)+'}, ' \
                                 '{"color": "navy", "value": '+str(maxScore)+'}]'
     nodecolor = '"nodecolor": [{"color": "black", "value": 0}, ' \
                                 '{"color": "blue", "value": '+str(minHood)+'}, ' \
                                 '{"color": "green", "value": '+str(minHood+colorrangeNode)+'}, ' \
-                                '{"color": "yellow", "value": '+str(minHood+(colorrangeNode*2))+'}, ' \
+                                '{"color": "yellow", "value": '+str(maxHood-colorrangeNode)+'}, ' \
                                 '{"color": "red", "value": '+str(maxHood)+'}]'
+    searchString = '"Experiment": 0'
+    jsonFile = jsonFile.replace(searchString, searchString+', "filterscore": 0')
     jsonFile = jsonFile[:-1]+', '+linkcolor+', '+nodecolor+'}'
     return jsonFile
 
@@ -268,23 +271,72 @@ def getInteractType(scores):
                     "Genfusion": 0,
                     "Coocurence": 0,
                     "Neighborhood": 0,
-                    "Coexpression": 0}
+                    "Coexpression": 0,
+                    "CoexpressionA": 0,
+                    "CoexpressionB": 0,
+                    "NeighborhoodA": 0,
+                    "NeighborhoodB": 0,
+                    "NeighborhoodC": 0,
+                    "CoocurenceA": 0,
+                    "CoocurenceB": 0,
+                    "GenfusionA": 0,
+                    "GenfusionB": 0,
+                    "TextminingA": 0,
+                    "TextminingB": 0,
+                    "DatabaseA": 0,
+                    "DatabaseB": 0,
+                    "ExperimentA": 0,
+                    "ExperimentB": 0,
+                    }
+
     for score in scores:
         scoretype = int(score[0])
         if scoretype == 5:
             interactType["Homology"] = score[1]
-        elif scoretype == 7 or scoretype == 8:
-            interactType["Coexpression"] = score[1]
-        elif scoretype == 8 or scoretype == 9:
-            interactType["Experiment"] = score[1]
-        elif scoretype == 10 or scoretype == 11:
-            interactType["Database"] = score[1]
-        elif scoretype == 12 or scoretype == 13:
-            interactType["Textmining"] = score[1]
-        elif scoretype == 14 or scoretype == 1 or scoretype == 2:
-            interactType["Neighborhood"] = score[1]
-        elif scoretype == 15 or scoretype == 3:
-            interactType["Genfusion"] = score[1]
-        elif scoretype == 16 or scoretype == 4:
-            interactType["Coocurence"] = score[1]
+        #elif scoretype == 6 or scoretype == 7:
+        elif scoretype == 6:
+            interactType["CoexpressionA"] = score[1]
+        elif scoretype == 7:
+            interactType["CoexpressionB"] = score[1]
+        #elif scoretype == 8 or scoretype == 9:
+        elif scoretype == 8:
+            interactType["ExperimentA"] = score[1]
+        elif scoretype == 9:
+            interactType["ExperimentB"] = score[1]
+        #elif scoretype == 10 or scoretype == 11:
+        elif scoretype == 10:
+            interactType["DatabaseA"] = score[1]
+        elif scoretype == 11:
+            interactType["DatabaseB"] = score[1]
+        #elif scoretype == 12 or scoretype == 13:
+        elif scoretype == 12:
+            interactType["TextminingA"] = score[1]
+        elif scoretype == 13:
+            interactType["TextminingB"] = score[1]
+        #elif scoretype == 14 or scoretype == 1 or scoretype == 2:
+        elif scoretype == 1:
+            interactType["NeighborhoodA"] = score[1]
+        elif scoretype == 2:
+            interactType["NeighborhoodB"] = score[1]
+        elif scoretype == 14:
+            interactType["NeighborhoodC"] = score[1]
+        #elif scoretype == 15 or scoretype == 3:
+        elif scoretype == 3:
+            interactType["GenfusionA"] = score[1]
+        elif scoretype == 15:
+            interactType["GenfusionB"] = score[1]
+        #elif scoretype == 16 or scoretype == 4:
+        elif scoretype == 4:
+            interactType["CoocurenceA"] = score[1]
+        elif scoretype == 16:
+            interactType["CoocurenceB"] = score[1]
+
+    interactType["Coexpression"] = (1-((1-interactType["CoexpressionA"]/1000.0)*(1-interactType["CoexpressionB"]/1000.0)))*1000.0
+    interactType["Experiment"] = (1-((1-interactType["ExperimentA"]/1000.0)*(1-interactType["ExperimentB"]/1000.0)))*1000.0
+    interactType["Database"] = (1-((1-interactType["DatabaseA"]/1000.0)*(1-interactType["DatabaseB"]/1000.0)))*1000.0
+    interactType["Textmining"] = (1-((1-interactType["TextminingA"]/1000.0)*(1-interactType["TextminingB"]/1000.0)))*1000.0
+    interactType["Neighborhood"] = (1-((1-interactType["NeighborhoodA"]/1000.0)*(1-interactType["NeighborhoodB"]/1000.0)*(1-interactType["NeighborhoodC"]/1000.0)))*1000.0
+    interactType["Genfusion"] = (1-((1-interactType["GenfusionA"]/1000.0)*(1-interactType["GenfusionB"]/1000.0)))*1000.0
+    interactType["Coocurence"] = (1-((1-interactType["CoocurenceA"]/1000.0)*(1-interactType["CoocurenceB"]/1000.0)))*1000.0
+
     return interactType
