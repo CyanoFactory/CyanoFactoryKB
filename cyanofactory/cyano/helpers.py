@@ -2102,7 +2102,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
     return obj
 
 
-def format_sequence_as_html(species, sequence, lineLen=60, show_protein_seq=False):
+def format_sequence_as_html(species, sequence, lineLen=60, seq_offset=0, show_protein_seq=False):
     # Split sequence in lists of size lineLen
     line = [sequence[i:i+lineLen] for i in range(0, len(sequence), lineLen)]
     # Split lists in list of codons (len 3)
@@ -2117,7 +2117,7 @@ def format_sequence_as_html(species, sequence, lineLen=60, show_protein_seq=Fals
 
     nums = range(1, len(sequence), lineLen)
 
-    c = Context({'sequence': zip(line, prot_line), 'protein_sequence': prot_line, 'numbers': nums, 'line_length': lineLen, 'sequence_length': len(sequence)})
+    c = Context({'sequence': zip(line, prot_line), 'protein_sequence': prot_line, 'numbers': nums, 'line_length': lineLen, 'sequence_length': len(sequence), 'sequence_offset': seq_offset})
     template = loader.get_template("cyano/fields/sequence.html")
     rendered = template.render(c)
 

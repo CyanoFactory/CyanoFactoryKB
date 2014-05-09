@@ -610,9 +610,12 @@ def detail(request, species, model, item):
 @permission_required(perm.READ_NORMAL)
 def detail_field(request, species, model, item):
     from django.template import loader
+    from django.utils.html import strip_tags
 
     if request.GET.get('name') is None:
         return HttpResponseBadRequest("Unknown field")
+
+    strip = request.GET.get('strip', False)
 
     output = chelpers.format_field_detail_view(species, item, request.GET.get('name'), request.user.is_anonymous())
 
@@ -620,8 +623,12 @@ def detail_field(request, species, model, item):
         return HttpResponseBadRequest("Unknown field")
 
     template = loader.get_template("cyano/field.html")
-    c = Context({'data': output})
+    c = Context({'request': request, 'data': output})
+
     rendered = template.render(c)
+
+    if strip:
+        rendered = strip_tags(rendered)
 
     return HttpResponse(rendered)
 

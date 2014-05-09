@@ -209,6 +209,26 @@ CHOICES_SIGNAL_SEQUENCE_TYPE = (
     ('secretory', 'Secretory'),
 )
 
+NUCLEOTIDE_SUBSTITUTION = {
+    'A': 'A',
+    'C': 'C',
+    'G': 'G',
+    'T': 'T',
+    'U': 'U',
+    'R': 'GA',
+    'Y': 'TC',
+    'K': 'GT',
+    'M': 'AC',
+    'S': 'GC',
+    'W': 'AT',
+    'B': 'GTC',
+    'D': 'GAT',
+    'H': 'ACT',
+    'V': 'GCA',
+    'N': 'AGCT',
+    '-': ''
+}
+
 ''' END: CHOICES '''
 
 # add model options
@@ -1810,10 +1830,7 @@ class Genome(Molecule):
 
             return None, output.getvalue()
 
-    def get_as_html_new_structure(self, species, is_user_anonymous, start_coordinate=None, end_coordinate=None, highlight_wid=None):
-        import time
-        start = time.time()
-
+    def get_as_html_new_structure_local(self, species, is_user_anonymous, start_coordinate=None, end_coordinate=None, highlight_wid=None):
         from .helpers import overlaps
 
         attrib_class = type(str("StructureAttribClass"), (object,), dict())
@@ -1831,8 +1848,8 @@ class Genome(Molecule):
         chr_attrib.start = start_coordinate
         chr_attrib.end = end_coordinate
         chr_attrib.y = gene_y + gene_height + 4
-        chr_attrib.left = 4.5 * len('%s' % chr_attrib.start) + 4
-        chr_attrib.right = W - 4.5 * len('%s' % chr_attrib.end) - 2 - 6
+        chr_attrib.left = 4.5 * len(str(chr_attrib.start)) + 4
+        chr_attrib.right = W - 4.5 * len(str(chr_attrib.end)) - 2 - 6
         chr_attrib.width = chr_attrib.right - chr_attrib.left
         chr_attrib.length = chr_attrib.end - chr_attrib.start + 1
 
@@ -1877,6 +1894,7 @@ class Genome(Molecule):
                 num_transcription_units += 1
 
             gene_attrib = attrib_class()
+            gene_attrib.wid = gene.wid
             gene_attrib.x1 = chr_attrib.left + float(gene.coordinate - chr_attrib.start) / chr_attrib.length * chr_attrib.width
             gene_attrib.x2 = chr_attrib.left + float(gene.coordinate + gene.length - 1 - chr_attrib.start) / chr_attrib.length * chr_attrib.width
 
@@ -1897,24 +1915,14 @@ class Genome(Molecule):
             gene_attrib.y1 = gene_y
             gene_attrib.y2 = gene_y + gene_height
 
-            if highlight_wid is None or gene.wid in highlight_wid:
-                gene_attrib.fill_opacity = 0.75
-                gene_attrib.stroke_opacity = 1
-                gene_attrib.stroke_width = 3
-            else:
-                gene_attrib.fill_opacity = 0.15
-                gene_attrib.stroke_opacity = 0.35
-                gene_attrib.stroke_width = 1
-
             if math.fabs(gene_attrib.x2 - gene_attrib.x1) > len(gene.wid) * 5:
                 gene_attrib.label = gene.wid
             else:
                 gene_attrib.label = ''
 
-            gene_attrib.title = gene.name or gene.wid
+            gene_attrib.title = (gene.name or gene.wid).replace("'", "\'")
 
             gene_attrib.text = 'Transcription unit: %s' % ("(None)" if transcription_unit is None else transcription_unit.name or transcription_unit.wid)
-            gene_attrib.title = gene_attrib.title.replace("'", "\'")
             gene_attrib.text = gene_attrib.text.replace("'", "\'")
 
             gene_attrib.url = gene.get_absolute_url(species)
@@ -1927,6 +1935,7 @@ class Genome(Molecule):
         def draw_segment(wid, coordinate, item_length, tip_title, typ, url):
             feature_attrib = attrib_class()
 
+            feature_attrib.wid = wid
             feature_attrib.coordinate = coordinate
             feature_attrib.length = item_length
 
@@ -1935,8 +1944,8 @@ class Genome(Molecule):
             else:
                 feature_attrib.opacity = 0.25
 
-            feature_attrib.x = chr_attrib.left + float(feature_attrib.coordinate - chr_attrib.start) / length * chr_attrib.width
-            feature_attrib.width = chr_attrib.left + float(feature_attrib.coordinate + feature_attrib.length - 1 - chr_attrib.start) / length * chr_attrib.width
+            feature_attrib.x = chr_attrib.left + float(feature_attrib.coordinate - chr_attrib.start) / chr_attrib.length * chr_attrib.width
+            feature_attrib.width = chr_attrib.left + float(feature_attrib.coordinate + feature_attrib.length - 1 - chr_attrib.start) / chr_attrib.length * chr_attrib.width
 
             feature_attrib.x = max(chr_attrib.left, min(chr_attrib.right, feature_attrib.x))
             feature_attrib.width = max(chr_attrib.left, min(chr_attrib.right, feature_attrib.width)) - feature_attrib.x
@@ -2019,18 +2028,19 @@ class Genome(Molecule):
         H = 2 + gene_height + 2 + 4 + 1 * (2 + len(feature_draw) * (feature_height + 2)) + 2
 
         c = Context({
+            'species': species,
             'genes': genes,
             'width': W,
             'height': H,
             'chromosome': chr_attrib,
             'features': features,
             'promoters': promoters,
-            'tf_sites': tf_sites
+            'tf_sites': tf_sites,
+            'highlight_wid': highlight_wid
         })
 
         template = loader.get_template("cyano/fields/structure.html")
         rendered = template.render(c)
-        print "New", (time.time() - start)
 
         return rendered
 
@@ -2793,6 +2803,18 @@ class ChromosomeFeature(SpeciesComponent):
 
     #additional fields
     #positions = reverse relation
+    def get_as_html_tooltip(self, species, is_user_anonymous):
+        types = map(lambda x: x.wid, self.type.filter(species=species))
+
+        if "SNP" in types:
+            if self.comments:
+                split = self.comments.split("_")
+                if len(split) >= 2:
+                    nucl_subst = "Substitiution of {} with {}".format(split[0], " or ".join(NUCLEOTIDE_SUBSTITUTION[split[1]]))
+                    return nucl_subst
+
+            return self.comments
+        return ", ".join(map(str, self.type.filter(species=species)))
 
     #meta information
     class Meta:
@@ -2899,7 +2921,7 @@ class FeaturePosition(EntryData):
             self.chromosome.model_type.model_name,
             self.chromosome.get_absolute_url(species), self.chromosome.wid,
             self.coordinate, self.length, direction,
-            format_sequence_as_html(species, self.get_sequence(), show_protein_seq=True))
+            format_sequence_as_html(species, self.get_sequence(), seq_offset=self.coordinate, show_protein_seq=True))
 
     def get_as_html_genes(self, species, is_user_anonymous):
         results = []
@@ -3074,7 +3096,7 @@ class Gene(Molecule):
         return format_list_html(results, force_list=True)
 
     def get_as_html_new_structure(self, species, is_user_anonymous):
-        return self.chromosome.get_as_html_new_structure(
+        return self.chromosome.get_as_html_new_structure_local(
             species,
             is_user_anonymous,
             start_coordinate=self.coordinate - 2500,
@@ -3098,7 +3120,7 @@ class Gene(Molecule):
             self.chromosome.get_absolute_url(species), self.chromosome.wid,
             self.coordinate, self.length, direction,
             self.get_gc_content() * 100,
-            format_sequence_as_html(species, self.get_sequence(), show_protein_seq=True))
+            format_sequence_as_html(species, self.get_sequence(), seq_offset=self.coordinate, show_protein_seq=True))
 
     def get_as_fasta(self, species):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
@@ -3143,7 +3165,11 @@ class Gene(Molecule):
             cds.qualifiers["product"] = monomer[0].name
 
         return gene, cds
-        
+
+    def get_as_html_tooltip(self, species, is_user_anonymous):
+        from cyano.helpers import format_field_detail_view
+        return "Transcription unit: %s" % (format_field_detail_view(species, self, "transcription_units", is_user_anonymous))
+
     #meta information
     class Meta:
         concrete_entry_model = True
