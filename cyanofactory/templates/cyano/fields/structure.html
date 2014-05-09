@@ -1,3 +1,32 @@
+<script>
+var old_target = "";
+var tooltip_response = "";
+var tooltip_func = function(evt, name, target) {
+    if (old_target != target) {
+        old_target = target;
+
+        $.ajax({
+            url: target,
+            context: document.body,
+            beforeSend: function() {
+                //dialog_progressbar.dialog("open");
+            },
+            data: {
+            }
+        }).done(function(x) {
+            tooltip_response = x;
+            showToolTip(evt, name, tooltip_response);
+        });
+    }
+    else {
+        showToolTip(evt, name, tooltip_response);
+    }
+}
+var features_func = function(evt, name, target) {
+    tooltip_func(evt, name, target);
+    highlight_seq($(evt.target).data("coordinate"), $(evt.target).data("length"));
+}
+</script>
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{{ width }}" height="{{ height }}" viewport="0 0 {{ width }} {{ height }}">
     <style>
         .color-0 { fill:#3d80b3; stroke: #3d80b3; }
@@ -50,16 +79,12 @@
                                 {{ gene.x1 }},{{ gene.y2 }}
                                 {{ gene.x1 }},{{ gene.y1 }}
                             {% endif %}"
-                         onmousemove="javascript: showToolTip(evt, '{{ gene.title }}', '{{ gene.text }}')"
-                         onmouseout="javascript: hideToolTip(evt);"
-                         {% if gene.fill_opacity %}
-                         style="fill-opacity: {{ gene.fill_opacity }};
-                         {% endif %}
-                         {% if gene.stroke_opacity %}
-                         stroke-opacity: {{ gene.stroke_opacity }};
-                         {% endif %}
-                         {% if gene.stroke_width %}
-                         stroke-width: {{ gene.stroke_width }}px"
+                         onmousemove="tooltip_func(evt, '{{ gene.title }}', '{% url 'cyano.views.detail_field' species_wid=species.wid model_type="Gene" wid=gene.wid %}?name=tooltip&strip=1')"
+                         onmouseout="hideToolTip(evt);"
+                         {% if gene.wid in highlight_wid %}
+                         style="fill-opacity: 0.75; stroke-opacity: 1; stroke-width: 3px"
+                         {% else %}
+                         style="fill-opacity: 0.15; stroke-opacity: 0.35; stroke-width: 1px"
                          {% endif %}
                         >
                 </polygon>
@@ -67,8 +92,8 @@
             <a xlink:href="{{ gene.url }}">
                 <text x="{% widthratio gene.x1|add:gene.x2 2 1 %}"
                       y="{% widthratio gene.y1|add:gene.y2 2 1 %}"
-                      onmousemove="javascript: showToolTip(evt, '{{ gene.title }}', '{{ gene.text }}')"
-                      onmouseout="javascript: hideToolTip(evt);">{{ gene.label }}
+                      onmousemove="tooltip_func(evt, '{{ gene.title }}', '{% url 'cyano.views.detail_field' species_wid=species.wid model_type="Gene" wid=gene.wid %}?name=tooltip&strip=1')"
+                      onmouseout="hideToolTip(evt);">{{ gene.label }}
                 </text>
             </a>
         </g>
@@ -84,8 +109,10 @@
                   onmousemove="showToolTip(evt, '{{ promoter.title }}', '{{ promoter.text }}')"
                   onmouseout="hideToolTip(evt);"
                   style="
-                  {% if promoter.opacity %}
-                  opacity: {{ promoter.opacity }};
+                  {% if promoter.wid in highlight_wid %}
+                  opacity: 1;
+                  {% else %}
+                  opacity: 0.25;
                   {% endif %}
                   ">
             </rect>
@@ -127,8 +154,10 @@
                   width="{{ feature.width }}"
                   height="{{ feature.height }}"
         {% endif %}
-                  onmousemove="showToolTip(evt, '{{ feature.title }}', '{{ feature.text }}');"
+                  onmousemove="features_func(evt, '{{ feature.title }}', '{% url 'cyano.views.detail_field' species_wid=species.wid model_type="ChromosomeFeature" wid=feature.wid %}?name=tooltip&strip=1')"
                   onmouseout="hideToolTip(evt);"
+                  data-coordinate="{{ feature.coordinate }}"
+                  data-length="{{ feature.length }}"
                   style="
                   {% if feature.opacity %}
                   opacity: {{ feature.opacity }};
