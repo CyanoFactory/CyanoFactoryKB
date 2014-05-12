@@ -9,6 +9,7 @@ from Bio import SeqIO
 
 import cyano.models as cmodels
 from cyano.helpers import slugify
+from cyano.models import NUCLEOTIDE_SUBSTITUTION
 from bioparser import BioParser
 from django.db.transaction import commit_on_success
 
@@ -85,6 +86,7 @@ class FastaFeature(BioParser):
         self.species.save(self.detail)
 
         typ = cmodels.Type.objects.for_wid(self.feature_type, create=True)
+        typ.name = "SNP"
         typ.save(self.detail)
         typ.species.add(self.species)
 
@@ -94,6 +96,24 @@ class FastaFeature(BioParser):
             end = item["end"]
             description = item["description"]
 
+            # special handling for (Uppsala) SNPs...
+            snp_type = None
+
+            if typ.wid == "SNP":
+                if description.count("_") == 1:
+                    subst_type = description.split("_")
+                    if len(subst_type[0]) == len(subst_type[1]):
+                        snp_type = cmodels.Type.objects.for_wid(description, create=True)
+                        subst_text = "Substitution of "
+                        subst_items = []
+                        for x, y in zip(subst_type[0], subst_type[1]):
+                            subst_items.append(x + " with " + ", ".join(NUCLEOTIDE_SUBSTITUTION[y])[::-1].replace(", "[::-1], " or "[::-1], 1)[::-1])
+                        subst_text += " and ".join(subst_items)
+                        snp_type.name = subst_text
+                        snp_type.parent = typ
+                        snp_type.save(self.detail)
+                        snp_type.species.add(self.species)
+
             direction = "f" if start < end else "r"
             length = abs(end - start)
             coordinate = start if direction == "f" else end
@@ -101,7 +121,7 @@ class FastaFeature(BioParser):
             cf = cmodels.ChromosomeFeature.objects.for_species(self.species).for_wid(wid, create=True)
             cf.comments = description
             cf.save(self.detail)
-            cf.type.add(typ)
+            cf.type.add(snp_type or typ)
             cf.species.add(self.species)
 
             cmodels.FeaturePosition.objects.get_or_create(chromosome_feature=cf,

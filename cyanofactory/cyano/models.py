@@ -2804,16 +2804,6 @@ class ChromosomeFeature(SpeciesComponent):
     #additional fields
     #positions = reverse relation
     def get_as_html_tooltip(self, species, is_user_anonymous):
-        types = map(lambda x: x.wid, self.type.filter(species=species))
-
-        if "SNP" in types:
-            if self.comments:
-                split = self.comments.split("_")
-                if len(split) >= 2:
-                    nucl_subst = "Substitiution of {} with {}".format(split[0], " or ".join(NUCLEOTIDE_SUBSTITUTION[split[1]]))
-                    return nucl_subst
-
-            return self.comments
         return ", ".join(map(str, self.type.filter(species=species)))
 
     #meta information
