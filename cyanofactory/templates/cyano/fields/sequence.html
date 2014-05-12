@@ -26,18 +26,30 @@ var highlight_seq = function(begin, length) {
 
     var amount = (begin - sequence_offset);
 
-    var index = Math.ceil(amount / nucleotide_length);
-    var last_index = Math.ceil((amount + length) / nucleotide_length);
+    if (amount < 0) {
+        if (amount + length >= 0) {
+            length += amount;
+            amount = 0;
+        } else {
+            return;
+        }
+    }
+
+    // | 0 -> cast to int
+    var index = (amount / nucleotide_length) | 0;
+    var last_index = ((amount + length) / nucleotide_length) | 0;
 
     if (index >= 0 && index < nucleotides.length) {
 
         var first_element = $(nucleotides[index]);
 
-        wrap_text(first_element, amount, length);
+        wrap_text(first_element, amount - (index * nucleotide_length), length);
 
         if (index != last_index) {
             var last_element = $(nucleotides[last_index]);
-            wrap_text(last_element, 0, length - (last_index - index) * nucleotide_length);
+            var remaining_length = length - (nucleotide_length - (amount - (index * nucleotide_length)));
+            remaining_length -= (last_index - index - 1) * nucleotide_length;
+            wrap_text(last_element, 0, remaining_length);
         }
 
         for (var i = index + 1; i < last_index; ++i) {
