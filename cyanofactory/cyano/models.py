@@ -2804,7 +2804,7 @@ class ChromosomeFeature(SpeciesComponent):
     #additional fields
     #positions = reverse relation
     def get_as_html_tooltip(self, species, is_user_anonymous):
-        return ", ".join(map(str, self.type.filter(species=species)))
+        return ", ".join(map(lambda x: x.name or x.wid, self.type.filter(species=species)))
 
     #meta information
     class Meta:
@@ -5042,7 +5042,7 @@ class Type(SpeciesComponent):
         for m in self.members.for_species(species):
             members.append(m)
         for c in self.children.for_species(species):
-            members += c.get_all_members()
+            members += c.get_all_members(species)
         return members
 
     #html formatting    
