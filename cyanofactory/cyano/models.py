@@ -1885,7 +1885,6 @@ class Genome(Molecule):
                     transcription_units_index[transcription_unit.wid] = transcription_unit_index
                     num_transcription_units += 1
             else:
-                transcription_unit = None
                 transcription_unit_index = num_transcription_units
                 num_transcription_units += 1
 
@@ -1898,12 +1897,13 @@ class Genome(Molecule):
 
             gene_attrib.direction = gene.direction
 
+            gene_attrib.arrow_size = 0
             if gene.direction == "r" and gene_attrib.x1 + 5 > gene_attrib.x2:
                 gene_attrib.arrow_size = gene_attrib.x2 - gene_attrib.x1
             else:
                 gene_attrib.arrow_size = 5
 
-            #arrow_size = -arrow_size if gene.direction == "f" else arrow_size
+            gene_attrib.arrow_size = -gene_attrib.arrow_size if gene_attrib.direction == "f" else gene_attrib.arrow_size
 
             gene_attrib.x1 = max(chr_attrib.left, min(chr_attrib.right, gene_attrib.x1))
             gene_attrib.x2 = max(chr_attrib.left, min(chr_attrib.right, gene_attrib.x2))
@@ -1915,11 +1915,6 @@ class Genome(Molecule):
                 gene_attrib.label = gene.wid
             else:
                 gene_attrib.label = ''
-
-            gene_attrib.title = (gene.name or gene.wid).replace("'", "\'")
-
-            gene_attrib.text = 'Transcription unit: %s' % ("(None)" if transcription_unit is None else transcription_unit.name or transcription_unit.wid)
-            gene_attrib.text = gene_attrib.text.replace("'", "\'")
 
             gene_attrib.url = gene.get_absolute_url(species)
 
@@ -3153,7 +3148,6 @@ class Gene(Molecule):
             ('Classification', {'fields': ['type']}),
             ('Structure', {'fields': [
                 {'verbose_name': 'New structure', 'name': 'new_structure'},
-                {'verbose_name': 'Structure', 'name': 'structure'},
                 {'verbose_name': 'Sequence', 'name': 'sequence'},
                 {'verbose_name': 'Transcription unit', 'name': 'transcription_units'},
                 {'verbose_name': 'Empirical formula (pH 7.5)', 'name': 'empirical_formula'},

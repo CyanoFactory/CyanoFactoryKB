@@ -41,13 +41,20 @@ var hide_features_func = function(evt) {
         .color-5 { fill:#0acdcd; stroke: #0acdcd; }
         .color-6 { fill:#0860e7; stroke: #0860e7; }
 
+       /* .color-0 { fill:#3d80b3; }
+        .color-1 { fill:#3db34a; }
+        .color-2 { fill:#cd0a0a; }
+        .color-3 { fill:#e78f08; }
+        .color-4 { fill:#b33da6; }
+        .color-5 { fill:#0acdcd; }
+        .color-6 { fill:#0860e7; }*/
+
         .chr text { fill:#222; alignment-baseline:middle; font-size:10px }
         .chr line{ stroke:#666; stroke-width:0.5px; }
         .genes g polygon {}
         .genes g text { text-anchor:middle; alignment-baseline:middle; font-size:8px; fill: #222 }
         .promoters rect { fill:#3d80b3; opacity:0.5 }
         .tfSites rect { fill:#3db34a; opacity:0.5 }
-        .features rect { fill:#cd0a0a; }
     </style>
     <g class="chr">
         <text x="{{ chromosome.left|add:-4 }}" y="{{ chromosome.y }}" style="text-anchor:end;">{{ chromosome.start }}</text>
