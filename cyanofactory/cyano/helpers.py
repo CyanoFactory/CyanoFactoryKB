@@ -1437,7 +1437,7 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
         if issubclass(field_model, cmodels.Entry):
             results = []
             for subvalue in value:
-                results.append('<a href="%s">%s</a>' % (subvalue.get_absolute_url(species, history_id), subvalue.wid))
+                results.append('<a href="%s" title="%s">%s</a>' % (subvalue.get_absolute_url(species, history_id), subvalue.name, subvalue.wid))
             return cmodels.format_list_html(results)        
             
         results = []
@@ -1471,7 +1471,7 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
     elif isinstance(field, ForeignKey):
         if issubclass(field_model, cmodels.Entry):
             if value is not None:
-                return '<a href="%s">%s</a>' % (value.get_absolute_url(species, history_id), value.wid)
+                return format_list_html_url([value], species, history_id)
             else:
                 return ''
         
@@ -1605,9 +1605,13 @@ def format_field_detail_view_diff(species, old_obj, new_obj, field_name, is_user
         import cyano.importer.diff_match_patch as diff
         d = diff.diff_match_patch()
         return diffgen(d.diff_main(old_item, new_item))
-    
-def format_field_detail_view_helper():
-    pass
+
+
+def format_list_html_url(iterable, species, history_id=None):
+    from cyano.models import format_list_html
+    return format_list_html(
+        map(lambda x: '<a href="%s" title="%s">%s</a>' % (x.get_absolute_url(species, history_id), x.name, x.wid), iterable),
+        comma_separated=True)
 
 def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = []):
     model = obj.__class__
