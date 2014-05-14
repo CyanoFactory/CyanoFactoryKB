@@ -72,18 +72,18 @@ def proteingraph(protein_id, limit):
     G = nx.Graph()
     interactions = NodeNodeLinks.objects.filter(node_id_a=protein.protein_id).order_by('-combined_score')[:limit]
     #interactions = NodeNodeLinks.objects.filter(node_id_a=prot.protein_id)
-    G.add_node(protein.protein_id, name=protein.preferred_name, hood=0, geneid=protein.protein_external_id)
+    G.add_node(protein.protein_id, name=protein.preferred_name, hood=0, geneid=protein.protein_external_id, clicked=1, checkbox=1, isselected=0)
     for i in interactions:
         linked = i.node_id_b
         hoodsize = len(NodeNodeLinks.objects.filter(node_id_a=linked))
-        G.add_node(linked, name=Proteins.objects.get(protein_id=linked).preferred_name, hood=hoodsize, geneid=Proteins.objects.get(protein_id=linked).protein_external_id)
+        G.add_node(linked, name=Proteins.objects.get(protein_id=linked).preferred_name, hood=hoodsize, geneid=Proteins.objects.get(protein_id=linked).protein_external_id, clicked=1, checkbox=1, isselected=0)
         scores = getInteractType(
             NodeNodeLinks.objects.get(node_id_a=protein.protein_id, node_id_b=linked).evidence_scores)
         G.add_edge(protein.protein_id, linked, score=i.combined_score,
                    Homology=scores["Homology"], Experiment=scores["Experiment"],
                    Database=scores["Database"], Textmining=scores["Textmining"],
                    Genfusion=scores["Genfusion"], Coocurence=scores["Coocurence"],
-                   Neighborhood=scores["Neighborhood"], Coexpression=scores["Coexpression"])
+                   Neighborhood=scores["Neighborhood"], Coexpression=scores["Coexpression"], clicked=1, checkbox=1)
         maxhood = hoodsize if maxhood < hoodsize else maxhood
         minhood = hoodsize if minhood > hoodsize else minhood
         maxScore = i.combined_score if maxScore < i.combined_score else maxScore
@@ -101,7 +101,7 @@ def proteingraph(protein_id, limit):
                                    Homology=scores["Homology"], Experiment=scores["Experiment"],
                                    Database=scores["Database"], Textmining=scores["Textmining"],
                                    Genfusion=scores["Genfusion"], Coocurence=scores["Coocurence"],
-                                   Neighborhood=scores["Neighborhood"], Coexpression=scores["Coexpression"])
+                                   Neighborhood=scores["Neighborhood"], Coexpression=scores["Coexpression"], clicked=1, checkbox=1)
                         maxScore = link.combined_score if maxScore < link.combined_score else maxScore
                         minScore = link.combined_score if minScore > link.combined_score else minScore
                     except ObjectDoesNotExist:
@@ -125,8 +125,8 @@ def calcColorRange(jsonFile, maxHood, minHood, maxScore, minScore):
                                 '{"color": "green", "value": '+str(minHood+colorrangeNode)+'}, ' \
                                 '{"color": "yellow", "value": '+str(maxHood-colorrangeNode)+'}, ' \
                                 '{"color": "red", "value": '+str(maxHood)+'}]'
-    searchString = '"Experiment": 0'
-    jsonFile = jsonFile.replace(searchString, searchString+', "filterscore": 0')
+    searchString = '"Experiment":'
+    jsonFile = jsonFile.replace(searchString, '"filterscore": 0, '+searchString)
     jsonFile = jsonFile[:-1]+', '+linkcolor+', '+nodecolor+'}'
     return jsonFile
 
@@ -224,10 +224,18 @@ Needs some time and space
 
 
 def getwholenetwork(request):
+    print "Running"
     proteins = Proteins.objects.filter(species_id=1148)
     G = nx.Graph()
+    amount = len(proteins)
+    current = 1
+    i = 0
     for prot in proteins:
-        print prot.preferred_name
+        if current == amount/4:
+            i += current
+            print str(i)+" done"
+            current = 1
+        #print prot.preferred_name
         protid = prot.protein_id
         if not G.has_node(protid):
             G.add_node(protid, name=prot.preferred_name)
@@ -238,8 +246,10 @@ def getwholenetwork(request):
                     G.add_node(interactprot.protein_id, name=interactprot.preferred_name)
                 if not G.has_edge(interactprot, protid):
                     G.add_edge(protid, interactprot.protein_id, score=interact.combined_score)
+        current += 1
     d = json_graph.node_link_data(G)
-    json.dump(d, open('cyanofactory/stringdb/protein_network/cyano.json', 'w'))
+    json.dump(d, open('cyanofactory/stringdb/protein_network_v1/cyano.json', 'w'))
+    print "finish"
     return HttpResponse("Done")
 
 
@@ -340,3 +350,11 @@ def getInteractType(scores):
     interactType["Coocurence"] = (1-((1-interactType["CoocurenceA"]/1000.0)*(1-interactType["CoocurenceB"]/1000.0)))*1000.0
 
     return interactType
+
+def determineDistance(jsonfile, protA, protB):
+    jsondata = json.load(jsonfile)
+    g = json_graph.node_link_graph(jsondata)
+    nProtA = Proteins.objects.get(preferred_name=protA, species_id=1148)
+    nProtB = Proteins.objects.get(preferred_name=protB, species_id=1148)
+    result = nx.shortest_path(g, nProtA.protein_id, nProtB.id)
+    print result

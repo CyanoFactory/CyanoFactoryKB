@@ -37,41 +37,31 @@ Released under the MIT license
 #list{
 	width:100%;
 }
+
 #listfilter{
 	display:none;
 }
 
-#sidebar {
-	position:absolute;
-	right: -200px;
-	width: 200px;
-	margin: 0px -30px;
-	padding: 10px 10px;
-	border: 5px;
-	border:1px solid #3d80b3;
-	border-radius: 8px;
-    color: black;
-    font-weight: normal;
-}
 #search_box {
 	width: 100%;
 	border:1px solid #3d80b3;
 	border-radius:6px;
 }
 
-        .node {
-          stroke: #fff;
-        }
+.node {
+    stroke: #fff;
+}
 
-        .node text {
-          pointer-events: none;
-          stroke: #000;
-          stroke-width: .1px;
-        }
+.node text {
+    pointer-events: none;
+    stroke: #000;
+    stroke-width: .1px;
+}
 
-        .link {
-          stroke-opacity: .4;
-        }
+.link {
+  stroke-opacity: .4;
+}
+
 #checkboxcontainer > .checkboxcontainer_field {display:inline;}
 
 #buttoncontainer > .buttoncontainer_field {display:inline;}
@@ -101,34 +91,52 @@ Released under the MIT license
     display: none;
     }
 #networkvisualization{
+    position: relative;
 	border:1px solid #3d80b3;
     border-radius: 10px;
     margin-bottom: 20px;
     }
+
 .overlay {
     fill: none;
     pointer-events: all;
     }
+
 #content table th, #content table td {
     padding-right: 10px;
     text-align: center;
 }
+
 #detail tbody tr th, #detail tbody tr td {
     padding-left: 2px;
     padding-right: 2px;
     vertical-align: middle;
+}
+
+.interacttable {
+    position:absolute;
+	right: -100px;
+	width: 100px;
+	margin: 200px -30px;
+	padding: 10px 10px;
+
+    color: black;
+    font-weight: normal;
 }
 {% endblock %}
 
 {% block content %}
 
     <div id="networkvisualization">
+        <div id="interacttable" class="interacttable">
+        </div>
         <div id="dialog-progressbar" title="Please wait...">
         <div id="progressbar"></div>
         </div>
 
          <div id="checkboxcontainer" class="checkboxcontainer">
             <h3>Select Source</h3>
+
         </div>
         <div id="helpbox" class="helpbox">
         </div>
@@ -142,9 +150,10 @@ Released under the MIT license
             <input name="+10" type="button" class="demo" value=+10 onclick="expandNetwork(value)"/>
         </div>
 
-        <div id="javascriptcontainer" class="javascriptcontainer">
-        </div>
+        <div id="javascriptcontainer" class="javascriptcontainer"></div>
+
     </div>
+
 
     <script id="network">
 
@@ -211,8 +220,8 @@ Released under the MIT license
                 lrangelist = new Array;
 
             for (var i in help.linkcolor){
-            ldomainlist.push(help.linkcolor[i].value);
-            lrangelist.push(help.linkcolor[i].color);
+                ldomainlist.push(help.linkcolor[i].value);
+                lrangelist.push(help.linkcolor[i].color);
             };
             for (var i in help.nodecolor){
                 ndomainlist.push(help.nodecolor[i].value);
@@ -248,7 +257,8 @@ Released under the MIT license
                 for (var i in help.linkcolor){
                     ldomainlist.push(help.linkcolor[i].value);
                     lrangelist.push(help.linkcolor[i].color);
-                };
+                }
+
                 for (var i in help.nodecolor){
                     ndomainlist.push(help.nodecolor[i].value);
                     nrangelist.push(help.nodecolor[i].color);
@@ -269,8 +279,8 @@ Released under the MIT license
                     .domain(ndomainlist)
                     .range(nrangelist);
 
-                    helplegend.selectAll("rect").remove();
-                    helplegend.selectAll("circle").remove();
+                helplegend.selectAll("rect").remove();
+                helplegend.selectAll("circle").remove();
 
                 var fontsize = "10px",
                 rectx = 90,
@@ -364,19 +374,20 @@ Released under the MIT license
                     .attr("width", width)
                     .attr("height", height)
                     .attr("pointer-events","all")
-                    /** Zoom feature disabled, conflict with drag */
-
-                    //.call(d3.behavior.zoom().on("zoom", zoomed))
+                    /** _!_!_!_ Zoom feature disabled, conflict with drag _!_!_!_ */
+                    .call(d3.behavior.zoom().on("zoom", zoomed))
                     .append("svg:g");
 
-            //svg.append("svg:rect")
-            //        .attr("class", "overlay")
-            //        .attr("width", width)
-            //        .attr("height", height)
-            //        .attr("fill", "white");
+            svg.append("rect")
+                    .attr("class", "overlay")
+                    .attr("width", width)
+                    .attr("height", height)
+                    .attr("fill", "white");
 
             function zoomed(){
-                svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+                if (d3.select(this)){
+                    svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+                }
             }
 
             update(jsonfile);
@@ -424,16 +435,21 @@ Released under the MIT license
                         .attr("id", function(d) { return d.id; })
                         .call(drag)
                         .attr("transform", function(d) { return "translate(" + d + ")"; })
-                        .on("mouseover", nodeOver)
-                        .on("mouseout", nodeOut)
-                        .on("dbclick", dragstop);
+                        //.on("mouseover", nodeOver)
+                        //.on("mouseout", nodeOut)
+                        .on("click", nodeOver);
+                        //.on("dbclick", dragstop);
+
+                var background = svg.select("rect")
+                        .on("click", nodeOut);
 
                 node.append("svg:a")
                 /** #### NEEDS TO BE MODIFIED #### Link to each Node **/
-                        .attr("xlink:href", function(d) {return "http://127.0.0.1:8000/stringdb/interaction/"+d.id+"/"})
+                        //.attr("xlink:href", function(d) {return "http://127.0.0.1:8000/stringdb/interaction/"+d.id+"/"})
                     .append("svg:circle")
                         .attr("r", nodesize)
-                        .style("fill", function(d) { return ncolor(d.hood); });
+                        .style("fill", function(d) { return ncolor(d.hood); })
+                        .style("stroke", "black");
 
                 node.append("text")
                     .attr("dx", ""+(nodesize+7-0.7)+"")
@@ -441,7 +457,6 @@ Released under the MIT license
                     .style("color", "black")
                     .style("font-size", textsize)
                     .text(function(d) { return d.name });
-
 
                 force.on("tick", function() {
                 var qtree = d3.geom.quadtree(nodes),
@@ -464,15 +479,48 @@ Released under the MIT license
             }
 
             function nodeOut() {
-                doHighlight(d3.select(this), false);
+                svg.selectAll(".link").each(function (d){
+                    d.clicked = 1;
+                    d3.select(this).transition().duration(750).style("stroke-opacity", 0.4);
+                })
+
+                var nodesize = calculateNodesize();
+                var fontsize = calculateTextSize();
+                svg.selectAll(".node")
+                        .each( function (d) {
+                            d.isselected = 0;
+                            d.clicked = 1;
+                            d3.select(this).select("circle")
+                                .transition()
+                                .duration(750)
+                                .attr("r", nodesize)
+                                .style("stroke", "white")
+                            d3.select(this).select("text")
+                                .transition()
+                                .duration(750)
+                                .style("font-size", ""+fontsize+"px")
+                            }
+                        );
+                d3.select("#interacttable")
+                                .style("border", 0)
+                                .style("border-radius", 0)
+                                .style("color", 0);
+                d3.select("#interacttable").select("table").remove();
+                setvisible(".node");
+                setvisible(".link");
             }
 
             function nodeOver() {
-                doHighlight(d3.select(this), true);
+                var liste = doHighlight(d3.select(this), true);
+                setvisible(".node");
+                setvisible(".link");
+                d3.select("#interacttable").select("table").remove();
+                showTable(liste);
             }
 
             /** Highlight all links which are bounded with selected Node and hide all others*/
             function doHighlight(node, hl) {
+
                 var nd = node.datum();
                 var opacity = hl ? 0 : 0.4;
                 var oopacity = hl ? 1 : 0.4;
@@ -482,30 +530,117 @@ Released under the MIT license
                 var fontsize = calculateTextSize();
                 var font = hl ? fontsize+Math.exp(1/fontsize*15) : fontsize;
                 var nodeRadius = hl ?  nodesize+nodesize/2: nodesize;
-                var nodecolor = hl ? "lawngreen" : "white";
+                var nodecolor = hl ? "lawngreen" : "black";
                 //var nwidth = hl ? ".5px" : ".1px";
 
+                var protlist = new Array();
+                protlist.push(nd.index);
                 /** show/hide all links which are not connected with the selected node */
                 svg.selectAll(".link")
-                        .filter(function(d) {  return d.source.index != nd.index && d.target.index != nd.index; })
-                        .transition().duration(750).style("stroke-opacity", opacity);
+                        .each(function(d) {
+                            if(d.source.index == nd.index && d.checkbox == 1){
+                                protlist.push(d.target.index);
+                                d.clicked = 1;
+                                d3.select(this).transition().duration(750)
+                                    .style("stroke-opacity", oopacity);
+                            }
+                            else if(d.target.index == nd.index && d.checkbox == 1){
+                                protlist.push(d.source.index);
+                                d.clicked = 1;
+                                d3.select(this).transition().duration(750)
+                                    .style("stroke-opacity", oopacity);
+                            }
+                            else if (d.source.index != nd.index && d.target.index != nd.index){
+                                d.clicked = 0;
+                                d3.select(this).transition().duration(750)
+                                    .style("stroke-opacity", opacity);
+                            }
+                        });
 
-                svg.selectAll(".link")
-                        .filter(function(d) {  return d.source.index == nd.index || d.target.index == nd.index; })
-                        .transition().duration(750).style("stroke-opacity", oopacity);
+
+                svg.selectAll(".node")
+                        .each( function (d) {
+                            d.isselected = 0;
+                            d3.select(this).select("circle")
+                                .transition()
+                                .duration(750)
+                                .attr("r", nodesize)
+                                .style("stroke", "black");
+                            d3.select(this).select("text")
+                                .transition()
+                                .duration(750)
+                                .style("font-size", ""+fontsize+"px");
+                            }
+                        )
+
+
+                var textlist = new Array();
+
+                svg.selectAll(".node")
+                        .each(function (d) {
+                            if(protlist.indexOf(d.index) != -1  && d.checkbox == 1){
+                                textlist.push({name: d.name});
+                                d.clicked = 1;
+                            }
+                            else{
+                                d.clicked = 0;
+                            }
+                            if(d.index == nd.index){
+                                d.isselected = 1;
+                            }
+                        });
 
                 node.select("circle")
-                    .transition()
-                    .duration(750)
-                    .attr("r", nodeRadius)
-                    .style("stroke", nodecolor);
+                    .transition().duration(750)
+                        .attr("r", nodeRadius)
+                        .style("stroke", nodecolor);
                 node.select("text")
-                    .transition()
-                    .duration(750)
-                    .style("font-size", ""+font+"px");
+                    .transition().duration(750)
+                        .style("font-size", ""+font+"px");
+
+                return textlist;
             }
 
-            /** Expanding/Contract the Network based on the Klicked Button */
+            function showTable(list){
+                var table = d3.select("#interacttable")
+                                .style("border", "1px solid #3D80B3")
+                                .style("border-radius", "8px")
+                                .style("color", "black")
+                                .append("table").attr("id", "detail");
+                var thead = table.append("thead").selectAll("th")
+                                .data(["Selected Proteins"])
+                                .enter().append("th").text(function(d) {return d});
+                    tbody = table.append("tbody").attr("class", "data");
+
+                //rows
+                var row = tbody.selectAll("tr")
+                    .data(list)
+                    .enter()
+                    .append("tr");
+
+                // cells
+                var cells = row.selectAll("td")
+                    .data(function(d) {return d3.values(d)})
+                    .enter()
+                    .append("td")
+                    .text(function(d) {
+                            return d});
+            }
+
+            function setvisible(selected){
+                svg.selectAll(selected)
+                        .each(function(d){
+                            var show = 0;
+                            if (d.checkbox == 1 && d.clicked == 1){
+                                show = 1;
+                            }
+                            d3.select(this)
+                                    .transition().duration(750).style("opacity", show);
+
+                        });
+            }
+
+            /** Expanding/Contract the Network based on the clicked Button */
             function expandNetwork(d){
                 var nnumber = +d;
                 var amount = protamount + nnumber;
@@ -528,25 +663,63 @@ Released under the MIT license
 
             /** Changing the opacity of each link depending on link stats, using checkBoxes() */
             function filterLinks(){
-                var listchecked = isCheckboxChecked(),
-                    singleList = new Array();
+                var listchecked = isCheckboxChecked();
 
                 var transition = 1000;
+                var hiddenNodesIndexList = new Array();
                 d3.selectAll(".link")
-                        .filter(function (d) {
-                            return checkBoxes(d);
+                        .each(function (d) {
+                            if (checkBoxes(d)){
+                                d.checkbox = 0;
+                                if (hiddenNodesIndexList.indexOf(d.source.index) == -1){
+                                    hiddenNodesIndexList.push(d.source.index);
+                                }
+                                if (hiddenNodesIndexList.indexOf(d.target.index) == -1){
+                                    hiddenNodesIndexList.push(d.target.index);
+                                }
+                            }
+                            else{
+                                d.checkbox = 1;
+                            }
                         })
-                        .transition().duration(transition).style("opacity", 0);
+
+                var singleList = new Array();
                 var passedlinks = d3.selectAll(".link")
                         .filter(function (d) {
-                            return !checkBoxes(d);
+                            if (!checkBoxes(d)){
+                                var index1 = hiddenNodesIndexList.indexOf(d.source.index);
+                                if(index1 > -1){
+                                    hiddenNodesIndexList.splice(index1, 1);
+                                }
+                                var index2 = hiddenNodesIndexList.indexOf(d.target.index);
+                                if(index2 > -1){
+                                    hiddenNodesIndexList.splice(index2, 1);
+                                }
+                                return true;
+                            }
+                            else{
+                                return false;
+                            }
                         })
-                        .transition().duration(transition).style("opacity", 1)
                         .each(function (d){
                             var scoreList = new Array();
-                            {% for key in list %}
-                                if (d.{{ key }} != 0 && listchecked.indexOf('{{ key }}') != -1) {scoreList.push(d.{{ key }})};
-                            {% endfor %}
+
+                            if (d.Homology != 0 && listchecked.indexOf("Homology") != -1) { scoreList.push(d.Homology) };
+
+                            if (d.Experiment != 0 && listchecked.indexOf("Experiment") != -1) { scoreList.push(d.Experiment) };
+
+                            if (d.Database != 0 && listchecked.indexOf("Database") != -1) { scoreList.push(d.Database) };
+
+                            if (d.Textmining != 0 && listchecked.indexOf("Textmining") != -1) { scoreList.push(d.Textmining) };
+
+                            if (d.Genfusion != 0 && listchecked.indexOf("Genfusion") != -1) { scoreList.push(d.Genfusion) };
+
+                            if (d.Coocurence != 0 && listchecked.indexOf("Coocurence") != -1) { scoreList.push(d.Coocurence) };
+
+                            if (d.Neighborhood != 0 && listchecked.indexOf("Neighborhood") != -1) { scoreList.push(d.Neighborhood) };
+
+                            if (d.Coexpression != 0 && listchecked.indexOf("Coexpression") != -1) { scoreList.push(d.Coexpression) };
+
                             if(scoreList != 0){
                                 var comboscore = 1;
                                 for(var i in scoreList){
@@ -557,28 +730,48 @@ Released under the MIT license
                                 singleList.push(result);
                                 d.filterscore = result;
                             }
-                            console.log("ScoreList "+scoreList);
-
-                            return true;
                         });
+                d3.selectAll(".node")
+                        .each(function (d){
+                            if (hiddenNodesIndexList.indexOf(d.index) == -1){
+                                d.checkbox = 1;
+                            }
+                            else{
+                                d.checkbox = 0;
+                            }
+                        });
+
                 if(singleList != 0){
                     var min = Math.min.apply(Math, singleList),
                         max = Math.max.apply(Math, singleList),
                         range = (max - min)/4;
                     drawhelp(jsonfile , [min, min+range, max-range, max]);
                     passedlinks.style("stroke", function(d) {
-                        console.log(singleList, [min, min+range, max-range, max], d.score, lcolor(d.score));
                         return lcolor(d.filterscore);});
                 }
                 else{
                     drawhelp(jsonfile , []);
                     passedlinks.style("stroke", function(d) { return lcolor(d.score);});
                 }
+
+                svg.selectAll(".node")
+                        .each(function(d){
+                            console.log(d.isselected);
+                            if(d.isselected == 1){
+                                console.log(d);
+                                var list = doHighlight(d3.select(this), true);
+                                d3.select("#interacttable").select("table").remove();
+                                showTable(list);
+                            }
+                        })
+                setvisible(".node");
+                setvisible(".link");
             }
 
+            /** Giving the name of Selected Checkboxes */
             function isCheckboxChecked(){
                 var listchecked = new Array
-                var boxes = d3.selectAll("input")
+                d3.selectAll("input")
                         .each(function (d) {
                             if (this.checked){
                                 listchecked.push(d)
@@ -609,6 +802,7 @@ Released under the MIT license
 
             /** dragging nodes ends with pin the node to specific place */
             function dragstart(d){
+                d3.event.sourceEvent.stopPropagation();
                 d3.select(this).classed("fixed", d.fixed = true)
             }
 
@@ -648,6 +842,7 @@ Released under the MIT license
                 return 1/protamount*20
             }
 
+            /** dynamical calculation Linkstrengt */
             function calculateTextSize(){
                 return 1/protamount*150
             }
@@ -676,24 +871,6 @@ Released under the MIT license
                     }
                     return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
                 };
-            }
-
-            function calcComboScore(scoreList){
-                var comboscore = 1;
-
-                for(var score in scoreList){
-                    comboscore = comboscore*(1-score/1000);
-                }
-                return comboscore;
-            }
-
-            function updateLegendCheckbox(allScores){
-                var min = Math.min(allScores),
-                    max = Math.max(allScores),
-                    range = (max - min)/4;
-
-                var list = [min, min+range, max-range, max];
-                return list;
             }
 
             /** Creates Buttons for Selecting Size of Network - NOT WORKING CORRECT, NOT ENABLED*/
