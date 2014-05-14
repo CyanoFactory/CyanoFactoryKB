@@ -57,6 +57,36 @@ def index(request):
     count = proteincount
     return HttpResponse("Min: " + str(linkcount_min) + " Max: " + str(linkcount_max))
 
+
+def checkInteractionRequest(request):
+    json_file = proteingraph(request.GET["protid"], 10)
+    interactions = listInteractions(request.GET["protid"])
+    prot = Proteins.objects.get(protein_id=request.GET["protid"]).annotation
+    if prot.__contains__(";"):
+        name, rest = prot.split(";", 1)
+    else:
+        name = prot
+
+    if request.is_ajax():
+        template = "stringdb/list_page.html"
+    else:
+        template = "stringdb/index.html"
+    return render_queryset_to_response(
+        request=request,
+        template=template,
+        data={
+            'protid': request.GET["protid"],
+            'prot_name': Proteins.objects.get(protein_id=request.GET["protid"]).preferred_name,
+            'interacts': interactions,
+            'name': name,
+            'list': ["Homology", "Experiment", "Database", "Textmining",
+                     "Genfusion", "Coocurence", "Neighborhood", "Coexpression"],
+            'json': json_file,
+            'limit': 10
+        }
+    )
+
+
 @ajax_required
 def onlygraph(request):
     json = proteingraph(request.GET["protid"], request.GET["amount"])

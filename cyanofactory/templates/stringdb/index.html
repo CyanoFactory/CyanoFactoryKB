@@ -494,7 +494,7 @@ Released under the MIT license
                                 .transition()
                                 .duration(750)
                                 .attr("r", nodesize)
-                                .style("stroke", "white")
+                                .style("stroke", "black")
                             d3.select(this).select("text")
                                 .transition()
                                 .duration(750)
@@ -610,7 +610,15 @@ Released under the MIT license
                 var thead = table.append("thead").selectAll("th")
                                 .data(["Selected Proteins"])
                                 .enter().append("th").text(function(d) {return d});
-                    tbody = table.append("tbody").attr("class", "data");
+                var tbody = table.append("tbody").attr("class", "data");
+
+                thead
+                    .style("border-radius", "6px 6px 0 0" )
+                    .style("width", "10%")
+                    .style("background", "#3D80B3")
+                    .style("border", "1px solid #3D80B3")
+                    .style("color", "#FFFFFF")
+                    .style("padding", "2px");
 
                 //rows
                 var row = tbody.selectAll("tr")
@@ -624,7 +632,20 @@ Released under the MIT license
                     .enter()
                     .append("td")
                     .text(function(d) {
-                            return d});
+                            return d})
+                    .html(function(d) {
+                            var ad = d,
+                                id = 0;
+                            svg.selectAll(".node")
+                                    .each(function(d){
+                                        console.log(d.name, ad)
+                                        if(d.name == ad ){
+                                            id = d.id;
+                                        }
+                                    });
+                            var url = "{% url "stringdb.views.checkInteractionRequest" %}?protid="+id;
+                            return"<a href="+url+">"+ d +"</a>"
+                        });
             }
 
             function setvisible(selected){

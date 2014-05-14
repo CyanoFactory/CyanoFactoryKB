@@ -8,5 +8,6 @@ urlpatterns = patterns('',
     url(r'^interaction/(?P<protID>\d+)/$', views.checkInteraction),
     url(r'^interaction/(?P<protID>\d+)_(?P<limit>\d+)/$', views.checkInteraction),
     url(r'^interaction/ajax/$', views.onlygraph),
+    url(r'^interaction/request/$', views.checkInteractionRequest),
     url(r'^whole', views.getwholenetwork)
 )
