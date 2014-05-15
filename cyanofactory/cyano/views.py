@@ -510,7 +510,7 @@ def listing(request, species, model):
             if value is not None and unicode(value) != '':
                 facets.append({
                     'id': unicode(id_), 
-                    'name': unicode(name),
+                    'name': unicode(name or id_),
                     'count': facet['count']})
         if len(facets) > 1:
             facet_fields.append({ 
