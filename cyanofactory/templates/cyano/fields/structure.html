@@ -1,3 +1,18 @@
+<style>
+#listfilter {
+	position:absolute;
+	right: -200px;
+	width: 200px;
+	margin: 0px -10px;
+}
+
+.feature-checkbox+label {
+    margin: .5em;
+    width:16px;
+    height:16px;
+    vertical-align:middle;
+}
+</style>
 <script>
 var old_target = "";
 var tooltip_response = "";
@@ -7,7 +22,7 @@ var tooltip_func = function(evt, name, target) {
 
         $.ajax({
             url: target,
-            context: document.body,
+            context: document.body
         }).done(function(x) {
             tooltip_response = x;
 
@@ -26,16 +41,61 @@ var hide_features_func = function(evt) {
     hideToolTip(evt);
     highlight_seq(0, 0);
 }
+
+function createCheckBox(ele, i) {
+    var newID = "cbx-"+i;
+    ele.attr({ "id": newID  })
+        .prop({ "type": "checkbox" })
+        .after($("<label />").attr({ for: newID  }).addClass("color-" + ele.data("color")))
+        .button({ text: false })
+        .click(function(e) {
+            $(this).button("option", {
+                icons: {
+                    primary: $(this)[0].checked ? "ui-icon-check" : ""
+                }
+            });
+            $(this).next().css("opacity", $(this)[0].checked ? "1" : "0.25")
+        });
+    return ele;
+}
+
+$(document).ready(function() {
+    $("#listfilter").find("input:checked").change(function() {
+        var features = $("svg").find("g.features > a").children().filter("[data-type=" + $(this).data("type") + "]");
+
+        if ($(this).is(":checked")) {
+            features.show();
+        } else {
+            features.hide();
+        }
+    });
+
+    $(".feature-checkbox").each(function(i) {
+        var newCheckBox = createCheckBox($(this), i);
+        newCheckBox.click();
+        newCheckBox.click();
+    });
+});
 </script>
+<div id="listfilter">
+<h1>Structure Filter</h1>
+<div id="block">
+{% for type in types %}
+    <input class="feature-checkbox" name="feature_{{ type.pk }}" type="checkbox" checked="checked" data-type="{{ type.pk }}" data-color="{{ type.color }}" />
+    <label for="feature_{{ type.pk }}">{{ type.get_name_or_wid }}</label>
+    <br>
+{% endfor %}
+</div>
+</div>
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{{ width }}" height="{{ height }}" viewport="0 0 {{ width }} {{ height }}">
     <style>
-        .color-0 { fill:#3d80b3; stroke: #3d80b3; }
-        .color-1 { fill:#3db34a; stroke: #3db34a; }
-        .color-2 { fill:#cd0a0a; stroke: #cd0a0a; }
-        .color-3 { fill:#e78f08; stroke: #e78f08; }
-        .color-4 { fill:#b33da6; stroke: #b33da6; }
-        .color-5 { fill:#0acdcd; stroke: #0acdcd; }
-        .color-6 { fill:#0860e7; stroke: #0860e7; }
+        {% with "#3d80b3" as color %} .color-0 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#3db34a" as color %} .color-1 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#cd0a0a" as color %} .color-2 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#e78f08" as color %} .color-3 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#b33da6" as color %} .color-4 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#0acdcd" as color %} .color-5 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#0860e7" as color %} .color-6 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
 
         .chr text { fill:#222; alignment-baseline:middle; font-size:10px }
         .chr line{ stroke:#666; stroke-width:0.5px; }
@@ -157,6 +217,7 @@ var hide_features_func = function(evt) {
                   onmouseout="hide_features_func(evt);"
                   data-coordinate="{{ feature.coordinate }}"
                   data-length="{{ feature.length }}"
+                  data-type="{{ feature.type.pk }}"
                   style="
                   {% if feature.opacity %}
                   opacity: {{ feature.opacity }};

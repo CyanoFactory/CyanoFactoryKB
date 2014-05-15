@@ -1317,6 +1317,9 @@ class Entry(AbstractEntry):
     def natural_key(self):
         return self.wid
 
+    def get_name_or_wid(self):
+        return self.name or self.wid
+
     def save(self, revision_detail, *args, **kwargs):
         # Optimized to reduce number of database accesses to a minimum
 
@@ -2252,6 +2255,10 @@ class Genome(Molecule):
             .values_list("chromosome_feature__type", flat=True).distinct()
         )
 
+        all_features_types_count = dict(map(lambda x: [x, 0], all_feature_type_pks))
+
+        types = []
+
         for i, gene in enumerate(genes_list):
             if len(gene.transcription_units.all()[:1]) == 1:
                 transcription_unit = gene.transcription_units.all()[:1][0]
@@ -2326,8 +2333,16 @@ class Genome(Molecule):
             if isinstance(typ, basestring):
                 feature_attrib.text = typ
             else:
+                if typ and all_features_types_count[typ.id] == 0:
+                    types.append(typ)
+                    all_features_types_count[typ.id] = 1
+                else:
+                    all_features_types_count[None] = 1
                 feature_attrib.text = (typ.name or typ.wid) if typ else ''
                 feature_attrib.color = all_feature_type_pks.index(typ.pk if typ else None) % num_colors
+                if typ:
+                    typ.color = feature_attrib.color
+                feature_attrib.type = typ
 
             feature_attrib.url = url
             new_item = [feature_attrib.x, feature_attrib.x + feature_attrib.width]
@@ -2407,7 +2422,8 @@ class Genome(Molecule):
             'features': features,
             'promoters': promoters,
             'tf_sites': tf_sites,
-            'highlight_wid': highlight_wid
+            'highlight_wid': highlight_wid,
+            'types': types
         })
 
         template = loader.get_template("cyano/fields/structure.html")
