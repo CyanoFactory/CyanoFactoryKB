@@ -102,11 +102,15 @@ def proteingraph(protein_id, limit):
     G = nx.Graph()
     interactions = NodeNodeLinks.objects.filter(node_id_a=protein.protein_id).order_by('-combined_score')[:limit]
     #interactions = NodeNodeLinks.objects.filter(node_id_a=prot.protein_id)
-    G.add_node(protein.protein_id, name=protein.preferred_name, hood=0, geneid=protein.protein_external_id, clicked=1, checkbox=1, isselected=0)
+    G.add_node(protein.protein_id, name=protein.preferred_name, hood=0, geneid=protein.protein_external_id, clicked=1,
+               checkbox=1, isselected=0, annotation=protein.annotation)
     for i in interactions:
         linked = i.node_id_b
+        linkedprot = Proteins.objects.get(protein_id=linked)
         hoodsize = len(NodeNodeLinks.objects.filter(node_id_a=linked))
-        G.add_node(linked, name=Proteins.objects.get(protein_id=linked).preferred_name, hood=hoodsize, geneid=Proteins.objects.get(protein_id=linked).protein_external_id, clicked=1, checkbox=1, isselected=0)
+        G.add_node(linked, name=linkedprot.preferred_name, hood=hoodsize,
+                   geneid=linkedprot.protein_external_id, clicked=1, checkbox=1,
+                   isselected=0, annotation=linkedprot.annotation)
         scores = getInteractType(
             NodeNodeLinks.objects.get(node_id_a=protein.protein_id, node_id_b=linked).evidence_scores)
         G.add_edge(protein.protein_id, linked, score=i.combined_score,
@@ -131,7 +135,8 @@ def proteingraph(protein_id, limit):
                                    Homology=scores["Homology"], Experiment=scores["Experiment"],
                                    Database=scores["Database"], Textmining=scores["Textmining"],
                                    Genfusion=scores["Genfusion"], Coocurence=scores["Coocurence"],
-                                   Neighborhood=scores["Neighborhood"], Coexpression=scores["Coexpression"], clicked=1, checkbox=1)
+                                   Neighborhood=scores["Neighborhood"], Coexpression=scores["Coexpression"], clicked=1,
+                                   checkbox=1)
                         maxScore = link.combined_score if maxScore < link.combined_score else maxScore
                         minScore = link.combined_score if minScore > link.combined_score else minScore
                     except ObjectDoesNotExist:

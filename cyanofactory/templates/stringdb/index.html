@@ -22,6 +22,7 @@ Released under the MIT license
 <script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless_on_scroll.js"></script>
 <script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
 <script src="{% get_static_prefix %}stringdb/d3/d3.v3.min.js"></script>
+<script src="{% get_static_prefix %}stringdb/d3-tip.js"></script>
 <script type="text/javascript">
 {% include "kegg/script.js" %}
 </script>
@@ -122,6 +123,15 @@ Released under the MIT license
 
     color: black;
     font-weight: normal;
+}
+
+.d3-tip {
+  line-height: 1;
+  font-weight: bold;
+  padding: 12px;
+  background: #3d7fb2;
+  color: #fff;
+  border-radius: 2px;
 }
 {% endblock %}
 
@@ -602,6 +612,20 @@ Released under the MIT license
             }
 
             function showTable(list){
+                var tip = d3.tip()
+                    .attr("class", "d3-tip")
+                    .offset([-10, -100])
+                    .html(function(d) {
+                        var ad = d;
+                        var selectedd = d;
+                        svg.selectAll(".node")
+                                .each(function(d){
+                                    if(ad == d.name){
+                                        selectedd = d;
+                                    }
+                                })
+                        return selectedd.name +" - "+selectedd.annotation;
+                    });
                 var table = d3.select("#interacttable")
                                 .style("border", "1px solid #3D80B3")
                                 .style("border-radius", "8px")
@@ -631,22 +655,43 @@ Released under the MIT license
                     .data(function(d) {return d3.values(d)})
                     .enter()
                     .append("td")
-                    .text(function(d) {
-                            return d})
-                    .html(function(d) {
-                            var ad = d,
-                                id = 0;
-                            svg.selectAll(".node")
-                                    .each(function(d){
-                                        console.log(d.name, ad)
-                                        if(d.name == ad ){
-                                            id = d.id;
-                                        }
-                                    });
-                            var url = "{% url "stringdb.views.checkInteractionRequest" %}?protid="+id;
-                            return"<a href="+url+">"+ d +"</a>"
-                        });
+                    .append("svg")
+                            .attr("width", 50)
+                            .attr("height", 30)
+                            .attr("fill", "blue")
+                            .call(tip)
+                            .on('mouseover', tip.show)
+                            .on('mouseout', tip.hide)
+                            .append("svg:a")
+                                .attr("xlink:href", function(d){
+                                        var ad = d,
+                                            id = 0;
+                                        svg.selectAll(".node")
+                                            .each(function(d){
+                                                if(d.name == ad ){
+                                                    id = d.id;
+                                                }
+                                        })
+                                        var url = "{% url "stringdb.views.checkInteractionRequest" %}?protid="+id;
+                                        console.log(url);
+                                        return url;
+                                })
+                                .append("text")
+                                    .attr("x", 0)
+                                    .attr("y", 20)
+                                    .text(function (d){return d})
+                                    .attr("fill", "black")
+                                    .attr("font-size", "14px")
+                                    .on('mouseover', function(){
+                                        d3.select(this).attr("fill", "blue");
+                                        })
+                                    .on('mouseout', function(){
+                                        d3.select(this).attr("fill", "black");
+                                       });
+
             }
+
+
 
             function setvisible(selected){
                 svg.selectAll(selected)
