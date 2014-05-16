@@ -117,6 +117,16 @@ Released under the MIT license
                 return this.name + " [" + this.constraints.join(", ") + "]";
             }
         }
+
+        this.convertToFloat = function() {
+            this.constraints[0] = parseFloat(this.constraints[0]);
+            if (this.constraints[1] !== null) {
+                this.constraints[1] = parseFloat(this.constraints[1]);
+            }
+
+            this.stoichiometric_substrates = this.stoichiometric_substrates.map(parseFloat);
+            this.stoichiometric_products = this.stoichiometric_products.map(parseFloat);
+        }
     }
 
     function Metabolite(name, external) {
@@ -396,6 +406,32 @@ Released under the MIT license
             dialog_metabolite_add.dialog("open");
         }
 
+        function saveEnzyme(enzyme) {
+            var name = dialog_enzyme.find(".name");
+            var reversible = dialog_enzyme.find("#reversible");
+            var constrained = dialog_enzyme.find("#constrained");
+            var constrained_min = dialog_enzyme.find("#constrained-min");
+            var constrained_max = dialog_enzyme.find("#constrained-max");
+            var substrates = dialog_enzyme.find("div#reaction-substrates");
+            var products = dialog_enzyme.find("div#reaction-products");
+
+            enzyme.name = name.val();
+            enzyme.reversible = reversible.prop("checked");
+            if (constrained.prop("checked")) {
+                enzyme.constraints[0] = constrained_min.val();
+                enzyme.constraints[1] = constrained_max.val();
+            } else {
+                enzyme.makeUnconstrained();
+            }
+
+            substrates.find("input.ui-spinner-input").each(function(index, value) {
+                enzyme.stoichiometric_substrates[index] = $(value).val();
+            });
+            products.find("input.ui-spinner-input").each(function(index, value) {
+                enzyme.stoichiometric_products[index] = $(value).val();
+            });
+        }
+
         dialog_enzyme.dialog({
             autoOpen: false,
             height: 300,
@@ -430,38 +466,31 @@ Released under the MIT license
                     bValid &= checkLength($(this), name, "Name", 1, 50);
 
                     if (constrained.prop("checked")) {
-                        bValid &= checkRegexp($(this), constrained_min, numeric, "Min constraint must be numeric");
-                        bValid &= checkRegexp($(this), constrained_max, numeric, "Max constraint must be numeric");
+                        var cmin_float = isFinite(parseFloat(constrained_min.val()));
+                        var cmax_float = isFinite(parseFloat(constrained_max.val()));
+                        bValid &= checkBool($(this), constrained_min, cmin_float, "Min constraint must be numeric");
+                        bValid &= checkBool($(this), constrained_max, cmax_float, "Max constraint must be numeric");
                         if (bValid) {
-                            bValid &= checkBool($(this), constrained_min, constrained_min.val() <= constrained_max.val(), "Min constraint > Max constraint");
+                            bValid &= checkBool($(this), constrained_min, parseFloat(constrained_min.val()) <= parseFloat(constrained_max.val()), "Min constraint > Max constraint");
                         }
                     }
 
                     substrates.find("input.ui-spinner-input").each(function(index, value) {
-                        bValid &= checkRegexp(self, $(value), numeric, "Stoichiometry must be numeric");
+                        var is_float = isFinite(parseFloat($(value).val()));
+                        bValid &= checkBool(self, $(value), is_float, "Stoichiometry must be numeric");
                     });
                     products.find("input.ui-spinner-input").each(function(index, value) {
-                        bValid &= checkRegexp(self, $(value), numeric, "Stoichiometry must be numeric");
+                        var is_float = isFinite(parseFloat($(value).val()));
+                        bValid &= checkBool(self, $(value), is_float, "Stoichiometry must be numeric");
                     });
 
                     if (bValid) {
                         var reaction = $(this).data("object");
-                        reaction.backup = undefined;
-                        reaction.name = name.val();
-                        reaction.reversible = reversible.prop("checked");
-                        if (constrained.prop("checked")) {
-                            reaction.constraints[0] = constrained_min.val();
-                            reaction.constraints[1] = constrained_max.val();
-                        } else {
-                            reaction.makeUnconstrained();
-                        }
 
-                        substrates.find("input.ui-spinner-input").each(function(index, value) {
-                            reaction.stoichiometric_substrates[index] = $(value).val();
-                        });
-                        products.find("input.ui-spinner-input").each(function(index, value) {
-                            reaction.stoichiometric_products[index] = $(value).val();
-                        });
+                        saveEnzyme(reaction);
+                        reaction.convertToFloat();
+
+                        reaction.backup = undefined;
 
                         if (create_new_enzyme) {
                             enzymes.push(reaction);
@@ -562,13 +591,16 @@ Released under the MIT license
             showEnzymeDialog(new Enzyme(""), true);
         });
         $("#add-substrate-button").click(function (event) {
+            saveEnzyme(dialog_enzyme.data("object"));
             showAddMetaboliteDialog(dialog_enzyme.data("object"), true);
         });
         $("#add-product-button").click(function (event) {
+            saveEnzyme(dialog_enzyme.data("object"));
             showAddMetaboliteDialog(dialog_enzyme.data("object"), false);
         });
         dialog_enzyme.on("click", "div.cyano-metabolite", function(event) {
             var item = $(event.target).data("object");
+            saveEnzyme(dialog_enzyme.data("object"));
             dialog_metabolite_edit.find("input.name").val(item.name);
             dialog_metabolite_edit.find("#external").prop("checked", item.external);
             dialog_metabolite_edit.data("object", item);
@@ -599,7 +631,7 @@ Released under the MIT license
             dialog_enzyme.data("substrates_del").push(index);
             target.parent().remove();
         })
-dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(event) {
+        dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(event) {
             var target = $(event.target);
             var index = target.data("count");
             dialog_enzyme.data("products_del").push(index);
