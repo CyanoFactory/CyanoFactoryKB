@@ -520,7 +520,7 @@ def listing(request, species, model):
                 })
     
         #filter
-        val = request.GET.get(field_full_name)        
+        val = request.GET.get(field_full_name)
         if val:
             if isinstance(field, (ForeignKey, ManyToManyField)):
                 kwargs = {field_full_name + '__wid': val}

@@ -82,7 +82,7 @@ $(document).ready(function() {
 <div id="block">
 {% for type in types %}
     <input class="feature-checkbox" name="feature_{{ type.pk }}" type="checkbox" checked="checked" data-type="{{ type.pk }}" data-color="{{ type.color }}" />
-    <label for="feature_{{ type.pk }}">{{ type.get_name_or_wid }}</label>
+    <label for="feature_{{ type.pk }}">{% if type.name %}{{ type.name }}{% else %}{{ type.wid }}{% endif %}</label>
     <br>
 {% endfor %}
 </div>
@@ -105,9 +105,11 @@ $(document).ready(function() {
         .tfSites rect { fill:#3db34a; opacity:0.5 }
     </style>
     <g class="chr">
+        {% for chromosome in chromosomes %}
         <text x="{{ chromosome.left|add:-4 }}" y="{{ chromosome.y }}" style="text-anchor:end;">{{ chromosome.start }}</text>
         <line x1="{{ chromosome.left }}" x2="{{ chromosome.right }}" y1="{{ chromosome.y }}" y2="{{ chromosome.y }}"></line>
         <text x="{{ chromosome.right|add:2 }}" y="{{ chromosome.y }}" style="text-anchor:start;">{{ chromosome.end }}</text>
+        {% endfor %}
     </g>
     <g class="genes">
         {% for gene in genes %}
@@ -140,7 +142,7 @@ $(document).ready(function() {
                             {% endif %}"
                          onmousemove="tooltip_func(evt, '{{ gene.title }}', '{% url 'cyano.views.detail_field' species_wid=species.wid model_type="Gene" wid=gene.wid %}?name=tooltip&strip=1')"
                          onmouseout="hideToolTip(evt);"
-                         {% if gene.wid in highlight_wid %}
+                         {% if highlight_all or gene.wid in highlight_wid %}
                          style="fill-opacity: 0.75; stroke-opacity: 1; stroke-width: 3px"
                          {% else %}
                          style="fill-opacity: 0.15; stroke-opacity: 0.35; stroke-width: 1px"
@@ -168,7 +170,7 @@ $(document).ready(function() {
                   onmousemove="showToolTip(evt, '{{ promoter.title }}', '{{ promoter.text }}')"
                   onmouseout="hideToolTip(evt);"
                   style="
-                  {% if promoter.wid in highlight_wid %}
+                  {% if highlight_all or promoter.wid in highlight_wid %}
                   opacity: 1;
                   {% else %}
                   opacity: 0.25;

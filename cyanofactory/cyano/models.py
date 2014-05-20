@@ -1836,209 +1836,167 @@ class Genome(Molecule):
             return self.get_as_html_structure_local(species, is_user_anonymous, start_coordinate = start_coordinate, end_coordinate = end_coordinate, highlight_wid = highlight_wid)
 
     def get_as_html_structure_global(self, species, is_user_anonymous):
+        import time
+
         from .helpers import shift, overlaps
         from collections import namedtuple
-        from cyano.string_template import Loader as StringTemplateLoader
 
-        ntPerSegment = 1e4
-        segmentHeight = 27
-        geneHeight = 10
-        featureHeight = 5
-        nSegments = int(math.ceil(self.length / ntPerSegment))
+        attrib_class = type(str("StructureAttribClass"), (object,), dict())
+
+        chr_attrib = attrib_class()
+
         W = 636
-        segmentLeft = 35
-        segmentW = W - 4 - segmentLeft
-        oneNtW = segmentW / ntPerSegment
-        segmentWLast = (self.length - ntPerSegment * (nSegments - 1)) * oneNtW
-        chrTop = -12
-        feature_draw = [[] for x in range(nSegments)]
-        row_offset = []
-        gene_template = StringTemplateLoader().load_template("cyano/genome/draw_gene.tmpl")[0]
-        feature_template_rect = StringTemplateLoader().load_template("cyano/genome/draw_feature_rect.tmpl")[0]
-        feature_template_triangle = StringTemplateLoader().load_template("cyano/genome/draw_feature_triangle.tmpl")[0]
+
+        chr_attrib.nt_per_segment = 1e4
+        chr_attrib.height = 27
+        gene_height = 10
+        feature_height = 5
+        num_colors = 7
+        num_segments = int(math.ceil(self.length / chr_attrib.nt_per_segment))
+        chr_attrib.left = 35
+        chr_attrib.width = W - 4 - chr_attrib.left
+        chr_attrib.one_nt_width = chr_attrib.width / chr_attrib.nt_per_segment
+        chr_attrib.last_width = (self.length - chr_attrib.nt_per_segment * (num_segments - 1)) * chr_attrib.one_nt_width
+        chr_attrib.top = -12
+
         fake_gene = Gene(model_type=TableMeta.get_by_model_name("Gene"))
         fake_cf = ChromosomeFeature(model_type=TableMeta.get_by_model_name("ChromosomeFeature"))
 
-        #style
-        colors = ['3d80b3', '3db34a', 'cd0a0a', 'e78f08', 'b33da6', '0acdcd', '0860e7']
-        style = ''
-        for i in range(len(colors)):
-            style += '.color-%s{fill:#%s; stroke: #%s;}' % (i, colors[i], colors[i], )
-
-        #chromosome
-        chrStyle = '\
-            .chr text{fill:#222; text-anchor:end; alignment-baseline:middle; font-size:10px}\
-            .chr line{stroke:#666; stroke-width:0.5px;}\
-        '
-
-        #genes
-        geneStyle = '\
-            .genes g polygon{stroke-width:1px; fill-opacity:0.5;}\
-            .genes g text{text-anchor:middle; alignment-baseline:middle; font-size:8px; fill: #222}\
-        '
-
-        genes = StringIO.StringIO()
+        # data
+        chromosomes = []
+        genes = [[] for x in range(num_segments)]
+        features = [[] for x in range(num_segments)]
+        promoters = [[] for x in range(num_segments)]
+        tf_sites = [[] for x in range(num_segments)]
 
         GeneTuple = namedtuple("GeneTuple", "name wid coordinate direction length transcription_units transcription_units__wid transcription_units__name")
 
-        genesList = map(GeneTuple._make, self.genes.values_list(
+        # TUs
+        num_transcription_units = 0
+        transcription_units_index = {}
+        transcription_units = []
+
+        genes_list = map(GeneTuple._make, self.genes.values_list(
             "name", "wid", "coordinate", "direction", "length",
             "transcription_units", "transcription_units__wid", "transcription_units__name").all())
 
-        nTus = 0
-        iTUs = {}
-        tus = []
-
         all_feature_type_pks = [None] + list(self.features.prefetch_related("chromosome_feature").values_list("chromosome_feature__type", flat=True).distinct())
 
-        def draw_gene(gene, tu):
-            iSegment = math.floor((gene.coordinate - 1) / ntPerSegment)
+        all_features_types_count = dict(map(lambda x: [x, 0], all_feature_type_pks))
 
-            tip_title = gene.name or gene.wid
-            tip_text = 'Transcription unit: %s' % (tu or "(None)")
+        types = []
+
+        def draw_gene(gene, tu):
+            segment_index = int(math.floor((gene.coordinate - 1) / chr_attrib.nt_per_segment))
+
+            #tip_text = 'Transcription unit: %s' % (tu or "(None)")
 
             fake_gene.wid = gene.wid
-            gene_abs_url = fake_gene.get_absolute_url(species)
+            url = fake_gene.get_absolute_url(species)
 
-            tip_title = tip_title.replace("'", "\'")
-            tip_text = tip_text.replace("'", "\'")
-
-            context_dict = {'title': tip_title,
-                            'text': tip_text,
-                            'url': gene_abs_url,
-                            'color': iTu % len(colors)}
+            title = (gene.name or gene.wid).replace("'", "\'")
 
             ret = []
 
-            segments = shift(range(nSegments), int(iSegment))
+            segments = shift(range(num_segments), int(segment_index))
 
             w_drawn = 0
 
             for i in itertools.cycle(segments):
-                context_dict.update({'direction': gene.direction})
+                gene_attrib = attrib_class()
+                gene_attrib.url = url
+                gene_attrib.title = title
+                gene_attrib.wid = gene.wid
 
-                if i == iSegment:
-                    x1 = segmentLeft + ((gene.coordinate - 1) % ntPerSegment) / ntPerSegment * segmentW
+                gene_attrib.direction = gene.direction
+
+                gene_attrib.color = transcription_unit_index % num_colors
+
+                if i == segment_index:
+                    gene_attrib.x1 = chr_attrib.left + ((gene.coordinate - 1) % chr_attrib.nt_per_segment) / chr_attrib.nt_per_segment * chr_attrib.width
                 else:
-                    x1 = segmentLeft
+                    gene_attrib.x1 = chr_attrib.left
 
-                w_needed = gene.length / ntPerSegment * segmentW - w_drawn
+                w_needed = gene.length / chr_attrib.nt_per_segment * chr_attrib.width - w_drawn
 
                 row = i + 1
-                if row == nSegments:
-                    w_space = segmentLeft + segmentWLast - x1
+                if row == num_segments:
+                    w_space = chr_attrib.left + chr_attrib.last_width - gene_attrib.x1
                 else:
-                    w_space = segmentLeft + segmentW - x1
+                    w_space = chr_attrib.left + chr_attrib.width - gene_attrib.x1
 
-                y2 = chrTop + row_offset[i] + geneHeight - 2
-                y1 = y2 - geneHeight
+                gene_attrib.y2 = chr_attrib.top + gene_height - 2  # + row_offset[i]
+                gene_attrib.y1 = gene_attrib.y2 - gene_height
 
                 if w_space < w_needed:
                     # Not enough space left on line
 
                     w = max(1, w_space)
                     w_drawn += w
-                    x2 = x1 + w
+                    gene_attrib.x2 = gene_attrib.x1 + w
 
-                    if math.fabs(x2 - x1) > len(gene.wid) * 5:
-                        label = gene.wid
+                    if math.fabs(gene_attrib.x2 - gene_attrib.x1) > len(gene.wid) * 5:
+                        gene_attrib.label = gene.wid
                     else:
-                        label = ''
+                        gene_attrib.label = ''
 
-                    if gene.direction == "f" or iSegment == i:
-                        if gene.direction == "r" and x1 + 5 > x2:
-                            arrow_size = x2 - x1
+                    if gene.direction == "f" or segment_index == i:
+                        if gene.direction == "r" and gene_attrib.x1 + 5 > gene_attrib.x2:
+                            gene_attrib.arrow_size = gene_attrib.x2 - gene_attrib.x1
                         else:
-                            arrow_size = 5
+                            gene_attrib.arrow_size = 5
+                        gene_attrib.arrow = True
 
-                        if gene.direction == "f":
-                            x1_arrow = x1
-                            x2_arrow = x2
-                        else:
-                            x1_arrow = x1 + arrow_size
-                            x2_arrow = x2
-                    else:
-                        x1_arrow, x2_arrow = x1, x2
-
-                    context_dict.update({'x1': x1,
-                                         'x2': x2,
-                                         'y1': y1,
-                                         'y2': y2,
-                                         'x1_arrow': x1_arrow,
-                                         'x2_arrow': x2_arrow,
-                                         'x_middle': (x1 + x2) / 2,
-                                         'y_middle': (y1 + y2) / 2,
-                                         'label': label,
-                                         'color': iTu % len(colors)
-                                         })
-                    ret.append(gene_template.render(Context(context_dict)))
+                    genes[i].append(gene_attrib)
                 else:
                     w = w_needed
-                    x2 = x1 + w
-                    if math.fabs(x2 - x1) > len(gene.wid) * 5:
-                        label = gene.wid
+                    gene_attrib.x2 = gene_attrib.x1 + w
+                    if math.fabs(gene_attrib.x2 - gene_attrib.x1) > len(gene.wid) * 5:
+                        gene_attrib.label = gene.wid
                     else:
-                        label = ''
+                        gene_attrib.label = ''
 
-                    if gene.direction == "f" or iSegment == i:
-                        if x2 - 5 < x1:
-                            arrow_size = abs(x1 - x2)
+                    if gene.direction == "f" or segment_index == i:
+                        if gene_attrib.x2 - 5 < gene_attrib.x1:
+                            gene_attrib.arrow_size = abs(gene_attrib.x1 - gene_attrib.x2)
                         else:
-                            arrow_size = 5
+                            gene_attrib.arrow_size = 5
+                        gene_attrib.arrow_size = -gene_attrib.arrow_size if gene_attrib.direction == "f" else gene_attrib.arrow_size
+                        gene_attrib.arrow = True
 
-                        if gene.direction == "f":
-                            x1_arrow = x1
-                            x2_arrow = x2 - arrow_size
-                        else:
-                            x1_arrow = x1 + arrow_size
-                            x2_arrow = x2
-                    else:
-                        x1_arrow, x2_arrow = x1, x2
-
-                    context_dict.update({'x1': x1,
-                                         'x2': x2,
-                                         'y1': y1,
-                                         'y2': y2,
-                                         'x1_arrow': x1_arrow,
-                                         'x2_arrow': x2_arrow,
-                                         'x_middle': (x1 + x2) / 2,
-                                         'y_middle': (y1 + y2) / 2,
-                                         'label': label,
-                                         })
-                    ret.append(gene_template.render(Context(context_dict)))
+                    genes[i].append(gene_attrib)
                     break
 
             return ret
 
+        feature_rows = [[] for x in range(num_segments)]
+
         #promoters
-        promoterStyle = '.promoters rect{fill:#%s; opacity:0.5}' % (colors[0], )
-        tfSiteStyle = '.tfSites rect{fill:#%s; opacity:0.5}' % (colors[1], )
+        def add_segment(wid, coordinate, length, typ, url):
+            segment_index = math.floor((coordinate - 1) / chr_attrib.nt_per_segment)
 
-        promoters = StringIO.StringIO()
-        tfSites = StringIO.StringIO()
-
-        def preprocess_draw_segment(coordinate, length, tip_title, typ_pk, typ, url):
-            iSegment = math.floor((coordinate - 1) / ntPerSegment)
-
-            segments = shift(range(nSegments), int(iSegment))
+            segments = shift(range(num_segments), int(segment_index))
 
             w_drawn = 0
             done = False
             for i in itertools.cycle(segments):
-                if i == iSegment:
-                    x = (coordinate - 1) % ntPerSegment
+                feature_attrib = attrib_class()
+                feature_attrib.wid = wid
+                feature_attrib.coordinate = coordinate
+                feature_attrib.length = length
+                feature_attrib.url = url
+                feature_attrib.title = wid.replace("'", "\'")
+
+                feature_attrib.x = chr_attrib.left
+                if i == segment_index:
+                    feature_attrib.x += ((feature_attrib.coordinate - 1) % chr_attrib.nt_per_segment) * chr_attrib.one_nt_width
                 else:
-                    x = 0
+                    feature_attrib.x += 0
 
-                w_needed = length - w_drawn
+                w_needed = feature_attrib.length - w_drawn
 
-                row = i + 1
-                if row == nSegments:
-                    w_space = ntPerSegment - x
-                else:
-                    w_space = ntPerSegment - x
+                w_space = chr_attrib.nt_per_segment - feature_attrib.x
 
-                y = i
                 if w_space < w_needed:
                     # Not enough space left on line
                     w = max(1, w_space)
@@ -2047,103 +2005,78 @@ class Genome(Molecule):
                     w = w_needed
                     done = True
 
-                new_item = [x, x + w, tip_title, typ_pk, typ, url]
+                #feature_attrib.x = chr_attrib.left + feature_attrib.x * chr_attrib.one_nt_width
+                feature_attrib.y = 0
+                feature_attrib.height = feature_height
+                #feature_attrib.width = w
+
+                feature_attrib.width = max(3, w * chr_attrib.one_nt_width)
+                #y = row_offset[i] + j * (featureHeight + 1)
+
+                if isinstance(typ, basestring):
+                    pass
+                else:
+                    if typ and all_features_types_count[typ.pk] == 0:
+                        types.append(typ)
+                        all_features_types_count[typ.pk] = 1
+                    else:
+                        all_features_types_count[None] = 1
+                    feature_attrib.color = all_feature_type_pks.index(typ.pk if typ else None) % num_colors
+                    if typ:
+                        typ.color = feature_attrib.color
+                    feature_attrib.type = typ
+
+                new_item = [feature_attrib.x, feature_attrib.x + feature_attrib.width, feature_attrib]
                 inserted = False
-                for row in feature_draw[i]:
-                    if any(overlaps(item, new_item, 50) for item in row):
+
+                for j, row in enumerate(feature_rows[i]):
+                    if any(overlaps(item, new_item, 5) for item in row):
                         continue
                     # Space left -> insert
                     row.append(new_item)
+                    features[i].append(feature_attrib)
+                    feature_attrib.y += j * (feature_height + 1)
                     inserted = True
                     break
 
                 if not inserted:
                     # Create new row
-                    feature_draw[i].append([new_item])
+                    feature_attrib.y += len(feature_rows[i]) * (feature_height + 1)
+                    feature_rows[i].append([new_item])
+                    features[i].append(feature_attrib)
 
                 if done:
                     break
 
-        def draw_segment(i, row):
-            ret = []
+        for transcription_unit in transcription_units:
+            if transcription_unit.promoter_35_coordinate is not None:
+                tu_coordinate = transcription_unit.get_coordinate() + transcription_unit.promoter_35_coordinate
+                tu_length = transcription_unit.promoter_35_length
 
-            for j, subrow in enumerate(row):
-                for item in subrow:
-                    start, end, tip_title, typ_pk, typ, url = item
-                    tip_text = typ
+                if not tu_coordinate > chr_attrib.end or tu_coordinate + tu_length - 1 < chr_attrib.start:
+                    tip_title = transcription_unit.name or transcription_unit.wid
+                    url = transcription_unit.get_absolute_url(species)
 
-                    tip_title = tip_title.replace("'", "\'")
+                    draw_segment(transcription_unit.wid, tu_coordinate, tu_length, tip_title, 'Promoter -35 box', url)
 
-                    color = "#" + str(colors[all_feature_type_pks.index(typ_pk) % len(colors)])
-                    context_dict = {'h': featureHeight,
-                                    'title': tip_title,
-                                    'text': tip_text,
-                                    'url': url,
-                                    'color': color,
-                                    'opacity': 1,
-                                    'coordinate': 0,
-                                    'length': 0}
+            if transcription_unit.promoter_10_coordinate is not None:
+                tu_coordinate = transcription_unit.get_coordinate() + transcription_unit.promoter_10_coordinate
+                tu_length = transcription_unit.promoter_10_length
 
-                    x = segmentLeft + start * oneNtW
-                    w = max(3, (end - start) * oneNtW)
-                    y = row_offset[i] + j * (featureHeight + 1)
+                if not (tu_coordinate > chr_attrib.end or tu_coordinate + tu_length - 1 < chr_attrib.start):
+                    tip_title = transcription_unit.name or transcription_unit.wid
+                    url = transcription_unit.get_absolute_url(species)
 
-                    context_dict.update({'x': x,
-                                         'x_middle': 0,
-                                         'y': y,
-                                         'w': w})
+                    promoters.append(draw_segment(transcription_unit.wid, tu_coordinate, tu_length, tip_title, 'Promoter -10 box', url))
 
-                    if w <= 3:
-                        feature_template = feature_template_triangle
-                        context_dict.update({
-                            'h': y + featureHeight,
-                            'w': x + 3,
-                            'x': x - 3,
-                            'x_middle': x,
-                        })
-                    else:
-                        feature_template = feature_template_rect
+            for tr in transcription_unit.transcriptional_regulations.all():
+                if tr.binding_site is not None and not (tr.binding_site.coordinate > chr_attrib.end or tr.binding_site.coordinate + tr.binding_site.length - 1 < chr_attrib.start):
+                    tip_title = transcription_unit.name or transcription_unit.wid
+                    url = transcription_unit.get_absolute_url(species)
 
-                    ret.append(feature_template.render(Context(context_dict)))
-
-            return ret
-
-        for tu in tus:
-            if tu.promoter_35_coordinate is not None:
-                tu_coordinate = tu.get_coordinate() + tu.promoter_35_coordinate
-                tu_length = tu.promoter_35_length
-
-                tip_title = tu.name or tu.wid
-                tip_text = 'Promoter -35 box'
-                url = tu.get_absolute_url(species)
-
-                [promoters.write(item) for item in draw_segment(tu_coordinate, tu_length)]
-
-            if tu.promoter_10_coordinate is not None:
-                tu_coordinate = tu.get_coordinate() + tu.promoter_10_coordinate
-                tu_length = tu.promoter_10_length
-
-                tip_title = tu.name or tu.wid
-                tip_text = 'Promoter -10 box'
-                url = tu.get_absolute_url(species)
-
-                [promoters.write(item) for item in draw_segment(tu_coordinate, tu_length)]
-
-            for tr in tu.transcriptional_regulations.all():
-                if tr.binding_site is not None:
-                    tr_coordinate = tr.binding_site.coordinate
-                    tr_length = tr.binding_site.length
-
-                    tip_title = tr.name or tr.wid
-                    tip_text = 'Transcription factor binding site'
-                    url = tr.get_absolute_url(species)
-
-                    [tfSites.write(item) for item in draw_segment(tr_coordinate, tr_length)]
+                    tf_sites.append(draw_segment(transcription_unit.wid, tr.binding_site.coordinate, tr.binding_site.length, tip_title, 'Transcription factor binding site', url))
 
         #features
-        featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
-        features = StringIO.StringIO()
-
 
         feature_values = self.features.all().order_by("coordinate").\
             values("coordinate", "length",
@@ -2154,59 +2087,90 @@ class Genome(Molecule):
             coordinate = feature["coordinate"]
             length = feature["length"]
 
-            tip_title = feature["chromosome_feature__name"] or feature["chromosome_feature__wid"]
-
             if feature["chromosome_feature__type"]:
-                typ = feature["chromosome_feature__type__name"] or feature["chromosome_feature__type__wid"]
+                typ = attrib_class()
+                typ.wid = feature["chromosome_feature__type__wid"]
+                typ.name = feature["chromosome_feature__type__name"]
+                typ.pk = feature["chromosome_feature__type"]
             else:
                 typ = None
             fake_cf.wid = feature["chromosome_feature__wid"]
             url = fake_cf.get_absolute_url(species)
 
-            preprocess_draw_segment(coordinate, length, tip_title, feature["chromosome_feature__type"], typ, url)
+            add_segment(fake_cf.wid, coordinate, length, typ, url)
 
-        for i, row in enumerate(feature_draw):
-            if i == 0:
-                row_offset.append(chrTop + segmentHeight + 2)
-            else:
-                row_offset.append(chrTop + segmentHeight + 2 + (len(feature_draw[i - 1]) or 1) * (featureHeight + 1) + row_offset[-1])
+        for i in range(num_segments):
+            attrib = attrib_class()
 
-        for i, row in enumerate(feature_draw):
-            [features.write(item) for item in draw_segment(i, row)]
+            attrib.left = int(chr_attrib.left)
+            attrib.right = int(chr_attrib.left + ((min(self.length, (i+1) * chr_attrib.nt_per_segment) - 1) % chr_attrib.nt_per_segment) / chr_attrib.nt_per_segment * chr_attrib.width)
+            attrib.y = chr_attrib.top + gene_height
+            attrib.start = i * chr_attrib.nt_per_segment + 1
+            attrib.end = i * chr_attrib.nt_per_segment + chr_attrib.nt_per_segment
+            chromosomes.append(attrib)
 
-        chro = StringIO.StringIO()
-
-        for i in range(nSegments):
-            x1 = segmentLeft
-            x2 = segmentLeft + ((min(self.length, (i+1) * ntPerSegment) - 1) % ntPerSegment) / ntPerSegment * segmentW
-            y = chrTop + row_offset[i] + geneHeight
-            chro.write('<text x="%s" y="%s">%d</text>' % (segmentLeft - 2, y, i * ntPerSegment + 1))
-            chro.write('<line x1="%s" x2="%s" y1="%s" y2="%s"/>' % (x1, x2, y, y))
-
-        for i, gene in enumerate(genesList):
+        for i, gene in enumerate(genes_list):
             if gene.transcription_units:
                 tu_wid = gene.transcription_units__wid
                 tu_name = gene.transcription_units__name
 
                 tu = tu_name or tu_wid
 
-                if tu_wid in iTUs:
-                    iTu = iTUs[tu_wid]
-                else:
-                    iTu = nTus
-                    iTUs[tu_wid] = iTu
-                    nTus += 1
+                transcription_unit_index = transcription_units_index.get(tu_wid)
+                if transcription_unit_index is None:
+                    transcription_units.append(gene.transcription_units)
+                    transcription_unit_index = num_transcription_units
+                    transcription_units_index[tu_wid] = transcription_unit_index
+                    num_transcription_units += 1
             else:
+                transcription_unit_index = num_transcription_units
+                num_transcription_units += 1
                 tu = None
-                iTu = nTus
-                nTus += 1
 
-            [genes.write(item) for item in draw_gene(gene, tu)]
+            draw_gene(gene, tu)
 
-        H = row_offset[-1] + len(feature_draw[-1]) * (featureHeight + 2)
+        row_offset = [chr_attrib.top + chr_attrib.height + 2]
+        # Flatten lists and add offset
+        for i, feature in enumerate(feature_rows):
+            if i > 0:
+                row_offset.append(chr_attrib.top + chr_attrib.height + 2 + (len(feature_rows[i - 1])*(feature_height + 1) + row_offset[-1]))
 
-        return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s%s%s%s</style><g class="chr">%s</g><g class="genes">%s</g><g class="promoters">%s</g><g class="tfSites">%s</g><g class="features">%s</g></svg>' % (
-            W, H, W, H, style, chrStyle, geneStyle, promoterStyle, tfSiteStyle, featureStyle, chro.getvalue(), genes.getvalue(), promoters.getvalue(), tfSites.getvalue(), features.getvalue())
+        for item, offset in zip(chromosomes, row_offset):
+            item.y += offset
+
+        for row, offset in zip(genes, row_offset):
+            for item in row:
+                item.y1 += offset
+                item.y2 += offset
+
+        for row, offset in zip(itertools.chain(features, promoters, tf_sites), itertools.cycle(row_offset)):
+            for item in row:
+                item.y += offset
+
+        H = row_offset[-1] + len(feature_rows[-1]) * (feature_height + 2)
+
+        c = Context({
+            'species': species,
+            'genes': [item for sublist in genes for item in sublist],
+            'width': W,
+            'height': H,
+            'chromosomes': chromosomes,
+            'features': [item for sublist in features for item in sublist],
+            'promoters': [item for sublist in promoters for item in sublist],
+            'tf_sites': [item for sublist in tf_sites for item in sublist],
+            'highlight_all': True,
+            'types': types
+        })
+
+
+        start = time.time()
+        template = loader.get_template("cyano/fields/structure.html")
+        rendered = template.render(c)
+
+        end = time.time()
+        print end - start
+
+        return rendered
 
     def get_as_html_structure_local(self, species, is_user_anonymous, start_coordinate=None, end_coordinate=None, highlight_wid=[]):
         from .helpers import overlaps
@@ -2331,14 +2295,13 @@ class Genome(Molecule):
             feature_attrib.title = tip_title.replace("'", "\'")
 
             if isinstance(typ, basestring):
-                feature_attrib.text = typ
+                pass
             else:
                 if typ and all_features_types_count[typ.id] == 0:
                     types.append(typ)
                     all_features_types_count[typ.id] = 1
                 else:
                     all_features_types_count[None] = 1
-                feature_attrib.text = (typ.name or typ.wid) if typ else ''
                 feature_attrib.color = all_feature_type_pks.index(typ.pk if typ else None) % num_colors
                 if typ:
                     typ.color = feature_attrib.color
@@ -2418,7 +2381,7 @@ class Genome(Molecule):
             'genes': genes,
             'width': W,
             'height': H,
-            'chromosome': chr_attrib,
+            'chromosomes': [chr_attrib],
             'features': features,
             'promoters': promoters,
             'tf_sites': tf_sites,
