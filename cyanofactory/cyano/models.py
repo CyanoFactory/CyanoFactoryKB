@@ -1845,16 +1845,14 @@ class Genome(Molecule):
 
         chr_attrib = attrib_class()
 
-        W = 636
-
         chr_attrib.nt_per_segment = 1e4
         chr_attrib.height = 27
         gene_height = 10
         feature_height = 5
-        num_colors = 7
+        num_colors = 20
         num_segments = int(math.ceil(self.length / chr_attrib.nt_per_segment))
-        chr_attrib.left = 35
-        chr_attrib.width = W - 4 - chr_attrib.left
+        chr_attrib.left = len(str(num_segments * chr_attrib.nt_per_segment)) * 5
+        chr_attrib.width = 636 - 4 - chr_attrib.left
         chr_attrib.one_nt_width = chr_attrib.width / chr_attrib.nt_per_segment
         chr_attrib.last_width = (self.length - chr_attrib.nt_per_segment * (num_segments - 1)) * chr_attrib.one_nt_width
         chr_attrib.top = -12
@@ -1885,6 +1883,16 @@ class Genome(Molecule):
         all_features_types_count = dict(map(lambda x: [x, 0], all_feature_type_pks))
 
         types = []
+
+        for i in range(num_segments):
+            attrib = attrib_class()
+
+            attrib.left = chr_attrib.left
+            attrib.right = chr_attrib.left + ((min(self.length, (i+1) * chr_attrib.nt_per_segment) - 1) % chr_attrib.nt_per_segment) / chr_attrib.nt_per_segment * chr_attrib.width
+            attrib.y = chr_attrib.top + gene_height
+            attrib.start = int(i * chr_attrib.nt_per_segment + 1)
+            #attrib.end = int(i * chr_attrib.nt_per_segment + chr_attrib.nt_per_segment)
+            chromosomes.append(attrib)
 
         def draw_gene(gene, tu):
             segment_index = int(math.floor((gene.coordinate - 1) / chr_attrib.nt_per_segment))
@@ -1940,7 +1948,7 @@ class Genome(Molecule):
                     else:
                         gene_attrib.label = ''
 
-                    if gene.direction == "f" or segment_index == i:
+                    if gene.direction == "r" and segment_index == i:
                         if gene.direction == "r" and gene_attrib.x1 + 5 > gene_attrib.x2:
                             gene_attrib.arrow_size = gene_attrib.x2 - gene_attrib.x1
                         else:
@@ -2099,16 +2107,6 @@ class Genome(Molecule):
 
             add_segment(fake_cf.wid, coordinate, length, typ, url)
 
-        for i in range(num_segments):
-            attrib = attrib_class()
-
-            attrib.left = int(chr_attrib.left)
-            attrib.right = int(chr_attrib.left + ((min(self.length, (i+1) * chr_attrib.nt_per_segment) - 1) % chr_attrib.nt_per_segment) / chr_attrib.nt_per_segment * chr_attrib.width)
-            attrib.y = chr_attrib.top + gene_height
-            attrib.start = i * chr_attrib.nt_per_segment + 1
-            attrib.end = i * chr_attrib.nt_per_segment + chr_attrib.nt_per_segment
-            chromosomes.append(attrib)
-
         for i, gene in enumerate(genes_list):
             if gene.transcription_units:
                 tu_wid = gene.transcription_units__wid
@@ -2152,16 +2150,14 @@ class Genome(Molecule):
         c = Context({
             'species': species,
             'genes': [item for sublist in genes for item in sublist],
-            'width': W,
             'height': H,
             'chromosomes': chromosomes,
             'features': [item for sublist in features for item in sublist],
             'promoters': [item for sublist in promoters for item in sublist],
             'tf_sites': [item for sublist in tf_sites for item in sublist],
-            'highlight_all': True,
-            'types': types
+            'types': types,
+            'highlight_all': True
         })
-
 
         start = time.time()
         template = loader.get_template("cyano/fields/structure.html")
@@ -2177,11 +2173,10 @@ class Genome(Molecule):
 
         attrib_class = type(str("StructureAttribClass"), (object,), dict())
 
-        W = 636
         gene_y = 2
         gene_height = 20
         feature_height = 10
-        num_colors = 7
+        num_colors = 20
 
         # Chromosome
         chr_attrib = attrib_class()
@@ -2190,7 +2185,7 @@ class Genome(Molecule):
         chr_attrib.end = end_coordinate
         chr_attrib.y = gene_y + gene_height + 4
         chr_attrib.left = 4.5 * len(str(chr_attrib.start)) + 4
-        chr_attrib.right = W - 4.5 * len(str(chr_attrib.end)) - 2 - 6
+        chr_attrib.right = 636 - 4.5 * len(str(chr_attrib.end)) - 2 - 6
         chr_attrib.width = chr_attrib.right - chr_attrib.left
         chr_attrib.length = chr_attrib.end - chr_attrib.start + 1
 
@@ -2280,11 +2275,6 @@ class Genome(Molecule):
             feature_attrib.wid = wid
             feature_attrib.coordinate = coordinate
             feature_attrib.length = item_length
-
-            if highlight_wid is None or wid in highlight_wid:
-                feature_attrib.opacity = 1
-            else:
-                feature_attrib.opacity = 0.25
 
             feature_attrib.x = chr_attrib.left + float(feature_attrib.coordinate - chr_attrib.start) / chr_attrib.length * chr_attrib.width
             feature_attrib.width = chr_attrib.left + float(feature_attrib.coordinate + feature_attrib.length - 1 - chr_attrib.start) / chr_attrib.length * chr_attrib.width
@@ -2379,7 +2369,6 @@ class Genome(Molecule):
         c = Context({
             'species': species,
             'genes': genes,
-            'width': W,
             'height': H,
             'chromosomes': [chr_attrib],
             'features': features,
@@ -2402,6 +2391,7 @@ class Genome(Molecule):
         from cyano.helpers import format_list_html_url
 
         features = self.features.all().values_list("chromosome_feature__pk", flat=True)
+        
         return format_list_html_url(ChromosomeFeature.objects.for_species(species).filter(pk__in=features).distinct(), species)
 
     def get_as_fasta(self, species):

@@ -54,7 +54,7 @@ function createCheckBox(ele, i) {
                     primary: $(this)[0].checked ? "ui-icon-check" : ""
                 }
             });
-            $(this).next().css("opacity", $(this)[0].checked ? "1" : "0.25")
+            $(this).next().css("opacity", $(this)[0].checked ? "1" : "0.3")
         });
     return ele;
 }
@@ -87,19 +87,31 @@ $(document).ready(function() {
 {% endfor %}
 </div>
 </div>
-<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{{ width }}" height="{{ height }}" viewport="0 0 {{ width }} {{ height }}">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="100%" height="{{ height }}" viewport="0 0 {{ width }} {{ height }}">
     <style>
-        {% with "#3d80b3" as color %} .color-0 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
-        {% with "#3db34a" as color %} .color-1 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
-        {% with "#cd0a0a" as color %} .color-2 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
-        {% with "#e78f08" as color %} .color-3 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
-        {% with "#b33da6" as color %} .color-4 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
-        {% with "#0acdcd" as color %} .color-5 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
-        {% with "#0860e7" as color %} .color-6 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#1f77b4" as color %} .color-0 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#aec7e8" as color %} .color-1 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#ff7f0e" as color %} .color-2 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#ffbb78" as color %} .color-3 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#2ca02c" as color %} .color-4 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#98df8a" as color %} .color-5 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#d62728" as color %} .color-6 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#ff9896" as color %} .color-7 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#9467bd" as color %} .color-8 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#c5b0d5" as color %} .color-9 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#8c564b" as color %} .color-10 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#c49c94" as color %} .color-11 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#e377c2" as color %} .color-12 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#f7b6d2" as color %} .color-13 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#7f7f7f" as color %} .color-14 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#c7c7c7" as color %} .color-15 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#bcbd22" as color %} .color-16 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#dbdb8d" as color %} .color-17 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#17becf" as color %} .color-18 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#9edae5" as color %} .color-19 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
 
         .chr text { fill:#222; alignment-baseline:middle; font-size:10px }
         .chr line{ stroke:#666; stroke-width:0.5px; }
-        .genes g polygon {}
         .genes g text { text-anchor:middle; alignment-baseline:middle; font-size:8px; fill: #222 }
         .promoters rect { fill:#3d80b3; opacity:0.5 }
         .tfSites rect { fill:#3db34a; opacity:0.5 }
@@ -143,9 +155,9 @@ $(document).ready(function() {
                          onmousemove="tooltip_func(evt, '{{ gene.title }}', '{% url 'cyano.views.detail_field' species_wid=species.wid model_type="Gene" wid=gene.wid %}?name=tooltip&strip=1')"
                          onmouseout="hideToolTip(evt);"
                          {% if highlight_all or gene.wid in highlight_wid %}
-                         style="fill-opacity: 0.75; stroke-opacity: 1; stroke-width: 3px"
+                         style="fill-opacity: 1; stroke-opacity: 0; stroke-width: 5px"
                          {% else %}
-                         style="fill-opacity: 0.15; stroke-opacity: 0.35; stroke-width: 1px"
+                         style="fill-opacity: 0.3; stroke-opacity: 0.35; stroke-width: 1px"
                          {% endif %}
                         >
                 </polygon>
@@ -173,7 +185,7 @@ $(document).ready(function() {
                   {% if highlight_all or promoter.wid in highlight_wid %}
                   opacity: 1;
                   {% else %}
-                  opacity: 0.25;
+                  opacity: 0.3;
                   {% endif %}
                   ">
             </rect>
@@ -190,8 +202,10 @@ $(document).ready(function() {
                   onmousemove="showToolTip(evt, '{{ tf_site.title }}', '{{ tf_site.text }}')"
                   onmouseout="hideToolTip(evt);"
                   style="
-                  {% if tf_site.opacity %}
-                  opacity: {{ tf_site.opacity }};
+                  {% if highlight_all or tf_site.wid in highlight_wid %}
+                  opacity: 1;
+                  {% else %}
+                  opacity: 0.3;
                   {% endif %}
                   ">
             </rect>
@@ -221,8 +235,10 @@ $(document).ready(function() {
                   data-length="{{ feature.length }}"
                   data-type="{{ feature.type.pk }}"
                   style="
-                  {% if feature.opacity %}
-                  opacity: {{ feature.opacity }};
+                  {% if highlight_all or feature.wid in highlight_wid %}
+                  opacity: 1;
+                  {% else %}
+                  opacity: 0.3;
                   {% endif %}
                   ">
         {% if feature.width <= 3 %}
