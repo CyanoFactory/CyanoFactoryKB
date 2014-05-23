@@ -36,7 +36,7 @@ import cyano.helpers as chelpers
 import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
 from cyano.decorators import resolve_to_objects, permission_required
-from django.db.transaction import commit_on_success
+from django.db.transaction import atomic
 from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse
 
 
@@ -782,7 +782,7 @@ def edit(request, species, model = None, item = None, action='edit'):
     #save object
     error_messages = {}
     if request.method == 'POST':
-        with transaction.commit_on_success():
+        with transaction.atomic():
             submitted_data = chelpers.get_edit_form_data(model, request.POST, user=request.user.profile)
             
             data = submitted_data
@@ -988,7 +988,7 @@ def importData(request, species=None):
 @login_required
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
-@commit_on_success
+@atomic
 def importSpeciesData(request, species=None):
     data = {}
     

@@ -10,8 +10,8 @@ from Bio import SeqIO
 import cyano.models as cmodels
 from cyano.helpers import slugify
 from bioparser import BioParser
-from django.db.transaction import commit_on_success
-from django.core.exceptions import ObjectDoesNotExist
+from django.db.transaction import atomic
+
 
 class Genbank(BioParser):    
     def __init__(self, wid, user, reason, chromosome, name):
@@ -60,7 +60,7 @@ class Genbank(BioParser):
             # Genbank files only have one record
             break
 
-    @commit_on_success
+    @atomic
     def apply(self):
         self.detail.save()
         

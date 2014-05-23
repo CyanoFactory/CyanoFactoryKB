@@ -808,7 +808,7 @@ class CyanoCreateTest(CyanoBaseTest):
                 'reason': 'unit test'
             }
             self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
-            self.assertPOSTOK(SPECIES + "/import/species/", data = data)
+            self.assertPOSTOK(SPECIES + "/import/species/", data=data)
 
         cmodels.Species.objects.for_wid("new-species")
         

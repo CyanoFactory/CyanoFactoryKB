@@ -7,8 +7,8 @@ Released under the MIT license
 import cyano.models as cmodels
 from cyano.helpers import slugify
 from bioparser import BioParser
-from django.db.transaction import commit_on_success
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db.transaction import atomic
+from django.core.exceptions import ObjectDoesNotExist
 
 import re
 import xml.etree.ElementTree as ET
@@ -86,7 +86,7 @@ class InterProScan(BioParser):
                                                             "length": length,
                                                             "direction": direction})
 
-    @commit_on_success
+    @atomic
     def apply(self):
         self.detail.save()
 

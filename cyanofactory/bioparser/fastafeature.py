@@ -11,7 +11,7 @@ import cyano.models as cmodels
 from cyano.helpers import slugify
 from cyano.models import NUCLEOTIDE_SUBSTITUTION
 from bioparser import BioParser
-from django.db.transaction import commit_on_success
+from django.db.transaction import atomic
 
 class FastaFeature(BioParser):
     """Parses a FASTA file format used to indicate Chromosome features.
@@ -74,7 +74,7 @@ class FastaFeature(BioParser):
                 "description": description
             })
 
-    @commit_on_success
+    @atomic
     def apply(self):
         current = 0
         total = len(self.data)

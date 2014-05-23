@@ -6,7 +6,7 @@ Released under the MIT license
 """
 
 from bioparser import BioParser
-from django.db.transaction import commit_on_success
+from django.db.transaction import atomic
 from libsbml import SBMLReader
 from cyano.helpers import slugify
 import cyano.models as cmodels
@@ -23,7 +23,7 @@ class SBML(BioParser):
         self.sbml_species = map(lambda i: self.model.getSpecies(i), range(len(self.model.getListOfSpecies())))
         self.reactions = map(lambda i: self.model.getReaction(i), range(len(self.model.getListOfReactions())))
 
-    @commit_on_success
+    @atomic
     def apply(self):
         self.detail.save()
         

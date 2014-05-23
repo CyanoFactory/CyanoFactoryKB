@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 import cyano.models as cmodels
 from cyano.helpers import slugify
 from bioparser import BioParser
-from django.db.transaction import commit_on_success
+from django.db.transaction import atomic
 
 
 class _NoOverwriteDict(dict):
@@ -366,7 +366,7 @@ class EasyProt(BioParser):
                 odict[current_group][header[j]] = sheet.cell(row=i+2, column=j).value
             data.append(odict)
 
-    @commit_on_success
+    @atomic
     def apply(self):
         self.current = 0
 

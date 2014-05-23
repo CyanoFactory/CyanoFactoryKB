@@ -2661,7 +2661,7 @@ class Compartment(SpeciesComponent):
 
     def get_as_html_protein_complexes(self, species, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.get_protein_complexes(), species)
+        return format_list_html_url(self.get_protein_complexes(species), species)
 
     #meta information
     class Meta:
