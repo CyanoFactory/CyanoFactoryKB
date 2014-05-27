@@ -15,6 +15,7 @@ Released under the MIT license
 
 {% load static %}
 {% load templatetags %}
+{% load filters %}
 
 {% block head_title %}{{ block.super }} :: Search :: "{{ query }}"{% endblock %}
 {% block page_title %}Search :: "{{ query }}"{% endblock %}
@@ -41,11 +42,13 @@ Released under the MIT license
 	</tr>
 </thead>
 <tbody>
-	{% for object in queryset %}
+	{% for search_object in queryset %}
+    {% with search_object.object as object %}
 	<tr>
-		<th><a href="{{ object.get_absolute_url }}">{{ object.wid }}</a></th>
-		<td><a href="{{ object.get_absolute_url }}">{{ object.name|truncatechars:80 }}</a></td>
+		<th><a href="{{ object|get_absolute_url:species }}">{{ object.wid }}</a></th>
+		<td><a href="{{ object|get_absolute_url:species }}">{{ object.name|truncatechars:80 }}</a></td>
 	</tr>
+        {% endwith %}
 	{% endfor %}
 </tbody>
 </table>

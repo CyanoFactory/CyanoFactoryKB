@@ -18,7 +18,7 @@ from django.db import IntegrityError
 from django.db.models import get_app, get_models, get_model
 from django.db.models.fields import AutoField, BigIntegerField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField, BooleanField, NullBooleanField, DecimalField, FloatField, CharField, CommaSeparatedIntegerField, EmailField, FilePathField, GenericIPAddressField, IPAddressField, SlugField, URLField, TextField, DateField, DateTimeField, TimeField, NOT_PROVIDED
 from django.db.models.fields.related import OneToOneField, RelatedObject, ManyToManyField, ForeignKey
-from django.db.models.query import EmptyQuerySet
+from django.db.models.query import EmptyQuerySet, QuerySet
 from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render_to_response, get_object_or_404
 from django.template import Context, RequestContext, loader
@@ -392,7 +392,7 @@ From http://www.peterbe.com/plog/uniqifiers-benchmark
 def uniqueSorted(seq):
 	return {}.fromkeys(seq).keys()
 
-def render_queryset_to_response(request = [], queryset = EmptyQuerySet(), models = [], templateFile = '', data = {}, species_wid=None):
+def render_queryset_to_response(request = [], queryset = QuerySet(), models = [], templateFile = '', data = {}, species_wid=None):
 	format = request.GET.get('format', 'html')
 	
 	if species_wid is not None and species_wid != '':

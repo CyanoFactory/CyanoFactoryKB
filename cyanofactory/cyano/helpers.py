@@ -445,7 +445,7 @@ def get_extra_context(request = [], queryset = QuerySet(), models = [], template
         data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
         data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
         
-        if queryset is not None and data['queryset'].model is None:
+        if queryset is not None and getattr(queryset, "model", None) is None:
             del data['queryset']
     elif outformat == 'json':
         objects = []

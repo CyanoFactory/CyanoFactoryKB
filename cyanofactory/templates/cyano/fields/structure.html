@@ -77,6 +77,7 @@ $(document).ready(function() {
     });
 });
 </script>
+{% if type %}
 <div id="listfilter">
 <h1>Structure Filter</h1>
 <div id="block">
@@ -87,6 +88,7 @@ $(document).ready(function() {
 {% endfor %}
 </div>
 </div>
+{% endif %}
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="100%" height="{{ height }}" viewport="0 0 {{ width }} {{ height }}">
     <style>
         {% with "#1f77b4" as color %} .color-0 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}

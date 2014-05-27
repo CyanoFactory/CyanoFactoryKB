@@ -9,7 +9,7 @@ Last updated: 2012-07-17
 from django.contrib.auth.models import User
 from django.db.models.fields import BooleanField, NullBooleanField
 from django.db.models.fields.related import ForeignKey, ManyToManyField
-from haystack import site
+#from haystack import site
 from haystack.indexes import CharField, IntegerField, SearchIndex, ModelSearchIndex
 from public.helpers import getModels, getModelDataFields
 from public.models import Entry, SpeciesComponent
@@ -109,4 +109,4 @@ for modelname, model in getModels().iteritems():
 		index = type(model.__class__.__name__ + 'Index', (EntryIndex, ), {})
 	
 	#register index
-	site.register(model, index)
+	#site.register(model, index)

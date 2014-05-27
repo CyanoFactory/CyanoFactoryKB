@@ -46,7 +46,7 @@ Released under the MIT license
 		<div class="banner"><a href="{% if species %}{% url "cyano.views.species" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}"><img src="{% get_static_prefix %}cyano/img/banner.png" /></a></div>
 		<div class="search">
 			{% if species %}
-			<!--<form name="search" action="{% url "cyano.views.search" species_wid=species.wid %}" method="get">
+			<form name="search" action="{% url "cyano.views.search" species_wid=species.wid %}" method="get">
 				<table cellpadding="0" cellspacing="0">
 				<tr>
 					<td><input name="q" type="text" 
@@ -66,7 +66,7 @@ Released under the MIT license
 					{% endif %} 
 					<td></td>
 				</table>
-			</form>-->
+			</form>
 			{% endif %}
 		</div>
 		

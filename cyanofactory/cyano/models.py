@@ -4813,7 +4813,7 @@ class PublicationReference(SpeciesComponent):
 
     def get_all_referenced_entries(self, species):
         entries = []
-        for entry in self.publication_referenced_entries.filter(species = species):
+        for entry in self.publication_referenced_components.filter(species = species):
             entries.append(entry)
         for ev in Evidence.objects.filter(references__id=self.id):
             entries.append(ev.species_component)

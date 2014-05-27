@@ -13,6 +13,7 @@ Released under the MIT license
 
 import os
 from django.template.context import Context
+from haystack.inputs import AutoQuery
 import settings
 import tempfile
 from copy import deepcopy
@@ -25,7 +26,7 @@ from django.db import transaction
 from django.db.models import Count, Sum
 from django.db.models.fields import BooleanField, NullBooleanField, AutoField, BigIntegerField, DecimalField, FloatField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField
 from django.db.models.fields.related import RelatedObject, ManyToManyField, ForeignKey
-from django.db.models.query import EmptyQuerySet
+from django.db.models.query import EmptyQuerySet, QuerySet
 from django.shortcuts import get_object_or_404
 from django.utils.text import capfirst
 
@@ -402,51 +403,57 @@ def search(request, species = None):
         return search_google(request, species, query)
                 
 def search_haystack(request, species, query):
-    results = SearchQuerySet().filter(species=species).filter(content=query)
+    results = SearchQuerySet().filter(content=AutoQuery(query))
+    #.filter(species_wid=species_wid).filter(content=query)
     
     #calculate facets      
     facets = results.facet('model_type')
-    tmp = facets.facet_counts()['fields']['model_type']
-    modelNameFacet = []
-    objectTypes = chelpers.getObjectTypes()
+    print facets
+    print facets.facet_counts()
+
     models = []
-    for tmp2 in tmp:
-        modelName = objectTypes[objectTypes.index(tmp2[0])]
-        modelNameFacet.append({
-            'name':modelName, 
-            'verbose_name': chelpers.getModel(modelName)._meta.verbose_name,
-            'count':tmp2[1],
-            })
-        models.append(chelpers.getModel(modelName))
-    modelNameFacet.sort(lambda x, y:cmp(x['verbose_name'], y['verbose_name']))
-    
-    #narrow search by facets
+    model_name_facet = []
+
     model_type = request.GET.get('model_type', '')
-    if model_type:
-        results = results.models(chelpers.getModel(model_type))
-        
+
+    if facets.facet_counts():
+        tmp = facets.facet_counts()['fields']['model_type']
+        print tmp
+        for tmp2 in tmp:
+            print "tmp2", tmp2
+            model_name = cmodels.TableMeta.objects.get(model_name__iexact=tmp2[0]).model_name
+            model_name_facet.append({
+                'name':model_name,
+                'verbose_name': chelpers.getModel(model_name)._meta.verbose_name,
+                'count':tmp2[1],
+                })
+            models.append(chelpers.getModel(model_name))
+        model_name_facet.sort(lambda x, y:cmp(x['verbose_name'], y['verbose_name']))
+
+        #narrow search by facets
+        if model_type:
+            results = results.filter(model_type=model_type)
+
     #order results
     results = results.order_by('wid')
-    
-    #convert results to query set
-    queryset = EmptyQuerySet()
-    for obj in results:
-        tmp = obj.model.objects.none()
-        tmp._result_cache.append(obj.object)
-        queryset = chain(queryset, tmp)
+
+    results.model = cmodels.Entry
+
+    #for result in results:
+    #    print result.model_name, result
     
     #form response
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
-        models = models, 
-        queryset = queryset, 
+        models = models,
+        queryset = results,
         template = 'cyano/search.html', 
         data = {
             'query': query,
             'engine': 'haystack',
             'model_type': model_type,
-            'modelNameFacet': modelNameFacet,
+            'modelNameFacet': model_name_facet,
             })
 
 def search_google(request, species, query):

@@ -124,9 +124,12 @@ TEMPLATE_DIRS = (
     ROOT_DIR + "/templates",
 )
 
-HAYSTACK_SITECONF = 'cyano.search_indexes'
-HAYSTACK_SEARCH_ENGINE = 'dummy'
-HAYSTACK_XAPIAN_PATH = os.path.join(os.path.dirname(__file__), 'xapian_index')
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'xapian_backend.XapianEngine',
+        'PATH': os.path.join(os.path.dirname(__file__), 'xapian_index'),
+    },
+}
 
 djcelery.setup_loader()
 
