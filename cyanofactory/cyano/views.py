@@ -403,9 +403,8 @@ def search(request, species = None):
         return search_google(request, species, query)
                 
 def search_haystack(request, species, query):
-    results = SearchQuerySet().filter(content=AutoQuery(query))
-    #.filter(species_wid=species_wid).filter(content=query)
-    
+    results = SearchQuerySet().filter(species_wid=species.wid).filter(content=AutoQuery(query))
+
     #calculate facets      
     facets = results.facet('model_type')
     print facets
