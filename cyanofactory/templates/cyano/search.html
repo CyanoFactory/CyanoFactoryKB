@@ -29,6 +29,14 @@ Released under the MIT license
 {% endwith %}
 {% endblock %}
 
+{% block head %}
+{{ block.super }}
+<meta name="entry_type" content="{{ model_verbose_name }}" />
+
+<script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless.js"></script>
+<script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless_on_scroll.js"></script>
+<script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
+{% endblock %}
 
 {% block content %}
 {% if queryset|length == 0 %}
@@ -42,14 +50,7 @@ Released under the MIT license
 	</tr>
 </thead>
 <tbody>
-	{% for search_object in queryset %}
-    {% with search_object.object as object %}
-	<tr>
-		<th><a href="{{ object|get_absolute_url:species }}">{{ object.wid }}</a></th>
-		<td><a href="{{ object|get_absolute_url:species }}">{{ object.name|truncatechars:80 }}</a></td>
-	</tr>
-        {% endwith %}
-	{% endfor %}
+{% include "cyano/search_page.html" %}
 </tbody>
 </table>
 

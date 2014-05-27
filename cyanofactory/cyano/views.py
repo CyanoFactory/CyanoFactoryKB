@@ -413,6 +413,11 @@ def search_haystack(request, species, query):
     models = []
     model_name_facet = []
 
+    if request.is_ajax():
+        template = "cyano/search_page.html"
+    else:
+        template = "cyano/search.html"
+
     model_type = request.GET.get('model_type', '')
 
     if facets.facet_counts():
@@ -447,7 +452,7 @@ def search_haystack(request, species, query):
         request = request, 
         models = models,
         queryset = results,
-        template = 'cyano/search.html', 
+        template = template,
         data = {
             'query': query,
             'engine': 'haystack',
