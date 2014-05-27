@@ -5433,9 +5433,12 @@ def format_with_evidence(obj = None, txt = None, list_item = False):
     if isinstance(obj, EvidencedEntryData):
         evidence = obj.evidence.all()
     else:
-        evidence = EmptyQuerySet()
+        evidence = None
         for tmp in obj:
-            evidence = tmp.evidence.all() | evidence
+            if evidence is None:
+                evidence = tmp.evidence.all()
+            else:
+                evidence = tmp.evidence.all() | evidence
 
     if len(evidence) == 0:
         return txt
