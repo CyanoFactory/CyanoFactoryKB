@@ -407,8 +407,8 @@ def search_haystack(request, species, query):
 
     #calculate facets      
     facets = results.facet('model_type')
-    print facets
-    print facets.facet_counts()
+    ##print facets
+    ##print facets.facet_counts()
 
     models = []
     model_name_facet = []
@@ -422,9 +422,9 @@ def search_haystack(request, species, query):
 
     if facets.facet_counts():
         tmp = facets.facet_counts()['fields']['model_type']
-        print tmp
+        ##print tmp
         for tmp2 in tmp:
-            print "tmp2", tmp2
+            ##print "tmp2", tmp2
             model_name = cmodels.TableMeta.objects.get(model_name__iexact=tmp2[0]).model_name
             model_name_facet.append({
                 'name':model_name,

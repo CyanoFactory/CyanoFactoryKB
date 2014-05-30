@@ -19,6 +19,7 @@ import json
 import math
 import os
 import re
+from haystack.models import SearchResult
 import settings
 import sys
 import tempfile
@@ -478,6 +479,10 @@ def get_extra_context(request = [], queryset = QuerySet(), models = [], template
 
 def render_queryset_to_response(request=[], queryset=QuerySet(), models=[], template='', data={}, species=None):
     outformat = request.GET.get('format', 'html')
+
+    if outformat in ['json', 'xml', 'xlsx']:
+        if queryset and isinstance(queryset[0], SearchResult):
+            queryset = [obj.object for obj in queryset]
 
     data = get_extra_context(request, queryset, models, template, data, species)
 
@@ -1624,20 +1629,24 @@ def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = [
         fields = getModelDataFields(model, metadata=not is_user_anonymous)
     else:
         fields = model._meta.fields + model._meta.many_to_many
-        
+
     for field in fields:    
         model_val = getattr(obj, field.name)
         if field.auto_created:
             continue
-        
+
         if isinstance(field, ForeignKey):
             if model_val is None:
                 stdobj_val = None
             else:
                 if issubclass(field.rel.to, cmodels.Entry):
                     stdobj_val = model_val.wid
-                elif issubclass(field.rel.to, User):
-                    stdobj_val = model_val.username
+                elif issubclass(field.rel.to, cmodels.RevisionDetail):
+                    stdobj_val = {"user": model_val.user.user.username,
+                                  "date": str(model_val.date),
+                                  "reason": model_val.reason}
+                elif issubclass(field.rel.to, cmodels.UserProfile):
+                    stdobj_val = model_val.user.username
                 else: 
                     stdobj_val = convert_modelobject_to_stdobject(model_val, is_user_anonymous, ancestors + [obj])
         elif isinstance(field, ManyToManyField):
@@ -1664,9 +1673,9 @@ def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = [
         objDict[field.name] = stdobj_val
     
     for field in model._meta.get_all_related_objects() + model._meta.get_all_related_many_to_many_objects():
-        if field.get_accessor_name() == '+':
+        if field.get_accessor_name().endswith('+'):
             continue
-            
+
         objDict[field.get_accessor_name()] = []
         for model_subval in getattr(obj, field.get_accessor_name()).all():
             if model_subval not in ancestors:
