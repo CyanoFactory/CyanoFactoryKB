@@ -18,7 +18,7 @@ def index(request):
 @login_required
 @ajax_required
 def get_reactions(request):
-    model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model2.txt")
+    model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model.txt")
 
     org = Metabolism(model)
 
