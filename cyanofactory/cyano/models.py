@@ -14,9 +14,11 @@ Released under the MIT license
 from __future__ import unicode_literals
 
 import itertools
+import json
 import math
 import re
 from django.contrib.contenttypes.generic import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.db.models.fields import NullBooleanField
 import subprocess
 import sys
@@ -867,14 +869,15 @@ class Revision(Model):
     
     :Columns:
         * ``current``: Reference to the latest entry
-        * ``detail``: Contains additional information about the edit 
+        * ``detail``: Contains additional information about the edit
         * ``action``: Type of the operation (Update, Insert, Delete)
         * ``column``: Table and column where the modification occured
         * ``new_value``: New value in the cell of the column
     """
     current = GenericForeignKey()
-    object_id = IntegerField(blank=True, null=True, db_index=True, verbose_name="Current version of entry")
-    detail = ForeignKey(RevisionDetail, verbose_name='Details about operation', related_name='revisions', editable=False, null=True)
+    content_type = ForeignKey(ContentType)
+    object_id = IntegerField(blank=True, null=True, db_index=True, verbose_name="Current version primary key")
+    detail = ForeignKey(RevisionDetail, verbose_name='Details about this revision', related_name='revisions', editable=False, null=True)
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
     new_data = TextField(blank=True, null=True)
 
@@ -1228,33 +1231,42 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
         if action == "post_add":
             #print "m2m-add:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
 
-            table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
+            # Try extracting the field name from object_name...
+            model_name, field_name = sender._meta.object_name.split("_", 1)
 
-            save_list = []
+            # Test if that field is correct
+            field = getattr(instance, field_name)
 
-            for pk in pk_set:
-                # FIXME: detail_id is the current one
-                save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "I", table = table_meta, new_value = pk))
+            # Fetch latest revision for instance
+            revision = Revision.objects.filter(object_id=instance.pk).last()
 
-            if len(save_list) > 0:
-                #print instance.wid + ": revisioning", len(save_list), "items"
-                # Don't update the detail when actually nothing changed for that entry
-                RevisionManyToMany.objects.bulk_create(save_list)
-        elif action == "post_delete":
+            new_data = json.loads(revision.new_data)
+            item = new_data.get(field_name, [])
+            item += list(pk_set)
+            new_data[field_name] = item
+            revision.new_data = json.dumps(new_data)
+            revision.save()
+
+        elif action == "post_remove":
             #print "m2m-del:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
 
-            table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
+            # Try extracting the field name from object_name...
+            model_name, field_name = sender._meta.object_name.split("_", 1)
 
-            save_list = []
+            # Test if that field is correct
+            field = getattr(instance, field_name)
 
-            for pk in pk_set:
-                # FIXME: detail_id is the current one
-                save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "D", table = table_meta, new_value = pk))
+            # Fetch latest revision for instance
+            revision = Revision.objects.filter(object_id=instance.pk).last()
 
-            if len(save_list) > 0:
-                #print instance.wid + ": deleting", len(save_list), "items"
-                # Don't update the detail when actually nothing changed for that entry
-                RevisionManyToMany.objects.bulk_create(save_list)
+            new_data = json.loads(revision.new_data)
+            item = new_data.get(field_name, [])
+
+            for x in list(pk_set):
+                item.remove(x)
+            new_data[field_name] = item
+            revision.new_data = json.dumps(new_data)
+            revision.save()
 
 class EntryQuerySet(QuerySet):
     def with_permission(self, permission):
@@ -1326,9 +1338,8 @@ class Entry(AbstractEntry):
 
         from cyano.helpers import slugify
         from django.core import serializers
-        import json
 
-        if self.wid != slugify(self.wid):
+        if not self.wid or self.wid != slugify(self.wid):
             # Slugify the WID
             raise ValidationError("Wid must be slug!")
 
@@ -1338,24 +1349,22 @@ class Entry(AbstractEntry):
 
             # can this be optimized? Probably not
             old_item = self._meta.concrete_model.objects.get(pk = self.pk)
-            super(Entry, self).save(*args, **kwargs)
+            #super(Entry, self).save(*args, **kwargs)
         else:
             # New entry (no primary key)
             # The latest entry is not revisioned to save space (and time)
             action = "I"
             cache_model_type = TableMeta.get_by_model_name(self._meta.object_name)
-            self.created_detail = revision_detail
-            self.detail = revision_detail
             self.model_type = cache_model_type
 
-            if self._meta.concrete_model._meta.wid_unique and self._meta.concrete_model.objects.for_wid(self.wid, get = False).exists():
+            old_item = None
+
+            if self._meta.concrete_model._meta.wid_unique and self._meta.concrete_model.objects.for_wid(self.wid, get=False).exists():
                 raise ValidationError("Wid {} for model_type {} is shared and must be unique for all species".format(self.wid, self.model_type.model_name))
 
-            ##print "CREATE: No revision needed for", str(self.wid)
             super(Entry, self).save(*args, **kwargs)
-            return
 
-        save_list = []
+        save_data = {}
 
         fields = self._meta.fields
         # Remove primary keys and some fields that don't need revisioning:
@@ -1377,45 +1386,20 @@ class Entry(AbstractEntry):
                     old_value = getattr(old_item, field.name)
 
             if old_value != new_value:
-                column = TableMetaColumn.get_by_field(field)
+                save_data[field.name] = new_value
 
-                if new_value is None:
-                    ##print "delete"
-                    action = "D"
-                else:
-                    if Revision.objects.filter(current_id = self.pk, column = column).exists():
-                        ##print "update", self.wid, tm.model_name, column
-                        action = "U"
-                    else:
-                        ##print "insert", self.wid, tm.model_name, column
-                        action = "I"
-
-                # Assumption: When nothing changed saving isn't needed at all
-                save_list.append(Revision(current_id = self.pk, detail_id = old_item.created_detail_id if action == "I" else old_item.detail_id, action = action, column = column, new_value = old_value))
-
-        if len(save_list) > 0:
+        if len(save_data) > 0:
             ##print self.wid + ": revisioning", len(save_list), "items"
             # Don't update the detail when actually nothing changed for that entry
-            self.detail = revision_detail
-            Revision.objects.bulk_create(save_list)
+            #self.detail = revision_detail
 
-    def create_revision(self, revision_detail):
-        # TODO :/
-
-        revision = Revision(current_id=self.pk, object_id=self.pk, detail_id=revision_detail.pk)
-        revision.current = self
-        revision.object_id = self.pk
-        revision.detail = revision_detail
-
-        # Fetch previous version
-        revs = Revision.objects.filter(object_id=self.pk)
-
-        if len(revs) == 0:
-            # New object
-            revision.action = "I"
-
-
-        pass
+            r = Revision(current=self,
+                        object_id=self.pk,
+                        detail_id=revision_detail.pk,
+                        action=action,
+                        new_data=json.dumps(save_data))
+            print save_data
+            r.save()
 
     #html formatting
     def get_as_html_synonyms(self, species, is_user_anonymous):
