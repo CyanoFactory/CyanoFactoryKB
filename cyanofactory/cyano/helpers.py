@@ -1525,13 +1525,37 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
 def get_history(species, obj, detail_id):
     #return cmodels.Revision.objects.filter(current = obj, detail__lte = detail_id, table = TableMeta.get_by_model(field.model), column = get_column_index(field)).order_by("-detail")[0].new_value + " (current: " + str(value) + ")"
 
-    history_obj = obj.__class__.objects.get(pk = obj.pk)
+    if not isinstance(obj, cmodels.Entry):
+        return obj
+
+    history_obj = obj.__class__.objects.get(pk=obj.pk)
     history_obj.detail_history = detail_id
     
     comments = ""
 
-    rev_query = cmodels.Revision.objects.filter(current = obj, detail__lte = detail_id).order_by("-detail")
+    # Fetch all revisions <= the detail_id
+    # Parse from bottom to top and set all fields...
 
+    rev_query = cmodels.Revision.objects.filter(object_id=obj.pk, detail__lte=detail_id).order_by("detail")
+
+    for rev in rev_query:
+        for key, value in json.loads(rev.new_data).items():
+            field = history_obj._meta.get_field_by_name(key)[0]
+            if isinstance(field, RelatedObject):
+                print "Rel: " + field.name
+                pass
+            elif isinstance(field, ManyToManyField):
+                print "M2M: " + field.name
+                pass
+            elif isinstance(field, ForeignKey):
+                setattr(history_obj, key, get_history(species, field.rel.to.objects.get(pk=value), detail_id))
+                pass
+            else:
+                comments += "{}: {} (cur: {})<br>".format(field.name, value, getattr(obj, key))
+                setattr(history_obj, key, str(value))
+            pass
+
+    history_obj.comments = comments
     used_columns = []
 
     #print "=="
@@ -1543,28 +1567,28 @@ def get_history(species, obj, detail_id):
     #        getattr(history_obj, field.name)
     #print obj._meta.fields
     #print history_obj._meta.fields
-    for field in obj._meta.fields:
-        if isinstance(field, RelatedObject):
-            #print "Rel: " + field.name
-            pass
-        elif isinstance(field, ManyToManyField):
-            #print "M2M: " + field.name
-            pass
-        elif isinstance(field, ForeignKey):
-            #print "FK:  " + field.name
-            pass
-        else:
-            #print "Non: " + field.name
-            column = cmodels.TableMetaColumn.get_by_field(field)
-            
-            for query in rev_query:
-                if query.column_id == column.pk and not query.column_id in used_columns:
-                    used_columns.append(query.column_id)
-                    new_value = field.to_python(query.new_value)     
-                    comments += "{}: {} (cur: {})<br>".format(field.name, new_value, getattr(obj, field.name))
-                    setattr(history_obj, field.name, new_value)
-    
-    history_obj.comments = comments
+    #for field in obj._meta.fields:
+    #    if isinstance(field, RelatedObject):
+    #        #print "Rel: " + field.name
+    #        pass
+    #    elif isinstance(field, ManyToManyField):
+    #        #print "M2M: " + field.name
+    #        pass
+    #    elif isinstance(field, ForeignKey):
+    #        #print "FK:  " + field.name
+    #        pass
+    #    else:
+    #        #print "Non: " + field.name
+    #        column = cmodels.TableMetaColumn.get_by_field(field)
+    #
+    #        for query in rev_query:
+    #            if query.column_id == column.pk and not query.column_id in used_columns:
+    #                used_columns.append(query.column_id)
+    #                new_value = field.to_python(query.new_value)
+    #                comments += "{}: {} (cur: {})<br>".format(field.name, new_value, getattr(obj, field.name))
+    #                setattr(history_obj, field.name, new_value)
+    #
+    #history_obj.comments = comments
     
     # Only FK and Non yet:
     return history_obj
@@ -1998,7 +2022,7 @@ def validate_model_objects(model, obj_data, all_obj_data=None, all_obj_data_by_m
     parent_list.reverse()
     for parent_model in parent_list + [model]:
         if hasattr(parent_model._meta, 'clean'):
-            parent_model._meta.clean(parent_model, obj_data, all_obj_data=all_obj_data, all_obj_data_by_model=all_obj_data_by_model)
+            parent_model._meta.clean(obj_data, all_obj_data=all_obj_data, all_obj_data_by_model=all_obj_data_by_model)
 
 def validate_model_unique(model, model_objects_data, all_obj_data=None, all_obj_data_by_model=None):
     if not issubclass(model, cmodels.SpeciesComponent):

@@ -653,19 +653,19 @@ def history(request, species, model = None, item = None):
     if item:
         # Item specific
         obj = item
-        objects = cmodels.Revision.objects.filter(current = item).distinct().order_by("-detail")
+        objects = cmodels.Revision.objects.filter(object_id=item.pk).distinct().order_by("-detail")
         
         # Add link to the current version of the item
-        wid = obj.wid
-        detail_id = obj.detail.pk
-        date = obj.detail.date.date()
-        time = obj.detail.date.strftime("%H:%M")
-        reason = obj.detail.reason
-        author = obj.detail.user
-        url = reverse("cyano.views.detail", kwargs = {"species_wid": species.wid, "model_type": obj.model_type.model_name, "wid": wid})
-        
-        entry = [date, []]
-        entry[1].append({'id': detail_id, 'time': time, 'wid': wid, 'reason': reason, 'author': author, 'url': url})
+        #wid = obj.wid
+        #detail_id = obj.detail.pk
+        #date = obj.detail.date.date()
+        #time = obj.detail.date.strftime("%H:%M")
+        #reason = obj.detail.reason
+        #author = obj.detail.user
+        #url = reverse("cyano.views.detail", kwargs = {"species_wid": species.wid, "model_type": obj.model_type.model_name, "wid": wid})
+        #
+        #entry = [date, []]
+        #entry[1].append({'id': detail_id, 'time': time, 'wid': wid, 'reason': reason, 'author': author, 'url': url})
         
     elif model:
         # Model specific
@@ -800,6 +800,7 @@ def edit(request, species, model = None, item = None, action='edit'):
             data['id'] = obj.id
             data['species'] = species.wid
             data['model_type'] = model.__name__
+            data['wid'] = obj.wid
             
             try:
                 #validate is WID unique

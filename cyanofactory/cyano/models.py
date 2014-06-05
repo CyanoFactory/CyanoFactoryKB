@@ -859,7 +859,7 @@ class TableMetaManyToMany(Model):
 
 class RevisionDetail(Model):
     user = ForeignKey(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
-    date = DateTimeField(default=datetime.now, verbose_name = "Modificiation date")
+    date = DateTimeField(default=datetime.now, verbose_name = "Modification date")
     reason = TextField(blank=True, default='', verbose_name='Reason for edit')
 
 class Revision(Model):
@@ -1333,7 +1333,7 @@ class Entry(AbstractEntry):
     def get_name_or_wid(self):
         return self.name or self.wid
 
-    def save(self, revision_detail, *args, **kwargs):
+    def save(self, revision_detail, force_revision=True, *args, **kwargs):
         # Optimized to reduce number of database accesses to a minimum
 
         from cyano.helpers import slugify
@@ -1349,7 +1349,7 @@ class Entry(AbstractEntry):
 
             # can this be optimized? Probably not
             old_item = self._meta.concrete_model.objects.get(pk = self.pk)
-            #super(Entry, self).save(*args, **kwargs)
+            super(Entry, self).save(*args, **kwargs)
         else:
             # New entry (no primary key)
             # The latest entry is not revisioned to save space (and time)
@@ -1388,16 +1388,25 @@ class Entry(AbstractEntry):
             if old_value != new_value:
                 save_data[field.name] = new_value
 
-        if len(save_data) > 0:
+        if force_revision or len(save_data) > 0:
             ##print self.wid + ": revisioning", len(save_list), "items"
             # Don't update the detail when actually nothing changed for that entry
             #self.detail = revision_detail
 
-            r = Revision(current=self,
-                        object_id=self.pk,
-                        detail_id=revision_detail.pk,
-                        action=action,
-                        new_data=json.dumps(save_data))
+            # Try fetching an existing revision
+            try:
+                r = Revision.objects.get(object_id=self.pk,
+                                         detail_id=revision_detail.pk,
+                                         action=action)
+                new_data = json.loads(r.new_data)
+                new_data.update(save_data)
+                r.new_data = json.dumps(new_data)
+            except ObjectDoesNotExist:
+                r = Revision(current=self,
+                             object_id=self.pk,
+                             detail_id=revision_detail.pk,
+                             action=action,
+                             new_data=json.dumps(save_data))
             print save_data
             r.save()
 
@@ -1734,7 +1743,8 @@ class Protein(Molecule):
         verbose_name_plural = 'Proteins'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #regulatory rule
             if obj_data['regulatory_rule'] is not None and obj_data['regulatory_rule']['value'] is not None and obj_data['regulatory_rule']['value'] != '':
                 parse_regulatory_rule(obj_data['regulatory_rule']['value'], all_obj_data, obj_data['species'])
@@ -2467,7 +2477,8 @@ class Genome(Molecule):
         verbose_name_plural = 'Genome'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['sequence'] is not None and obj_data['sequence'] != '' and len(obj_data['sequence']) != obj_data['length']:
                 raise ValidationError({'length': 'Length of sequence property must match length property'})
 
@@ -2531,7 +2542,8 @@ class ChromosomeFeature(SpeciesComponent):
         verbose_name_plural = 'Chromosome features'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
                 chro = Genome.objects.get(species__wid=obj_data['species'], wid=obj_data['genome'])
             else:
@@ -2890,7 +2902,8 @@ class Gene(Molecule):
         wid_unique = False
 
         #chromosome coordinate, length
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
                 chro = Genome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
@@ -3668,7 +3681,8 @@ class ProteinComplex(Protein):
         verbose_name_plural = 'Protein complexes'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getModel, getEntry
 
             #biosynthesis
@@ -4059,7 +4073,8 @@ class ProteinMonomer(Protein):
         verbose_name_plural = 'Protein monomers'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['signal_sequence'] is not None:
                 if all_obj_data is None:
                     gene = Gene.objects.get(species__wid=obj_data['species'], wid=obj_data['gene'])
@@ -4253,7 +4268,8 @@ class Reaction(SpeciesComponent):
         verbose_name_plural = 'Reactions'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getEntry, getModel, EmpiricalFormula
 
             #stoichiometry
@@ -4565,7 +4581,8 @@ class TranscriptionUnit(Molecule):
         verbose_name_plural = 'Transcription units'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if len(obj_data['genes']) == 1:
                 return
             if len(obj_data['genes']) == 0:
@@ -4668,7 +4685,8 @@ class TranscriptionalRegulation(SpeciesComponent):
         verbose_name_plural = 'Transcriptional regulation'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #gene wid
             if all_obj_data is None:
                 tu = TranscriptionUnit.objects.get(species__wid=obj_data['species'], wid=obj_data['transcription_unit'])
