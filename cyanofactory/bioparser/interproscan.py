@@ -111,16 +111,17 @@ class InterProScan(BioParser):
                 if cf.wid in self.xrefs:
                     for item in self.xrefs[cf.wid]:
                         xid, source = item
-                        x = cmodels.CrossReference.objects.get_or_create(xid=xid, source=source)[0]
+                        x = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, xid=xid, source=source)
                         real_cf.cross_references.add(x)
 
                 if cf.wid in self.feature_positions:
                     for fp in self.feature_positions[cf.wid]:
-                        cmodels.FeaturePosition.objects.get_or_create(chromosome_feature=real_cf,
-                                                                      chromosome_id=fp["chromosome"],
-                                                                      coordinate=fp["coordinate"],
-                                                                      length=fp["length"],
-                                                                      direction=fp["direction"])
+                        cmodels.FeaturePosition.objects.get_or_create_with_revision(self.detail,
+                                                                                    chromosome_feature=real_cf,
+                                                                                    chromosome_id=fp["chromosome"],
+                                                                                    coordinate=fp["coordinate"],
+                                                                                    length=fp["length"],
+                                                                                    direction=fp["direction"])
 
                 if cf.wid in self.types:
                     typ = self.types[cf.wid]

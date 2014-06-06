@@ -81,7 +81,7 @@ class Genbank(BioParser):
                 for x in xref:
                     if ":" in x:
                         source, xid = x.split(":")
-                        x, _ = cmodels.CrossReference.objects.get_or_create(source=source, xid=xid)
+                        x = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source=source, xid=xid)
                         chromosome.cross_references.add(x)
     
         if "references" in self.annotation:
@@ -120,18 +120,18 @@ class Genbank(BioParser):
                 pubref.save(self.detail)
     
                 if ref.pubmed_id:
-                    xref, _ = cmodels.CrossReference.objects.get_or_create(source = "PUBMED", xid = ref.pubmed_id)
+                    xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source="PUBMED", xid=ref.pubmed_id)
                     pubref.cross_references.add(xref)
     
                 if ref.medline_id:
-                    xref, _ = cmodels.CrossReference.objects.get_or_create(source = "MEDLINE", xid = ref.medline_id)
+                    xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source="MEDLINE", xid=ref.medline_id)
                     pubref.cross_references.add(xref)
                     
                 pubref.species.add(self.species)
                 chromosome.publication_references.add(pubref)
     
         if "gi" in self.annotation:
-            xref, _ = cmodels.CrossReference.objects.get_or_create(xid = self.annotation["gi"], source = "GI")
+            xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, xid=self.annotation["gi"], source="GI")
             chromosome.cross_references.add(xref)
         
         features = self.record.features
@@ -142,7 +142,7 @@ class Genbank(BioParser):
                     for xref in features[0].qualifiers["db_xref"]:
                         if ":" in xref:
                             source, xid = xref.split(":")
-                            xref, _ = cmodels.CrossReference.objects.get_or_create(source=source, xid=xid)
+                            xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source=source, xid=xid)
                             chromosome.cross_references.add(xref)
         
         gene_features = filter(lambda x : x.type == "gene", features)
@@ -211,12 +211,12 @@ class Genbank(BioParser):
                 for xref in qualifiers["db_xref"]:
                     if ":" in xref:
                         source, xid = xref.split(":")
-                        xref, _ = cmodels.CrossReference.objects.get_or_create(source = source, xid = xid)
+                        xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source=source, xid=xid)
                         g.cross_references.add(xref)
             
             if "EC_number" in qualifiers:
                 for ec in qualifiers["EC_number"]:
-                    xref, _ = cmodels.CrossReference.objects.get_or_create(source = "EC", xid = ec)
+                    xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source="EC", xid=ec)
                     g.cross_references.add(xref)
             
             if "gene_synonym" in qualifiers:
@@ -224,7 +224,7 @@ class Genbank(BioParser):
                     # Inconsistency: Multiple synonyms appear in one entry,
                     # why don't they split them like for all other items?
                     for syn in synonym.split(";"):
-                        obj, _ = cmodels.Synonym.objects.get_or_create(name = syn.strip())
+                        obj = cmodels.Synonym.objects.get_or_create_with_revision(self.detail, name=syn.strip())
                         obj.save()
                         g.synonyms.add(obj)
             
@@ -232,12 +232,12 @@ class Genbank(BioParser):
                 protxref = qualifiers["protein_id"][0]
                 wid = slugify(g.wid + "_Monomer")
 
-                protein = cmodels.ProteinMonomer.objects.for_species(self.species).for_wid(wid, create = True)
+                protein = cmodels.ProteinMonomer.objects.for_species(self.species).for_wid(wid, create=True)
          
                 if "product" in qualifiers:
                     protein.name = qualifiers["product"][0]
                     
-                xref, _ = cmodels.CrossReference.objects.get_or_create(source = "RefSeq", xid = protxref)
+                xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source="RefSeq", xid=protxref)
 
                 protein.gene = g
                 protein.save(self.detail)
@@ -251,7 +251,7 @@ class Genbank(BioParser):
             if v.type == "CDS":
                 v.type = "mRNA"
             
-            t = cmodels.Type.objects.for_wid(wid = slugify(v.type), create = True)
+            t = cmodels.Type.objects.for_wid(wid=slugify(v.type), create=True)
             t.name = v.type
 
             t.save(self.detail)
@@ -261,7 +261,7 @@ class Genbank(BioParser):
             
         if hasattr(self, "notify_progress"):
             outstr = "Assigning KEGG pathways"
-            self.notify_progress(current = len(cds_map.values()), total = len(cds_map.values()), message = outstr)
+            self.notify_progress(current=len(cds_map.values()), total=len(cds_map.values()), message=outstr)
         
         cmodels.Pathway.add_kegg_pathway(self.species, self.detail)
 

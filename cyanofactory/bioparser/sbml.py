@@ -124,9 +124,7 @@ class SBML(BioParser):
                     participant_obj.molecule = cmodels.Metabolite.objects.for_species(self.species).for_wid(slugify(reactant.getSpecies()))
                     participant_obj.coefficient = -reactant.getStoichiometry()
                     participant_obj.compartment = cmodels.Compartment.objects.for_species(self.species).for_wid(slugify(self.model.getSpecies(reactant.getSpecies()).getCompartment()))
-                    # TODO: EvidencedData needs Revisioning
-                    participant_obj.detail = self.detail
-                    participant_obj.save()
+                    participant_obj.save(self.detail)
                     
                     reaction_obj.stoichiometry.add(participant_obj)
                 
@@ -140,9 +138,8 @@ class SBML(BioParser):
                     participant_obj.molecule = cmodels.Metabolite.objects.for_species(self.species).for_wid(slugify(product.getSpecies()))
                     participant_obj.coefficient = product.getStoichiometry()
                     participant_obj.compartment = cmodels.Compartment.objects.for_species(self.species).for_wid(slugify(self.model.getSpecies(product.getSpecies()).getCompartment()))
-                    # TODO: EvidencedData needs Revisioning
                     participant_obj.detail = self.detail
-                    participant_obj.save()
+                    participant_obj.save(self.detail)
             
                     reaction_obj.stoichiometry.add(participant_obj)
                 

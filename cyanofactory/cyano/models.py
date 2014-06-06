@@ -932,7 +932,19 @@ class Evidence(Model):
         verbose_name = 'Evidence'
         verbose_name_plural = 'Evidence'
 
+class EntryDataQuerySet(QuerySet):
+    def get_or_create_with_revision(self, revision, *args, **kwargs):
+        print args, kwargs
+        try:
+            return self.get(*args, **kwargs)
+        except ObjectDoesNotExist:
+            obj = self.model(*args, **kwargs)
+            obj.save(revision)
+            return obj
+
 class EntryData(Model):
+    objects = PassThroughManager.for_queryset_class(EntryDataQuerySet)()
+
     def __unicode__(self):
         arr = []
         txt = unicode('')
@@ -955,12 +967,70 @@ class EntryData(Model):
         else:
             return ', '.join(arr)
 
+    def save(self, revision_detail, force_revision=True, *args, **kwargs):
+        if self.pk is not None:
+            # Update item
+            action = "U"
+
+            # can this be optimized? Probably not
+            old_item = self._meta.concrete_model.objects.get(pk=self.pk)
+        else:
+            # New entry (no primary key)
+            action = "I"
+
+            old_item = None
+
+        super(EntryData, self).save(*args, **kwargs)
+
+        save_data = {}
+
+        fields = self._meta.fields
+        # Remove primary keys and some fields that don't need revisioning:
+        fields = itertools.ifilter(lambda x: not x.primary_key, fields)
+
+        for field in fields:
+            if hasattr(self, field.name + "_id"):
+                new_value = getattr(self, field.name + "_id")
+            else:
+                new_value = getattr(self, field.name)
+
+            if old_item is None:
+                old_value = None
+            else:
+                if hasattr(old_item, field.name + "_id"):
+                    old_value = getattr(old_item, field.name + "_id")
+                else:
+                    old_value = getattr(old_item, field.name)
+
+            if old_value != new_value:
+                save_data[field.name] = new_value
+
+        if force_revision or len(save_data) > 0:
+            print str(self) + ": revisioning", len(save_data), "items"
+            # Don't update the detail when actually nothing changed for that entry
+
+            # Try fetching an existing revision
+            try:
+                r = Revision.objects.get(object_id=self.pk,
+                                         detail_id=revision_detail.pk,
+                                         action=action)
+                new_data = json.loads(r.new_data)
+                new_data.update(save_data)
+                r.new_data = json.dumps(new_data)
+            except ObjectDoesNotExist:
+                r = Revision(current=self,
+                             object_id=self.pk,
+                             detail_id=revision_detail.pk,
+                             action=action,
+                             new_data=json.dumps(save_data))
+            print save_data
+            r.save()
+
     class Meta:
         abstract = True
 
 class EvidencedEntryData(EntryData):
     evidence = ManyToManyField(Evidence, blank=True, null=True, verbose_name='Evidence')
-    detail = ForeignKey(RevisionDetail, verbose_name = 'Last edit', related_name = '+', editable = False)
 
     class Meta:
         abstract = True
@@ -4783,7 +4853,8 @@ class CrossReference(EntryData):
 
     class Meta:
         ordering = ['xid']
-        verbose_name='Cross reference'
+        unique_together = ('xid', 'source')
+        verbose_name = 'Cross reference'
         verbose_name_plural = 'Cross references'
 
 class PublicationReference(SpeciesComponent):
