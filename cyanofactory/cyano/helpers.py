@@ -2115,19 +2115,33 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
             
         if isinstance(field, ManyToManyField):
             if save_m2m:
-                getattr(obj, field.name).clear()
+                db_m2m = list(getattr(obj, field.name).all().values_list("pk", flat=True))
                 if issubclass(field.rel.to, cmodels.Entry):
                     for wid in obj_data[field.name]:
-                        if obj_list.has_key(wid):
+                        if wid in obj_list:
                             tmp = obj_list[wid]
                         elif issubclass(field.rel.to, cmodels.SpeciesComponent):
                             tmp = field.rel.to.objects.for_species(species).for_wid(wid)
                         else:
                             tmp = field.rel.to.objects.get(wid=wid)
                         getattr(obj, field.name).add(tmp)
+                        try:
+                            db_m2m.remove(tmp.pk)
+                        except ValueError:
+                            # not in DB
+                            pass
                 else:
                     for sub_obj_data in obj_data[field.name]:
-                        getattr(obj, field.name).add(save_object_data(species.wid, field.rel.to(), sub_obj_data, obj_list, user, save=save, save_m2m=save_m2m))
+                        s_obj_data = save_object_data(species.wid, field.rel.to(), sub_obj_data, obj_list, user, save=save, save_m2m=save_m2m)
+                        getattr(obj, field.name).add(s_obj_data)
+                        try:
+                            db_m2m.remove(s_obj_data.pk)
+                        except ValueError:
+                            # not in DB
+                            pass
+
+                for item in db_m2m:
+                    getattr(obj, field.name).remove(item)
     
     #save
     if save:
