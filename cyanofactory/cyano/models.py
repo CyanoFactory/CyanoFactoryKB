@@ -1026,6 +1026,16 @@ class EntryData(Model):
             print save_data
             r.save()
 
+    def delete(self, revision_detail, using=None):
+        r = Revision(current=self,
+                     object_id=self.pk,
+                     detail_id=revision_detail.pk,
+                     action="D",
+                     new_data="{}")
+        r.save()
+
+        super(EntryData, self).delete(using=using)
+
     class Meta:
         abstract = True
 
@@ -1404,10 +1414,7 @@ class Entry(AbstractEntry):
         return self.name or self.wid
 
     def save(self, revision_detail, force_revision=True, *args, **kwargs):
-        # Optimized to reduce number of database accesses to a minimum
-
         from cyano.helpers import slugify
-        from django.core import serializers
 
         if not self.wid or self.wid != slugify(self.wid):
             # Slugify the WID
@@ -1479,6 +1486,16 @@ class Entry(AbstractEntry):
                              new_data=json.dumps(save_data))
             print save_data
             r.save()
+
+    def delete(self, revision_detail, using=None):
+        r = Revision(current=self,
+                     object_id=self.pk,
+                     detail_id=revision_detail.pk,
+                     action="D",
+                     new_data="{}")
+        r.save()
+
+        super(Entry, self).delete(using=using)
 
     #html formatting
     def get_as_html_synonyms(self, species, is_user_anonymous):
@@ -1565,18 +1582,16 @@ class SpeciesComponent(AbstractSpeciesComponent):
 
     #getters
 
-    def delete(self, species, using=None):
+    def delete(self, species, revision_detail, using=None):
         """
         Delete is referenced counted and only detached when at least one more item is left
         """
-        #if self.species.count() > 1:
+        if self.species.count() > 1:
             # Detach
-        #    # Todo revisioning
-        self.species.remove(species.pk)
-        #else:
+            self.species.remove(species.pk)
+        else:
             # Delete
-        #    # Todo revisioning
-        #    super(SpeciesComponent, self).delete(using=using)
+            super(SpeciesComponent, self).delete(revision_detail, using=using)
 
     #@permalink
     def get_absolute_url(self, species, history_id = None):

@@ -885,8 +885,9 @@ def delete(request, species, model = None, item = None):
     
     #delete
     if request.method == 'POST':
-        # Todo: Should be revisioned
-        obj.delete(species)
+        # Todo: Should be revisioned with custom message
+        rev_detail = cmodels.RevisionDetail(user=request.user.profile, reason="Delete "+item.wid)
+        obj.delete(species, rev_detail)
         return HttpResponseRedirect(reverse('cyano.views.listing', kwargs={'species_wid':species.wid, 'model_type': model.__name__}))
         
     #confirmation message
