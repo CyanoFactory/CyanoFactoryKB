@@ -800,7 +800,7 @@ def edit(request, species, model = None, item = None, action='edit'):
             data['id'] = obj.id
             data['species'] = species.wid
             data['model_type'] = model.__name__
-            data['wid'] = obj.wid
+            data['wid'] = data['wid'] if action == 'add' else obj.wid
             
             try:
                 #validate is WID unique
