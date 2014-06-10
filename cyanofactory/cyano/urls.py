@@ -24,6 +24,8 @@ urlpatterns = patterns('cyano.views',
     url(r'^logout/$', 'logout', name="logout"),
     url(r'^' + _species_wid + r'/logout/$', 'logout', name="logout"),
 
+    url(r'^sbgn/$', 'sbgn'),
+
     url(r'^account/password_change_required/$', 'password_change_required', name="password_change_required"),
 
     url(r'^license/$', 'licensing'),

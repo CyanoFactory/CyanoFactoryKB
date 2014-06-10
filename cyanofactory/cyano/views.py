@@ -1389,3 +1389,8 @@ def jobs(request, species = None):
                     'finished': finished,
                     'running': running})
 
+def sbgn(request):
+    return chelpers.render_queryset_to_response(
+        request,
+        template="cyano/sbgn.html",
+    )
