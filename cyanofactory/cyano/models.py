@@ -1358,22 +1358,22 @@ class EntryQuerySet(QuerySet):
         if get:
             try:
                 if not creation_status:
-                    return self.get(wid = wid)
+                    return self.get(wid=wid)
 
-                return self.get(wid = wid), False
+                return self.get(wid=wid), False
             except ObjectDoesNotExist:
                 if not create:
                     raise
 
                 if not creation_status:
-                    return self.model(wid = wid)
+                    return self.model(wid=wid)
 
-                return self.model(wid = wid), True
+                return self.model(wid=wid), True
 
         if create:
             raise ValueError("Create only compatible with get")
 
-        return self.filter(wid = wid)
+        return self.filter(wid=wid)
 
 class SpeciesComponentQuerySet(EntryQuerySet):
     def for_species(self, species):
@@ -1401,9 +1401,6 @@ class Entry(AbstractEntry):
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
 
-    #created_detail = ForeignKey(RevisionDetail, verbose_name='Entry created revision', related_name='entry_created_detail', editable = False)
-    #detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry', related_name='entry_detail', editable = False)
-
     def __unicode__(self):
         return self.wid
 
@@ -1412,6 +1409,12 @@ class Entry(AbstractEntry):
 
     def get_name_or_wid(self):
         return self.name or self.wid
+
+    def last_revision(self):
+        return Revision.objects.filter(object_id=self.pk).last()
+
+    def first_revision(self):
+        return Revision.objects.filter(object_id=self.pk).first()
 
     def save(self, revision_detail, force_revision=True, *args, **kwargs):
         from cyano.helpers import slugify
@@ -1508,7 +1511,7 @@ class Entry(AbstractEntry):
         return format_list_html(results, separator=', ')
 
     def get_as_html_created_user(self, species, is_user_anonymous):
-        revision = Revision.objects.filter(object_id=self.pk).first()
+        revision = self.first_revision()
         detail = revision.detail
         if is_user_anonymous:
             return '%s<br>%s' % (detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
@@ -1517,7 +1520,7 @@ class Entry(AbstractEntry):
             return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
 
     def get_as_html_last_updated_user(self, species, is_user_anonymous):
-        revision = Revision.objects.filter(object_id=self.pk).last()
+        revision = self.last_revision()
         detail = revision.detail
         if is_user_anonymous:
             return '%s<br>%s' % (detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
