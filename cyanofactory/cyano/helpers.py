@@ -401,7 +401,7 @@ From http://www.peterbe.com/plog/uniqifiers-benchmark
 def uniqueSorted(seq):
     return {}.fromkeys(seq).keys()
 
-def get_extra_context(request = [], queryset = QuerySet(), models = [], template = '', data = {}, species = None):
+def get_extra_context(request = [], queryset = None, models = [], template = '', data = {}, species = None):
     data['species'] = species
     data['queryset'] = queryset
     data['queryargs'] = {}
@@ -443,7 +443,10 @@ def get_extra_context(request = [], queryset = QuerySet(), models = [], template
         data['pdfstyles'] = ''
         data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
         data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
-        data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
+        if queryset and len(queryset) > 0 and isinstance(queryset[0], cmodels.Entry):
+            data['last_updated_date'] = queryset.order_by("-created_detail__date").first().detail.date
+        else:
+            data['last_updated_date'] = cmodels.RevisionDetail.objects.order_by("-date").first().date
         data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
         
         if queryset is not None and getattr(queryset, "model", None) is None:
@@ -477,7 +480,7 @@ def get_extra_context(request = [], queryset = QuerySet(), models = [], template
     return data
 
 
-def render_queryset_to_response(request=[], queryset=QuerySet(), models=[], template='', data={}, species=None):
+def render_queryset_to_response(request=[], queryset=None, models=[], template='', data={}, species=None):
     outformat = request.GET.get('format', 'html')
 
     if outformat in ['json', 'xml', 'xlsx']:
@@ -611,7 +614,7 @@ def render_queryset_to_response(request=[], queryset=QuerySet(), models=[], temp
     return response
 
 
-def render_queryset_to_response_error(request = [], queryset = QuerySet(), model = None, data = {}, species=None, error = 403, msg = "", msg_debug = ""):
+def render_queryset_to_response_error(request = [], queryset = None, model = None, data = {}, species=None, error = 403, msg = "", msg_debug = ""):
     import django.http as http
     
     _format = request.GET.get('format', 'html')
