@@ -102,13 +102,15 @@ Released under the MIT license
 			</li>
 			{% endcomment %}
 			<li class="spacer"/>
-			<li><a href="#">Tools</a>
+			<li><a href="#">CyanoMaps</a>
 				<ul>
 				<li><a href="{% url "boehringer.views.index" %}" title="Biochemical Pathways">Biochemical Pathways</a></li>
                 <li><a href="{% url "kegg.views.index" %}" title="KEGG Pathways">KEGG Pathways</a></li>
-                <li><a href="{% url "cyanodesign.views.index" %}" title="CyanoDesign">CyanoDesign</a></li>
 				</ul>
 			</li>
+            <li class="spacer"/>
+            <li><a href="{% url "cyanodesign.views.index" %}" title="CyanoDesign">CyanoDesign</a>
+            </li>
 			{% if request.user.is_authenticated %}
 			<li class="spacer"/>
 			<li><a href="#">Import</a>
