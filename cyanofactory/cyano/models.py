@@ -35,8 +35,8 @@ from django.core import validators
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField,\
-    FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, Min, signals
-from django.db.models.query import EmptyQuerySet, QuerySet
+    FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, signals
+from django.db.models.query import QuerySet
 from django.template import loader, Context
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import m2m_changed
