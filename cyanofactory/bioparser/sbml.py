@@ -112,6 +112,7 @@ class SBML(BioParser):
                 
                 reaction_obj.name = name
                 reaction_obj.direction = 'r' if reaction.getReversible() else 'f'
+                reaction_obj.is_spontaneous = False  # TODO
                 reaction_obj.save(self.detail)
                 
                 for reactant in reactants:

@@ -19,6 +19,7 @@ import json
 import math
 import os
 import re
+from django.contrib.contenttypes.models import ContentType
 from haystack.models import SearchResult
 import settings
 import sys
@@ -1539,7 +1540,9 @@ def get_history(species, obj, detail_id):
     # Fetch all revisions <= the detail_id
     # Parse from bottom to top and set all fields...
 
-    rev_query = cmodels.Revision.objects.filter(object_id=obj.pk, detail__lte=detail_id).order_by("detail")
+    rev_query = cmodels.Revision.objects.filter(object_id=obj.pk,
+                                                content_type=ContentType.objects.get_for_model(obj._meta.concrete_model),
+                                                detail__lte=detail_id).order_by("detail")
 
     for rev in rev_query:
         for key, value in json.loads(rev.new_data).items():
@@ -1556,10 +1559,9 @@ def get_history(species, obj, detail_id):
             else:
                 comments += "{}: {} (cur: {})<br>".format(field.name, value, getattr(obj, key))
                 setattr(history_obj, key, str(value))
-            pass
+                pass
 
     history_obj.comments = comments
-    used_columns = []
 
     #print "=="
     #print obj._meta.fields

@@ -1012,6 +1012,7 @@ class EntryData(Model):
             # Try fetching an existing revision
             try:
                 r = Revision.objects.get(object_id=self.pk,
+                                         content_type_id=ContentType.objects.get_for_model(self._meta.concrete_model).pk,
                                          detail_id=revision_detail.pk,
                                          action=action)
                 new_data = json.loads(r.new_data)
@@ -1318,7 +1319,9 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
             field = getattr(instance, field_name)
 
             # Fetch latest revision for instance
-            revision = Revision.objects.filter(object_id=instance.pk).last()
+            revision = Revision.objects.filter(
+                object_id=instance.pk,
+                content_type=ContentType.objects.get_for_model(instance._meta.concrete_model)).last()
 
             new_data = json.loads(revision.new_data)
             item = new_data.get(field_name, [])
@@ -1337,13 +1340,18 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
             field = getattr(instance, field_name)
 
             # Fetch latest revision for instance
-            revision = Revision.objects.filter(object_id=instance.pk).last()
+            revision = Revision.objects.filter(
+                object_id=instance.pk,
+                content_type=ContentType.objects.get_for_model(instance._meta.concrete_model)).last()
 
             new_data = json.loads(revision.new_data)
             item = new_data.get(field_name, [])
 
             for x in list(pk_set):
-                item.remove(x)
+                try:
+                    item.remove(x)
+                except ValueError:
+                    print "fixme?"
             new_data[field_name] = item
             revision.new_data = json.dumps(new_data)
             revision.save()
@@ -1476,6 +1484,7 @@ class Entry(AbstractEntry):
             # Try fetching an existing revision
             try:
                 r = Revision.objects.get(object_id=self.pk,
+                                         content_type_id=ContentType.objects.get_for_model(self._meta.concrete_model).pk,
                                          detail_id=revision_detail.pk,
                                          action=action)
                 new_data = json.loads(r.new_data)
