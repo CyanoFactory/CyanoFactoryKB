@@ -848,6 +848,7 @@ def edit(request, species, model = None, item = None, action='edit'):
                     error_messages = error.message_dict
                 else:
                     raise
+                transaction.rollback()
 
     #form query set
     if action == 'edit':
