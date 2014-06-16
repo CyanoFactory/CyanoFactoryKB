@@ -371,7 +371,7 @@ def getEntryDatas():
 
 def getEntry(species_wid = None, wid = None):
     try:
-        species_id = cmodels.Species.objects.values('id').for_wid(species_wid)['id']
+        species_id = cmodels.Species.objects.for_wid(species_wid).pk
     except ObjectDoesNotExist:
         return None    
     
@@ -379,8 +379,8 @@ def getEntry(species_wid = None, wid = None):
         if species_wid == wid:
             return cmodels.Species.objects.for_wid(wid)
         else:
-            tmp = cmodels.SpeciesComponent.objects.get(species__id = species_id, wid=wid)
-            return getModel(tmp.model_type).objects.select_related(depth=2).get(id=tmp.id)
+            tmp = cmodels.SpeciesComponent.objects.get(species__id=species_id, wid=wid)
+            return getModel(tmp.model_type.model_name).objects.select_related(depth=2).get(id=tmp.id)
     except ObjectDoesNotExist:
         return None
     
@@ -2068,7 +2068,13 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
             obj.model_type = cmodels.TableMeta.get_by_model_name(obj._meta.object_name)
     else:
         fields = model._meta.fields + model._meta.many_to_many
-    
+
+    if isinstance(obj, cmodels.CrossReference):
+        try:
+            obj = cmodels.CrossReference.objects.get(xid=obj_data["xid"], source=obj_data["source"])
+        except ObjectDoesNotExist:
+            pass
+
     #regular and foreign key fields
     for field in fields:
         if not field.editable or field.auto_created:
@@ -2089,7 +2095,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
                         setattr(obj, field.name, None)
                 else:
                     if obj_data[field.name] is not None:
-                        setattr(obj, field.name, save_object_data(species.wid, field.rel.to(), obj_data[field.name], obj_list, user, save=save, save_m2m=save_m2m))
+                        setattr(obj, field.name, save_object_data(species, field.rel.to(), obj_data[field.name], obj_list, user, save=save, save_m2m=save_m2m))
                     else:
                         setattr(obj, field.name, None)
         elif isinstance(field, ManyToManyField):
@@ -2137,7 +2143,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
                             pass
                 else:
                     for sub_obj_data in obj_data[field.name]:
-                        s_obj_data = save_object_data(species.wid, field.rel.to(), sub_obj_data, obj_list, user, save=save, save_m2m=save_m2m)
+                        s_obj_data = save_object_data(species, field.rel.to(), sub_obj_data, obj_list, user, save=save, save_m2m=save_m2m)
                         getattr(obj, field.name).add(s_obj_data)
                         try:
                             db_m2m.remove(s_obj_data.pk)
