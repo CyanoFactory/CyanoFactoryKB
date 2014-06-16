@@ -452,7 +452,7 @@ class EasyProt(BioParser):
             peptide.type.add(target_type)
 
             for protein in item["Matched Proteins"].split(","):
-                prot = cmodels.EntryBasicTextData.objects.get_or_create(value=protein.strip())[0]
+                prot = cmodels.EntryBasicTextData.objects.get_or_create_with_revision(self.detail, value=protein.strip())
                 peptide.proteins.add(prot)
 
             peptide.species.add(self.species)
@@ -492,7 +492,8 @@ class EasyProt(BioParser):
 
             coordinate, length = map(lambda x: int(x), row["Position (to mature prot.)"].split("-"))
 
-            cmodels.MassSpectrometryProteinDetail.objects.get_or_create(
+            cmodels.MassSpectrometryProteinDetail.objects.get_or_create_with_revision(
+                self.detail,
                 protein=ref_protein,
                 sequence=row["Sequence"],
                 sequence_ptm=row["Sequence + PTMs"],
@@ -520,7 +521,7 @@ class EasyProt(BioParser):
             """:type: cmodels.MassSpectrometryProtein"""
             protein.comments = row["Description"]
 
-            uniprot = cmodels.CrossReference.objects.get_or_create(source="UniProt", xid=row["AC"])[0]
+            uniprot = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source="UniProt", xid=row["AC"])
 
             protein.score = row["Protein Score"]
             protein.coverage = row["% Coverage"]
@@ -543,18 +544,18 @@ class EasyProt(BioParser):
             if go_term_row:
                 go_terms = (x.groups() for x in (re.match(r"^(.*) \((.*):(.*)\)$", x) for x in go_term_row.split(";") if x))
                 for name, typ, identifier in go_terms:
-                    go = cmodels.CrossReference.objects.get_or_create(source=typ, xid=identifier)[0]
+                    go = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source=typ, xid=identifier)
                     protein.cross_references.add(go)
                     # No field for name :/
 
             if row["#Ambiguous Prots"] > 0:
                 for amb_protein in row["Ambiguous Prots"].split(","):
-                    prot = cmodels.EntryBasicTextData.objects.get_or_create(value=amb_protein.strip())[0]
+                    prot = cmodels.EntryBasicTextData.objects.get_or_create_with_revision(self.detail, value=amb_protein.strip())
                     protein.ambiguous.add(prot)
 
             if row["#Sub-Prots"] > 0:
                 for sub_protein in row["Sub-Prots"].split(","):
-                    prot = cmodels.EntryBasicTextData.objects.get_or_create(value=sub_protein.strip())[0]
+                    prot = cmodels.EntryBasicTextData.objects.get_or_create_with_revision(self.detail, value=sub_protein.strip())
                     protein.sub.add(prot)
 
             protein.species.add(self.species)

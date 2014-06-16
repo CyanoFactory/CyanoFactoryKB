@@ -124,10 +124,11 @@ class FastaFeature(BioParser):
             cf.type.add(snp_type or typ)
             cf.species.add(self.species)
 
-            cmodels.FeaturePosition.objects.get_or_create(chromosome_feature=cf,
-                                                          chromosome=self.chromosome,
-                                                          coordinate=coordinate,
-                                                          length=length,
-                                                          direction=direction)
+            cmodels.FeaturePosition.objects.get_or_create_with_revision(self.detail,
+                                                                        chromosome_feature=cf,
+                                                                        chromosome=self.chromosome,
+                                                                        coordinate=coordinate,
+                                                                        length=length,
+                                                                        direction=direction)
 
             self.report_progress(current=i+1, total=total, message="Importing FASTA feature: {}".format(wid))

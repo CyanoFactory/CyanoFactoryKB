@@ -14,8 +14,11 @@ Released under the MIT license
 from __future__ import unicode_literals
 
 import itertools
+import json
 import math
 import re
+from django.contrib.contenttypes.generic import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 from django.db.models.fields import NullBooleanField
 import subprocess
 import sys
@@ -813,51 +816,10 @@ class TableMeta(Model):
     def __unicode__(self):
         return self.table_name + " - " + self.model_name
 
-class TableMetaColumn(Model):
-    table = ForeignKey(TableMeta, related_name = 'columns')
-    column_name = CharField(max_length=255, verbose_name = "Name of the column")
-    column_id = IntegerField(verbose_name = "Index of the column")
-
-    @staticmethod
-    def get_by_field(field):
-        model_type_key = "column/%s/%s" % (field.model._meta.object_name, field.column)
-
-        return Cache.try_get(model_type_key,
-                lambda: TableMetaColumn.objects.prefetch_related("table").get(table__model_name = field.model._meta.object_name, column_name = field.column))
-
-    def __unicode__(self):
-        return "{}: {} ({})".format(self.table.model_name, self.column_name, self.column_id)
-
-    class Meta:
-        unique_together = ('table', 'column_name')
-
-class TableMetaManyToMany(Model):
-    m2m_table = ForeignKey(TableMeta, related_name = '+', verbose_name = "Data about the M2M-Table", unique = True)
-    source_table = ForeignKey(TableMeta, related_name = 'm2ms_source', verbose_name = "The table the m2m references from")
-    target_table = ForeignKey(TableMeta, related_name = 'm2ms_target', verbose_name = "The table the m2m references to")
-
-    @staticmethod
-    def get_by_m2m_table_name(name):
-        model_type_key = "model/model_type_m2m/tbl/" + name
-        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("m2m_table", "source_table", "target_table").get(m2m_table__table_name = name))
-        return cache_model_type
-
-    @staticmethod
-    def get_by_m2m_model_name(name):
-        model_type_key = "model/model_type_m2m/" + name
-        cache_model_type = Cache.try_get(model_type_key, lambda: TableMetaManyToMany.objects.prefetch_related("m2m_table", "source_table", "target_table").get(m2m_table__model_name = name))
-        return cache_model_type
-
-    def __unicode__(self):
-        return self.m2m_table.table_name + " - " + self.m2m_table.model_name
-
-    class Meta:
-        unique_together = ('m2m_table', 'source_table', 'target_table')
-
 class RevisionDetail(Model):
     user = ForeignKey(UserProfile, verbose_name = "Modified by", related_name = '+', editable = False)
-    date = DateTimeField(default=datetime.now, verbose_name = "Modificiation date")
-    reason = CharField(max_length=255, blank=True, default='', verbose_name='Reason for edit')
+    date = DateTimeField(default=datetime.now, verbose_name = "Modification date")
+    reason = TextField(blank=True, default='', verbose_name='Reason for edit')
 
 class Revision(Model):
     """To allow reverting of edits all edit operations are stored in this table.
@@ -866,37 +828,17 @@ class Revision(Model):
     
     :Columns:
         * ``current``: Reference to the latest entry
-        * ``detail``: Contains additional information about the edit 
+        * ``detail``: Contains additional information about the edit
         * ``action``: Type of the operation (Update, Insert, Delete)
         * ``column``: Table and column where the modification occured
         * ``new_value``: New value in the cell of the column
     """
-    current = ForeignKey("Entry", verbose_name = "Current version of entry", related_name = 'revisions', editable = False, auto_created = True)
-    detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions', editable = False, null = True)
+    current = GenericForeignKey()
+    content_type = ForeignKey(ContentType)
+    object_id = IntegerField(blank=True, null=True, db_index=True, verbose_name="Current version primary key")
+    detail = ForeignKey(RevisionDetail, verbose_name='Details about this revision', related_name='revisions', editable=False, null=True)
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
-    column = ForeignKey(TableMetaColumn, verbose_name = 'Table and column where the modification occured', related_name = '+')
-    new_value = TextField(blank = True, null = True)
-
-    def __unicode__(self):
-        return str(self.current)
-
-class RevisionManyToMany(Model):
-    """To allow reverting of edits all edit operations are stored in this table.
-    
-    Always only the new value of a single cell is stored to save memory.
-    
-    :Columns:
-        * ``current``: Reference to the latest entry
-        * ``detail``: Contains additional information about the edit 
-        * ``action``: Type of the operation (Only insert and delete)
-        * ``table``: Table where the modification occured
-        * ``new_value``: New value in the cell of the column
-    """
-    current = ForeignKey("Entry", verbose_name = "Current version of entry points to source of m2m", related_name = 'revisions_m2m', editable = False, auto_created = True)
-    detail = ForeignKey(RevisionDetail, verbose_name = 'Details about operation', related_name = 'revisions_m2m', editable = False, null = True)
-    action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
-    table = ForeignKey(TableMetaManyToMany, verbose_name = 'M2M Table where the modification occured', related_name = '+')
-    new_value = IntegerField(blank = True, null = True)
+    new_data = TextField(blank=True, null=True)
 
     def __unicode__(self):
         return str(self.current)
@@ -928,7 +870,19 @@ class Evidence(Model):
         verbose_name = 'Evidence'
         verbose_name_plural = 'Evidence'
 
+class EntryDataQuerySet(QuerySet):
+    def get_or_create_with_revision(self, revision, *args, **kwargs):
+        print args, kwargs
+        try:
+            return self.get(*args, **kwargs)
+        except ObjectDoesNotExist:
+            obj = self.model(*args, **kwargs)
+            obj.save(revision)
+            return obj
+
 class EntryData(Model):
+    objects = PassThroughManager.for_queryset_class(EntryDataQuerySet)()
+
     def __unicode__(self):
         arr = []
         txt = unicode('')
@@ -951,12 +905,81 @@ class EntryData(Model):
         else:
             return ', '.join(arr)
 
+    def save(self, revision_detail, force_revision=True, *args, **kwargs):
+        if self.pk is not None:
+            # Update item
+            action = "U"
+
+            # can this be optimized? Probably not
+            old_item = self._meta.concrete_model.objects.get(pk=self.pk)
+        else:
+            # New entry (no primary key)
+            action = "I"
+
+            old_item = None
+
+        super(EntryData, self).save(*args, **kwargs)
+
+        save_data = {}
+
+        fields = self._meta.fields
+        # Remove primary keys and some fields that don't need revisioning:
+        fields = itertools.ifilter(lambda x: not x.primary_key, fields)
+
+        for field in fields:
+            if hasattr(self, field.name + "_id"):
+                new_value = getattr(self, field.name + "_id")
+            else:
+                new_value = getattr(self, field.name)
+
+            if old_item is None:
+                old_value = None
+            else:
+                if hasattr(old_item, field.name + "_id"):
+                    old_value = getattr(old_item, field.name + "_id")
+                else:
+                    old_value = getattr(old_item, field.name)
+
+            if old_value != new_value:
+                save_data[field.name] = new_value
+
+        if force_revision or len(save_data) > 0:
+            print str(self) + ": revisioning", len(save_data), "items"
+            # Don't update the detail when actually nothing changed for that entry
+
+            # Try fetching an existing revision
+            try:
+                r = Revision.objects.get(object_id=self.pk,
+                                         content_type_id=ContentType.objects.get_for_model(self._meta.concrete_model).pk,
+                                         detail_id=revision_detail.pk,
+                                         action=action)
+                new_data = json.loads(r.new_data)
+                new_data.update(save_data)
+                r.new_data = json.dumps(new_data)
+            except ObjectDoesNotExist:
+                r = Revision(current=self,
+                             object_id=self.pk,
+                             detail_id=revision_detail.pk,
+                             action=action,
+                             new_data=json.dumps(save_data))
+            print save_data
+            r.save()
+
+    def delete(self, revision_detail, using=None):
+        r = Revision(current=self,
+                     object_id=self.pk,
+                     detail_id=revision_detail.pk,
+                     action="D",
+                     new_data="{}")
+        r.save()
+
+        super(EntryData, self).delete(using=using)
+
     class Meta:
         abstract = True
 
 class EvidencedEntryData(EntryData):
     evidence = ManyToManyField(Evidence, blank=True, null=True, verbose_name='Evidence')
-    detail = ForeignKey(RevisionDetail, verbose_name = 'Last edit', related_name = '+', editable = False)
 
     class Meta:
         abstract = True
@@ -1227,33 +1250,49 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
         if action == "post_add":
             #print "m2m-add:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
 
-            table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
+            # Try extracting the field name from object_name...
+            model_name, field_name = sender._meta.object_name.split("_", 1)
 
-            save_list = []
+            # Test if that field is correct
+            field = getattr(instance, field_name)
 
-            for pk in pk_set:
-                # FIXME: detail_id is the current one
-                save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "I", table = table_meta, new_value = pk))
+            # Fetch latest revision for instance
+            revision = Revision.objects.filter(
+                object_id=instance.pk,
+                content_type=ContentType.objects.get_for_model(instance._meta.concrete_model)).last()
 
-            if len(save_list) > 0:
-                #print instance.wid + ": revisioning", len(save_list), "items"
-                # Don't update the detail when actually nothing changed for that entry
-                RevisionManyToMany.objects.bulk_create(save_list)
-        elif action == "post_delete":
+            new_data = json.loads(revision.new_data)
+            item = new_data.get(field_name, [])
+            item += list(pk_set)
+            new_data[field_name] = item
+            revision.new_data = json.dumps(new_data)
+            revision.save()
+
+        elif action == "post_remove":
             #print "m2m-del:",TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name),instance,pk_set
 
-            table_meta = TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name)
+            # Try extracting the field name from object_name...
+            model_name, field_name = sender._meta.object_name.split("_", 1)
 
-            save_list = []
+            # Test if that field is correct
+            field = getattr(instance, field_name)
 
-            for pk in pk_set:
-                # FIXME: detail_id is the current one
-                save_list.append(RevisionManyToMany(current_id = instance.pk, detail_id = instance.detail_id, action = "D", table = table_meta, new_value = pk))
+            # Fetch latest revision for instance
+            revision = Revision.objects.filter(
+                object_id=instance.pk,
+                content_type=ContentType.objects.get_for_model(instance._meta.concrete_model)).last()
 
-            if len(save_list) > 0:
-                #print instance.wid + ": deleting", len(save_list), "items"
-                # Don't update the detail when actually nothing changed for that entry
-                RevisionManyToMany.objects.bulk_create(save_list)
+            new_data = json.loads(revision.new_data)
+            item = new_data.get(field_name, [])
+
+            for x in list(pk_set):
+                try:
+                    item.remove(x)
+                except ValueError:
+                    print "fixme?"
+            new_data[field_name] = item
+            revision.new_data = json.dumps(new_data)
+            revision.save()
 
 class EntryQuerySet(QuerySet):
     def with_permission(self, permission):
@@ -1265,22 +1304,22 @@ class EntryQuerySet(QuerySet):
         if get:
             try:
                 if not creation_status:
-                    return self.get(wid = wid)
+                    return self.get(wid=wid)
 
-                return self.get(wid = wid), False
+                return self.get(wid=wid), False
             except ObjectDoesNotExist:
                 if not create:
                     raise
 
                 if not creation_status:
-                    return self.model(wid = wid)
+                    return self.model(wid=wid)
 
-                return self.model(wid = wid), True
+                return self.model(wid=wid), True
 
         if create:
             raise ValueError("Create only compatible with get")
 
-        return self.filter(wid = wid)
+        return self.filter(wid=wid)
 
 class SpeciesComponentQuerySet(EntryQuerySet):
     def for_species(self, species):
@@ -1308,9 +1347,6 @@ class Entry(AbstractEntry):
     synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
 
-    created_detail = ForeignKey(RevisionDetail, verbose_name='Entry created revision', related_name='entry_created_detail', editable = False)
-    detail = ForeignKey(RevisionDetail, verbose_name='Last Revision entry', related_name='entry_detail', editable = False)
-
     def __unicode__(self):
         return self.wid
 
@@ -1320,35 +1356,41 @@ class Entry(AbstractEntry):
     def get_name_or_wid(self):
         return self.name or self.wid
 
-    def save(self, revision_detail, *args, **kwargs):
-        # Optimized to reduce number of database accesses to a minimum
+    def last_revision(self):
+        return Revision.objects.filter(object_id=self.pk).last()
 
+    def first_revision(self):
+        return Revision.objects.filter(object_id=self.pk).first()
+
+    def save(self, revision_detail, force_revision=True, *args, **kwargs):
         from cyano.helpers import slugify
 
-        if self.wid != slugify(self.wid):
+        if not self.wid or self.wid != slugify(self.wid):
             # Slugify the WID
             raise ValidationError("Wid must be slug!")
 
         if self.pk is not None:
+            # Update item
+            action = "U"
+
             # can this be optimized? Probably not
             old_item = self._meta.concrete_model.objects.get(pk = self.pk)
             super(Entry, self).save(*args, **kwargs)
         else:
             # New entry (no primary key)
             # The latest entry is not revisioned to save space (and time)
+            action = "I"
             cache_model_type = TableMeta.get_by_model_name(self._meta.object_name)
-            self.created_detail = revision_detail
-            self.detail = revision_detail
             self.model_type = cache_model_type
 
-            if self._meta.concrete_model._meta.wid_unique and self._meta.concrete_model.objects.for_wid(self.wid, get = False).exists():
+            old_item = None
+
+            if self._meta.concrete_model._meta.wid_unique and self._meta.concrete_model.objects.for_wid(self.wid, get=False).exists():
                 raise ValidationError("Wid {} for model_type {} is shared and must be unique for all species".format(self.wid, self.model_type.model_name))
 
-            ##print "CREATE: No revision needed for", str(self.wid)
             super(Entry, self).save(*args, **kwargs)
-            return
 
-        save_list = []
+        save_data = {}
 
         fields = self._meta.fields
         # Remove primary keys and some fields that don't need revisioning:
@@ -1370,27 +1412,40 @@ class Entry(AbstractEntry):
                     old_value = getattr(old_item, field.name)
 
             if old_value != new_value:
-                column = TableMetaColumn.get_by_field(field)
+                save_data[field.name] = new_value
 
-                if new_value is None:
-                    ##print "delete"
-                    action = "D"
-                else:
-                    if Revision.objects.filter(current_id = self.pk, column = column).exists():
-                        ##print "update", self.wid, tm.model_name, column
-                        action = "U"
-                    else:
-                        ##print "insert", self.wid, tm.model_name, column
-                        action = "I"
-
-                # Assumption: When nothing changed saving isn't needed at all
-                save_list.append(Revision(current_id = self.pk, detail_id = old_item.created_detail_id if action == "I" else old_item.detail_id, action = action, column = column, new_value = old_value))
-
-        if len(save_list) > 0:
+        if force_revision or len(save_data) > 0:
             ##print self.wid + ": revisioning", len(save_list), "items"
             # Don't update the detail when actually nothing changed for that entry
-            self.detail = revision_detail
-            Revision.objects.bulk_create(save_list)
+            #self.detail = revision_detail
+
+            # Try fetching an existing revision
+            try:
+                r = Revision.objects.get(object_id=self.pk,
+                                         content_type_id=ContentType.objects.get_for_model(self._meta.concrete_model).pk,
+                                         detail_id=revision_detail.pk,
+                                         action=action)
+                new_data = json.loads(r.new_data)
+                new_data.update(save_data)
+                r.new_data = json.dumps(new_data)
+            except ObjectDoesNotExist:
+                r = Revision(current=self,
+                             object_id=self.pk,
+                             detail_id=revision_detail.pk,
+                             action=action,
+                             new_data=json.dumps(save_data))
+            print save_data
+            r.save()
+
+    def delete(self, revision_detail, using=None):
+        r = Revision(current=self,
+                     object_id=self.pk,
+                     detail_id=revision_detail.pk,
+                     action="D",
+                     new_data="{}")
+        r.save()
+
+        super(Entry, self).delete(using=using)
 
     #html formatting
     def get_as_html_synonyms(self, species, is_user_anonymous):
@@ -1403,7 +1458,8 @@ class Entry(AbstractEntry):
         return format_list_html(results, separator=', ')
 
     def get_as_html_created_user(self, species, is_user_anonymous):
-        detail = self.created_detail
+        revision = self.first_revision()
+        detail = revision.detail
         if is_user_anonymous:
             return '%s<br>%s' % (detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
         else:
@@ -1411,7 +1467,8 @@ class Entry(AbstractEntry):
             return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
 
     def get_as_html_last_updated_user(self, species, is_user_anonymous):
-        detail = self.detail
+        revision = self.last_revision()
+        detail = revision.detail
         if is_user_anonymous:
             return '%s<br>%s' % (detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
         else:
@@ -1440,7 +1497,7 @@ class Entry(AbstractEntry):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'comments', 'created_detail', 'detail'
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'comments'
             ]
         listing = ['wid', 'name']
         facet_fields = []
@@ -1449,9 +1506,6 @@ class Entry(AbstractEntry):
         verbose_name = 'Entry'
         verbose_name_plural = 'Entries'
         wid_unique = False
-
-class CrossReferenceMeta(Model):
-    name = CharField(max_length=255, verbose_name = "Identifier for crossreference (DB name or URL)", editable = False)
 
 class AbstractSpeciesComponent(Entry):
     objects = PassThroughManager.for_queryset_class(SpeciesComponentQuerySet)()
@@ -1475,18 +1529,16 @@ class SpeciesComponent(AbstractSpeciesComponent):
 
     #getters
 
-    def delete(self, species, using=None):
+    def delete(self, species, revision_detail, using=None):
         """
         Delete is referenced counted and only detached when at least one more item is left
         """
-        #if self.species.count() > 1:
+        if self.species.count() > 1:
             # Detach
-        #    # Todo revisioning
-        self.species.remove(species.pk)
-        #else:
+            self.species.remove(species.pk)
+        else:
             # Delete
-        #    # Todo revisioning
-        #    super(SpeciesComponent, self).delete(using=using)
+            super(SpeciesComponent, self).delete(revision_detail, using=using)
 
     #@permalink
     def get_absolute_url(self, species, history_id = None):
@@ -1537,7 +1589,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references',  'created_detail', 'detail',
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references'
             ]
         facet_fields = ['type']
         verbose_name = 'Species component'
@@ -1635,7 +1687,7 @@ class Molecule(SpeciesComponent):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references', 'created_detail', 'detail'
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references'
             ]
         facet_fields = ['type']
         verbose_name = 'Molecule'
@@ -1716,14 +1768,15 @@ class Protein(Molecule):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references', 'created_detail', 'detail'
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references'
             ]
         facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
         verbose_name='Protein'
         verbose_name_plural = 'Proteins'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #regulatory rule
             if obj_data['regulatory_rule'] is not None and obj_data['regulatory_rule']['value'] is not None and obj_data['regulatory_rule']['value'] != '':
                 parse_regulatory_rule(obj_data['regulatory_rule']['value'], all_obj_data, obj_data['species'])
@@ -2449,14 +2502,15 @@ class Genome(Molecule):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'sequence', 'length', 'comments', 'publication_references', 'created_detail', 'detail'
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'sequence', 'length', 'comments', 'publication_references'
             ]
         facet_fields = ['type']
         verbose_name = 'Genome'
         verbose_name_plural = 'Genome'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['sequence'] is not None and obj_data['sequence'] != '' and len(obj_data['sequence']) != obj_data['length']:
                 raise ValidationError({'length': 'Length of sequence property must match length property'})
 
@@ -2513,14 +2567,15 @@ class ChromosomeFeature(SpeciesComponent):
                                      {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
         ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'comments', 'publication_references', 'created_detail', 'detail'
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'comments', 'publication_references'
         ]
         facet_fields = ['type',] #ToDo 'positions.chromosome', 'positions.direction']
         verbose_name = 'Chromosome feature'
         verbose_name_plural = 'Chromosome features'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
                 chro = Genome.objects.get(species__wid=obj_data['species'], wid=obj_data['genome'])
             else:
@@ -2679,7 +2734,7 @@ class Compartment(SpeciesComponent):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'comments', 'publication_references', 'created_detail', 'detail'
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'comments', 'publication_references'
             ]
         facet_fields = ['type']
         verbose_name='Compartment'
@@ -2879,7 +2934,8 @@ class Gene(Molecule):
         wid_unique = False
 
         #chromosome coordinate, length
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if all_obj_data is None:
                 chro = Genome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
             else:
@@ -3018,8 +3074,7 @@ class Metabolite(Molecule):
             'biomass_composition', 'media_composition',
             'map_coordinates',
             'comments',
-            'publication_references',
-            'created_detail', 'detail'
+            'publication_references'
             ]
         facet_fields = ['type', 'charge', 'is_hydrophobic']
         verbose_name='Metabolite'
@@ -3049,7 +3104,6 @@ class Note(SpeciesComponent):
             'type',
             'comments',
             'publication_references',
-            'created_detail', 'detail'
             ]
         facet_fields = ['type']
         verbose_name='Note'
@@ -3090,7 +3144,6 @@ class Parameter(SpeciesComponent):
             'reactions', 'molecules', 'state', 'process',
             'comments',
             'publication_references',
-            'created_detail', 'detail'
             ]
         facet_fields = ['type', 'reactions', 'molecules', 'state', 'process']
         verbose_name='Misc. parameter'
@@ -3374,7 +3427,6 @@ class Pathway(SpeciesComponent):
             'id', 'name', 'synonyms', 'cross_references',
             'comments',
             'publication_references',
-            'created_detail', 'detail'
             ]
         group_field = 'type'
         facet_fields = ['type']
@@ -3423,7 +3475,6 @@ class Process(SpeciesComponent):
             'initialization_order',
             'comments',
             'publication_references',
-            'created_detail', 'detail'
             ]
         facet_fields = ['type']
         verbose_name='Process'
@@ -3656,14 +3707,14 @@ class ProteinComplex(Protein):
             'regulatory_rule',
             'comments',
             'publication_references',
-            'created_detail', 'detail'
             ]
         facet_fields = ['type', 'dna_footprint__binding', 'dna_footprint__region', 'formation_process', 'chaperones']
         verbose_name='Protein complex'
         verbose_name_plural = 'Protein complexes'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getModel, getEntry
 
             #biosynthesis
@@ -4048,14 +4099,14 @@ class ProteinMonomer(Protein):
             'regulatory_rule',
             'comments',
             'publication_references',
-            'created_detail', 'detail'
             ]
         facet_fields = ['type', 'is_n_terminal_methionine_cleaved__value', 'signal_sequence__type', 'signal_sequence__location', 'dna_footprint__binding', 'dna_footprint__region', 'localization', 'chaperones']
         verbose_name='Protein monomer'
         verbose_name_plural = 'Protein monomers'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if obj_data['signal_sequence'] is not None:
                 if all_obj_data is None:
                     gene = Gene.objects.get(species__wid=obj_data['species'], wid=obj_data['gene'])
@@ -4243,14 +4294,14 @@ class Reaction(SpeciesComponent):
             'map_coordinates',
             'comments',
             'publication_references',
-            'created_detail', 'detail'
             ]
         facet_fields = ['type', 'direction', 'enzyme__protein', 'coenzymes__metabolite', 'is_spontaneous', 'pathways', 'processes', 'states']
         verbose_name='Reaction'
         verbose_name_plural = 'Reactions'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             from cyano.helpers import getEntry, getModel, EmpiricalFormula
 
             #stoichiometry
@@ -4398,7 +4449,6 @@ class State(SpeciesComponent):
             'type',
             'comments',
             'publication_references',
-            'created_detail', 'detail'
             ]
         facet_fields = ['type']
         verbose_name='State'
@@ -4438,7 +4488,6 @@ class Stimulus(Molecule):
             'value',
             'comments',
             'publication_references',
-            'created_detail', 'detail'
             ]
         facet_fields = ['type', 'value__units']
         verbose_name='Stimulus'
@@ -4557,15 +4606,15 @@ class TranscriptionUnit(Molecule):
             'type',
             'genes', 'promoter_35_coordinate', 'promoter_35_length', 'promoter_10_coordinate', 'promoter_10_length', 'tss_coordinate',
             'comments',
-            'publication_references',
-            'created_detail', 'detail'
+            'publication_references'
             ]
         facet_fields = ['type']
         verbose_name='Transcription unit'
         verbose_name_plural = 'Transcription units'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             if len(obj_data['genes']) == 1:
                 return
             if len(obj_data['genes']) == 0:
@@ -4661,15 +4710,15 @@ class TranscriptionalRegulation(SpeciesComponent):
             'type',
             'transcription_unit', 'transcription_factor', 'binding_site', 'affinity', 'activity',
             'comments',
-            'publication_references',
-            'created_detail', 'detail'
+            'publication_references'
             ]
         facet_fields = ['type', 'transcription_unit', 'transcription_factor']
         verbose_name='Transcriptional regulation'
         verbose_name_plural = 'Transcriptional regulation'
         wid_unique = False
 
-        def clean(self, obj_data, all_obj_data=None, all_obj_data_by_model=None):
+        @staticmethod
+        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
             #gene wid
             if all_obj_data is None:
                 tu = TranscriptionUnit.objects.get(species__wid=obj_data['species'], wid=obj_data['transcription_unit'])
@@ -4753,8 +4802,7 @@ class Type(SpeciesComponent):
             'id', 'wid', 'name', 'synonyms', 'cross_references',
             'type', 'parent',
             'comments',
-            'publication_references',
-            'created_detail', 'detail'
+            'publication_references'
             ]
         facet_fields = ['type', 'parent']
         verbose_name='Type'
@@ -4767,7 +4815,8 @@ class CrossReference(EntryData):
 
     class Meta:
         ordering = ['xid']
-        verbose_name='Cross reference'
+        unique_together = ('xid', 'source')
+        verbose_name = 'Cross reference'
         verbose_name_plural = 'Cross references'
 
 class PublicationReference(SpeciesComponent):
@@ -4960,8 +5009,7 @@ class PublicationReference(SpeciesComponent):
             'type',
             'authors', 'editors', 'year', 'title', 'publication', 'publisher', 'volume', 'issue', 'pages',
             'comments',
-            'publication_references',
-            'created_detail', 'detail'
+            'publication_references'
             ]
         facet_fields = ['type', 'year', 'publication']
         verbose_name='Publication Reference'
@@ -5018,7 +5066,7 @@ class MassSpectrometryJob(SpeciesComponent):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
         ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references',  'created_detail', 'detail',
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type',  'comments', 'publication_references'
         ]
         facet_fields = ['type']
         verbose_name = 'Mass Spectrometry Job'
@@ -5099,7 +5147,7 @@ class Peptide(Protein):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references', 'created_detail', 'detail'
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'comments', 'publication_references'
             ]
         facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
         verbose_name = 'Peptide'
@@ -5291,7 +5339,7 @@ class MassSpectrometryProtein(Protein):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'score', 'coverage', 'pi', 'mass', 'sequence', 'comments', 'publication_references', 'created_detail', 'detail'
+            'id', 'wid', 'name', 'synonyms', 'cross_references', 'type', 'prosthetic_groups', 'chaperones', 'dna_footprint', 'regulatory_rule', 'score', 'coverage', 'pi', 'mass', 'sequence', 'comments', 'publication_references'
             ]
         facet_fields = ['type', 'chaperones', 'dna_footprint__binding', 'dna_footprint__region']
         verbose_name = 'Mass Spectrometry Protein'
