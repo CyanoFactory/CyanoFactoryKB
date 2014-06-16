@@ -801,7 +801,6 @@ def edit(request, species, model = None, item = None, action='edit'):
     #save object
     error_messages = {}
     if request.method == 'POST':
-        with transaction.atomic():
             submitted_data = chelpers.get_edit_form_data(model, request.POST, user=request.user.profile)
             
             data = submitted_data
@@ -811,44 +810,45 @@ def edit(request, species, model = None, item = None, action='edit'):
             data['wid'] = data['wid'] if action == 'add' else obj.wid
             
             try:
-                #validate is WID unique
-                if issubclass(model, cmodels.SpeciesComponent):
-                    qs = cmodels.SpeciesComponent.objects.values('wid', 'model_type__model_name').filter(species__wid=species.wid)
-                else:
-                    qs = model.objects.values('wid', 'model_type__model_name').all()
-                    
-                if action == 'edit':
-                    qs = qs.exclude(id=obj.id)
-                    
-                wids = defaultdict(list)
-                for x in qs:
-                    wids[x['wid']].append(x['model_type__model_name'])
-                
-                if data['wid'] in wids.keys():
-                    if model.__name__ in wids[data['wid']]:
-                        raise ValidationError({'wid': 'Value must be unique for model'})
-                    
-                wids[data['wid']] = model.__name__
-            
-                #validate
-                data = chelpers.validate_object_fields(model, data, wids, species.wid, data['wid'])
-                chelpers.validate_revision_detail(data)
-                chelpers.validate_model_objects(model, data)
-                chelpers.validate_model_unique(model, [data])
-                
-                #save
-                obj = chelpers.save_object_data(species, obj, data, {}, request.user, save=False, save_m2m=False)
-                obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=False)
-                obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=True)
-                
-                #redirect to details page
-                return HttpResponseRedirect(obj.get_absolute_url(species))
+                with transaction.atomic():
+                    #validate is WID unique
+                    if issubclass(model, cmodels.SpeciesComponent):
+                        qs = cmodels.SpeciesComponent.objects.values('wid', 'model_type__model_name').filter(species__wid=species.wid)
+                    else:
+                        qs = model.objects.values('wid', 'model_type__model_name').all()
+
+                    if action == 'edit':
+                        qs = qs.exclude(id=obj.id)
+
+                    wids = defaultdict(list)
+                    for x in qs:
+                        wids[x['wid']].append(x['model_type__model_name'])
+
+                    if data['wid'] in wids.keys():
+                        if model.__name__ in wids[data['wid']]:
+                            raise ValidationError({'wid': 'Value must be unique for model'})
+
+                    wids[data['wid']] = model.__name__
+
+                    #validate
+                    data = chelpers.validate_object_fields(model, data, wids, species.wid, data['wid'])
+                    chelpers.validate_revision_detail(data)
+                    chelpers.validate_model_objects(model, data)
+                    chelpers.validate_model_unique(model, [data])
+
+                    #save
+                    obj = chelpers.save_object_data(species, obj, data, {}, request.user, save=False, save_m2m=False)
+                    obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=False)
+                    obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=True)
+
+                    #redirect to details page
+                    return HttpResponseRedirect(obj.get_absolute_url(species))
             except ValidationError as error:
                 if hasattr(error, "message_dict"):
+                    print error.message_dict
                     error_messages = error.message_dict
                 else:
                     raise
-                transaction.rollback()
 
     #form query set
     if action == 'edit':
