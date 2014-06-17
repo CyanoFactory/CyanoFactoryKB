@@ -744,18 +744,19 @@ def history_detail(request, species, model, item, detail_id):
         del fieldsets[idx]
     
     #form query set
-    qs = chelpers.objectToQuerySet(item, model = model)
+    qs = chelpers.objectToQuerySet(item, model=model)
+    ct_id = ContentType.objects.get_for_model(model).pk
 
     # prev rev
-    prev_rev = cmodels.Revision.objects.filter(object_id=item.pk, detail_id__lt=detail_id).distinct().order_by("-detail").first()
+    prev_rev = cmodels.Revision.objects.filter(object_id=item.pk, content_type__pk=ct_id, detail_id__lt=detail_id).distinct().order_by("-detail").first()
     if prev_rev:
         prev_rev = prev_rev.detail
 
-    new_rev = cmodels.Revision.objects.filter(object_id=item.pk, detail_id__gt=detail_id).distinct().order_by("detail").first()
+    new_rev = cmodels.Revision.objects.filter(object_id=item.pk, content_type__pk=ct_id, detail_id__gt=detail_id).distinct().order_by("detail").first()
     if new_rev:
         new_rev = new_rev.detail
 
-    latest_rev = cmodels.Revision.objects.filter(object_id=item.pk).distinct().order_by("-detail").first().detail
+    latest_rev = cmodels.Revision.objects.filter(object_id=item.pk, content_type__pk=ct_id).distinct().order_by("-detail").first().detail
 
     #render response
     return chelpers.render_queryset_to_response(

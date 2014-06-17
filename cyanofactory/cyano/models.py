@@ -1242,7 +1242,8 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
     if not pk_set is None and len(pk_set) > 0 and isinstance(instance, Entry):
         if action == "pre_add":
             # target ist species?
-            if TableMetaManyToMany.get_by_m2m_model_name(sender._meta.object_name).target_table.model_name == "Species":
+            model_name, field_name = sender._meta.object_name.split("_", 1)
+            if model_name == "Species":
                 species = model.objects.get(pk=list(pk_set)[0])
                 if species.species_components.filter(model_type = instance.model_type, wid = instance.wid).exists():
                     raise ValidationError("Species {}: Wid {} already in use for model_type .{}".format(species.wid, instance, instance._meta.object_name))

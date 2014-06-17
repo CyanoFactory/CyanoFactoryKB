@@ -1558,7 +1558,7 @@ def get_history(species, obj, detail_id):
                 pass
             else:
                 comments += "{}: {} (cur: {})<br>".format(field.name, value, getattr(obj, key))
-                setattr(history_obj, key, str(value))
+                setattr(history_obj, key, value)
                 pass
 
     history_obj.comments = comments
