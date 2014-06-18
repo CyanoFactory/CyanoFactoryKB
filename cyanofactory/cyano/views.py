@@ -846,7 +846,6 @@ def edit(request, species, model = None, item = None, action='edit'):
                     return HttpResponseRedirect(obj.get_absolute_url(species))
             except ValidationError as error:
                 if hasattr(error, "message_dict"):
-                    print error.message_dict
                     error_messages = error.message_dict
                 else:
                     raise

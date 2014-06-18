@@ -50,7 +50,7 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
                         new_data = json.loads(revision.new_data)
                         data.update(new_data)
 
-                    print "FK", self.field.name
+                    ##print "FK", self.field.name
                     rel_obj.detail_history = instance.detail_history
                     for field in rel_obj._meta.fields:
                         if isinstance(field, RelatedObject):
@@ -65,7 +65,8 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
                                 new_value = field.to_python(data[field.name])
                                 setattr(rel_obj, field.name, new_value)
                             else:
-                                print "Not in", field.name
+                                ##print "Not in", field.name
+                                pass
 
                 if not self.field.rel.multiple:
                     setattr(rel_obj, self.field.related.get_cache_name(), instance)
@@ -105,7 +106,7 @@ def create_history_many_related_manager(superclass):
                     if self.prefetch_cache_name in new_data:
                         data = new_data[self.prefetch_cache_name]
 
-                    print "History:", self.instance.detail_history, "Data:", data
+                    ##print "History:", self.instance.detail_history, "Data:", data
 
                     queryset = queryset.filter(pk__in=data)
 
@@ -114,7 +115,7 @@ def create_history_many_related_manager(superclass):
 
                     #queryset = queryset.filter(pk__in = vals)
                     
-                    print "Queryset:", queryset#, self.core_filters, self.target_field_name, self.source_field_name, self._fk_val
+                    ##print "Queryset:", queryset#, self.core_filters, self.target_field_name, self.source_field_name, self._fk_val
                     
                     return queryset
             else:

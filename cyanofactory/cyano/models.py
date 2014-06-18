@@ -872,7 +872,6 @@ class Evidence(Model):
 
 class EntryDataQuerySet(QuerySet):
     def get_or_create_with_revision(self, revision, *args, **kwargs):
-        print args, kwargs
         try:
             return self.get(*args, **kwargs)
         except ObjectDoesNotExist:
@@ -944,7 +943,7 @@ class EntryData(Model):
                 save_data[field.name] = new_value
 
         if force_revision or len(save_data) > 0:
-            print str(self) + ": revisioning", len(save_data), "items"
+            ##print str(self) + ": revisioning", len(save_data), "items"
             # Don't update the detail when actually nothing changed for that entry
 
             # Try fetching an existing revision
@@ -962,7 +961,7 @@ class EntryData(Model):
                              detail_id=revision_detail.pk,
                              action=action,
                              new_data=json.dumps(save_data))
-            print save_data
+            ##print save_data
             r.save()
 
     def delete(self, revision_detail, using=None):
@@ -1290,7 +1289,8 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
                 try:
                     item.remove(x)
                 except ValueError:
-                    print "fixme?"
+                    #print "fixme?"
+                    pass
             new_data[field_name] = item
             revision.new_data = json.dumps(new_data)
             revision.save()
@@ -1435,7 +1435,7 @@ class Entry(AbstractEntry):
                              detail_id=revision_detail.pk,
                              action=action,
                              new_data=json.dumps(save_data))
-            print save_data
+            ##print save_data
             r.save()
 
     def delete(self, revision_detail, using=None):
@@ -1890,8 +1890,6 @@ class Genome(Molecule):
             return self.get_as_html_structure_local(species, is_user_anonymous, start_coordinate = start_coordinate, end_coordinate = end_coordinate, highlight_wid = highlight_wid)
 
     def get_as_html_structure_global(self, species, is_user_anonymous):
-        import time
-
         from .helpers import shift, overlaps
         from collections import namedtuple
 
@@ -2213,12 +2211,8 @@ class Genome(Molecule):
             'highlight_all': True
         })
 
-        start = time.time()
         template = loader.get_template("cyano/fields/structure.html")
         rendered = template.render(c)
-
-        end = time.time()
-        print end - start
 
         return rendered
 

@@ -173,7 +173,6 @@ def permission_required(permission):
                         "".join(str(x) for x in perm_allow),
                         "".join(str(x) for x in perm_deny),
                         "".join(str(x) for x in perm_needed))
-                    print extra
 
                 if is_guest:
                     return HttpResponseRedirect(reverse('login') + "?next={}&message={}".format(request.path, msg))

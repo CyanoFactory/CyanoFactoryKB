@@ -1548,53 +1548,21 @@ def get_history(species, obj, detail_id):
         for key, value in json.loads(rev.new_data).items():
             field = history_obj._meta.get_field_by_name(key)[0]
             if isinstance(field, RelatedObject):
-                print "Rel: " + field.name
+                ##print "Rel: " + field.name
                 pass
             elif isinstance(field, ManyToManyField):
-                print "M2M: " + field.name
+                ##print "M2M: " + field.name
                 pass
             elif isinstance(field, ForeignKey):
                 setattr(history_obj, key, get_history(species, field.rel.to.objects.get(pk=value), detail_id))
                 pass
             else:
-                comments += "{}: {} (cur: {})<br>".format(field.name, value, getattr(obj, key))
+                ##comments += "{}: {} (cur: {})<br>".format(field.name, value, getattr(obj, key))
                 setattr(history_obj, key, value)
                 pass
 
     history_obj.comments = comments
 
-    #print "=="
-    #print obj._meta.fields
-    #print history_obj._meta.fields
-    #for field in history_obj._meta.fields:
-    #    if isinstance(field, ForeignKey):
-    #        print "redi"
-    #        getattr(history_obj, field.name)
-    #print obj._meta.fields
-    #print history_obj._meta.fields
-    #for field in obj._meta.fields:
-    #    if isinstance(field, RelatedObject):
-    #        #print "Rel: " + field.name
-    #        pass
-    #    elif isinstance(field, ManyToManyField):
-    #        #print "M2M: " + field.name
-    #        pass
-    #    elif isinstance(field, ForeignKey):
-    #        #print "FK:  " + field.name
-    #        pass
-    #    else:
-    #        #print "Non: " + field.name
-    #        column = cmodels.TableMetaColumn.get_by_field(field)
-    #
-    #        for query in rev_query:
-    #            if query.column_id == column.pk and not query.column_id in used_columns:
-    #                used_columns.append(query.column_id)
-    #                new_value = field.to_python(query.new_value)
-    #                comments += "{}: {} (cur: {})<br>".format(field.name, new_value, getattr(obj, field.name))
-    #                setattr(history_obj, field.name, new_value)
-    #
-    #history_obj.comments = comments
-    
     # Only FK and Non yet:
     return history_obj
 
