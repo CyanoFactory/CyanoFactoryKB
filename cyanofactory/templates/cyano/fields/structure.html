@@ -1,0 +1,254 @@
+<style>
+#listfilter {
+	position:absolute;
+	right: -200px;
+	width: 200px;
+	margin: 0px -10px;
+}
+
+.feature-checkbox+label {
+    margin: .5em;
+    width:16px;
+    height:16px;
+    vertical-align:middle;
+}
+</style>
+<script>
+var old_target = "";
+var tooltip_response = "";
+var tooltip_func = function(evt, name, target) {
+    if (old_target != target) {
+        old_target = target;
+
+        $.ajax({
+            url: target,
+            context: document.body
+        }).done(function(x) {
+            tooltip_response = x;
+
+            showToolTip(evt, name, tooltip_response);
+        });
+    }
+    else {
+        showToolTip(evt, name, tooltip_response);
+    }
+}
+var features_func = function(evt, name, target) {
+    tooltip_func(evt, name, target);
+    highlight_seq($(evt.target).data("coordinate"), $(evt.target).data("length"));
+}
+var hide_features_func = function(evt) {
+    hideToolTip(evt);
+    highlight_seq(0, 0);
+}
+
+function createCheckBox(ele, i) {
+    var newID = "cbx-"+i;
+    ele.attr({ "id": newID  })
+        .prop({ "type": "checkbox" })
+        .after($("<label />").attr({ for: newID  }).addClass("color-" + ele.data("color")))
+        .button({ text: false })
+        .click(function(e) {
+            $(this).button("option", {
+                icons: {
+                    primary: $(this)[0].checked ? "ui-icon-check" : ""
+                }
+            });
+            $(this).next().css("opacity", $(this)[0].checked ? "1" : "0.3")
+        });
+    return ele;
+}
+
+$(document).ready(function() {
+    $("#listfilter").find("input:checked").change(function() {
+        var features = $("svg").find("g.features > a").children().filter("[data-type=" + $(this).data("type") + "]");
+
+        if ($(this).is(":checked")) {
+            features.show();
+        } else {
+            features.hide();
+        }
+    });
+
+    $(".feature-checkbox").each(function(i) {
+        var newCheckBox = createCheckBox($(this), i);
+        newCheckBox.click();
+        newCheckBox.click();
+    });
+});
+</script>
+{% if types %}
+<div id="listfilter">
+<h1>Structure Filter</h1>
+<div id="block">
+{% for type in types %}
+    <input class="feature-checkbox" name="feature_{{ type.pk }}" type="checkbox" checked="checked" data-type="{{ type.pk }}" data-color="{{ type.color }}" />
+    <label for="feature_{{ type.pk }}">{% if type.name %}{{ type.name }}{% else %}{{ type.wid }}{% endif %}</label>
+    <br>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="100%" height="{{ height }}" viewport="0 0 {{ width }} {{ height }}">
+    <style>
+        {% with "#1f77b4" as color %} .color-0 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#aec7e8" as color %} .color-1 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#ff7f0e" as color %} .color-2 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#ffbb78" as color %} .color-3 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#2ca02c" as color %} .color-4 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#98df8a" as color %} .color-5 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#d62728" as color %} .color-6 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#ff9896" as color %} .color-7 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#9467bd" as color %} .color-8 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#c5b0d5" as color %} .color-9 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#8c564b" as color %} .color-10 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#c49c94" as color %} .color-11 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#e377c2" as color %} .color-12 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#f7b6d2" as color %} .color-13 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#7f7f7f" as color %} .color-14 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#c7c7c7" as color %} .color-15 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#bcbd22" as color %} .color-16 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#dbdb8d" as color %} .color-17 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#17becf" as color %} .color-18 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+        {% with "#9edae5" as color %} .color-19 { fill:{{ color }}; stroke:{{ color }}; background:{{ color }} }{% endwith %}
+
+        .chr text { fill:#222; alignment-baseline:middle; font-size:10px }
+        .chr line{ stroke:#666; stroke-width:0.5px; }
+        .genes g text { text-anchor:middle; alignment-baseline:middle; font-size:8px; fill: #222 }
+        .promoters rect { fill:#3d80b3; opacity:0.5 }
+        .tfSites rect { fill:#3db34a; opacity:0.5 }
+    </style>
+    <g class="chr">
+        {% for chromosome in chromosomes %}
+        <text x="{{ chromosome.left|add:-4 }}" y="{{ chromosome.y }}" style="text-anchor:end;">{{ chromosome.start }}</text>
+        <line x1="{{ chromosome.left }}" x2="{{ chromosome.right }}" y1="{{ chromosome.y }}" y2="{{ chromosome.y }}"></line>
+        <text x="{{ chromosome.right|add:2 }}" y="{{ chromosome.y }}" style="text-anchor:start;">{{ chromosome.end }}</text>
+        {% endfor %}
+    </g>
+    <g class="genes">
+        {% for gene in genes %}
+        <g>
+            <a xlink:href="{{ gene.url }}">
+                <polygon class="color-{{ gene.color }}"
+                         points="
+                            {% if gene.arrow %}
+                                {% if gene.direction == "f" %}
+                                    {{ gene.x1 }},{{ gene.y1 }}
+                                    {{ gene.x2|add:gene.arrow_size }},{{ gene.y1 }}
+                                    {{ gene.x2 }},{% widthratio gene.y2|add:gene.y1 2 1 %}
+                                    {{ gene.x2|add:gene.arrow_size }},{{ gene.y2 }}
+                                    {{ gene.x1 }},{{ gene.y2 }}
+                                    {{ gene.x1 }},{{ gene.y1 }}
+                                {% else %}
+                                    {{ gene.x1|add:gene.arrow_size }},{{ gene.y1 }}
+                                    {{ gene.x2 }},{{ gene.y1 }}
+                                    {{ gene.x2 }},{{ gene.y2 }}
+                                    {{ gene.x1|add:gene.arrow_size }},{{ gene.y2 }}
+                                    {{ gene.x1 }},{% widthratio gene.y1|add:gene.y2 2 1 %}
+                                    {{ gene.x1|add:gene.arrow_size }},{{ gene.y1 }}
+                                {% endif %}
+                            {% else %}
+                                {{ gene.x1 }},{{ gene.y1 }}
+                                {{ gene.x2 }},{{ gene.y1 }}
+                                {{ gene.x2 }},{{ gene.y2 }}
+                                {{ gene.x1 }},{{ gene.y2 }}
+                                {{ gene.x1 }},{{ gene.y1 }}
+                            {% endif %}"
+                         onmousemove="tooltip_func(evt, '{{ gene.title }}', '{% url 'cyano.views.detail_field' species_wid=species.wid model_type="Gene" wid=gene.wid %}?name=tooltip&strip=1')"
+                         onmouseout="hideToolTip(evt);"
+                         {% if highlight_all or gene.wid in highlight_wid %}
+                         style="fill-opacity: 1; stroke-opacity: 0; stroke-width: 5px"
+                         {% else %}
+                         style="fill-opacity: 0.3; stroke-opacity: 0.35; stroke-width: 1px"
+                         {% endif %}
+                        >
+                </polygon>
+            </a>
+            <a xlink:href="{{ gene.url }}">
+                <text x="{% widthratio gene.x1|add:gene.x2 2 1 %}"
+                      y="{% widthratio gene.y1|add:gene.y2 2 1 %}"
+                      onmousemove="tooltip_func(evt, '{{ gene.title }}', '{% url 'cyano.views.detail_field' species_wid=species.wid model_type="Gene" wid=gene.wid %}?name=tooltip&strip=1')"
+                      onmouseout="hideToolTip(evt);">{{ gene.label }}
+                </text>
+            </a>
+        </g>
+        {% endfor %}
+    </g>
+    <g class="promoters">
+        {% for promoter in promoters %}
+        <a xlink:href="{{ promoter.url }}">
+            <rect x="{{ promoter.x }}"
+                  y="{{ promoter.y }}"
+                  width="{{ promoter.width }}"
+                  height="{{ promoter.height }}"
+                  onmousemove="showToolTip(evt, '{{ promoter.title }}', '{{ promoter.text }}')"
+                  onmouseout="hideToolTip(evt);"
+                  style="
+                  {% if highlight_all or promoter.wid in highlight_wid %}
+                  opacity: 1;
+                  {% else %}
+                  opacity: 0.3;
+                  {% endif %}
+                  ">
+            </rect>
+        </a>
+        {% endfor %}
+    </g>
+    <g class="tfSites">
+        {% for tf_site in tf_sites %}
+        <a xlink:href="{{ tf_site.url }}">
+            <rect x="{{ tf_site.x }}"
+                  y="{{ tf_site.y }}"
+                  width="{{ tf_site.width }}"
+                  height="{{ tf_site.height }}"
+                  onmousemove="showToolTip(evt, '{{ tf_site.title }}', '{{ tf_site.text }}')"
+                  onmouseout="hideToolTip(evt);"
+                  style="
+                  {% if highlight_all or tf_site.wid in highlight_wid %}
+                  opacity: 1;
+                  {% else %}
+                  opacity: 0.3;
+                  {% endif %}
+                  ">
+            </rect>
+        </a>
+        {% endfor %}
+    </g>
+    <g class="features">
+        {% for feature in features %}
+        <a xlink:href="{{ feature.url }}">
+        {% if feature.width <= 3 %}
+            <polygon class="color-{{ feature.color }}"
+                 points="
+                    {% widthratio feature.x|add:feature.x|add:5 2 1 %}, {{ feature.y }}
+                    {{ feature.x|add:5 }}, {{ feature.y|add:feature.height }}
+                    {{ feature.x }}, {{ feature.y|add:feature.height }}
+                    "
+        {% else %}
+            <rect class="color-{{ feature.color }}"
+                  x="{{ feature.x }}"
+                  y="{{ feature.y }}"
+                  width="{{ feature.width }}"
+                  height="{{ feature.height }}"
+        {% endif %}
+                  onmousemove="features_func(evt, '{{ feature.title }}', '{% url 'cyano.views.detail_field' species_wid=species.wid model_type="ChromosomeFeature" wid=feature.wid %}?name=tooltip&strip=1')"
+                  onmouseout="hide_features_func(evt);"
+                  data-coordinate="{{ feature.coordinate }}"
+                  data-length="{{ feature.length }}"
+                  data-type="{{ feature.type.pk }}"
+                  style="
+                  {% if highlight_all or feature.wid in highlight_wid %}
+                  opacity: 1;
+                  {% else %}
+                  opacity: 0.3;
+                  {% endif %}
+                  ">
+        {% if feature.width <= 3 %}
+            </polygon>
+        {% else %}
+            </rect>
+        {% endif %}
+        </a>
+        {% endfor %}
+    </g>
+</svg>

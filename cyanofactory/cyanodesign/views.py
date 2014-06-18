@@ -18,7 +18,7 @@ def index(request):
 @login_required
 @ajax_required
 def get_reactions(request):
-    model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model2.txt")
+    model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model.txt")
 
     org = Metabolism(model)
 
@@ -60,10 +60,10 @@ def simulate(request):
     if not all(x for x in string_type):
         return HttpResponseBadRequest("Invalid data type")
 
-    print "\n".join(data)
-    print constr
-    print ext
-    print objective
+    #print "\n".join(data)
+    #print constr
+    #print ext
+    #print objective
 
     try:
         organism = Metabolism("model_name",

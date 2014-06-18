@@ -1,0 +1,120 @@
+<script>
+var sequence_offset = {{ sequence_offset }};
+
+// highlights text at [position, length)
+var wrap_text = function(element, position, length) {
+    var text = element.text();
+    element.text("");
+
+    $("<span></span>").text(text.substr(0, position)).appendTo(element);
+    $("<span></span>").text(text.substr(position, length)).addClass("highlight").appendTo(element);
+
+    if (length != undefined) {
+        $("<span></span>").text(text.substr(position + length)).appendTo(element);
+    }
+}
+
+var highlight_seq = function(begin, length) {
+    var nucleotides = $(".nucleotide");
+    var proteins = $(".protein");
+
+    var func = function(index, value) {
+        value = $(value);
+        value.html(value.text());
+    }
+    nucleotides.each(func);
+    proteins.each(func);
+
+    var nucleotide_length = nucleotides[0].textContent.length;
+
+    var amount = (begin - sequence_offset);
+
+    if (amount < 0) {
+        if (amount + length >= 0) {
+            length += amount;
+            amount = 0;
+        } else {
+            return;
+        }
+    }
+
+    // | 0 -> cast to int
+    var index = (amount / nucleotide_length) | 0;
+    var last_index = ((amount + length) / nucleotide_length) | 0;
+
+    if (index >= 0 && index < nucleotides.length) {
+
+        var first_element = $(nucleotides[index]);
+        var first_element_prot = $(proteins[index]);
+
+        wrap_text(first_element, amount - (index * nucleotide_length), length);
+        wrap_text(first_element_prot, amount - (index * nucleotide_length), length);
+
+        if (index != last_index) {
+            var last_element = $(nucleotides[last_index]);
+            var last_element_prot = $(proteins[last_index]);
+            var remaining_length = length - (nucleotide_length - (amount - (index * nucleotide_length)));
+            remaining_length -= (last_index - index - 1) * nucleotide_length;
+            wrap_text(last_element, 0, remaining_length);
+            wrap_text(last_element_prot, 0, remaining_length);
+        }
+
+        for (var i = index + 1; i < last_index; ++i) {
+            $(nucleotides[i]).wrapInner("<span class='highlight'></span>");
+            $(proteins[i]).wrapInner("<span class='highlight'></span>");
+        }
+    }
+}
+
+$(function() {
+    var nucleotides = $("span.nucleotide");
+    var proteins = $("span.protein");
+
+    nucleotides.each(function(index, self) {
+        $(self).data("index", index);
+    });
+    proteins.each(function(index, self) {
+        $(self).data("index", index);
+    });
+
+    nucleotides.hover(function() {
+        $(this).addClass("highlight");
+        $(proteins[$(this).data("index")]).addClass("highlight");
+    },
+    function() {
+        $(this).removeClass("highlight");
+        $(proteins[$(this).data("index")]).removeClass("highlight");
+    });
+
+    proteins.hover(function() {
+        $(this).addClass("highlight");
+        $(nucleotides[$(this).data("index")]).addClass("highlight");
+    },
+    function() {
+        $(this).removeClass("highlight");
+        $(nucleotides[$(this).data("index")]).removeClass("highlight");
+    });
+});
+</script>
+<div class="sequence">
+    <div>
+    {% for num in numbers %}
+    {{ num }}<br/>{% if sequence.0.1 %}<br/>{% endif %}
+    {% endfor %}
+    </div>
+    <div>
+    {% for seq in sequence %}
+    <span class="nucleotide">{% for codon in seq.0 %}{{ codon }}{% endfor %}</span>
+    <br/>
+    {% if seq.1 %}
+    <span class="protein">{% for as in seq.1 %}{{ as }}&nbsp;&nbsp;{% endfor %}</span>
+    <br/>
+    {% endif %}
+    {% endfor %}
+    </div>
+    <div>
+    {% for num in numbers %}
+    {% if forloop.last %}{{ sequence_length }}{% else %}{{ num|add:line_length|add:-1 }}{% endif %}<br/>{% if sequence.0.1 %}<br/>{% endif %}
+    {% endfor %}
+    </div>
+</div>

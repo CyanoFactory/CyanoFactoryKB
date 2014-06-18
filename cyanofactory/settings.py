@@ -102,8 +102,8 @@ TEMPLATE_LOADERS = (
 
 MIDDLEWARE_CLASSES = (
     'cyano.middleware.RedirectAllowedHostMiddlware',
-    'johnny.middleware.LocalStoreClearMiddleware',
-    'johnny.middleware.QueryCacheMiddleware',
+    #'johnny.middleware.LocalStoreClearMiddleware',
+    #'johnny.middleware.QueryCacheMiddleware',
     #'django.middleware.cache.UpdateCacheMiddleware',
     'django.middleware.common.CommonMiddleware',
     #'django.middleware.cache.FetchFromCacheMiddleware',
@@ -124,9 +124,12 @@ TEMPLATE_DIRS = (
     ROOT_DIR + "/templates",
 )
 
-HAYSTACK_SITECONF = 'cyano.search_indexes'
-HAYSTACK_SEARCH_ENGINE = 'dummy'
-HAYSTACK_XAPIAN_PATH = os.path.join(os.path.dirname(__file__), 'xapian_index')
+HAYSTACK_CONNECTIONS = {
+    'default': {
+        'ENGINE': 'xapian_backend.XapianEngine',
+        'PATH': os.path.join(os.path.dirname(__file__), 'xapian_index'),
+    },
+}
 
 djcelery.setup_loader()
 
@@ -217,7 +220,7 @@ CACHES = {
         'OPTIONS': {
             'MAX_ENTRIES': 1000
         },
-        'JOHNNY_CACHE': True,
+        'JOHNNY_CACHE': False,
     }
 }
 
@@ -245,5 +248,8 @@ TEMPLATE_CONTEXT_PROCESSORS += (
 )
 
 GOOGLE_SEARCH_ENABLED = False
+
+CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
+CELERY_RESULT_BACKEND = "djcelery.backends.database:DatabaseBackend"
 
 JOHNNY_TABLE_BLACKLIST = ["djcelery_crontabschedule", "djcelery_intervalschedule", "djcelery_periodictask", "djcelery_periodictasks", "djcelery_taskstate", "djcelery_workerstate", "celery_taskmeta", "celery_tasksetmeta"]

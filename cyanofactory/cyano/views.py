@@ -11,7 +11,12 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
+from __future__ import absolute_import
+
 import os
+from django.contrib.contenttypes.models import ContentType
+from django.template.context import Context
+from haystack.inputs import AutoQuery
 import settings
 import tempfile
 from copy import deepcopy
@@ -24,7 +29,7 @@ from django.db import transaction
 from django.db.models import Count, Sum
 from django.db.models.fields import BooleanField, NullBooleanField, AutoField, BigIntegerField, DecimalField, FloatField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField
 from django.db.models.fields.related import RelatedObject, ManyToManyField, ForeignKey
-from django.db.models.query import EmptyQuerySet
+from django.db.models.query import EmptyQuerySet, QuerySet
 from django.shortcuts import get_object_or_404
 from django.utils.text import capfirst
 
@@ -35,8 +40,9 @@ import cyano.helpers as chelpers
 import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
 from cyano.decorators import resolve_to_objects, permission_required
-from django.db.transaction import commit_on_success
-from django.http.response import HttpResponseRedirect
+from django.db.transaction import atomic
+from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse
+
 
 def index(request):
     return chelpers.render_queryset_to_response(
@@ -400,51 +406,61 @@ def search(request, species = None):
         return search_google(request, species, query)
                 
 def search_haystack(request, species, query):
-    results = SearchQuerySet().filter(species=species).filter(content=query)
-    
+    results = SearchQuerySet().filter(species_wid=species.wid).filter(content=AutoQuery(query))
+
     #calculate facets      
     facets = results.facet('model_type')
-    tmp = facets.facet_counts()['fields']['model_type']
-    modelNameFacet = []
-    objectTypes = chelpers.getObjectTypes()
+    ##print facets
+    ##print facets.facet_counts()
+
     models = []
-    for tmp2 in tmp:
-        modelName = objectTypes[objectTypes.index(tmp2[0])]
-        modelNameFacet.append({
-            'name':modelName, 
-            'verbose_name': chelpers.getModel(modelName)._meta.verbose_name,
-            'count':tmp2[1],
-            })
-        models.append(chelpers.getModel(modelName))
-    modelNameFacet.sort(lambda x, y:cmp(x['verbose_name'], y['verbose_name']))
-    
-    #narrow search by facets
+    model_name_facet = []
+
+    if request.is_ajax():
+        template = "cyano/search_page.html"
+    else:
+        template = "cyano/search.html"
+
     model_type = request.GET.get('model_type', '')
-    if model_type:
-        results = results.models(chelpers.getModel(model_type))
-        
+
+    if facets.facet_counts():
+        tmp = facets.facet_counts()['fields']['model_type']
+        ##print tmp
+        for tmp2 in tmp:
+            ##print "tmp2", tmp2
+            model_name = cmodels.TableMeta.objects.get(model_name__iexact=tmp2[0]).model_name
+            model_name_facet.append({
+                'name':model_name,
+                'verbose_name': chelpers.getModel(model_name)._meta.verbose_name,
+                'count':tmp2[1],
+                })
+            models.append(chelpers.getModel(model_name))
+        model_name_facet.sort(lambda x, y:cmp(x['verbose_name'], y['verbose_name']))
+
+        #narrow search by facets
+        if model_type:
+            results = results.filter(model_type=model_type)
+
     #order results
     results = results.order_by('wid')
-    
-    #convert results to query set
-    queryset = EmptyQuerySet()
-    for obj in results:
-        tmp = obj.model.objects.none()
-        tmp._result_cache.append(obj.object)
-        queryset = chain(queryset, tmp)
+
+    results.model = cmodels.Entry
+
+    #for result in results:
+    #    print result.model_name, result
     
     #form response
     return chelpers.render_queryset_to_response(
         species = species,
         request = request, 
-        models = models, 
-        queryset = queryset, 
-        template = 'cyano/search.html', 
+        models = models,
+        queryset = results,
+        template = template,
         data = {
             'query': query,
             'engine': 'haystack',
             'model_type': model_type,
-            'modelNameFacet': modelNameFacet,
+            'modelNameFacet': model_name_facet,
             })
 
 def search_google(request, species, query):
@@ -508,7 +524,7 @@ def listing(request, species, model):
             if value is not None and unicode(value) != '':
                 facets.append({
                     'id': unicode(id_), 
-                    'name': unicode(name),
+                    'name': unicode(name or id_),
                     'count': facet['count']})
         if len(facets) > 1:
             facet_fields.append({ 
@@ -518,7 +534,7 @@ def listing(request, species, model):
                 })
     
         #filter
-        val = request.GET.get(field_full_name)        
+        val = request.GET.get(field_full_name)
         if val:
             if isinstance(field, (ForeignKey, ManyToManyField)):
                 kwargs = {field_full_name + '__wid': val}
@@ -603,41 +619,59 @@ def detail(request, species, model, item):
             'message': request.GET.get('message', ''),
             })
 
+
+@resolve_to_objects
+@permission_required(perm.READ_NORMAL)
+def detail_field(request, species, model, item):
+    from django.template import loader
+    from django.utils.html import strip_tags
+
+    if request.GET.get('name') is None:
+        return HttpResponseBadRequest("Unknown field")
+
+    strip = request.GET.get('strip', False)
+
+    output = chelpers.format_field_detail_view(species, item, request.GET.get('name'), request.user.is_anonymous())
+
+    if output is None:
+        return HttpResponseBadRequest("Unknown field")
+
+    template = loader.get_template("cyano/field.html")
+    c = Context({'request': request, 'data': output})
+
+    rendered = template.render(c)
+
+    if strip:
+        rendered = strip_tags(rendered)
+
+    return HttpResponse(rendered)
+
 @resolve_to_objects
 @permission_required(perm.READ_HISTORY)
-def history(request, species, model = None, item = None):
+def history(request, species, model=None, item=None):
     revisions = []
     entry = []
     date = None
 
     if item:
         # Item specific
-        obj = item
-        objects = cmodels.Revision.objects.filter(current = item).distinct().order_by("-detail")
-        
-        # Add link to the current version of the item
-        wid = obj.wid
-        detail_id = obj.detail.pk
-        date = obj.detail.date.date()
-        time = obj.detail.date.strftime("%H:%M")
-        reason = obj.detail.reason
-        author = obj.detail.user
-        url = reverse("cyano.views.detail", kwargs = {"species_wid": species.wid, "model_type": obj.model_type.model_name, "wid": wid})
-        
-        entry = [date, []]
-        entry[1].append({'id': detail_id, 'time': time, 'wid': wid, 'reason': reason, 'author': author, 'url': url})
-        
+        objects = cmodels.Revision.objects.filter(object_id=item.pk).distinct().order_by("-detail")
+
     elif model:
         # Model specific
         components = model.objects.for_species(species)
-        objects = cmodels.Revision.objects.filter(current__pk__in = components).distinct().order_by("-detail")
+        ct_id = ContentType.objects.get_for_model(model).pk
+        objects = cmodels.Revision.objects.filter(object_id__in=components, content_type__pk=ct_id).order_by("-detail")
 
     else:
         # Whole species specific
         components = cmodels.SpeciesComponent.objects.for_species(species)
-        objects = cmodels.Revision.objects.filter(current__pk__in = components).distinct().order_by("-detail")
+        objects = cmodels.Revision.objects.filter(object_id__in=components).distinct().order_by("-detail")
     
     for obj in objects:
+        if not issubclass(ContentType.objects.get_for_id(obj.content_type_id).model_class(), cmodels.Entry):
+            continue
+
         last_date = date
         wid = obj.current.wid
         item_model = obj.current.model_type.model_name
@@ -647,25 +681,25 @@ def history(request, species, model = None, item = None):
         reason = obj.detail.reason
         author = obj.detail.user
         url = reverse("cyano.views.history_detail", kwargs = {"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
-        
+
         if last_date != date:
             revisions.append(entry)
             entry = [date, []]
-        
+
         entry[1].append({'id': detail_id, 'time': time, 'wid': wid, 'reason': reason, 'author': author, 'url': url})
     revisions.append(entry)
-    
+
     if item:
         qs = chelpers.objectToQuerySet(item, model = model)
     else:
         qs = objects
 
     return chelpers.render_queryset_to_response(
-        species = species,
-        request = request,
-        models = [model],
-        queryset = qs,
-        template = 'cyano/history.html',
+        species=species,
+        request=request,
+        models=[model],
+        queryset=qs,
+        template='cyano/history.html',
         data = {
             'revisions': revisions
             })
@@ -712,19 +746,36 @@ def history_detail(request, species, model, item, detail_id):
         del fieldsets[idx]
     
     #form query set
-    qs = chelpers.objectToQuerySet(item, model = model)
+    qs = chelpers.objectToQuerySet(item, model=model)
+    ct_id = ContentType.objects.get_for_model(model).pk
+
+    # prev rev
+    prev_rev = cmodels.Revision.objects.filter(object_id=item.pk, content_type__pk=ct_id, detail_id__lt=detail_id).distinct().order_by("-detail").first()
+    if prev_rev:
+        prev_rev = prev_rev.detail
+
+    new_rev = cmodels.Revision.objects.filter(object_id=item.pk, content_type__pk=ct_id, detail_id__gt=detail_id).distinct().order_by("detail").first()
+    if new_rev:
+        new_rev = new_rev.detail
+
+    latest_rev = cmodels.Revision.objects.filter(object_id=item.pk, content_type__pk=ct_id).distinct().order_by("-detail").first().detail
 
     #render response
     return chelpers.render_queryset_to_response(
-        species = species,        
-        request = request, 
-        models = [model],
-        queryset = qs,
-        template = 'cyano/history_detail.html', 
-        data = {
+        species=species,
+        request=request,
+        models=[model],
+        queryset=qs,
+        template='cyano/history_detail.html',
+        data={
             'fieldsets': fieldsets,
             'message': request.GET.get('message', ''),
-            })
+            'latest_revision': latest_rev,
+            'previous_revision': prev_rev,
+            'revision': cmodels.RevisionDetail.objects.get(pk=detail_id),
+            'newer_revision': new_rev
+        }
+    )
 
 @login_required
 @resolve_to_objects
@@ -753,47 +804,48 @@ def edit(request, species, model = None, item = None, action='edit'):
     #save object
     error_messages = {}
     if request.method == 'POST':
-        with transaction.commit_on_success():
-            submitted_data = chelpers.get_edit_form_data(model, request.POST, user = request.user.profile)
+            submitted_data = chelpers.get_edit_form_data(model, request.POST, user=request.user.profile)
             
             data = submitted_data
             data['id'] = obj.id
             data['species'] = species.wid
             data['model_type'] = model.__name__
+            data['wid'] = data['wid'] if action == 'add' else obj.wid
             
             try:
-                #validate is WID unique
-                if issubclass(model, cmodels.SpeciesComponent):
-                    qs = cmodels.SpeciesComponent.objects.values('wid', 'model_type__model_name').filter(species__wid=species.wid)
-                else:
-                    qs = model.objects.values('wid', 'model_type__model_name').all()
-                    
-                if action == 'edit':
-                    qs = qs.exclude(id=obj.id)
-                    
-                wids = defaultdict(list)
-                for x in qs:
-                    wids[x['wid']].append(x['model_type__model_name'])
-                
-                if data['wid'] in wids.keys():
-                    if model.__name__ in wids[data['wid']]:
-                        raise ValidationError({'wid': 'Value must be unique for model'})
-                    
-                wids[data['wid']] = model.__name__
-            
-                #validate
-                data = chelpers.validate_object_fields(model, data, wids, species.wid, data['wid'])
-                chelpers.validate_revision_detail(data)
-                chelpers.validate_model_objects(model, data)
-                chelpers.validate_model_unique(model, [data])
-                
-                #save                
-                obj = chelpers.save_object_data(species, obj, data, {}, request.user, save=False, save_m2m=False)
-                obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=False)
-                obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=True)
-                
-                #redirect to details page
-                return HttpResponseRedirect(obj.get_absolute_url(species))
+                with transaction.atomic():
+                    #validate is WID unique
+                    if issubclass(model, cmodels.SpeciesComponent):
+                        qs = cmodels.SpeciesComponent.objects.values('wid', 'model_type__model_name').filter(species__wid=species.wid)
+                    else:
+                        qs = model.objects.values('wid', 'model_type__model_name').all()
+
+                    if action == 'edit':
+                        qs = qs.exclude(id=obj.id)
+
+                    wids = defaultdict(list)
+                    for x in qs:
+                        wids[x['wid']].append(x['model_type__model_name'])
+
+                    if data['wid'] in wids.keys():
+                        if model.__name__ in wids[data['wid']]:
+                            raise ValidationError({'wid': 'Value must be unique for model'})
+
+                    wids[data['wid']] = model.__name__
+
+                    #validate
+                    data = chelpers.validate_object_fields(model, data, wids, species.wid, data['wid'])
+                    chelpers.validate_revision_detail(data)
+                    chelpers.validate_model_objects(model, data)
+                    chelpers.validate_model_unique(model, [data])
+
+                    #save
+                    obj = chelpers.save_object_data(species, obj, data, {}, request.user, save=False, save_m2m=False)
+                    obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=False)
+                    obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=True)
+
+                    #redirect to details page
+                    return HttpResponseRedirect(obj.get_absolute_url(species))
             except ValidationError as error:
                 if hasattr(error, "message_dict"):
                     error_messages = error.message_dict
@@ -844,8 +896,9 @@ def delete(request, species, model = None, item = None):
     
     #delete
     if request.method == 'POST':
-        # Todo: Should be revisioned
-        obj.delete(species)
+        # Todo: Should be revisioned with custom message
+        rev_detail = cmodels.RevisionDetail(user=request.user.profile, reason="Delete "+item.wid)
+        obj.delete(species, rev_detail)
         return HttpResponseRedirect(reverse('cyano.views.listing', kwargs={'species_wid':species.wid, 'model_type': model.__name__}))
         
     #confirmation message
@@ -959,7 +1012,7 @@ def importData(request, species=None):
 @login_required
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
-@commit_on_success
+@atomic
 def importSpeciesData(request, species=None):
     data = {}
     
@@ -1349,3 +1402,8 @@ def jobs(request, species = None):
                     'finished': finished,
                     'running': running})
 
+def sbgn(request):
+    return chelpers.render_queryset_to_response(
+        request,
+        template="cyano/sbgn.html",
+    )

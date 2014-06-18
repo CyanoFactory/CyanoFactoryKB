@@ -1,0 +1,340 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Copyright (c) 2013 Roebbe Wuenschiers <wuenschi@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+
+{% block head_title %}{{ block.super }} :: SBGN{% endblock %}
+{% block page_title %}SBGN of Synechocystis{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<script type="text/javascript" src="{% static "boehringer/jquery-svgpan.js" %}"></script>
+
+<script>
+$(function() {
+	$('svg').svgPan('viewport');
+});
+</script>
+{% endblock %}
+
+{% block extrastyles %}
+#map {
+	width: 100%;
+	height: 100%;
+}
+
+#map_box {
+	overflow:scroll;
+	height:500px;
+}
+{% endblock %}
+
+{% block content %}
+<table id="detail">
+	<tbody class="data">
+			<th colspan="2">Map</th>
+		</tr>
+        <tr>
+            <td colspan="2" id="map_box">
+                <div id="map">
+				<svg height="100%" id="Synechocystis_6803.gml" name="Synechocystis_6803.gml" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+				<g id="viewport">
+					<image height="6586" width="7036" x="0" xlink:href="{% static "cyano/img/sbgn.png" %}" y="0" /><a xlink:href="http://www.kegg.jp/dbget-bin/www_bget?R00506" xlink:title="R00506"><polygon fill-opacity="0.0" points="378,334 292,334 292,336 378,336" style="stroke-width:1;stroke:rgb(255,0,0)" />
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
+						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="3525" y="3460" />
+					</a>
+					<a xlink:href="http://www.sciencemag.org/content/334/6062/1551.abstract" xlink:title="Zhang&amp;Bryant 2011">
+						<rect alt="Zhang&amp;Bryant 2011" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="655" y="4495" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
+						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="6695" y="2655" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
+						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="2565" y="1880" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
+						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="4745" y="3775" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
+						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="4365" y="3505" />
+					</a>
+					<a xlink:href="http://www.sciencemag.org/content/334/6062/1551.abstract" xlink:title="Zhang&amp;Bryant 2011">
+						<rect alt="Zhang&amp;Bryant 2011" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="365" y="5215" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="11167002" %}" xlink:title="Schmitz et al. 2000">
+						<rect alt="Schmitz et al. 2000" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="2775" y="5975" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
+						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="3645" y="4245" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
+						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="1625" y="1315" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
+						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="2155" y="1990" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
+						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="5995" y="2365" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
+						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="3135" y="1765" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
+						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="5395" y="2355" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1322" %}" xlink:title="sll1322">
+						<rect alt="sll1322" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4120" y="1050" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1289" %}" xlink:title="slr1289">
+						<rect alt="slr1289" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="474" y="5880" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1675" %}" xlink:title="slr1675">
+						<rect alt="slr1675" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="1054" y="1300" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1220" %}" xlink:title="sll1220">
+						<rect alt="sll1220" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3130" y="1810" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1434" %}" xlink:title="slr1434">
+						<rect alt="slr1434" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="5514" y="760" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1233" %}" xlink:title="slr1233">
+						<rect alt="slr1233" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="1774" y="3920" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0952" %}" xlink:title="slr0952">
+						<rect alt="slr0952" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4294" y="2840" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1327" %}" xlink:title="sll1327">
+						<rect alt="sll1327" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3264" y="580" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1124" %}" xlink:title="slr1124">
+						<rect alt="slr1124" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3474" y="5260" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0329" %}" xlink:title="slr0329">
+						<rect alt="slr0329" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4614" y="2300" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr2094" %}" xlink:title="slr2094">
+						<rect alt="slr2094" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4454" y="2840" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0823" %}" xlink:title="sll0823">
+						<rect alt="sll0823" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="1380" y="3870" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0018" %}" xlink:title="sll0018">
+						<rect alt="sll0018" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3564" y="3390" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1220" %}" xlink:title="sll1220">
+						<rect alt="sll1220" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2544" y="2000" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="ssl2153" %}" xlink:title="ssl2153">
+						<rect alt="ssl2153" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="6714" y="3260" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0943" %}" xlink:title="slr0943">
+						<rect alt="slr0943" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3724" y="3390" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0752" %}" xlink:title="slr0752">
+						<rect alt="slr0752" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3670" y="5760" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1326" %}" xlink:title="sll1326">
+						<rect alt="sll1326" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3354" y="340" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0012" %}" xlink:title="slr0012">
+						<rect alt="slr0012" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4654" y="4570" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1330" %}" xlink:title="slr1330">
+						<rect alt="slr1330" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3264" y="830" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1626" %}" xlink:title="sll1626">
+						<rect alt="sll1626" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="1640" y="1745" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0359" %}" xlink:title="sll0359">
+						<rect alt="sll0359" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2104" y="1630" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1226" %}" xlink:title="sll1226">
+						<rect alt="sll1226" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="384" y="1030" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0401" %}" xlink:title="sll0401">
+						<rect alt="sll0401" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="1914" y="6290" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1023" %}" xlink:title="sll1023">
+						<rect alt="sll1023" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="554" y="3860" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="ssl3580" %}" xlink:title="ssl3580">
+						<rect alt="ssl3580" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="570" y="230" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0394" %}" xlink:title="slr0394">
+						<rect alt="slr0394" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3674" y="4840" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0822" %}" xlink:title="sll0822">
+						<rect alt="sll0822" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2684" y="1640" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1275" %}" xlink:title="sll1275">
+						<rect alt="sll1275" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3484" y="5920" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0329" %}" xlink:title="sll0329">
+						<rect alt="sll0329" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="6544" y="2640" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0807" %}" xlink:title="sll0807">
+						<rect alt="sll0807" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="5964" y="2960" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0721" %}" xlink:title="slr0721">
+						<rect alt="slr0721" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2800" y="5360" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1323" %}" xlink:title="sll1323">
+						<rect alt="sll1323" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4124" y="600" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0370" %}" xlink:title="slr0370">
+						<rect alt="slr0370" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="520" y="4490" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1525" %}" xlink:title="sll1525">
+						<rect alt="sll1525" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="5424" y="3940" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1324" %}" xlink:title="sll1324">
+						<rect alt="sll1324" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4024" y="340" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1432" %}" xlink:title="sll1432">
+						<rect alt="sll1432" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="1484" y="1300" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1329" %}" xlink:title="slr1329">
+						<rect alt="slr1329" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3364" y="1080" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1462" %}" xlink:title="sll1462">
+						<rect alt="sll1462" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="930" y="180" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1625" %}" xlink:title="sll1625">
+						<rect alt="sll1625" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="1534" y="3870" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0891" %}" xlink:title="sll0891">
+						<rect alt="sll0891" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2474" y="5190" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1843" %}" xlink:title="slr1843">
+						<rect alt="slr1843" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="5234" y="2350" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1945" %}" xlink:title="slr1945">
+						<rect alt="slr1945" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3774" y="5260" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0593" %}" xlink:title="sll0593">
+						<rect alt="sll0593" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4764" y="2300" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0884" %}" xlink:title="slr0884">
+						<rect alt="slr0884" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3504" y="4230" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1220" %}" xlink:title="sll1220">
+						<rect alt="sll1220" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2170" y="1915" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1479" %}" xlink:title="sll1479">
+						<rect alt="sll1479" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="5844" y="2350" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0603" %}" xlink:title="sll0603">
+						<rect alt="sll0603" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="234" y="5210" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0009" %}" xlink:title="sll0009">
+						<rect alt="sll0009" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4294" y="4570" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1224" %}" xlink:title="sll1224">
+						<rect alt="sll1224" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="1280" y="2470" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0920" %}" xlink:title="sll0920">
+						<rect alt="sll0920" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2484" y="5540" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1793" %}" xlink:title="slr1793">
+						<rect alt="slr1793" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4600" y="3760" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1349" %}" xlink:title="slr1349">
+						<rect alt="slr1349" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4790" y="2760" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1070" %}" xlink:title="sll1070">
+						<rect alt="sll1070" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="5320" y="2960" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0741" %}" xlink:title="sll0741">
+						<rect alt="sll0741" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2634" y="5970" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0745" %}" xlink:title="sll0745">
+						<rect alt="sll0745" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4164" y="3440" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0587" %}" xlink:title="sll0587">
+						<rect alt="sll0587" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3324" y="5920" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1325" %}" xlink:title="sll1325">
+						<rect alt="sll1325" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3684" y="310" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1876" %}" xlink:title="slr1876">
+						<rect alt="slr1876" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="704" y="2300" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1223" %}" xlink:title="sll1223">
+						<rect alt="sll1223" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="1870" y="2430" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1342" %}" xlink:title="sll1342">
+						<rect alt="sll1342" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4254" y="4160" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1220" %}" xlink:title="sll1220">
+						<rect alt="sll1220" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2130" y="2110" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1557" %}" xlink:title="sll1557">
+						<rect alt="sll1557" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="890" y="3850" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll0322" %}" xlink:title="sll0322">
+						<rect alt="sll0322" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="1474" y="190" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1221" %}" xlink:title="sll1221">
+						<rect alt="sll1221" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2090" y="2340" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1498" %}" xlink:title="slr1498">
+						<rect alt="slr1498" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="204" y="230" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0665" %}" xlink:title="slr0665">
+						<rect alt="slr0665" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="1184" y="6270" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0018" %}" xlink:title="slr0018">
+						<rect alt="slr0018" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2184" y="4530" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1239" %}" xlink:title="slr1239">
+						<rect alt="slr1239" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="5864" y="760" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr1748" %}" xlink:title="slr1748">
+						<rect alt="slr1748" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3624" y="5250" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1220" %}" xlink:title="sll1220">
+						<rect alt="sll1220" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="3124" y="2000" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1220" %}" xlink:title="sll1220">
+						<rect alt="sll1220" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="2554" y="1810" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="ssl2615" %}" xlink:title="ssl2615">
+						<rect alt="ssl2615" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4134" y="840" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="sll1196" %}" xlink:title="sll1196">
+						<rect alt="sll1196" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="4324" y="3440" />
+					</a>
+					<a xlink:href="{% url "cyano.views.detail" species_wid="Synechocystis" model_type="Gene" wid="slr0194" %}" xlink:title="slr0194">
+						<rect alt="slr0194" fill-opacity="0.0" height="50" style="stroke-width:1;stroke:rgb(255,0,0)" width="120" x="6554" y="3260" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Oliveira&amp;Lindblad 2005">
+						<rect alt="Oliveira&amp;Lindblad 2005" fill-opacity="0.0" height="40" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="2289" y="1575" />
+					</a>
+					<a xlink:href="http://d-nb.info/1007352728/34" xlink:title="Gutekunst 2006">
+						<rect alt="Gutekunst 2006" fill-opacity="0.0" height="40" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="1819" y="1745" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="22865847" %}" xlink:title="Dutheil et al., 2012">
+						<rect alt="Dutheil et al., 2012" fill-opacity="0.0" height="40" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="3025" y="1675" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Oliveira&amp;Lindblad 2005">
+						<rect alt="Oliveira&amp;Lindblad 2005" fill-opacity="0.0" height="40" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="1819" y="1685" />
+					</a>
+					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="18039761" %}" xlink:title="Oliveira&amp;Lindblad 2007">
+						<rect alt="Oliveira&amp;Lindblad 2007" fill-opacity="0.0" height="40" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="2289" y="1635" />
+					</a>
+					<a xlink:href="http://d-nb.info/1019767197/34" xlink:title="maturation Hoffmann 2008">
+						<rect alt="maturation Hoffmann 2008" fill-opacity="0.0" height="40" style="stroke-width:1;stroke:rgb(255,0,0)" width="170" x="715" y="75" />
+				</a></g></svg></div>
+            </td>
+        </tr>
+	</tbody>
+</table>
+
+{% endblock %}

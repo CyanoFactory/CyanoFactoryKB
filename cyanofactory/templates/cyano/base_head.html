@@ -1,0 +1,43 @@
+{% load static %}
+<!-- meta data -->
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="Content-Language" content="en-us" />
+<meta http-equiv="Cache-Control" content="NO-CACHE" />
+<meta http-equiv="Pragma" content="NO-CACHE" />
+<meta name="description" content="Knowledge base embracing all data produced by and relevant to the CyanoFactory project partners." />
+<meta name="keywords" content="cyano, factory, cell, systems, biology, computational, database, modeling, mittweida" />
+<meta name="author" content="Experimental &amp; Computational Biology, University of Applied Sciences Mittweida" />
+<meta name="revised" content="2014" />
+<meta name="copyright" content="&copy; Experimental & Computational Biology, University of Applied Sciences Mittweida 2014. Original work: &copy; Covert Lab, Stanford University 2008-2012" />
+
+{% if species %}
+<meta name="species_wid" content="{{ species.wid }}" />
+<meta name="species_name" content="{{ species.name }}" />
+{% endif %}
+
+<!-- style -->
+{% if not is_pdf %}
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}public/css/jquery-ui-1.10.4.custom.min.css" />
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}public/css/PTSans.min.css" />
+{% endif %}
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/styles.css" />
+<link rel="stylesheet" type="text/css" media="print" href="{% get_static_prefix %}public/css/styles.print.css" />
+<style type="text/css" media="print">
+{{ pdfstyles }}
+</style>
+
+<!-- favicon -->
+<link rel="icon" type="image/png" href="{% get_static_prefix %}cyano/favicon.png">
+
+<!-- javascript -->
+<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.11.0.min.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-ui-1.10.4.custom.min.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.min.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.axislabels.min.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/jquery.flot.pie.min.js"></script>
+<!–[if lte IE 8]>
+<script type="text/javascript" src="{% get_static_prefix %}public/js/flot/excanvas.min.js"></script>
+<![endif]–>
+<script type="text/javascript" src="{% get_static_prefix %}public/js/evidence.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}cyano/js/tooltip.js"></script>
+

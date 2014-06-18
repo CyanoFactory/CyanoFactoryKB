@@ -15,19 +15,28 @@ Released under the MIT license
 
 {% load static %}
 {% load templatetags %}
+{% load filters %}
 
 {% block head_title %}{{ block.super }} :: Search :: "{{ query }}"{% endblock %}
 {% block page_title %}Search :: "{{ query }}"{% endblock %}
 
-{% block action_icons %}
-{% with object=queryset.0 %}
-<a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
-<a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
-<a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" /></a>
+{% block action_icons_export %}
+{% comment %}
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download results in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download results in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download results in XML format</a></li>
+{% endcomment %}
 {{ block.super }}
-{% endwith %}
 {% endblock %}
 
+{% block head %}
+{{ block.super }}
+<meta name="entry_type" content="{{ model_verbose_name }}" />
+
+<script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless.js"></script>
+<script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless_on_scroll.js"></script>
+<script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
+{% endblock %}
 
 {% block content %}
 {% if queryset|length == 0 %}
@@ -41,12 +50,7 @@ Released under the MIT license
 	</tr>
 </thead>
 <tbody>
-	{% for object in queryset %}
-	<tr>
-		<th><a href="{{ object.get_absolute_url }}">{{ object.wid }}</a></th>
-		<td><a href="{{ object.get_absolute_url }}">{{ object.name|truncatechars:80 }}</a></td>
-	</tr>
-	{% endfor %}
+{% include "cyano/search_page.html" %}
 </tbody>
 </table>
 

@@ -222,9 +222,17 @@ Released under the MIT license
 {% csrf_token %}
 <table>
 	<tbody>
+        {% with error_message=error_messages|getattribute:"__all__" %}
+        {% if error_message %}
+        <tr>
+            <th>Error</th>
+            <td><div class="error">{{ error_message }}</div></td>
+        </tr>
+        {% endif %}
+        {% endwith %}
 	{% for field in fields %}
 		{% with initial_value=initial_values|getattribute:field.name error_message=error_messages|getattribute:field.name %}
-		<tr>			
+		<tr>
 			<th>{{ field.verbose_name }}</th>
 			<td>
 				<div class="error">{% if error_message %}{{ error_message }}{% endif %}</div>
@@ -261,11 +269,11 @@ Released under the MIT license
 								</select>
 								</td>
 								<td><a href="javascript:delete_{{ field.name }}({{ forloop.counter }})"><img src="{% get_static_prefix %}public/img/delete.png" /></a></td>
-							</tr>						
+							</tr>
 						{% endfor %}
 						</tbody>
 						<tbody>
-							<tr>								
+							<tr>
 								<td colspan="{{ field.fields|length|add:1 }}"><a href="javascript:add_{{ field.name }}()">More</a></td>
 							</tr>
 						</tbody>
@@ -288,7 +296,7 @@ Released under the MIT license
 										<option disabled="true"{% if sub_initial_value|default_if_none:"" == "" %} selected="selected"{% endif %}>Select {{ subfield.verbose_name|lower }}</option>
 										{% endif %}
 								{% for choice in subfield.choices %}
-										<option value="{{ choice.0 }}"											
+										<option value="{{ choice.0 }}"
 											{% if subfield.type == "select" and choice.0 == sub_initial_value %} selected="selected"
 											{% elif subfield.type == "select" and choice.0 == sub_initial_value|stringformat:"s" %} selected="selected"
 											{% elif subfield.type != "select" and choice.0 in sub_initial_value %} selected="selected"
@@ -297,7 +305,7 @@ Released under the MIT license
 								{% endfor %}
 									</select>
 						{% endif %}
-						
+
 								{% if subfield.name = 'evidence' %}
 								<div>
 								<table class="evidence">
@@ -369,7 +377,7 @@ Released under the MIT license
 							<tr id="{{ field.name }}_{{ forloop.counter }}">
 						{% for subfield in field.fields %}
 						{% with child_initial_value=child_initial_values|getattribute:subfield.name %}
-								<td>								
+								<td>
 							{% if subfield.name == 'evidence' %}
 									<div>
 										<a href="javascript:void(0)" onclick="openEvidenceWindow(this);">Show</a>
@@ -417,7 +425,7 @@ Released under the MIT license
 														<td><a href="javascript:void(0)" onclick="$(this).parent().parent().remove();"><img src="{% get_static_prefix %}public/img/delete.png"></a></td>
 													</tr>
 													{% endfor %}
-												</tbody>												
+												</tbody>
 											</table>
 											<a href="javascript:void(0)" onclick="addEvidence('{{ field.name }}_{{ forloop.parentloop.counter }}_{{ subfield.name }}', $(this).parent().find('table.evidence'))">More</a>
 										</div>
@@ -429,7 +437,7 @@ Released under the MIT license
 										{% if subfield.type == "select" %}
 										<option disabled="true"{% if child_initial_value|length == 0 %} selected="selected"{% endif %}>Select {{ subfield.verbose_name|lower }}</option>
 										{% endif %}
-								{% for choice in subfield.choices %}									
+								{% for choice in subfield.choices %}
 										<option value="{{ choice.0 }}"
 											{% if subfield.type == "select" and choice.0 == child_initial_value %} selected="selected"
 											{% elif subfield.type == "select" and choice.0 == child_initial_value|stringformat:"s" %} selected="selected"
@@ -437,7 +445,7 @@ Released under the MIT license
 											{% endif %}
 											>{{ choice.1 }}</option>
 								{% endfor %}
-									</select>									
+									</select>
 							{% endif %}
 								</td>
 						{% endwith %}
@@ -447,7 +455,7 @@ Released under the MIT license
 					{% endfor %}
 						</tbody>
 						<tbody>
-							<tr>								
+							<tr>
 								<td colspan="{{ field.fields|length|add:1 }}"><a href="javascript:add_{{ field.name }}()">More</a></td>
 							</tr>
 						</tbody>

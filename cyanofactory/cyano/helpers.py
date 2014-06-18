@@ -15,9 +15,12 @@ from __future__ import unicode_literals
 
 import datetime
 import inspect
+import json
 import math
 import os
 import re
+from django.contrib.contenttypes.models import ContentType
+from haystack.models import SearchResult
 import settings
 import sys
 import tempfile
@@ -33,15 +36,15 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import get_app, get_models
-from django.db.models.fields import AutoField, BigIntegerField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField, BooleanField, NullBooleanField, DecimalField, FloatField, CharField, CommaSeparatedIntegerField, EmailField, FilePathField, GenericIPAddressField, IPAddressField, SlugField, URLField, TextField, DateField, DateTimeField, TimeField, NOT_PROVIDED
+from django.db.models.fields import AutoField, BigIntegerField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField, BooleanField, NullBooleanField, DecimalField, FloatField, CharField, CommaSeparatedIntegerField, EmailField, FilePathField, GenericIPAddressField, IPAddressField, SlugField, URLField, TextField, DateField, DateTimeField, TimeField, NOT_PROVIDED, \
+    FieldDoesNotExist
 from django.db.models.fields.related import OneToOneField, RelatedObject, ManyToManyField, ForeignKey
-from django.db.models.query import EmptyQuerySet
+from django.db.models.query import EmptyQuerySet, QuerySet
 from django.http import Http404, HttpResponse
 from django.shortcuts import render_to_response
 from django.template import Context, RequestContext, loader
 from django.template.loader import get_template
 from django.template.defaultfilters import capfirst
-from django.utils import simplejson
 from django.utils.html import strip_tags
 
 from openpyxl import Workbook, load_workbook
@@ -52,7 +55,8 @@ from openpyxl.style import NumberFormat, Border, Color, HashableObject, Alignmen
 from cyano.templatetags.templatetags import ceil
 import cyano.models as cmodels
 
-from Bio import SeqIO, Seq, SeqFeature
+from Bio import SeqIO, SeqFeature
+from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import IUPAC
 from Bio.Alphabet.IUPAC import IUPACUnambiguousDNA
@@ -367,7 +371,7 @@ def getEntryDatas():
 
 def getEntry(species_wid = None, wid = None):
     try:
-        species_id = cmodels.Species.objects.values('id').for_wid(species_wid)['id']
+        species_id = cmodels.Species.objects.for_wid(species_wid).pk
     except ObjectDoesNotExist:
         return None    
     
@@ -375,8 +379,8 @@ def getEntry(species_wid = None, wid = None):
         if species_wid == wid:
             return cmodels.Species.objects.for_wid(wid)
         else:
-            tmp = cmodels.SpeciesComponent.objects.get(species__id = species_id, wid=wid)
-            return getModel(tmp.model_type).objects.select_related(depth=2).get(id=tmp.id)
+            tmp = cmodels.SpeciesComponent.objects.get(species__id=species_id, wid=wid)
+            return getModel(tmp.model_type.model_name).objects.select_related(depth=2).get(id=tmp.id)
     except ObjectDoesNotExist:
         return None
     
@@ -398,7 +402,7 @@ From http://www.peterbe.com/plog/uniqifiers-benchmark
 def uniqueSorted(seq):
     return {}.fromkeys(seq).keys()
 
-def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], template = '', data = {}, species = None):
+def get_extra_context(request = [], queryset = None, models = [], template = '', data = {}, species = None):
     data['species'] = species
     data['queryset'] = queryset
     data['queryargs'] = {}
@@ -417,7 +421,7 @@ def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], tem
         if outformat == 'html' and request.is_ajax():
             return data
 
-        if queryset is not None and len(queryset) > 0:
+        if queryset and len(queryset) > 0:
             if len(queryset) == 1 and isinstance(queryset[0], cmodels.Entry):
                 social_text += data['model_verbose_name'] + " "
                 social_text += queryset[0].name if queryset[0].name else queryset[0].wid
@@ -440,10 +444,16 @@ def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], tem
         data['pdfstyles'] = ''
         data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
         data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
-        data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + template))
+        if queryset and len(queryset) > 0 and isinstance(queryset[0], cmodels.Entry):
+            data['last_updated_date'] = cmodels.Revision.objects.filter(
+                object_id__in=queryset,
+                content_type_id=ContentType.objects.get_for_model(queryset[0]._meta.concrete_model).pk
+            ).order_by("-detail__date").first().detail.date
+        else:
+            data['last_updated_date'] = cmodels.RevisionDetail.objects.order_by("-date").first().date
         data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
         
-        if queryset is not None and data['queryset'].model is None:
+        if queryset is not None and getattr(queryset, "model", None) is None:
             del data['queryset']
     elif outformat == 'json':
         objects = []
@@ -474,8 +484,12 @@ def get_extra_context(request = [], queryset = EmptyQuerySet(), models = [], tem
     return data
 
 
-def render_queryset_to_response(request=[], queryset=EmptyQuerySet(), models=[], template='', data={}, species=None):
+def render_queryset_to_response(request=[], queryset=None, models=[], template='', data={}, species=None):
     outformat = request.GET.get('format', 'html')
+
+    if outformat in ['json', 'xml', 'xlsx']:
+        if queryset and isinstance(queryset[0], SearchResult):
+            queryset = [obj.object for obj in queryset]
 
     data = get_extra_context(request, queryset, models, template, data, species)
 
@@ -490,7 +504,7 @@ def render_queryset_to_response(request=[], queryset=EmptyQuerySet(), models=[],
             response['Content-Disposition'] = "attachment; filename=data.bib"
         elif outformat == 'json':
             return HttpResponse(
-                simplejson.dumps(data, indent=2, ensure_ascii=False, encoding='utf-8'),
+                json.dumps(data, indent=2, ensure_ascii=False, encoding='utf-8'),
                 mimetype="application/json; charset=UTF-8",
                 content_type="application/json; charset=UTF-8")
         elif outformat == 'pdf':
@@ -604,7 +618,7 @@ def render_queryset_to_response(request=[], queryset=EmptyQuerySet(), models=[],
     return response
 
 
-def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), model = None, data = {}, species=None, error = 403, msg = "", msg_debug = ""):
+def render_queryset_to_response_error(request = [], queryset = None, model = None, data = {}, species=None, error = 403, msg = "", msg_debug = ""):
     import django.http as http
     
     _format = request.GET.get('format', 'html')
@@ -647,17 +661,17 @@ def render_queryset_to_response_error(request = [], queryset = EmptyQuerySet(), 
         objects = []
         
         now = datetime.datetime.now(tzlocal())
-        json = odict()
-        json['title'] = 'CyanoFactory KB'
-        json['time'] = str(now.isoformat())
-        json['species'] = species.wid if species else ""
-        json['model'] = model.__name__ if model else ""
-        json['comment'] = 'Generated by CyanoFactory KB'
-        json['copyright'] = '%s %s' % (now.year, 'Experimental & Computational Biology, University of Applied Sciences Mittweida')
-        json['result'] = {"code": error, "type": data["type"], "message": msg, "success": False}
-        json['data'] = objects
+        json_data = odict()
+        json_data['title'] = 'CyanoFactory KB'
+        json_data['time'] = str(now.isoformat())
+        json_data['species'] = species.wid if species else ""
+        json_data['model'] = model.__name__ if model else ""
+        json_data['comment'] = 'Generated by CyanoFactory KB'
+        json_data['copyright'] = '%s %s' % (now.year, 'Experimental & Computational Biology, University of Applied Sciences Mittweida')
+        json_data['result'] = {"code": error, "type": data["type"], "message": msg, "success": False}
+        json_data['data'] = objects
         response = response(
-            simplejson.dumps(json, indent=2, ensure_ascii=False, encoding='utf-8'),
+            json.dumps(json_data, indent=2, ensure_ascii=False, encoding='utf-8'),
             mimetype = "application/json; charset=UTF-8",
             content_type = "application/json; charset=UTF-8",
             status = error)
@@ -984,7 +998,7 @@ def format_value_excel(obj, field, depth = 0):
                     tmp_val, tmp_data_type, tmp_format_code = format_value_excel(subobj, subfield, depth = depth + 1)
                     
                     if depth == 0 and isinstance(tmp_val, (list, dict)):
-                        tmp_val = simplejson.dumps(tmp_val)[1:-1]
+                        tmp_val = json.dumps(tmp_val)[1:-1]
                     
                     value.append(tmp_val)
                     data_type.append(tmp_data_type)
@@ -1013,7 +1027,7 @@ def format_value_excel(obj, field, depth = 0):
                 value.append(subvalue)
                 
             if depth == 0:
-                value = simplejson.dumps(value)[1:-1]
+                value = json.dumps(value)[1:-1]
     else:
         raise Exception('%s class not supported' % field.__class__.__name__)
 
@@ -1277,13 +1291,13 @@ def read_excel_data(filename):
                                 if value == '':
                                     value = None
                                 else:
-                                    value = simplejson.loads(value)
+                                    value = json.loads(value)
                             elif isinstance(subfield, ManyToManyField):
                                 value = ws.cell(row=iRow, column=iCol2).value
                                 if value is None or value  == '':
                                     value = []
                                 else:
-                                    value = simplejson.loads('[' + value + ']')
+                                    value = json.loads('[' + value + ']')
                             
                             obj[field.name][subfield.name] = value
                             
@@ -1305,7 +1319,7 @@ def read_excel_data(filename):
                             obj[field.name] = []
                         else:
                             try:
-                                obj[field.name] = simplejson.loads('[' + value + ']')
+                                obj[field.name] = json.loads('[' + value + ']')
                             except:
                                 errors.append('Invalid json at field %s of %s %s at cell %s%s' % (field.name, modelname, obj['wid'], get_column_letter(iCol+1), iRow+1, ))
             
@@ -1415,8 +1429,11 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
         if isinstance(val, float) and val != 0. and val is not None:
             return ('%.' + str(int(math.ceil(max(0, -math.log10(abs(val)))+2))) + 'f') % val
         return val
-    
-    field = obj.__class__._meta.get_field_by_name(field_name)[0]
+
+    try:
+        field = obj.__class__._meta.get_field_by_name(field_name)[0]
+    except FieldDoesNotExist:
+        return None
     value = getattr(obj, field_name)
     
     if isinstance(field, RelatedObject):
@@ -1432,7 +1449,7 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
         if issubclass(field_model, cmodels.Entry):
             results = []
             for subvalue in value:
-                results.append('<a href="%s">%s</a>' % (subvalue.get_absolute_url(species, history_id), subvalue.wid))
+                results.append('<a href="%s" title="%s">%s</a>' % (subvalue.get_absolute_url(species, history_id), subvalue.name, subvalue.wid))
             return cmodels.format_list_html(results)        
             
         results = []
@@ -1466,7 +1483,7 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
     elif isinstance(field, ForeignKey):
         if issubclass(field_model, cmodels.Entry):
             if value is not None:
-                return '<a href="%s">%s</a>' % (value.get_absolute_url(species, history_id), value.wid)
+                return format_list_html_url([value], species, history_id)
             else:
                 return ''
         
@@ -1511,52 +1528,44 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
     else:
         return value
 
-    return ''
         
 def get_history(species, obj, detail_id):
     #return cmodels.Revision.objects.filter(current = obj, detail__lte = detail_id, table = TableMeta.get_by_model(field.model), column = get_column_index(field)).order_by("-detail")[0].new_value + " (current: " + str(value) + ")"
 
-    history_obj = obj.__class__.objects.get(pk = obj.pk)
+    if not isinstance(obj, cmodels.Entry):
+        return obj
+
+    history_obj = obj.__class__.objects.get(pk=obj.pk)
     history_obj.detail_history = detail_id
     
     comments = ""
 
-    rev_query = cmodels.Revision.objects.filter(current = obj, detail__lte = detail_id).order_by("-detail")
+    # Fetch all revisions <= the detail_id
+    # Parse from bottom to top and set all fields...
 
-    used_columns = []
+    rev_query = cmodels.Revision.objects.filter(object_id=obj.pk,
+                                                content_type=ContentType.objects.get_for_model(obj._meta.concrete_model),
+                                                detail__lte=detail_id).order_by("detail")
 
-    #print "=="
-    #print obj._meta.fields
-    #print history_obj._meta.fields
-    #for field in history_obj._meta.fields:
-    #    if isinstance(field, ForeignKey):
-    #        print "redi"
-    #        getattr(history_obj, field.name)
-    #print obj._meta.fields
-    #print history_obj._meta.fields
-    for field in obj._meta.fields:
-        if isinstance(field, RelatedObject):
-            #print "Rel: " + field.name
-            pass
-        elif isinstance(field, ManyToManyField):
-            #print "M2M: " + field.name
-            pass
-        elif isinstance(field, ForeignKey):
-            #print "FK:  " + field.name
-            pass
-        else:
-            #print "Non: " + field.name
-            column = cmodels.TableMetaColumn.get_by_field(field)
-            
-            for query in rev_query:
-                if query.column_id == column.pk and not query.column_id in used_columns:
-                    used_columns.append(query.column_id)
-                    new_value = field.to_python(query.new_value)     
-                    comments += "{}: {} (cur: {})<br>".format(field.name, new_value, getattr(obj, field.name))
-                    setattr(history_obj, field.name, new_value)
-    
+    for rev in rev_query:
+        for key, value in json.loads(rev.new_data).items():
+            field = history_obj._meta.get_field_by_name(key)[0]
+            if isinstance(field, RelatedObject):
+                ##print "Rel: " + field.name
+                pass
+            elif isinstance(field, ManyToManyField):
+                ##print "M2M: " + field.name
+                pass
+            elif isinstance(field, ForeignKey):
+                setattr(history_obj, key, get_history(species, field.rel.to.objects.get(pk=value), detail_id))
+                pass
+            else:
+                ##comments += "{}: {} (cur: {})<br>".format(field.name, value, getattr(obj, key))
+                setattr(history_obj, key, value)
+                pass
+
     history_obj.comments = comments
-    
+
     # Only FK and Non yet:
     return history_obj
 
@@ -1601,9 +1610,13 @@ def format_field_detail_view_diff(species, old_obj, new_obj, field_name, is_user
         import cyano.importer.diff_match_patch as diff
         d = diff.diff_match_patch()
         return diffgen(d.diff_main(old_item, new_item))
-    
-def format_field_detail_view_helper():
-    pass
+
+
+def format_list_html_url(iterable, species, history_id=None):
+    from cyano.models import format_list_html
+    return format_list_html(
+        map(lambda x: '<a href="%s" title="%s">%s</a>' % (x.get_absolute_url(species, history_id), x.name, x.wid), iterable),
+        comma_separated=True)
 
 def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = []):
     model = obj.__class__
@@ -1616,20 +1629,24 @@ def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = [
         fields = getModelDataFields(model, metadata=not is_user_anonymous)
     else:
         fields = model._meta.fields + model._meta.many_to_many
-        
+
     for field in fields:    
         model_val = getattr(obj, field.name)
         if field.auto_created:
             continue
-        
+
         if isinstance(field, ForeignKey):
             if model_val is None:
                 stdobj_val = None
             else:
                 if issubclass(field.rel.to, cmodels.Entry):
                     stdobj_val = model_val.wid
-                elif issubclass(field.rel.to, User):
-                    stdobj_val = model_val.username
+                elif issubclass(field.rel.to, cmodels.RevisionDetail):
+                    stdobj_val = {"user": model_val.user.user.username,
+                                  "date": str(model_val.date),
+                                  "reason": model_val.reason}
+                elif issubclass(field.rel.to, cmodels.UserProfile):
+                    stdobj_val = model_val.user.username
                 else: 
                     stdobj_val = convert_modelobject_to_stdobject(model_val, is_user_anonymous, ancestors + [obj])
         elif isinstance(field, ManyToManyField):
@@ -1656,9 +1673,9 @@ def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = [
         objDict[field.name] = stdobj_val
     
     for field in model._meta.get_all_related_objects() + model._meta.get_all_related_many_to_many_objects():
-        if field.get_accessor_name() == '+':
+        if field.get_accessor_name().endswith('+'):
             continue
-            
+
         objDict[field.get_accessor_name()] = []
         for model_subval in getattr(obj, field.get_accessor_name()).all():
             if model_subval not in ancestors:
@@ -1981,7 +1998,7 @@ def validate_model_objects(model, obj_data, all_obj_data=None, all_obj_data_by_m
     parent_list.reverse()
     for parent_model in parent_list + [model]:
         if hasattr(parent_model._meta, 'clean'):
-            parent_model._meta.clean(parent_model, obj_data, all_obj_data=all_obj_data, all_obj_data_by_model=all_obj_data_by_model)
+            parent_model._meta.clean(obj_data, all_obj_data=all_obj_data, all_obj_data_by_model=all_obj_data_by_model)
 
 def validate_model_unique(model, model_objects_data, all_obj_data=None, all_obj_data_by_model=None):
     if not issubclass(model, cmodels.SpeciesComponent):
@@ -2022,7 +2039,13 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
             obj.model_type = cmodels.TableMeta.get_by_model_name(obj._meta.object_name)
     else:
         fields = model._meta.fields + model._meta.many_to_many
-    
+
+    if isinstance(obj, cmodels.CrossReference):
+        try:
+            obj = cmodels.CrossReference.objects.get(xid=obj_data["xid"], source=obj_data["source"])
+        except ObjectDoesNotExist:
+            pass
+
     #regular and foreign key fields
     for field in fields:
         if not field.editable or field.auto_created:
@@ -2043,7 +2066,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
                         setattr(obj, field.name, None)
                 else:
                     if obj_data[field.name] is not None:
-                        setattr(obj, field.name, save_object_data(species.wid, field.rel.to(), obj_data[field.name], obj_list, user, save=save, save_m2m=save_m2m))
+                        setattr(obj, field.name, save_object_data(species, field.rel.to(), obj_data[field.name], obj_list, user, save=save, save_m2m=save_m2m))
                     else:
                         setattr(obj, field.name, None)
         elif isinstance(field, ManyToManyField):
@@ -2059,6 +2082,8 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
                 obj.save(obj_data["revision_detail"])
             except ValidationError as e:
                 raise ValidationError({"wid": ". ".join(e.messages)})
+        elif isinstance(obj, cmodels.EntryData):
+            obj.save(obj_data["revision_detail"])
         else:
             obj.save()
             
@@ -2072,47 +2097,72 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
             
         if isinstance(field, ManyToManyField):
             if save_m2m:
-                getattr(obj, field.name).clear()
+                db_m2m = list(getattr(obj, field.name).all().values_list("pk", flat=True))
                 if issubclass(field.rel.to, cmodels.Entry):
                     for wid in obj_data[field.name]:
-                        if obj_list.has_key(wid):
+                        if wid in obj_list:
                             tmp = obj_list[wid]
                         elif issubclass(field.rel.to, cmodels.SpeciesComponent):
                             tmp = field.rel.to.objects.for_species(species).for_wid(wid)
                         else:
                             tmp = field.rel.to.objects.get(wid=wid)
                         getattr(obj, field.name).add(tmp)
+                        try:
+                            db_m2m.remove(tmp.pk)
+                        except ValueError:
+                            # not in DB
+                            pass
                 else:
                     for sub_obj_data in obj_data[field.name]:
-                        getattr(obj, field.name).add(save_object_data(species.wid, field.rel.to(), sub_obj_data, obj_list, user, save=save, save_m2m=save_m2m))
+                        s_obj_data = save_object_data(species, field.rel.to(), sub_obj_data, obj_list, user, save=save, save_m2m=save_m2m)
+                        getattr(obj, field.name).add(s_obj_data)
+                        try:
+                            db_m2m.remove(s_obj_data.pk)
+                        except ValueError:
+                            # not in DB
+                            pass
+
+                for item in db_m2m:
+                    getattr(obj, field.name).remove(item)
     
     #save
     if save:
         obj.full_clean()
-        if isinstance(obj, cmodels.Entry):
+        if isinstance(obj, cmodels.Entry) or isinstance(obj, cmodels.EntryData):
             obj.save(obj_data["revision_detail"])
         else:
             obj.save()
         
     #return obj
     return obj
-    
-def format_sequence_as_html(sequence, lineLen=50):
-    htmlL = ''
-    htmlC = ''
-    htmlR = ''
-    
-    for i in range(int(ceil(float(len(sequence)) / float(lineLen)))):
-        htmlL += '%s<br/>' % (i * lineLen + 1, )
-        htmlC += '%s<br/>' % sequence[i*lineLen:(i + 1) * lineLen]
-        htmlR += '%s<br/>' % (min(len(sequence), (i + 1) * lineLen), )
-    
-    return '<div class="sequence"><div>%s</div><div>%s</div><div>%s</div></div>' % (htmlL, htmlC, htmlR)
-    
+
+
+def format_sequence_as_html(species, sequence, lineLen=60, seq_offset=0, show_protein_seq=False):
+    # Split sequence in lists of size lineLen
+    line = [sequence[i:i+lineLen] for i in range(0, len(sequence), lineLen)]
+    # Split lists in list of codons (len 3)
+    line = map(lambda x: [x[i:i+3] for i in range(0, len(x), 3)], line)
+
+    if show_protein_seq:
+        # Convert to protein seq and split in lists of size lineLen/3
+        prot_seq = unicode(Seq(sequence, IUPAC.unambiguous_dna).translate(table=species.genetic_code))
+        prot_line = [prot_seq[i:i+lineLen/3] for i in range(0, len(prot_seq), lineLen/3)]
+    else:
+        prot_line = ([] for x in range(len(line)))
+
+    nums = range(1, len(sequence), lineLen)
+
+    c = Context({'sequence': zip(line, prot_line), 'protein_sequence': prot_line, 'numbers': nums, 'line_length': lineLen, 'sequence_length': len(sequence), 'sequence_offset': seq_offset})
+    template = loader.get_template("cyano/fields/sequence.html")
+    rendered = template.render(c)
+
+    return rendered
+
+
 def readFasta(species_wid, filename, user):
     error_messages = []
     
-    f = open(filename, 'r')    
+    f = open(filename, 'r')
     data = f.readlines()
     f.close()
     

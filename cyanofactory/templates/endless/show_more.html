@@ -1,16 +1,18 @@
 {% load i18n %}
 {% if querystring %}
     <tr class="endless_container">
-	<th>
+	<th colspan="42">
         <a class="endless_more" href="{{ path }}{{ querystring }}"
             rel="{{ querystring_key }}">{% if label %}{{ label }}{% else %}{% trans "more" %}{% endif %}</a>
 		<span class="endless_loading" style="display: none;">{{ loading|safe }}</span>
 	</th>
+{% comment %}
 	<td>
 	</td>
 {% if not request.user.is_anonymous %}
 	<td>
 	</td>
 {% endif %}
+{% endcomment %}
     </tr>
 {% endif %}

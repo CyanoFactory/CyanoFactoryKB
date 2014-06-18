@@ -20,5 +20,21 @@ Released under the MIT license
 {% block page_title %}History of {% with object=queryset.0 %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}{% endblock %}
 
 {% block content %}
+
+<div>
+{% if not newer_revision %}
+This is the current revision of this page,
+{% else %}
+This is an old revision of this page,
+{% endif %}
+as edited by {{ revision.user.user.name }} at {{ revision.date }}.
+</div>
+
+<div>
+{% if previous_revision %}<a href="{% url 'cyano.views.history_detail' species_wid=species.wid model_type=model_type wid=queryset.0.wid detail_id=previous_revision.pk %}" title="Previous revision">Previous revision</a>{% else %}Previous revision{% endif %} |
+{% if newer_revision %}<a href="{% url 'cyano.views.history_detail' species_wid=species.wid model_type=model_type wid=queryset.0.wid detail_id=latest_revision.pk %}" title="Latest revision">Latest revision</a>{% else %}Latest revision{% endif %} |
+{% if newer_revision %}<a href="{% url 'cyano.views.history_detail' species_wid=species.wid model_type=model_type wid=queryset.0.wid detail_id=newer_revision.pk %}" title="Newer revision">Newer revision</a>{% else %}Newer revision{% endif %}
+</div>
+<br>
 {{ block.super}}
 {% endblock %}

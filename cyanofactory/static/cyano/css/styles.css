@@ -890,3 +890,8 @@ select.select{
 #delete div:last-child{
 	margin-top:10px;
 }
+
+.highlight {
+    background:#eeeeee;
+    /*color:#3D80B3;*/
+}
