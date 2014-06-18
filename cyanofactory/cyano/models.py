@@ -835,10 +835,10 @@ class Revision(Model):
     """
     current = GenericForeignKey()
     content_type = ForeignKey(ContentType)
-    object_id = IntegerField(blank=True, null=True, db_index=True, verbose_name="Current version primary key")
-    detail = ForeignKey(RevisionDetail, verbose_name='Details about this revision', related_name='revisions', editable=False, null=True)
+    object_id = IntegerField(db_index=True, verbose_name="Current version primary key")
+    detail = ForeignKey(RevisionDetail, verbose_name='Details about this revision', related_name='revisions', editable=False)
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
-    new_data = TextField(blank=True, null=True)
+    new_data = TextField(blank=True)
 
     def __unicode__(self):
         return str(self.current)

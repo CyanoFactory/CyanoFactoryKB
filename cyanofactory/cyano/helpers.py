@@ -445,7 +445,10 @@ def get_extra_context(request = [], queryset = None, models = [], template = '',
         data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
         data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
         if queryset and len(queryset) > 0 and isinstance(queryset[0], cmodels.Entry):
-            data['last_updated_date'] = cmodels.Revision.objects.filter(object_id__in=queryset.values_list("pk", flat=True)).order_by("-detail__date").first().detail.date
+            data['last_updated_date'] = cmodels.Revision.objects.filter(
+                object_id__in=queryset,
+                content_type_id=ContentType.objects.get_for_model(queryset[0]._meta.concrete_model).pk
+            ).order_by("-detail__date").first().detail.date
         else:
             data['last_updated_date'] = cmodels.RevisionDetail.objects.order_by("-date").first().date
         data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
