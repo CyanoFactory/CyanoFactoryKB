@@ -26,9 +26,9 @@ python manage.py importsbml ../sample_data/iSyn811_v2-2_sbml_fixed.xml --wid=Syn
 
 python manage.py importproopdb ../sample_data/SynOperonPrediction.txt --wid=Synechocystis --reason="Import Operon Prediction Files" --user=management
 
-python manage.py importinterproscan ../sample_data/synecho.interpro.fasta.xml --wid=Synechosystis --reason="Import InterProScan Data" --user=management
+python manage.py importinterproscan ../sample_data/synecho.interpro.fasta.xml --wid=Synechocystis --reason="Import InterProScan Data" --user=management
 
-python manage.py importfastafeature ../sample_data/SNPs/chromosom_2.txt --wid=Synechosystis --reason="Import Uppsala SNPs for Chromosome" --chromosome=Chromosome --feature-type=SNP --user=management
-python manage.py importfastafeature ../sample_data/SNPs/plasmid29_2.txt --wid=Synechosystis --reason="Import Uppsala SNPs for Plasmid pSYSM" --chromosome=pSYSM --feature-type=SNP --user=management
-python manage.py importfastafeature ../sample_data/SNPs/plasmid30_2.txt --wid=Synechosystis --reason="Import Uppsala SNPs for Plasmid pSYSA" --chromosome=pSYSA --feature-type=SNP --user=management
-python manage.py importfastafeature ../sample_data/SNPs/plasmid32_2.txt --wid=Synechosystis --reason="Import Uppsala SNPs for Plasmid pSYSX" --chromosome=pSYSX --feature-type=SNP --user=management
+python manage.py importfastafeature ../sample_data/SNPs/chromosom_2.txt --wid=Synechocystis --reason="Import Uppsala SNPs for Chromosome" --chromosome=Chromosome --feature-type=SNP --user=management
+python manage.py importfastafeature ../sample_data/SNPs/plasmid29_2.txt --wid=Synechocystis --reason="Import Uppsala SNPs for Plasmid pSYSM" --chromosome=pSYSM --feature-type=SNP --user=management
+python manage.py importfastafeature ../sample_data/SNPs/plasmid30_2.txt --wid=Synechocystis --reason="Import Uppsala SNPs for Plasmid pSYSA" --chromosome=pSYSA --feature-type=SNP --user=management
+python manage.py importfastafeature ../sample_data/SNPs/plasmid32_2.txt --wid=Synechocystis --reason="Import Uppsala SNPs for Plasmid pSYSX" --chromosome=pSYSX --feature-type=SNP --user=management
