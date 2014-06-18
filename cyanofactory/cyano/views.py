@@ -11,6 +11,8 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
+from __future__ import absolute_import
+
 import os
 from django.contrib.contenttypes.models import ContentType
 from django.template.context import Context
