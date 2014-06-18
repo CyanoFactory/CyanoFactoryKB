@@ -225,7 +225,6 @@ class Genbank(BioParser):
                     # why don't they split them like for all other items?
                     for syn in synonym.split(";"):
                         obj = cmodels.Synonym.objects.get_or_create_with_revision(self.detail, name=syn.strip())
-                        obj.save()
                         g.synonyms.add(obj)
             
             if "protein_id" in qualifiers:
