@@ -2448,7 +2448,7 @@ class Genome(Molecule):
     def get_as_genbank(self, species):
         genbank = StringIO.StringIO()
         genes = Gene.objects.filter(species=species, chromosome_id=self.pk).prefetch_related("cross_references", "protein_monomers")
-        record = SeqRecord.SeqRecord(Seq(self.sequence, IUPAC.IUPACUnambiguousDNA()))
+        record = SeqRecord.SeqRecord(Seq(self.sequence, IUPAC.IUPACAmbiguousDNA()))
 
         record.description = self.name
         record.name = self.wid
@@ -2605,7 +2605,7 @@ class FeaturePosition(EntryData):
 
         seq = chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
         if self.direction == 'r':
-            seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
+            seq = unicode(Seq(seq, IUPAC.ambiguous_dna).reverse_complement())
         return seq
 
     def get_genes(self):
@@ -2763,7 +2763,7 @@ class Gene(Molecule):
         seq = chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
 
         if self.direction == 'r':
-            seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
+            seq = unicode(Seq(seq, IUPAC.ambiguous_dna).reverse_complement())
         return seq
 
     def get_length(self):
@@ -2790,7 +2790,7 @@ class Gene(Molecule):
     def get_extinction_coefficient(self):
         from cyano.helpers import ExtinctionCoefficient
 
-        seq = Seq(self.get_sequence(), IUPAC.unambiguous_dna).transcribe()
+        seq = Seq(self.get_sequence(), IUPAC.ambiguous_dna).transcribe()
 
         value = 0;
         for i in range(len(seq) - 1):
@@ -3796,7 +3796,7 @@ class ProteinMonomer(Protein):
 
     #getters
     def get_sequence(self, species, cache=False):
-        return unicode(Seq(self.gene.get_sequence(cache=cache), IUPAC.unambiguous_dna).translate(table=species.genetic_code))
+        return unicode(Seq(self.gene.get_sequence(cache=cache), IUPAC.ambiguous_dna).translate(table=species.genetic_code))
 
     def get_length(self, species):
         return len(self.get_sequence(species))
@@ -4531,7 +4531,7 @@ class TranscriptionUnit(Molecule):
     def get_sequence(self, cache=False):
         seq = self.get_chromosome(cache=cache).sequence[self.get_coordinate() - 1:self.get_coordinate() - 1 + self.get_length()]
         if self.get_direction() == 'r':
-            seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
+            seq = unicode(Seq(seq, IUPAC.ambiguous_dna).reverse_complement())
         return seq
 
     def get_gc_content(self):
