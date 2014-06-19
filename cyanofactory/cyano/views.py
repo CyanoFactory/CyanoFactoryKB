@@ -958,8 +958,6 @@ def importData(request, species=None):
         form = ImportDataForm(request.POST, request.FILES)
         
         if form.is_valid():
-            selected_species_wid = None
-
             if form.cleaned_data.get('species'):
                 selected_species_wid = form.cleaned_data.get('species')
             else:
