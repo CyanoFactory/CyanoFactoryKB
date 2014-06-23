@@ -1353,6 +1353,9 @@ class Entry(AbstractEntry):
 
     def natural_key(self):
         return self.wid
+    
+    def get_model(self):
+        return TableMeta.get_by_id(self.model_type_id)
 
     def get_name_or_wid(self):
         return self.name or self.wid
@@ -5381,6 +5384,21 @@ class MassSpectrometryProteinDetail(EntryData):
 
 
 ''' END: specific data types'''
+
+class Basket(Model):
+    user = ForeignKey(UserProfile, related_name = 'baskets', verbose_name = "Users baskets")
+    name = CharField(max_length=255, blank=False, default='', verbose_name = "Basket name")
+    
+    def __unicode__(self):
+        return self.name + " " + str(self.components.all())
+
+class BasketComponent(Model):
+    basket = ForeignKey(Basket, related_name = "components", verbose_name = "In basket")
+    component = ForeignKey(SpeciesComponent, related_name = "+", verbose_name = "component")
+    species = ForeignKey(Species, related_name = "+", verbose_name = "Species component belongs to")
+    
+    def __unicode__(self):
+        return str(self.component)
 
 #http://isoelectric.ovh.org/files/practise-isoelectric-point.html
 def calculate_nucleic_acid_pi(seq):

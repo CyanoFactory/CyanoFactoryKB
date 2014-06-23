@@ -23,7 +23,7 @@ from copy import deepcopy
 from itertools import chain
 
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db import transaction
 from django.db.models import Count, Sum
@@ -39,9 +39,11 @@ from cyano.forms import ExportDataForm, ImportDataForm, ImportSpeciesForm
 import cyano.helpers as chelpers
 import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
-from cyano.decorators import resolve_to_objects, permission_required
+from cyano.decorators import resolve_to_objects, permission_required,\
+    ajax_required
 from django.db.transaction import atomic
 from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse
+from django.http.response import HttpResponse
 
 
 def index(request):
@@ -503,7 +505,7 @@ def listing(request, species, model):
             tmp = model.objects.for_species(species).order_by(field_full_name).values(field_full_name).annotate(count=Count(field_full_name))
         facets = []
         for facet in tmp:
-            value = facet[field_full_name]            
+            value = facet[field_full_name]
             if value is None or unicode(value) == '':
                 continue
             
@@ -578,6 +580,19 @@ def listing(request, species, model):
     else:
         objects = objects.order_by("wid")
     
+    if request.user.is_authenticated():
+        try:
+            basket = cmodels.Basket.objects.get(user = request.user.profile)
+        except ObjectDoesNotExist:
+            basket_objects = []
+        else:
+            from itertools import repeat
+            from collections import defaultdict
+            r = repeat("delete")
+            basket_objects = basket.components.filter(component__pk__in = objects).values_list("component__pk", flat = True)
+            # Increase lookup speed with a dict
+            basket_objects = defaultdict(lambda: "add", zip(basket_objects, r))
+    
     return chelpers.render_queryset_to_response(
         species=species,
         request=request,
@@ -586,7 +601,8 @@ def listing(request, species, model):
         template=template,
         data={
             'groups': groups,
-            'facet_fields': facet_fields
+            'facet_fields': facet_fields,
+            'basket_objects': basket_objects
         }
     )
 
@@ -1405,3 +1421,62 @@ def sbgn(request):
         request,
         template="cyano/sbgn.html",
     )
+
+@login_required
+@resolve_to_objects
+def basket(request, species=None):
+    basket = cmodels.Basket.objects.get_or_create(user = request.user.profile)[0]
+    
+    components = basket.components.all().prefetch_related("component")
+    
+    for component in components:
+        print component.component.wid
+
+    return chelpers.render_queryset_to_response(
+        species = species,
+        request = request,
+        queryset = components,
+        template = 'cyano/basket.html')
+
+@ajax_required
+@login_required
+@resolve_to_objects
+def basket_op(request, species, model):
+    from django.http import HttpResponseBadRequest
+    
+    wid = request.GET.get('wid', None)
+    op = request.GET.get('op', None)
+    
+    if wid is None:
+        return HttpResponseBadRequest("Invalid wid")
+    
+    if op is None or op not in ["add", "delete"]:
+        return HttpResponseBadRequest("Invalid op")
+    
+    basket = cmodels.Basket.objects.get_or_create(user = request.user.profile)[0]
+    
+    item = model.objects.for_species(species).for_wid(wid)
+    
+    kwargs = {"basket": basket,
+              "component": item,
+              "species": species}
+    
+    if op == "add":
+        basket_component, created = cmodels.BasketComponent.objects.get_or_create(
+                        **kwargs)
+        if not created:
+            return HttpResponseBadRequest("Already in basket")
+        
+        new_op = "delete"
+    elif op == "delete":
+        try:
+            basket_component = cmodels.BasketComponent.objects.get(
+                        **kwargs)
+            basket_component.delete()
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Not in basket")
+
+        new_op = "add"
+
+    return HttpResponse("""{"new_op": "%s"}""" % (new_op))
+

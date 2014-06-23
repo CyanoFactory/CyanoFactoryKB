@@ -8,6 +8,9 @@ Released under the MIT license
 import cyano.models as cmodels
 
 def process(request):
+    if request.is_ajax():
+        return {}
+
     data = {}
 
     data['request'] = request
