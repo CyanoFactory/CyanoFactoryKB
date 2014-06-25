@@ -30,17 +30,22 @@ Released under the MIT license
 
 <script language="javascript" type="text/javascript" charset="utf-8">
 $(document).ready(function() {
-	$("table#list").on("click", "#cartop", function (event) {
+	$("table#list").on("click", ".cartop", function (event) {
 		event.preventDefault();
-		target = $(event.target);
+
+        var basket = "{{ basket.pk }}";
+        var target = $(event.target);
+        var parent = target.parents("tr");
+
 		$.ajax({
+            type: "POST",
 			url: "{% url "cyano-basket-op" species_wid=species.wid model_type=model_type %}",
 			context: document.body,
-			data: {"wid": target.data("wid"), "op": target.data("op") }
+			data: { "id": basket, "wid": parent.data("wid"), "op": parent.data("op") }
 		}).done(function(result) {
 			json = jQuery.parseJSON(result);
 			target.attr("src", "{% get_static_prefix %}cyano/img/cart/cart_" + json.new_op + ".png");
-			target.data("op", json.new_op);
+			parent.data("op", json.new_op);
 		});
 	});
 });
@@ -90,19 +95,20 @@ $(document).ready(function() {
 </thead>
 <tbody>
 {% for object in value %}
-<tr>
+{% with item=basket_objects|index:object.pk %}
+<tr data-wid="{{ object.wid }}" data-op="{{ item }}">
 	<th><a href="{{ object|get_absolute_url:species }}">{{ object.wid }}</a></th>
 	<td><a href="{{ object|get_absolute_url:species }}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
 	{% if not request.user.is_anonymous %}
 	<td>
-		{% with item=basket_objects|index:object.pk %}
-		<a href="#" title="Add to cart"><img id="cartop" src="{% get_static_prefix %}cyano/img/cart/cart_{{ item }}.png" data-wid="{{ object.wid }}" data-op="{{ item }}" /></a>
-		{% endwith %}
+
+		<a href="#" class="cartop" title="Add to cart"><img src="{% get_static_prefix %}cyano/img/cart/cart_{{ item }}.png" /></a>
 		<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>
 		<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" /></a>
 	</td>
 	{% endif %}
 </tr>
+{% endwith %}
 {% endfor %}
 </tbody>
 <tbody class="spacing">

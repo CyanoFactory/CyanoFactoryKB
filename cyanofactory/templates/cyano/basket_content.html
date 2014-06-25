@@ -1,0 +1,148 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Basket content page template
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+{% load filters %}
+
+{% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.wid }}{% endwith %}{% endblock %}
+{% block page_title %}Basket &ndash; <span class="inline-edit">{{ basket.name }}</span>{% endblock %}
+
+{% block head %}
+{{ block.super }}
+
+<script src="{% static "cyano" %}/js/jquery.jeditable.js"></script>
+<script>
+$(document).ready(function() {
+     $('.inline-edit').editable('{% url "cyano-save" %}', {
+        submit : 'OK',
+        cancel : 'Cancel',
+        submitdata: {op: "basket", pk: "1"}
+    });
+
+    $('.inline-edit').hover(function() {
+        if ($(this).children().length == 0) {
+            $(this).addClass("highlight-border");
+        }
+    }, function() {
+        $(this).removeClass("highlight-border");
+    });
+
+	$("table#list").on("click", ".delete-button", function (event) {
+        event.preventDefault();
+
+        var basket = "{{ basket.pk }}";
+        var target = $(event.target);
+        var parent = target.parents("tr");
+
+        $.ajax({
+            type: "POST",
+            url: parent.data("url"),
+            context: document.body,
+            data: { "id": basket, "wid": parent.data("wid"), "op": "remove" }
+        });
+
+        parent.fadeOut(200, function() { $(this).remove(); });
+    });
+});
+</script>
+{% endblock %}
+
+{% block action_icons %}
+{% with object=queryset.0 %}
+<a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" /></a>
+<a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" /></a>
+<a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" /></a>
+{{ block.super }}
+{% endwith %}
+{% endblock %}
+
+{% block extrastyles %}
+#list{
+	width:100%;
+    position: relative;
+}
+#detail tbody.data tr td:nth-child(1){
+	width:3%;
+}
+#detail tbody.data tr td:nth-child(2n){
+	width:15%;
+}
+#detail tbody.data tr td:nth-child(3){
+	width:60%;
+}
+
+#detail a {
+	color: rgb(34, 34, 34);
+}
+
+#listfilter .nofilters{
+	font-style:italic;
+	text-align:center;
+}
+
+#listfilter{
+	display:none;
+}
+
+#sidebar {
+	position:absolute;
+	right: -200px;
+	width: 200px;
+	margin: 0px -30px;
+	padding: 10px 10px;
+	border: 5px;
+	border:1px solid #3d80b3;
+	border-radius: 8px;
+    color: black;
+    font-weight: normal;
+}
+#search_box {
+	width: 100%;
+	border:1px solid #3d80b3;
+	border-radius:6px;
+}
+{% endblock %}
+
+{% block content %}
+{% autoescape off %}
+<table id="list">
+<thead>
+	<tr>
+		<th>
+            WID
+        </th>
+		<th>Name</th>
+		<th>&nbsp;</th>
+	</tr>
+</thead>
+<tbody>
+{% for component in queryset %}
+{% with object=component.component %}
+{% with species_wid=component.species.wid %}
+{% with model_type=object.get_model.model_name %}
+<tr data-pk="{{ object.pk }}" data-wid="{{ object.wid }}" data-url="{% url "cyano-basket-op" species_wid=species_wid model_type=model_type %}">
+	<th><a href="{% url "cyano.views.detail" species_wid=species_wid model_type=model_type wid=object.wid %}">{{ object.wid }}</a></th>
+	<td><a href="{% url "cyano.views.detail" species_wid=species_wid model_type=model_type wid=object.wid %}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
+	<td>
+		{% comment %}<a href="{% url "cyano.views.edit" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}" title="Edit entry"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>{% endcomment %}
+		<a href="#" class="delete-button" title="Delete from cart"><img src="{% get_static_prefix %}public/img/delete.png"/></a>
+	</td>
+</tr>
+{% endwith %}
+{% endwith %}
+{% endwith %}
+{% endfor %}
+</tbody>
+</table>
+
+{% endautoescape %}
+{% endblock %}

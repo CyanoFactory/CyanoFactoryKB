@@ -895,3 +895,7 @@ select.select{
     background:#eeeeee;
     /*color:#3D80B3;*/
 }
+
+.highlight-border {
+    border: medium dashed;
+}

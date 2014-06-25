@@ -1,7 +1,7 @@
 {% extends "cyano/base.html" %}
 
 {% comment %}
-Basket page template
+Basket overview page template
 
 Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
 Hochschule Mittweida, University of Applied Sciences
@@ -14,27 +14,7 @@ Released under the MIT license
 {% load filters %}
 
 {% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.wid }}{% endwith %}{% endblock %}
-{% block page_title %}Basket
-{% if queryset %}{% with object=queryset.0 %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}
-{% elif model_type %}{{ model_verbose_name_plural}}
-{% elif species %}
-{% with object=species %}{{ object.wid }}{% if object.name|length > 0 %} &ndash; {{ object.name }}{% endif %}{% endwith %}
-{% endif %}{% endblock %}
-
-{% block head %}
-{{ block.super }}
-{% with object=queryset.0 %}
-<meta name="entry_created" content="{{ object.created_date }}" />
-<meta name="entry_last_updated" content="{{ object.last_updated_date }}" />
-<meta name="entry_type" content="{{ model_verbose_name }}" />
-<meta name="entry_wid" content="{{ object.wid }}" />
-{% if object.name|length > 0 %}
-<meta name="entry_name" content="{{ object.name }}" />
-{% else %}
-<meta name="entry_name" content="{{ object.wid }}" />
-{% endif %}
-{% endwith %}
-{% endblock %}
+{% block page_title %}My Baskets{% endblock %}
 
 {% block action_icons %}
 {% with object=queryset.0 %}
@@ -48,6 +28,7 @@ Released under the MIT license
 {% block extrastyles %}
 #list{
 	width:100%;
+    position: relative;
 }
 #detail tbody.data tr td:nth-child(1){
 	width:3%;
@@ -62,6 +43,33 @@ Released under the MIT license
 #detail a {
 	color: rgb(34, 34, 34);
 }
+
+#listfilter .nofilters{
+	font-style:italic;
+	text-align:center;
+}
+
+#listfilter{
+	display:none;
+}
+
+#sidebar {
+	position:absolute;
+	right: -200px;
+	width: 200px;
+	margin: 0px -30px;
+	padding: 10px 10px;
+	border: 5px;
+	border:1px solid #3d80b3;
+	border-radius: 8px;
+    color: black;
+    font-weight: normal;
+}
+#search_box {
+	width: 100%;
+	border:1px solid #3d80b3;
+	border-radius:6px;
+}
 {% endblock %}
 
 {% block content %}
@@ -69,29 +77,25 @@ Released under the MIT license
 <table id="list">
 <thead>
 	<tr>
-		<th>WID</th>
+		<th>
+            WID
+        </th>
 		<th>Name</th>
-		{% if not request.user.is_anonymous %}
-		<th>&nbsp;</th>
-		{% endif %}
 	</tr>
 </thead>
 <tbody>
-{% for component in queryset %}
-{% with object=component.component %}
-{% with species_wid=component.species.wid %}
+{% for object in queryset %}
 <tr>
-	<th><a href="{% url "cyano.views.detail" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}">{{ object.wid }}</a></th>
-	<td><a href="{% url "cyano.views.detail" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
-	{% if not request.user.is_anonymous %}
-	<td>
-		<a href="{% url "cyano.views.edit" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}" title="Edit entry"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>
-		<a href="{% url "cyano.views.delete" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}" title="Delete entry"><img src="{% get_static_prefix %}public/img/delete.png" /></a>
-	</td>
-	{% endif %}
-</tr>
-{% endwith %}
-{% endwith %}
+	<th><a href="{% if species %}
+	{% url "cyano.views.basket" species_wid=species.wid basket_id=object.pk %}{% else %}
+	{% url "cyano.views.basket" basket_id=object.pk %}{% endif %}
+	">{{ object.name }}</a></th>
+
+    <td>
+    <a href="{% if species %}
+	{% url "cyano.views.basket" species_wid=species.wid basket_id=object.pk %}{% else %}
+	{% url "cyano.views.basket" basket_id=object.pk %}{% endif %}
+	">{{ object.num_components }} items</td>
 {% endfor %}
 </tbody>
 </table>

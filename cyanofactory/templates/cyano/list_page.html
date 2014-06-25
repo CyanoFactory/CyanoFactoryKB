@@ -15,19 +15,19 @@ Released under the MIT license
 {% paginate 1000 queryset %}
 
 {% for object in queryset %}
-<tr>
+{% with item=basket_objects|index:object.pk %}
+<tr data-wid="{{ object.wid }}" data-op="{{ item }}">
 	<th><a href="{{ object|get_absolute_url:species }}">{{ object.wid }}</a></th>
 	<td><a href="{{ object|get_absolute_url:species }}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
 	{% if not request.user.is_anonymous %}
 	<td>
-		{% with item=basket_objects|index:object.pk %}
-		<a href="#" title="Add to cart"><img id="cartop" src="{% get_static_prefix %}cyano/img/cart/cart_{{ item }}.png" data-wid="{{ object.wid }}" data-op="{{ item }}" /></a>
-		{% endwith %}
+		<a href="#" class="cartop" title="Add to cart"><img id="cartop" src="{% get_static_prefix %}cyano/img/cart/cart_{{ item }}.png" /></a>
 		<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}" title="Edit entry"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>
 		<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}" title="Delete entry"><img src="{% get_static_prefix %}public/img/delete.png" /></a>
 	</td>
 	{% endif %}
 </tr>
+{% endwith %}
 {% endfor %}
 
 {% show_more "Load more" "Loading more..." %}
