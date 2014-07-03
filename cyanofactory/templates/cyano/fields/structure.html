@@ -35,11 +35,15 @@ var tooltip_func = function(evt, name, target) {
 }
 var features_func = function(evt, name, target) {
     tooltip_func(evt, name, target);
-    highlight_seq($(evt.target).data("coordinate"), $(evt.target).data("length"));
+    if (typeof highlight_seq != 'undefined') {
+        highlight_seq($(evt.target).data("coordinate"), $(evt.target).data("length"));
+    }
 }
 var hide_features_func = function(evt) {
     hideToolTip(evt);
-    highlight_seq(0, 0);
+    if (typeof highlight_seq != 'undefined') {
+        highlight_seq(0, 0);
+    }
 }
 
 function createCheckBox(ele, i) {
