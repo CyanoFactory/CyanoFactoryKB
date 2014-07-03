@@ -36,6 +36,7 @@ Released under the MIT license
 <script language="javascript" type="text/javascript" charset="utf-8">
 
 $(document).ready(function() {
+    var dialog_error = $("#dialog-error");
     var basket_list = $("#basket-list");
     var no_click = false;
 
@@ -61,6 +62,11 @@ $(document).ready(function() {
 
 	$("li#action_icons_edit").on("click", ".cart-add-button", function (event) {
 		event.preventDefault();
+
+        {% if not request.user.is_authenticated %}
+        dialog_error.dialog("open");
+        return;
+        {% endif %}
 
         //$("#basket-list").clone().multiselect({'element': $(event.target), 'selectedText': ''});
 
@@ -100,6 +106,18 @@ $(document).ready(function() {
         basket_list.multiselect("refresh");
         basket_list.multiselect("open");
 	});
+
+    dialog_error.dialog({
+        autoOpen: false,
+        height: 200,
+        width: 350,
+        modal: true,
+        buttons: {
+            "OK": function () {
+                $(this).dialog("close");
+            }
+        }
+    });
 });
 
 </script>
@@ -107,11 +125,7 @@ $(document).ready(function() {
 
 {% block action_icons_edit %}
 {% with object=queryset.0 %}
-{% if request.user.is_authenticated %}
 <li data-pk="{{ object.pk }}"><a href="#" class="cart-add-button" title="Add to basket"><img src="{% get_static_prefix %}cyano/img/cart/cart.png" />Add to basket</a></li>
-{% else %}
-<li>Add to basket (Login required)</li>
-{% endif %}
 <li><a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" />Edit {{ object.wid }}</a></li>
 <li><a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" />Delete {{ object.wid }}</a></li>
 <li><a href="{% url "cyano.views.permission" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/lock.png" title="View permissions" alt="View permissions" />View permissions of {{ object.wid }}</a></li>
@@ -161,4 +175,8 @@ $(document).ready(function() {
 <option value="basket{{ basket.pk }}" data-pk="{{ basket.pk }}">{{ basket.name }}</option>
 {% endfor %}
 </select>
+
+<div id="dialog-error" title="Login required">
+    Please login first.
+</div>
 {% endblock %}
