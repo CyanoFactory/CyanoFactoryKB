@@ -32,12 +32,86 @@ Released under the MIT license
 <meta name="entry_name" content="{{ object.wid }}" />
 {% endif %}
 {% endwith %}
+
+<script language="javascript" type="text/javascript" charset="utf-8">
+
+$(document).ready(function() {
+    var basket_list = $("#basket-list");
+    var no_click = false;
+
+    basket_list.multiselect({header: false});
+    basket_list.multiselect("getButton").hide();
+
+    basket_list.on("multiselectclick", function(event, ui) {
+        if (no_click) {
+            return;
+        }
+
+        $.ajax({
+            type: "POST",
+            url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+            context: document.body,
+            data: {
+                "id": ui.value.substring(6),
+                "wid": basket_list.data("wid"),
+                "op": ui.checked ? "add" : "remove"
+            }
+        });
+    });
+
+	$("li#action_icons_edit").on("click", ".cart-add-button", function (event) {
+		event.preventDefault();
+
+        //$("#basket-list").clone().multiselect({'element': $(event.target), 'selectedText': ''});
+
+        var target = $(event.target);
+        var parent = target.parents("li");
+
+         $.ajax({
+            type: "POST",
+            url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+            context: document.body,
+            async: false,
+            data: {
+                "id": parent.data("pk"),
+                "op": "list_item"
+            }
+        }).done(function(result) {
+			var json = jQuery.parseJSON(result);
+
+            no_click = true;
+            basket_list.multiselect("widget").find(":input:checked").each(function() {
+                this.click();
+            });
+
+            basket_list.find("option").each(function(index, value) {
+                var val = $(value);
+                if (json.baskets.indexOf(val.data("pk")) >= 0) {
+                    basket_list.multiselect("widget").find(":input:eq(" + (index) + ")").each(function(){
+                        this.click();
+                    });
+                }
+            });
+            no_click = false;
+		});
+
+        basket_list.data("wid", parent.data("pk"));
+        basket_list.multiselect("option", "position", {my: "top left", of: $(event.target)});
+        basket_list.multiselect("refresh");
+        basket_list.multiselect("open");
+	});
+});
+
+</script>
 {% endblock %}
 
 {% block action_icons_edit %}
 {% with object=queryset.0 %}
-{% if request. %}
-    <li></li>
+{% if request.user.is_authenticated %}
+<li data-pk="{{ object.pk }}"><a href="#" class="cart-add-button" title="Add to basket"><img src="{% get_static_prefix %}cyano/img/cart/cart.png" />Add to basket</a></li>
+{% else %}
+<li>Add to basket (Login required)</li>
+{% endif %}
 <li><a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" />Edit {{ object.wid }}</a></li>
 <li><a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" />Delete {{ object.wid }}</a></li>
 <li><a href="{% url "cyano.views.permission" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/lock.png" title="View permissions" alt="View permissions" />View permissions of {{ object.wid }}</a></li>
@@ -81,4 +155,10 @@ Released under the MIT license
 </table>
 {% endwith %}
 {% endautoescape %}
+
+<select id="basket-list" multiple="multiple" style="visibility:hidden">
+{% for basket in baskets %}
+<option value="basket{{ basket.pk }}" data-pk="{{ basket.pk }}">{{ basket.name }}</option>
+{% endfor %}
+</select>
 {% endblock %}

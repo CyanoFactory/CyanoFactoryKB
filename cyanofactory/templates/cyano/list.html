@@ -59,7 +59,6 @@ $(document).ready(function() {
 
         //$("#basket-list").clone().multiselect({'element': $(event.target), 'selectedText': ''});
 
-        var basket = "{{ basket.pk }}";
         var target = $(event.target);
         var parent = target.parents("tr");
 
@@ -166,7 +165,7 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 	<td><a href="{{ object|get_absolute_url:species }}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
 	{% if not request.user.is_anonymous %}
 	<td>
-		<a href="#" class="cart-add-button" title="Add to cart"><img src="{% get_static_prefix %}cyano/img/cart/cart.png" /></a>
+		<a href="#" class="cart-add-button" title="Add to basket"><img src="{% get_static_prefix %}cyano/img/cart/cart.png" /></a>
 		<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>
 		<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" /></a>
 	</td>

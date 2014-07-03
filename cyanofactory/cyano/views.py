@@ -581,19 +581,10 @@ def listing(request, species, model):
             #print groups
     else:
         objects = objects.order_by("wid")
-    
+
+    baskets = None
     if request.user.is_authenticated():
         baskets = cmodels.Basket.objects.filter(user=request.user.profile)
-
-        #if basket is None:
-        #    basket_objects = []
-        #else:
-        #    from itertools import repeat
-        #    from collections import defaultdict
-        #    r = repeat("remove")
-        #    basket_objects = basket.components.filter(component__pk__in = objects).values_list("component__pk", flat = True)
-        #    # Increase lookup speed with a dict
-        #    basket_objects = defaultdict(lambda: "add", zip(basket_objects, r))
 
     return chelpers.render_queryset_to_response(
         species=species,
@@ -605,9 +596,9 @@ def listing(request, species, model):
             'groups': groups,
             'facet_fields': facet_fields,
             'baskets': baskets,
-            #'basket_objects': basket_objects
         }
     )
+
 
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
@@ -624,19 +615,25 @@ def detail(request, species, model, item):
         #filter out empty fields
         fieldsets = chelpers.create_detail_fieldset(species, item, fieldsets, request.user.is_anonymous())
 
-    qs = chelpers.objectToQuerySet(item, model = model)
+    qs = chelpers.objectToQuerySet(item, model=model)
+
+    baskets = None
+    if request.user.is_authenticated():
+        baskets = cmodels.Basket.objects.filter(user=request.user.profile)
 
     #render response
     return chelpers.render_queryset_to_response(
-        species = species,        
-        request = request, 
-        models = [model],
-        queryset = qs,
-        template = 'cyano/detail.html', 
-        data = {
+        species=species,
+        request=request,
+        models=[model],
+        queryset=qs,
+        template='cyano/detail.html',
+        data={
             'fieldsets': fieldsets,
             'message': request.GET.get('message', ''),
-            })
+            'baskets': baskets,
+        }
+    )
 
 
 @resolve_to_objects
