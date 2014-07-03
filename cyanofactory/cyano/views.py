@@ -583,17 +583,17 @@ def listing(request, species, model):
         objects = objects.order_by("wid")
     
     if request.user.is_authenticated():
-        basket = cmodels.Basket.objects.filter(user=request.user.profile).first()
+        baskets = cmodels.Basket.objects.filter(user=request.user.profile)
 
-        if basket is None:
-            basket_objects = []
-        else:
-            from itertools import repeat
-            from collections import defaultdict
-            r = repeat("remove")
-            basket_objects = basket.components.filter(component__pk__in = objects).values_list("component__pk", flat = True)
-            # Increase lookup speed with a dict
-            basket_objects = defaultdict(lambda: "add", zip(basket_objects, r))
+        #if basket is None:
+        #    basket_objects = []
+        #else:
+        #    from itertools import repeat
+        #    from collections import defaultdict
+        #    r = repeat("remove")
+        #    basket_objects = basket.components.filter(component__pk__in = objects).values_list("component__pk", flat = True)
+        #    # Increase lookup speed with a dict
+        #    basket_objects = defaultdict(lambda: "add", zip(basket_objects, r))
 
     return chelpers.render_queryset_to_response(
         species=species,
@@ -604,8 +604,8 @@ def listing(request, species, model):
         data={
             'groups': groups,
             'facet_fields': facet_fields,
-            'basket': basket,
-            'basket_objects': basket_objects
+            'baskets': baskets,
+            #'basket_objects': basket_objects
         }
     )
 
@@ -1459,44 +1459,52 @@ def basket(request, species=None, basket_id=0):
 @ajax_required
 @login_required
 @resolve_to_objects
-def basket_op(request, species=None, model=None):
+def basket_op(request, species=None):
     from django.http import HttpResponseBadRequest
 
     # Supported operations:
     # create - Creates a new basket with name 'wid'
     #  return: {id, url}
-    # add - Adds item 'wid' to basket 'id'
+    # add - Adds item with pk 'wid' to basket 'id'
     #  return {new_op}
-    # remove - Removes item 'wid' from basket 'id'
+    # remove - Removes item with pk 'wid' from basket 'id'
     #  return {new_op}
     # delete - Deletes basket with 'id'
     #  return {}
+    # rename - Renames basket with 'id' to 'wid'
+    #  return wid
+    # list_basket - Lists items in basket 'id'
+    #  return {id, items: [list of ids]}
+    # list_item - Lists baskets containing item 'id'
+    #  return {id, baskets: [list of baskets]}
     # Errors return a bad request
 
     pk = request.POST.get('id', None)
     wid = request.POST.get('wid', None)
     op = request.POST.get('op', None)
     
-    if not op or op not in ["add", "delete", "create", "remove"]:
+    if not op or op not in ["add", "delete", "create", "remove", "rename", "list_basket", "list_item"]:
         return HttpResponseBadRequest("Invalid op")
 
-    if op in ["add", "create", "remove"] and not wid:
+    if op in ["add", "create", "remove", "rename"] and not wid:
         return HttpResponseBadRequest("Invalid wid")
 
-    if op in ["add", "delete", "remove"] and not pk:
+    if op in ["add", "delete", "remove", "rename"] and not pk:
         return HttpResponseBadRequest("Invalid id")
 
-    if op in ["add", "remove"] and not species or not model:
-        return HttpResponseBadRequest("Invalid species or model")
+    if op in ["add", "remove", "list_basket", "list_item"] and not species:
+        return HttpResponseBadRequest("Invalid species")
 
     if op == "create":
         basket = cmodels.Basket.objects.create(user=request.user.profile, name=wid)
+
+        url = {"basket_id": basket.pk}
+        if species:
+            url.update({"species_wid": species.wid})
+
         return HttpResponse(json.dumps(
             {"id": basket.pk,
-             "url": reverse("cyano-basket", kwargs={
-                 "species_wid": species.wid,
-                 "basket_id": basket.pk
-             })
+             "url": reverse("cyano-basket", kwargs=url)
             })
         )
     elif op == "delete":
@@ -1505,6 +1513,24 @@ def basket_op(request, species=None, model=None):
             return HttpResponse(json.dumps({}))
         except ObjectDoesNotExist:
             return HttpResponseBadRequest("Invalid basket")
+    elif op == "rename":
+        try:
+            bask = cmodels.Basket.objects.get(user=request.user.profile, pk=pk)
+            bask.name = wid
+            bask.save()
+            return HttpResponse(wid.replace("<", "&lt;").replace(">", "&gt;"))
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Invalid basket")
+    elif op == "list_basket":
+        try:
+            bask = cmodels.Basket.objects.get(user=request.user.profile, components__species=species.pk, pk=pk)
+            items = list(bask.components.filter(species=species.pk).values_list("pk", flat=True))
+            return HttpResponse(json.dumps({"id": bask.pk, "items": items}))
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Invalid basket")
+    elif op == "list_item":
+        bask = list(cmodels.Basket.objects.filter(user=request.user.profile, components__species=species.pk, components__component=pk).values_list("pk", flat=True))
+        return HttpResponse(json.dumps({"id": pk, "baskets": bask}))
 
     # op is add or remove
     try:
@@ -1513,7 +1539,7 @@ def basket_op(request, species=None, model=None):
         return HttpResponseBadRequest("Invalid basket")
 
     try:
-        item = model.objects.for_species(species).for_wid(wid)
+        item = cmodels.SpeciesComponent.objects.for_species(species).get(pk=wid)
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Invalid item")
 
@@ -1536,17 +1562,3 @@ def basket_op(request, species=None, model=None):
         new_op = "add"
 
     return HttpResponse(json.dumps({"new_op": new_op}))
-
-
-@ajax_required
-@login_required
-def save(request):
-    post = request.POST
-
-    if post["op"] == "basket":
-        basket = cmodels.Basket.objects.get(pk=int(post["pk"]), user=request.user.profile)
-        basket.name = post["value"]
-        basket.save()
-        return HttpResponse(basket.name)
-
-    return HttpResponseBadRequest()

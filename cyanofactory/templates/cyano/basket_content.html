@@ -13,7 +13,7 @@ Released under the MIT license
 {% load templatetags %}
 {% load filters %}
 
-{% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.wid }}{% endwith %}{% endblock %}
+{% block head_title %}{{ block.super }} :: {{ basket.name }}{% endblock %}
 {% block page_title %}Basket &ndash; <span class="inline-edit">{{ basket.name }}</span>{% endblock %}
 
 {% block head %}
@@ -22,10 +22,18 @@ Released under the MIT license
 <script src="{% static "cyano" %}/js/jquery.jeditable.js"></script>
 <script>
 $(document).ready(function() {
-     $('.inline-edit').editable('{% url "cyano-save" %}', {
-        submit : 'OK',
-        cancel : 'Cancel',
-        submitdata: {op: "basket", pk: "1"}
+     var basket = "{{ basket.pk }}";
+
+     $('.inline-edit').editable('{% url "cyano-basket-op" %}', {
+         submit : 'OK',
+         cancel : 'Cancel',
+         name: 'wid',
+         width: 200,
+         submitdata : function(value, settings) {
+             alert(value);
+             alert(settings);
+             return {id: basket, op: "rename"}
+         }
     });
 
     $('.inline-edit').hover(function() {
@@ -39,7 +47,6 @@ $(document).ready(function() {
 	$("table#list").on("click", ".delete-button", function (event) {
         event.preventDefault();
 
-        var basket = "{{ basket.pk }}";
         var target = $(event.target);
         var parent = target.parents("tr");
 
@@ -47,7 +54,7 @@ $(document).ready(function() {
             type: "POST",
             url: parent.data("url"),
             context: document.body,
-            data: { "id": basket, "wid": parent.data("wid"), "op": "remove" }
+            data: { "id": basket, "wid": parent.data("pk"), "op": "remove" }
         });
 
         parent.fadeOut(200, function() { $(this).remove(); });
@@ -113,7 +120,6 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block content %}
-{% autoescape off %}
 <table id="list">
 <thead>
 	<tr>
@@ -129,7 +135,7 @@ $(document).ready(function() {
 {% with object=component.component %}
 {% with species_wid=component.species.wid %}
 {% with model_type=object.get_model.model_name %}
-<tr data-pk="{{ object.pk }}" data-wid="{{ object.wid }}" data-url="{% url "cyano-basket-op" species_wid=species_wid model_type=model_type %}">
+<tr data-pk="{{ object.pk }}" data-url="{% url "cyano-basket-op" species_wid=species_wid %}">
 	<th><a href="{% url "cyano.views.detail" species_wid=species_wid model_type=model_type wid=object.wid %}">{{ object.wid }}</a></th>
 	<td><a href="{% url "cyano.views.detail" species_wid=species_wid model_type=model_type wid=object.wid %}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
 	<td>
@@ -144,5 +150,4 @@ $(document).ready(function() {
 </tbody>
 </table>
 
-{% endautoescape %}
 {% endblock %}

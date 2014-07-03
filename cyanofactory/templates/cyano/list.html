@@ -29,26 +29,75 @@ Released under the MIT license
 <script language="javascript" type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
 
 <script language="javascript" type="text/javascript" charset="utf-8">
+
 $(document).ready(function() {
-	$("table#list").on("click", ".cartop", function (event) {
+    var basket_list = $("#basket-list");
+    var no_click = false;
+
+    basket_list.multiselect({header: false});
+    basket_list.multiselect("getButton").hide();
+
+    basket_list.on("multiselectclick", function(event, ui) {
+        if (no_click) {
+            return;
+        }
+
+        $.ajax({
+            type: "POST",
+            url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+            context: document.body,
+            data: {
+                "id": ui.value.substring(6),
+                "wid": basket_list.data("wid"),
+                "op": ui.checked ? "add" : "remove"
+            }
+        });
+    });
+
+	$("table#list").on("click", ".cart-add-button", function (event) {
 		event.preventDefault();
+
+        //$("#basket-list").clone().multiselect({'element': $(event.target), 'selectedText': ''});
 
         var basket = "{{ basket.pk }}";
         var target = $(event.target);
         var parent = target.parents("tr");
 
-		$.ajax({
+         $.ajax({
             type: "POST",
-			url: "{% url "cyano-basket-op" species_wid=species.wid model_type=model_type %}",
-			context: document.body,
-			data: { "id": basket, "wid": parent.data("wid"), "op": parent.data("op") }
-		}).done(function(result) {
-			json = jQuery.parseJSON(result);
-			target.attr("src", "{% get_static_prefix %}cyano/img/cart/cart_" + json.new_op + ".png");
-			parent.data("op", json.new_op);
+            url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+            context: document.body,
+            async: false,
+            data: {
+                "id": parent.data("pk"),
+                "op": "list_item"
+            }
+        }).done(function(result) {
+			var json = jQuery.parseJSON(result);
+
+            no_click = true;
+            basket_list.multiselect("widget").find(":input:checked").each(function() {
+                this.click();
+            });
+
+            basket_list.find("option").each(function(index, value) {
+                var val = $(value);
+                if (json.baskets.indexOf(val.data("pk")) >= 0) {
+                    basket_list.multiselect("widget").find(":input:eq(" + (index) + ")").each(function(){
+                        this.click();
+                    });
+                }
+            });
+            no_click = false;
 		});
+
+        basket_list.data("wid", parent.data("pk"));
+        basket_list.multiselect("option", "position", {my: "center bottom", of: $(event.target)});
+        basket_list.multiselect("refresh");
+        basket_list.multiselect("open");
 	});
 });
+
 </script>
 {% endblock %}
 
@@ -69,6 +118,21 @@ $(document).ready(function() {
 	font-style:italic;
 	text-align:center;
 }
+
+#feedback { font-size: 1.4em; }
+#selectable .ui-selecting { background: #FECA40; }
+#selectable .ui-selected { background: #F39814; color: white; }
+#selectable { list-style-type: none; margin: 0; padding: 0; width: 60%; }
+#selectable li { margin: 3px; padding: 0.4em; font-size: 1.4em; height: 18px; }
+
+input.text { margin-bottom:12px; width:95%; padding: .4em; }
+fieldset { padding:0; border:0; margin-top:25px; }
+div#users-contain { width: 350px; margin: 20px 0; }
+div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%; }
+div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
+.ui-dialog .ui-state-error { padding: .3em; }
+.validateTips { border: 1px solid transparent; padding: 0.3em }
+
 {% if facet_fields|length == 0 %}
 #list{
 	width:100%;
@@ -76,6 +140,7 @@ $(document).ready(function() {
 #listfilter{
 	display:none;
 }
+
 {% endif %}
 {% endblock %}
 
@@ -95,14 +160,13 @@ $(document).ready(function() {
 </thead>
 <tbody>
 {% for object in value %}
-{% with item=basket_objects|index:object.pk %}
-<tr data-wid="{{ object.wid }}" data-op="{{ item }}">
+{% with item=basket_object %}
+<tr data-pk="{{ object.pk }}">
 	<th><a href="{{ object|get_absolute_url:species }}">{{ object.wid }}</a></th>
 	<td><a href="{{ object|get_absolute_url:species }}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
 	{% if not request.user.is_anonymous %}
 	<td>
-
-		<a href="#" class="cartop" title="Add to cart"><img src="{% get_static_prefix %}cyano/img/cart/cart_{{ item }}.png" /></a>
+		<a href="#" class="cart-add-button" title="Add to cart"><img src="{% get_static_prefix %}cyano/img/cart/cart.png" /></a>
 		<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>
 		<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" /></a>
 	</td>
@@ -157,4 +221,11 @@ $(document).ready(function() {
 </div>
 
 <div style="clear:both;"></div>
+
+<select id="basket-list" multiple="multiple" style="visibility:hidden">
+{% for basket in baskets %}
+<option value="basket{{ basket.pk }}" data-pk="{{ basket.pk }}">{{ basket.name }}</option>
+{% endfor %}
+</select>
+
 {% endblock %}

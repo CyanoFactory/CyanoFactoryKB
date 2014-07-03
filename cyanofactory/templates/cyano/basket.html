@@ -13,7 +13,7 @@ Released under the MIT license
 {% load templatetags %}
 {% load filters %}
 
-{% block head_title %}{% with object=queryset.0 %}{{ block.super }} :: {{ object.wid }}{% endwith %}{% endblock %}
+{% block head_title %}{{ block.super }} :: My Baskets{% endblock %}
 {% block page_title %}My Baskets{% endblock %}
 
 {% block action_icons %}
@@ -25,7 +25,149 @@ Released under the MIT license
 {% endwith %}
 {% endblock %}
 
+{% block head %}
+{{ block.super }}
+
+<script>
+$(document).ready(function() {
+    $(function () {
+        var dialog_create = $("#dialog-create");
+        var dialog_delete = $("#dialog-delete");
+
+        dialog_create.dialog({
+            autoOpen: false,
+            height: 300,
+            width: 350,
+            modal: true,
+            buttons: {
+                "OK": function () {
+                    var name = $(this).find($("#basket-name"));
+                    var valid = checkLength($(this), name, "Name", 1, 50);
+
+                    if (valid) {
+                        $.ajax({
+                            type: "POST",
+                            url: "{% url "cyano-basket-op" %}",
+                            context: document.body,
+                            data: { "op": "create", "wid": name.val() }
+                        });
+
+                        $(this).dialog("close");
+                        location.reload()
+                    }
+                },
+                Cancel: function () {
+                    $(this).dialog("close");
+                }
+            },
+            close: function () {
+                $(this).find($("#basket-name")).val("");
+                $(this).find("input").removeClass("ui-state-error");
+                $(".validateTips").hide();
+            }
+        });
+
+        dialog_delete.dialog({
+            autoOpen: false,
+            height: 300,
+            width: 350,
+            modal: true,
+            buttons: {
+                "Yes": function () {
+                    $.ajax({
+                        type: "POST",
+                        url: "{% url "cyano-basket-op" %}",
+                        context: document.body,
+                        data: { "op": "delete", "id": $(this).data("pk") }
+                    });
+
+                    $(this).dialog("close");
+
+                    $(this).data("parent").fadeOut(200, function() { $(this).remove(); });
+                },
+                Cancel: function () {
+                    $(this).dialog("close");
+                }
+            },
+            close: function () {
+            }
+        });
+
+        $("#dialog-create-open").click(function() {
+            dialog_create.dialog("open");
+        });
+
+        $(".delete-button").click(function() {
+            var parent = $(this).parents("tr");
+
+            dialog_delete.data("parent", parent);
+            dialog_delete.data("pk", parent.data("pk"));
+            dialog_delete.dialog("open");
+        });
+
+        function updateTips(dialog, t) {
+            dialog.find($(".validateTips").show());
+            dialog.find($(".validateTips"))
+                    .text(t)
+                    .addClass("ui-state-highlight");
+            setTimeout(function () {
+                //t.removeClass("ui-state-highlight", 1500);
+            }, 500);
+        }
+
+        function checkLength(dialog, o, n, min, max) {
+            if (o.val().length > max || o.val().length < min) {
+                o.addClass("ui-state-error");
+                updateTips(dialog, "Length of " + n + " must be between " +
+                        min + " and " + max + ".");
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+       function checkBool(dialog, o, bool, error) {
+            if (bool) {
+                return true;
+            } else {
+                o.addClass("ui-state-error");
+                updateTips(dialog, error);
+                return false;
+            }
+        }
+
+        function checkRegexp(dialog, o, regexp, n) {
+            if (!( regexp.test(o.val()) )) {
+                o.addClass("ui-state-error");
+                updateTips(dialog, n);
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        $(".validateTips").hide();
+    });
+});
+</script>
+
+{% endblock %}
+
 {% block extrastyles %}
+#feedback { font-size: 1.4em; }
+#selectable .ui-selecting { background: #FECA40; }
+#selectable .ui-selected { background: #F39814; color: white; }
+#selectable { list-style-type: none; margin: 0; padding: 0; width: 60%; }
+#selectable li { margin: 3px; padding: 0.4em; font-size: 1.4em; height: 18px; }
+
+input.text { margin-bottom:12px; width:95%; padding: .4em; }
+fieldset { padding:0; border:0; margin-top:25px; }
+div#users-contain { width: 350px; margin: 20px 0; }
+div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%; }
+div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
+.ui-dialog .ui-state-error { padding: .3em; }
+.validateTips { border: 1px solid transparent; padding: 0.3em }
+
 #list{
 	width:100%;
     position: relative;
@@ -73,7 +215,6 @@ Released under the MIT license
 {% endblock %}
 
 {% block content %}
-{% autoescape off %}
 <table id="list">
 <thead>
 	<tr>
@@ -81,11 +222,12 @@ Released under the MIT license
             WID
         </th>
 		<th>Name</th>
+        <th></th>
 	</tr>
 </thead>
 <tbody>
 {% for object in queryset %}
-<tr>
+<tr data-pk="{{ object.pk }}">
 	<th><a href="{% if species %}
 	{% url "cyano.views.basket" species_wid=species.wid basket_id=object.pk %}{% else %}
 	{% url "cyano.views.basket" basket_id=object.pk %}{% endif %}
@@ -96,9 +238,31 @@ Released under the MIT license
 	{% url "cyano.views.basket" species_wid=species.wid basket_id=object.pk %}{% else %}
 	{% url "cyano.views.basket" basket_id=object.pk %}{% endif %}
 	">{{ object.num_components }} items</td>
+
+	<td>
+		<a href="#" class="delete-button" title="Delete this cart"><img src="{% get_static_prefix %}public/img/delete.png"/></a>
+	</td>
 {% endfor %}
 </tbody>
 </table>
 
-{% endautoescape %}
+<div><a href="#" id="dialog-create-open">Create new basket</a></div>
+
+<div id="dialog-create" title="Create New Basket">
+    <p class="validateTips"></p>
+    <form>
+        <fieldset>
+            <label for="name">Name</label>
+            <input type="text" id="basket-name" class="name text ui-widget-content ui-corner-all">
+        </fieldset>
+    </form>
+</div>
+
+<div id="dialog-delete" title="Confirm deleting Basket">
+    Do you really want to delete the basket?
+    <form>
+        <fieldset>
+        </fieldset>
+    </form>
+</div>
 {% endblock %}

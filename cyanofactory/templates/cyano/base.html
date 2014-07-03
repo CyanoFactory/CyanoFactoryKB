@@ -152,7 +152,7 @@ Released under the MIT license
 			<li><a href="#">{{ request.user.username }}</a>
 				<ul>
 				<li><a href="{% if species %}{% url "cyano.views.user" username=request.user.username species_wid=species.wid %}{% else %}{% url "cyano.views.user" username=request.user.username %}{% endif %}">My Profile</a></li>
-                <li><a href="{% if species %}{% url "cyano.views.basket" species_wid=species.wid %}{% else %}{% url "cyano.views.basket" %}{% endif %}">My Basket</a></li>
+                <li><a href="{% if species %}{% url "cyano.views.basket" species_wid=species.wid %}{% else %}{% url "cyano.views.basket" %}{% endif %}">My Baskets</a></li>
 				<li><a href="{% url "password_change" %}">Change password</a></li>
 				<li><a href="{% if species %}{% url "logout" species_wid=species.wid %}{% else %}{% url "logout" %}{% endif %}">Logout</a></li>
 				</ul>
