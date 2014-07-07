@@ -10,10 +10,15 @@ from cyano.helpers import render_queryset_to_response
 
 @login_required
 def index(request):
+
+
+    pass
+
+@login_required
+def design(request):
     data = {}
     
-    return render_queryset_to_response(request, template="cyanodesign/index.html", data=data)
-
+    return render_queryset_to_response(request, template="cyanodesign/design.html", data=data)
 
 @login_required
 @ajax_required
