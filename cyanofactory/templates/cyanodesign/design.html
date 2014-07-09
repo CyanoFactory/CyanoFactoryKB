@@ -14,8 +14,8 @@ Released under the MIT license
 {% load templatetags %}
 {% load filters %}
 
-{% block head_title %}{{ block.super }} :: Cyanodesign{% endblock %}
-{% block page_title %}Cyanodesign{% endblock %}
+{% block head_title %}{{ block.super }} :: CyanoDesign{% endblock %}
+{% block page_title %}CyanoDesign &ndash; {{ name }}{% endblock %}
 
 {% block head %}
 {{ block.super }}
@@ -462,7 +462,7 @@ Released under the MIT license
                         }
                     }
 
-                    bValid &= checkRegexp($(this), name, /^[a-zA-Z0-9_]+$/, "Name must only contain A-Z, a-z, 0-9 and _");
+                    bValid &= checkRegexp($(this), name, /^[a-zA-Z0-9_.]+$/, "Name must only contain A-Z, a-z, 0-9, . and _");
                     bValid &= checkLength($(this), name, "Name", 1, 50);
 
                     if (constrained.prop("checked")) {
@@ -769,7 +769,7 @@ Released under the MIT license
         });
 
         $.ajax({
-            url: "{% url "cyanodesign.views.get_reactions" %}",
+            url: "{% url "cyano-design-get-reactions" pk=pk %}",
             context: document.body,
             beforeSend: function() {
                 dialog_progressbar.dialog("open");

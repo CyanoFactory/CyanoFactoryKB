@@ -13,13 +13,13 @@ Released under the MIT license
 {% load templatetags %}
 {% load filters %}
 
-{% block head_title %}{{ block.super }} :: My Baskets{% endblock %}
-{% block page_title %}My Baskets{% endblock %}
+{% block head_title %}{{ block.super }} :: CyanoDesign{% endblock %}
+{% block page_title %}CyanoDesign{% endblock %}
 
 {% block action_icons_export %}
-<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download basket list in Excel format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download basket list in JSON format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download basket list in XML format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download model list in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download model list in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download model list in XML format</a></li>
 {{ block.super }}
 {% endblock %}
 
@@ -39,19 +39,11 @@ $(document).ready(function() {
             modal: true,
             buttons: {
                 "OK": function () {
-                    var name = $(this).find($("#basket-name"));
+                    var name = $(this).find($("#name"));
                     var valid = checkLength($(this), name, "Name", 1, 50);
 
                     if (valid) {
-                        $.ajax({
-                            type: "POST",
-                            url: "{% url "cyano-basket-op" %}",
-                            context: document.body,
-                            data: { "op": "create", "wid": name.val() }
-                        });
-
-                        $(this).dialog("close");
-                        location.reload()
+                        $(this).find("form").submit();
                     }
                 },
                 Cancel: function () {
@@ -74,9 +66,9 @@ $(document).ready(function() {
                 "Yes": function () {
                     $.ajax({
                         type: "POST",
-                        url: "{% url "cyano-basket-op" %}",
+                        url: "{% url "cyano-design-delete" %}",
                         context: document.body,
-                        data: { "op": "delete", "id": $(this).data("pk") }
+                        data: { "id": $(this).data("pk") }
                     });
 
                     $(this).dialog("close");
@@ -118,26 +110,6 @@ $(document).ready(function() {
                 o.addClass("ui-state-error");
                 updateTips(dialog, "Length of " + n + " must be between " +
                         min + " and " + max + ".");
-                return false;
-            } else {
-                return true;
-            }
-        }
-
-       function checkBool(dialog, o, bool, error) {
-            if (bool) {
-                return true;
-            } else {
-                o.addClass("ui-state-error");
-                updateTips(dialog, error);
-                return false;
-            }
-        }
-
-        function checkRegexp(dialog, o, regexp, n) {
-            if (!( regexp.test(o.val()) )) {
-                o.addClass("ui-state-error");
-                updateTips(dialog, n);
                 return false;
             } else {
                 return true;
@@ -208,15 +180,13 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 <tbody>
 {% for object in queryset %}
 <tr data-pk="{{ object.pk }}">
-	<th><a href="{% if species %}
-	{% url "cyano.views.basket" species_wid=species.wid basket_id=object.pk %}{% else %}
-	{% url "cyano.views.basket" basket_id=object.pk %}{% endif %}
+	<th><a href="
+	{% url "cyano-design-design" pk=object.pk %}
 	">{{ object.name }}</a></th>
 
     <td>
-    <a href="{% if species %}
-	{% url "cyano.views.basket" species_wid=species.wid basket_id=object.pk %}{% else %}
-	{% url "cyano.views.basket" basket_id=object.pk %}{% endif %}
+    <a href="
+	{% url "cyano-design-design" pk=object.pk %}
 	">{{ object.num_components }} items</td>
 
 	<td>
@@ -226,23 +196,29 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 </tbody>
 </table>
 
-<div><a href="#" id="dialog-create-open">Create new basket</a></div>
+<div><a href="#" id="dialog-create-open">Create new model</a></div>
 
-<div id="dialog-create" title="Create New Basket">
+<div id="dialog-create" title="Create New Model">
     <p class="validateTips"></p>
-    <form>
+    <form method="post" action="{% url "cyano-design-upload" %}" enctype="multipart/form-data">
         <fieldset>
+            {% csrf_token %}
             <label for="name">Name</label>
-            <input type="text" id="basket-name" class="name text ui-widget-content ui-corner-all">
+            <input type="text" name=name id="name" class="name text ui-widget-content ui-corner-all">
+
+            <label for="file">Model</label>
+            <input name="file" id="file" type="file">
         </fieldset>
     </form>
 </div>
 
-<div id="dialog-delete" title="Confirm deleting Basket">
-    Do you really want to delete the basket?
+<div id="dialog-delete" title="Confirm deleting Model">
+    Do you really want to delete the model?
     <form>
         <fieldset>
         </fieldset>
     </form>
 </div>
+
 {% endblock %}
+

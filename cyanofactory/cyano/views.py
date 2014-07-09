@@ -930,7 +930,7 @@ def delete(request, species, model = None, item = None):
 @permission_required(perm.READ_NORMAL)
 def exportData(request, species):
     form = ExportDataForm(None)
-    if not form.is_valid():        
+    if not form.is_valid():
         return chelpers.render_queryset_to_response(
             species=species,
             request = request,
