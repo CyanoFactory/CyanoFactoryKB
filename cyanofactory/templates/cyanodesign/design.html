@@ -28,6 +28,7 @@ Released under the MIT license
     var dialog_enzyme;
     var dialog_metabolite_add;
     var dialog_progressbar;
+    var dialog_filter;
     var cyano_design_objective_select;
     var cyano_design_enzymes;
     var constraints_div;
@@ -36,6 +37,44 @@ Released under the MIT license
     var delete_button;
     var create_new_enzyme = false;
     var metabolite_combobox;
+
+    function Filter() {};
+
+    Filter.prototype = {
+        predicates: [
+            function(s, x) { return s.toLowerCase().contains(x.toLowerCase()) },
+            function(s, x) { return s.toLowerCase().startsWith(x.toLowerCase()) },
+            function(s, x) { return s.toLowerCase().endsWith(x.toLowerCase()) },
+            function(s, x) { return s.toLowerCase() == x.toLowerCase() },
+            function(s, x) { return !Filter.prototype.predicates[0](s, x) },
+            function(s, x) { return !Filter.prototype.predicates[1](s, x) },
+            function(s, x) { return !Filter.prototype.predicates[2](s, x) },
+            function(s, x) { return !Filter.prototype.predicates[3](s, x) }
+        ],
+        getters: [
+            function(e) { return [e.name] },
+            function(e) { return e.substrates.concat(e.products).map(function(x) { return x.name } ) },
+            function(e) { return e.substrates.map(function(x) { return x.name } ) },
+            function(e) { return e.products.map(function(x) { return x.name } ) }
+        ],
+        apply: function(enzyme, getter, predicate, search_string) {
+            return Filter.prototype.getters[getter](enzyme).some(function(x) {
+                return Filter.prototype.predicates[predicate](x, search_string)
+            });
+        },
+        getAll: function() {
+            return dialog_filter.find("fieldset > div").map(function() {
+                var child = $(this).children();
+                // jquery map flattens
+                return [[child[0].selectedIndex - 1, child[1].selectedIndex, child[2].value]];
+            }).toArray().slice(0, -1);
+        },
+        matchAll: function(e) {
+            return Filter.prototype.getAll().every(function(x) {
+                return Filter.prototype.apply(e, x[0], x[1], x[2]);
+            });
+        }
+    };
 
     function Enzyme(name) {
         this.name = name;
@@ -213,6 +252,7 @@ Released under the MIT license
         dialog_enzyme = $("#dialog-reaction");
         dialog_metabolite_add = $("#dialog-add-metabolite");
         dialog_progressbar = $("#dialog-progressbar");
+        dialog_filter = $("#dialog-filter");
         cyano_design_objective_select = $("#cyano-design-objective-select");
         cyano_design_enzymes = $(".cyano-design-enzymes");
         constraints_div = $("#constraints-min-max");
@@ -272,6 +312,9 @@ Released under the MIT license
             });
         });
 
+        $("#design-filters").click(function(event) {
+            dialog_filter.dialog("open");
+        });
 
         function updateTips(dialog, t) {
             dialog.find($(".validateTips").show());
@@ -327,6 +370,7 @@ Released under the MIT license
         function updateEnzymeList() {
             $(cyano_design_enzymes).text("");
             $(cyano_design_objective_select).text("");
+            var shown = 0;
 
             for (var i = 0; i < enzymes.length; ++i) {
                 var enzyme = enzymes[i];
@@ -334,9 +378,15 @@ Released under the MIT license
                     enzymes[i] = enzyme.backup;
                     enzyme = enzymes[i];
                 }
-                enzyme.toHTML().appendTo(cyano_design_enzymes);
+
+                if (Filter.prototype.matchAll(enzyme)) {
+                    enzyme.toHTML().appendTo(cyano_design_enzymes);
+                    shown++;
+                }
                 $("<option></option>").text(enzyme.name).appendTo(cyano_design_objective_select);
             }
+
+            $(".cyano-design-filter-text").text(shown + " of " + enzymes.length + " reactions displayed.");
         }
 
         function showEnzymeDialog(enzyme, create_new) {
@@ -579,11 +629,7 @@ Released under the MIT license
                 $(this).find(".creationState").text("");
             }
         });
-        $("#create-user")
-                .button()
-                .click(function () {
-                    $("#dialog-form").dialog("open");
-                });
+
         cyano_design_enzymes.on("click", "div.cyano-reaction", function(event) {
             showEnzymeDialog($(event.target).data("object"), false);
         });
@@ -649,7 +695,39 @@ Released under the MIT license
         pbar.progressbar();
         pbar.progressbar( "option", "value", false );
 
-        $.widget("custom.combobox", {
+        dialog_filter.dialog({
+            autoOpen: false,
+            height: 300,
+            width: 500,
+            modal: true,
+            buttons: {
+                "OK": function () {
+                    updateEnzymeList();
+                    $(this).dialog("close");
+                },
+                Cancel: function () {
+                    //$(this).data("filter").insertAfter($(this).find("fieldset > div"));
+                    $(this).find("fieldset").empty();
+                    $(this).data("filter").appendTo($(this).find("fieldset"));
+                    //$(this).find("fieldset > div").replaceWith($(this).data("filter"));
+                    $(this).dialog("close");
+                }
+            },
+            open: function() {
+                // Add selected tags
+                $(this).find("fieldset > div").each(function(div) {
+                    $(div).find("select").each(function(select) {
+                        console.log(select.selectedIndex);
+                    })
+                });
+
+                $(this).data("filter", $(this).find("fieldset > div").clone());
+            },
+            close: function () {
+            }
+        });
+
+        $.widget("custom.auto_combobox", {
             _create: function () {
                 this.wrapper = $("<span>")
                         .addClass("custom-combobox")
@@ -763,7 +841,8 @@ Released under the MIT license
                 this.element.show();
             }
         });
-        metabolite_combobox.combobox();
+        metabolite_combobox.auto_combobox();
+        //$(".combobox").combobox();
         $("#toggle").click(function () {
             metabolite_combobox.toggle();
         });
@@ -785,16 +864,31 @@ Released under the MIT license
 
             x["enzymes"].forEach(function(value) {
                 var enz = createEnzyme(value);
-                enz.toHTML().appendTo(cyano_design_enzymes);
                 enzymes.push(enz);
-                $("<option></option>").text(enz.name).appendTo(cyano_design_objective_select);
             });
 
             if (x.objective.length > 0) {
                 cyano_design_objective_select.val(x.objective[0].split(" ")[0])
             }
+            updateEnzymeList();
             dialog_progressbar.dialog("close");
         });
+
+        dialog_filter.find("fieldset").on("change", "[name=filter-value]:last", function() {
+            if (this.selectedIndex != 0) {
+                dialog_filter.find("[name=filter-template]").clone().appendTo(
+                    dialog_filter.find("fieldset").first()).attr("name", null).show();
+            }
+        });
+        dialog_filter.find("fieldset").on("change", "[name=filter-value]", function() {
+            if (this.selectedIndex == 0) {
+                $(this).parent().remove();
+            }
+        });
+
+        dialog_filter.find("[name=filter-template]").hide();
+        dialog_filter.find("[name=filter-template]").clone().appendTo(
+            dialog_filter.find("fieldset")).attr("name", null).show();
     });
 </script>
 
@@ -885,7 +979,6 @@ span.external-metabolite { color: blue }
 <img src="{% static "public/img/delete.png" %}" id="delete-button" class="delete-button" alt="Delete"/>
 <img src="{% static "public/img/add.png" %}" id="add-button" class="add-button" alt="Add"/>
 
-
 <div id="dialog-reaction" title="Edit Reaction">
     <p class="validateTips"></p>
 
@@ -955,16 +1048,51 @@ span.external-metabolite { color: blue }
 <div id="progressbar"></div>
 </div>
 
+<div id="dialog-filter" title="Manage filters">
+    <form>
+        <fieldset>
+        </fieldset>
+    </form>
+    <div name="filter-template">
+        <select name="filter-value" class="combobox">
+            <option>(Select)</option>
+            <option>Name</option>
+            <option>Metabolites</option>
+            <option>Substrates</option>
+            <option>Products</option>
+        </select>
+        <select name="filter-type" class="combobox">
+            <option>Contains</option>
+            <option>Starts with</option>
+            <option>Ends with</option>
+            <option>Is</option>
+            <option>Doesn't contain</option>
+            <option>Doesn't start with</option>
+            <option>Doesn't end with</option>
+            <option>Is not</option>
+        </select>
+        <input type="text" name="filter-text">
+    </div>
+</div>
+
 <div class="cyano-design-enzymes">
 </div>
 <img src="{% static "public/img/add.png" %}" id="add-enzyme-button" class="hoverable" alt="Add"/>
+
+<div class="cyano-design-filter">
+<div class="cyano-design-filter-text">
+
+</div>
+<input type="submit" id="design-filters" value="Manage filters">
+</div>
 
 <div class="cyano-design-objective">
 Design objective: <select id="cyano-design-objective-select"></select>
 </div>
 
 <div class="cyano-design-submit">
-<input type="submit" id="design-submit" value="Simulate"></div>
+<input type="submit" id="design-submit" value="Simulate">
+</div>
 
 <div id="products">
     <h1 class="ui-widget-header">Results</h1>
