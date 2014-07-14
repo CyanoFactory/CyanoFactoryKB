@@ -715,9 +715,9 @@ Released under the MIT license
             },
             open: function() {
                 // Add selected tags
-                $(this).find("fieldset > div").each(function(div) {
-                    $(div).find("select").each(function(select) {
-                        console.log(select.selectedIndex);
+                $(this).find("fieldset > div").each(function() {
+                    $(this).find("select").each(function() {
+                        $($(this).children()[this.selectedIndex]).attr("selected", "selected");
                     })
                 });
 
