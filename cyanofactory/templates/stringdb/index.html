@@ -67,6 +67,12 @@ Released under the MIT license
 
 #buttoncontainer > .buttoncontainer_field {display:inline;}
 
+#listChoice > .listChoic {display:inline;}
+
+#chemCheckbox {
+    display:inline;
+    }
+
 #checkboxcontainer{
     margin-left: 15px;
     }
@@ -133,6 +139,7 @@ Released under the MIT license
   color: #fff;
   border-radius: 2px;
 }
+}
 {% endblock %}
 
 {% block content %}
@@ -160,18 +167,31 @@ Released under the MIT license
             <input name="+10" type="button" class="demo" value=+10 onclick="expandNetwork(value)"/>
         </div>
 
+
         <div id="javascriptcontainer" class="javascriptcontainer"></div>
+        <div id="chemicals" style="display: inline">
+            <div id="chemCheckbox" style="display: inline"></div>
+            <div id="chembuttoncontainer" class="chembuttoncontainer">
+                <h3>Add/Remove Chemicals</h3>
+                <input name="-5" type="button" class="demo" value=-5 onclick="expandChemNetwork(value)"/>
+                <input name="-1" type="button" class="demo" value=-1 onclick="expandChemNetwork(value)"/>
+                <input name="+1" type="button" class="demo" value=+1 onclick="expandChemNetwork(value)"/>
+                <input name="+5" type="button" class="demo" value=+5 onclick="expandChemNetwork(value)"/>
+            </div>
+
+        </div>
 
     </div>
 
 
     <script id="network">
-
+            var selectedItem = "{{ protid }}";
             /** Generate Checkboxes */
-            createCheckboxes();
+            createSourceCheckboxes();
 
-            /** Create checkboxes with given list items and checks the status of these checkboxes */
-            function createCheckboxes(){
+            createChemCheckboxes();
+            /** Create checkboxes with given Source items and checks the status of these checkboxes */
+            function createSourceCheckboxes(){
                 d3.select(".checkboxcontainer").selectAll("div")
                         .data([
                             {% for key in list %}
@@ -186,6 +206,7 @@ Released under the MIT license
                         .each(function (d) {
                             d3.select(this).append("input")
                                     .attr("type", "checkbox")
+                                    .attr("class", "sourceCheckbox")
                                     .attr("id", function(d) {
                                         return d;
                                     })
@@ -201,6 +222,29 @@ Released under the MIT license
                         })
             }
 
+            function createChemCheckboxes() {
+                var chemicalsBox = d3.select("#chemCheckbox")
+                var box = chemicalsBox.append("input")
+                        .attr("type", "checkbox")
+                        .attr("class", "chemCheckbox")
+                        .attr("id", function (d) {
+                            return d;
+                        })
+                        .property("checked", function() {
+                            if(selectedItem[0] == "C"){
+                                return true;
+                            }
+                            else {
+                                return false;
+                            }
+                        });
+                box.on("click", function (d) {
+                            showChemicals();
+                        }
+                )
+                chemicalsBox.append("span")
+                        .text("Show Chemicals")
+            }
             var dialog_progressbar = $("#dialog-progressbar");
 
             dialog_progressbar.dialog({
@@ -221,6 +265,7 @@ Released under the MIT license
 
             /** Generate Network */
             var jsonfile = '{{ json|safe }}';
+            var json;
 
             /** 2 fache parsen abstellen */
             var help = JSON.parse(jsonfile),
@@ -375,16 +420,17 @@ Released under the MIT license
             var force = d3.layout.force()
                     .charge(calculateCharge())
                     .gravity(0.9)
-                    .friction(0.2)
+                    .friction(0.1)
                     .size([width, height]);
 
-            var protamount = +{{ limit }};
+            var totalamount = +{{ limit }}
+            var protamount = +{{ protlimit }};
+            var chemamount = +{{ chemlimit }};
 
             var svg = d3.select(".javascriptcontainer").append("svg")
                     .attr("width", width)
                     .attr("height", height)
                     .attr("pointer-events","all")
-                    /** _!_!_!_ Zoom feature disabled, conflict with drag _!_!_!_ */
                     .call(d3.behavior.zoom().on("zoom", zoomed))
                     .append("svg:g");
 
@@ -412,13 +458,18 @@ Released under the MIT license
                 svg.selectAll(".node")
                         .remove();
 
-                var nodesize = calculateNodesize();
-                var textsize = ""+calculateTextSize()+"px";
-
-                var graph = JSON.parse(json);
+                json = JSON.parse(json);
+                var graph = json;
 
                 var nodes = graph.nodes;
                 var links = graph.links;
+
+                totalamount = nodes.length
+
+                var nodesize = calculateNodesize();
+                var textsize = ""+calculateTextSize()+"px";
+
+
 
                 force
                     .nodes(nodes)
@@ -454,12 +505,25 @@ Released under the MIT license
                         .on("click", nodeOut);
 
                 node.append("svg:a")
-                /** #### NEEDS TO BE MODIFIED #### Link to each Node **/
-                        //.attr("xlink:href", function(d) {return "http://127.0.0.1:8000/stringdb/interaction/"+d.id+"/"})
                     .append("svg:circle")
                         .attr("r", nodesize)
-                        .style("fill", function(d) { return ncolor(d.hood); })
-                        .style("stroke", "black");
+                        .style("fill", function(d) {
+                            if (d.protein == 1){
+                                return ncolor(d.hood);
+                            }
+                            else {
+                                return "white";
+                            }
+                        })
+                        .style("stroke", function (d) {
+                            if (d.protein == 0) {
+                                return ncolor(d.hood);
+                            }
+                            else {
+                                return "black";
+                            }
+                        })
+                        .style("stroke-width", calculateLinkThikness());
 
                 node.append("text")
                     .attr("dx", ""+(nodesize+7-0.7)+"")
@@ -469,23 +533,23 @@ Released under the MIT license
                     .text(function(d) { return d.name });
 
                 force.on("tick", function() {
-                var qtree = d3.geom.quadtree(nodes),
-                      i = 0,
-                      n = nodes.length;
+                    var qtree = d3.geom.quadtree(nodes),
+                          i = 0,
+                          n = nodes.length;
 
-                while (++i < n) qtree.visit(collide(nodes[i]));
+                    while (++i < n) qtree.visit(collide(nodes[i]));
 
-                link.attr("x1", function(d) { return d.source.x; })
-                    .attr("y1", function(d) { return d.source.y; })
-                    .attr("x2", function(d) { return d.target.x; })
-                    .attr("y2", function(d) { return d.target.y; });
+                    link.attr("x1", function(d) { return d.source.x; })
+                        .attr("y1", function(d) { return d.source.y; })
+                        .attr("x2", function(d) { return d.target.x; })
+                        .attr("y2", function(d) { return d.target.y; });
 
-                node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
-                    .attr("cx", function(d) { return d.x = Math.max(nodesize, Math.min(width - (nodesize), d.x)); })
-                    .attr("cy", function(d) { return d.y = Math.max(nodesize, Math.min(height - (nodesize), d.y)); });
-                });
-
+                    node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+                        .attr("cx", function(d) { return d.x = Math.max(nodesize, Math.min(width - (nodesize), d.x)); })
+                        .attr("cy", function(d) { return d.y = Math.max(nodesize, Math.min(height - (nodesize), d.y)); });
+                    });
                 filterLinks();
+                showChemicals();
             }
 
             function nodeOut() {
@@ -504,7 +568,6 @@ Released under the MIT license
                                 .transition()
                                 .duration(750)
                                 .attr("r", nodesize)
-                                .style("stroke", "black")
                             d3.select(this).select("text")
                                 .transition()
                                 .duration(750)
@@ -518,14 +581,17 @@ Released under the MIT license
                 d3.select("#interacttable").select("table").remove();
                 setvisible(".node");
                 setvisible(".link");
+                showChemicals();
             }
 
             function nodeOver() {
+                showChemicals();
                 var liste = doHighlight(d3.select(this), true);
                 setvisible(".node");
                 setvisible(".link");
                 d3.select("#interacttable").select("table").remove();
                 showTable(liste);
+
             }
 
             /** Highlight all links which are bounded with selected Node and hide all others*/
@@ -540,7 +606,7 @@ Released under the MIT license
                 var fontsize = calculateTextSize();
                 var font = hl ? fontsize+Math.exp(1/fontsize*15) : fontsize;
                 var nodeRadius = hl ?  nodesize+nodesize/2: nodesize;
-                var nodecolor = hl ? "lawngreen" : "black";
+                //var nodecolor = hl ? "lawngreen" : "black";
                 //var nwidth = hl ? ".5px" : ".1px";
 
                 var protlist = new Array();
@@ -549,24 +615,27 @@ Released under the MIT license
                 svg.selectAll(".link")
                         .each(function(d) {
                             if(d.source.index == nd.index && d.checkbox == 1){
-                                protlist.push(d.target.index);
-                                d.clicked = 1;
-                                d3.select(this).transition().duration(750)
-                                    .style("stroke-opacity", oopacity);
+                                    protlist.push(d.target.index);
+                                    d.clicked = 1;
+                                    if (d.selectvis == 1){
+                                        d3.select(this).transition().duration(750)
+                                            .style("stroke-opacity", oopacity);
+                                    }
                             }
-                            else if(d.target.index == nd.index && d.checkbox == 1){
-                                protlist.push(d.source.index);
-                                d.clicked = 1;
-                                d3.select(this).transition().duration(750)
-                                    .style("stroke-opacity", oopacity);
+                            else if(d.target.index == nd.index && d.checkbox == 1 && d.selectvis == 1){
+                                    protlist.push(d.source.index);
+                                    d.clicked = 1;
+                                    if (d.selectvis == 1){
+                                        d3.select(this).transition().duration(750)
+                                            .style("stroke-opacity", oopacity);
+                                    }
                             }
-                            else if (d.source.index != nd.index && d.target.index != nd.index){
+                            else{
                                 d.clicked = 0;
                                 d3.select(this).transition().duration(750)
                                     .style("stroke-opacity", opacity);
                             }
                         });
-
 
                 svg.selectAll(".node")
                         .each( function (d) {
@@ -575,7 +644,6 @@ Released under the MIT license
                                 .transition()
                                 .duration(750)
                                 .attr("r", nodesize)
-                                .style("stroke", "black");
                             d3.select(this).select("text")
                                 .transition()
                                 .duration(750)
@@ -583,14 +651,17 @@ Released under the MIT license
                             }
                         )
 
-
-                var textlist = new Array();
+                var textlist = new Array(),
+                    lookednode = new Array();
 
                 svg.selectAll(".node")
                         .each(function (d) {
                             if(protlist.indexOf(d.index) != -1  && d.checkbox == 1){
-                                textlist.push({name: d.name});
-                                d.clicked = 1;
+                                if (lookednode.indexOf(d.name) == -1) {
+                                    textlist.push({name: d.name});
+                                    lookednode.push(d.name);
+                                    d.clicked = 1;
+                                }
                             }
                             else{
                                 d.clicked = 0;
@@ -603,11 +674,10 @@ Released under the MIT license
                 node.select("circle")
                     .transition().duration(750)
                         .attr("r", nodeRadius)
-                        .style("stroke", nodecolor);
+                        //.style("stroke", nodecolor);
                 node.select("text")
                     .transition().duration(750)
                         .style("font-size", ""+font+"px");
-
                 return textlist;
             }
 
@@ -624,7 +694,14 @@ Released under the MIT license
                                         selectedd = d;
                                     }
                                 })
-                        return selectedd.name +" - "+selectedd.annotation;
+                        var returnText = ""
+                        if(selectedd.id[0] != "C"){
+                            returnText = selectedd.name +" - "+selectedd.annotation
+                        }
+                        else{
+                            returnText = selectedd.name
+                        }
+                        return returnText;
                     });
                 var table = d3.select("#interacttable")
                                 .style("border", "1px solid #3D80B3")
@@ -632,7 +709,7 @@ Released under the MIT license
                                 .style("color", "black")
                                 .append("table").attr("id", "detail");
                 var thead = table.append("thead").selectAll("th")
-                                .data(["Selected Proteins"])
+                                .data(["Selected Element"])
                                 .enter().append("th").text(function(d) {return d});
                 var tbody = table.append("tbody").attr("class", "data");
 
@@ -672,8 +749,7 @@ Released under the MIT license
                                                     id = d.id;
                                                 }
                                         })
-                                        var url = "{% url "stringdb.views.checkInteractionRequest" %}?protid="+id;
-                                        console.log(url);
+                                        var url = "{% url "stringdb.views.checkRequest" %}?requestID="+id;
                                         return url;
                                 })
                                 .append("text")
@@ -691,17 +767,16 @@ Released under the MIT license
 
             }
 
-
-
             function setvisible(selected){
+                showChemicals();
                 svg.selectAll(selected)
                         .each(function(d){
                             var show = 0;
-                            if (d.checkbox == 1 && d.clicked == 1){
+                            if (d.checkbox == 1 && d.clicked == 1 && d.selectvis == 1){
                                 show = 1;
                             }
                             d3.select(this)
-                                    .transition().duration(750).style("opacity", show);
+                                    .transition().duration(750).attr("opacity", show);
 
                         });
             }
@@ -710,9 +785,43 @@ Released under the MIT license
             function expandNetwork(d){
                 var nnumber = +d;
                 var amount = protamount + nnumber;
-                protamount = amount
+                protamount = amount;
                 if(amount != 0){
-                    var text = "{% url "stringdb.views.onlygraph" %}?protid={{ protid }}&amount="+amount;
+                    var text = "";
+                    if(selectedItem[0] == "C"){
+                        text = "{% url "stringdb.views.onlyChemGraph" %}?chemid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
+                    }
+                    else{
+                        text = "{% url "stringdb.views.onlyProtGraph" %}?protid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
+                    }
+                    $.ajax({url:text,
+                         beforeSend: function() {
+                            dialog_progressbar.dialog("open")},
+                         success:function(result){
+                            jsonfile = result;
+                            update(jsonfile);
+
+                            dialog_progressbar.dialog("close");
+                         }});
+                }
+                else{
+                    alert("Not possible")
+                }
+            }
+
+            function expandChemNetwork(d) {
+                var nnumber = +d;
+                var amount = chemamount + nnumber;
+                chemamount = amount;
+                totalamount = protamount + chemamount;
+                if(amount > -1){
+                    var text = "";
+                    if(selectedItem[0] == "C"){
+                        text = "{% url "stringdb.views.onlyChemGraph" %}?chemid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
+                    }
+                    else{
+                        text = "{% url "stringdb.views.onlyProtGraph" %}?protid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
+                    }
                     $.ajax({url:text,
                          beforeSend: function() {
                             dialog_progressbar.dialog("open")},
@@ -788,8 +897,9 @@ Released under the MIT license
 
                             if(scoreList != 0){
                                 var comboscore = 1;
+
                                 for(var i in scoreList){
-                                    comboscore *= ((1000-scoreList[i])/1000).toFixed(3);
+                                    comboscore *= (1-(scoreList[i]/1000)).toFixed(3);
                                 }
                                 var result = (1-comboscore).toFixed(3);
                                 result*=1000;
@@ -822,9 +932,7 @@ Released under the MIT license
 
                 svg.selectAll(".node")
                         .each(function(d){
-                            console.log(d.isselected);
                             if(d.isselected == 1){
-                                console.log(d);
                                 var list = doHighlight(d3.select(this), true);
                                 d3.select("#interacttable").select("table").remove();
                                 showTable(list);
@@ -837,11 +945,10 @@ Released under the MIT license
             /** Giving the name of Selected Checkboxes */
             function isCheckboxChecked(){
                 var listchecked = new Array
-                d3.selectAll("input")
+                d3.select("#checkboxcontainer").selectAll("input")
                         .each(function (d) {
                             if (this.checked){
-                                listchecked.push(d)
-                                console.log(d);
+                                listchecked.push(d);
                             }
                         });
                 return listchecked;
@@ -850,7 +957,7 @@ Released under the MIT license
             /** Checking if selected link has stats for the selected Checkbox*/
             function checkBoxes(alink){
                 var hide = false;
-                d3.selectAll('input')
+                d3.select("#checkboxcontainer").selectAll('input')
                         .each(function (d){
                             var abox = d
                             {% for key in list %}
@@ -889,28 +996,28 @@ Released under the MIT license
                 var k1 = 160;
                 var unscaledDistance = (1/alink.score)*mean*k1;
                 var k2 = 400
-                var scaledDistance = unscaledDistance/(Math.exp(protamount/k2));
+                var scaledDistance = unscaledDistance/(Math.exp(totalamount/k2));
                 return scaledDistance;
             }
 
             /** dynamical calculation of Charge-Value after refresh of the network */
             function calculateCharge(){
-                return -5*protamount*2;
+                return -5*totalamount*2;
             }
 
             /** dynamical calculation of Nodesize */
             function calculateNodesize(){
-                return 1/protamount*80;
+                return 1/totalamount*80;
             }
 
             /** dynamical calculation Linkstrengt */
             function calculateLinkThikness(){
-                return 1/protamount*20
+                return 1/totalamount*20
             }
 
             /** dynamical calculation Linkstrengt */
             function calculateTextSize(){
-                return 1/protamount*150
+                return 1/totalamount*150
             }
 
             /** Calculating Collision between nodes an prevent node overlapping*/
@@ -926,7 +1033,7 @@ Released under the MIT license
                         var x = node.x - quad.point.x,
                             y = node.y - quad.point.y,
                             l = Math.sqrt(x * x + y * y),
-                            r =  calculateNodesize()*6;
+                            r =  calculateNodesize()*8;
                         if (l < r) {
                             l = (l - r) / l * 0.5;
                             node.x -= x *= l;
@@ -959,25 +1066,221 @@ Released under the MIT license
                             .onclick(expandNetwork(d));
                         })
             }
-        </script>
 
-    <div id="tablediv" class="tablediv">
-        </table>
-            <table id="detail">
-                <tbody class="data">
-                    <tr>
-                        <th>Protein</th>
-                        <th>Name</th>
-                        {% for key in list %}
-                            <th>{{ key }}</th>
-                        {% endfor %}
-                        <th>Score</th>
-                    </tr>
-                {% include "stringdb/list_page.html" %}
-                </tbody>
-                <tbody class="spacing">
-                        <tr><td colspan="2">&nbsp;</td></tr>
-                </tbody>
-            </table>
+            function showChemicals(){
+                d3.select(".chemCheckbox").each(function (d){
+                    var show = this.checked ? 1 : 0
+                    var chems = d3.selectAll(".node").filter(function (d){
+                        if(d.clicked == 1 && d.checkbox == 1) {
+                            if (d.protein == 0) {
+                                d.selectvis = show ? 1 : 0;
+                                return true;
+                            }
+                            else{return false}
+                        }
+                        else {
+                            return false;
+                        }
+                    })
+                    var chemLinks = d3.selectAll(".link").filter(function (d){
+                        if(d.clicked == 1 && d.checkbox == 1) {
+                            if (d.protein == 0) {
+                                d.selectvis = show ? 1 : 0;
+                                return true;
+                            }
+                            else{return false}
+                        }
+                        else {
+                            return false;
+                        }
+                    })
+                    chemLinks.transition().duration(750).attr("opacity", show);
+                    chems.transition().duration(750).attr("opacity", show);
+                    d3.select(".chembuttoncontainer").style("display", function(){
+                        if(show){
+                            return "inline";
+                        }
+                        else{
+                            return "none";
+                        }
+                    })
+                })
+
+            }
+        </script>
+    <div id="interactiondiv">
+        <div id="listChoice">
         </div>
+    </div>
+    <div id="interactbuttondiv">
+        <input name="loadmore" type="button" class="demo" value="Load more" onclick="loadmore()"/>
+    </div>
+
+    <script id="interactionListing">
+        var maxRows = 14;
+
+        createTableCheckboxes();
+
+        updateList();
+
+
+        function updateList(){
+            d3.select("#interactiondiv").select("table").remove();
+            var selectedList = filterList()
+            if(maxRows>selectedList.length){
+                maxRows = selectedList.length;
+            }
+            var finishedList = generateList(selectedList.slice(0,maxRows));
+            makeTable(finishedList);
+        }
+
+        function createTableCheckboxes() {
+            d3.select("#listChoice").selectAll("div")
+                    .data(["Proteins", "Chemicals"])
+                    .enter()
+                    .append("div")
+                    .attr("class", "listChoic")
+                    .append("label")
+                    .each(function (d) {
+                        d3.select(this).append("input")
+                                .attr("type", "checkbox")
+                                .attr("class", "listCheckbox")
+                                .attr("id", function(d) {
+                                    return d;
+                                })
+                        .property("checked", function(d){
+                                    if(d=="Proteins"){
+                                        return true;
+                                    }
+                                    else {
+                                        return false
+                                    }
+
+                                })
+                        .on("click", function() {
+                            maxRows = 14;
+                            updateList();
+                        })
+                        d3.select(this).append("span")
+                                .text(function (d) {
+                                    return d;
+                                });
+                    })
+        }
+
+        function filterList(){
+            var protList = {{ protInteracts|safe }};
+            var chemList = {{ chemInteracts|safe }};
+            var emptyList = [];
+            var allList = {{ allInteracts|safe }};
+
+            var checks = d3.select("#listChoice").selectAll("input");
+            var list =[]
+            checks.each(function (d){
+                if(this.checked){
+                    list.push(d)
+                }
+            })
+            if(list.length == 0){
+                return emptyList;
+            }
+            if(list.length == 2){
+                return allList;
+            }
+            if(list.indexOf("Proteins")>-1){
+                return protList;
+            }
+            if(list.indexOf("Chemicals">-1)){
+                return chemList;
+            }
+
+
+        }
+
+        function makeTable(showList){
+            var table = d3.select("#interactiondiv").append("table")
+                                    .attr("id", "detail")
+                                    .style("border", "1px solid #3D80B3")
+                                    .style("border-radius", "8px")
+                                    .style("color", "black")
+                                    //.append("table").attr("id", "detail");
+            var thead = table.append("thead").selectAll("th")
+                            .data(d3.keys(showList[0]))
+                            .enter().append("th").text(function(d) {
+                                return d});
+            var tbody = table.append("tbody").attr("class", "data");
+
+            thead
+                //.style("border-radius", "6px 6px 0 0" )
+                .style("width", "10%")
+                .style("background", "#3D80B3")
+                .style("border", "1px solid #3D80B3")
+                .style("color", "#FFFFFF")
+                .style("padding", "2px");
+
+            //rows
+            var row = tbody.selectAll("tr")
+                .data(showList)
+                .enter()
+                .append("tr");
+
+            // cells
+            var ids = [],
+                aID = "";
+            var cells = row.selectAll("td")
+                .data(function(d) {
+                        ids.push(d3.values(d)[0]);
+                        return d3.values(d)})
+                .enter()
+                .append("td")
+                .append("a")
+                    .text(function (d){return d;})
+                    .attr("href", function(d){
+                        if(ids.indexOf(d) > -1){
+                            aID = d;
+                        }
+                        var url = "{% url "stringdb.views.checkRequest" %}?requestID="+aID;
+                        return url;
+                    })
+                    .style("color", "black")
+        }
+
+        function generateList(preList){
+            var clearList = new Array();
+            for (entry in preList){
+                var listData = preList[entry],
+                    evidence = listData.evidence;
+
+                var clearData = {
+                    "ID": listData.interactname,
+                    "Name": listData.preferred_name,
+                    "Annotation": listData.annotation,
+                    "Homology": "",
+                    "Experiment": "",
+                    "Database": "",
+                    "Textmining": "",
+                    "Genfusion": "",
+                    "Coocurence": "",
+                    "Neighborhood": "",
+                    "Coexpression": "",
+                    "Score": listData.combined_score
+                };
+
+                for (i in evidence){
+                       if(evidence[i] > 0){
+                        clearData[i] = "•"
+                       }
+                }
+                clearList.push(clearData);
+            }
+            return clearList
+        }
+
+        function loadmore(){
+            maxRows += 15;
+            updateList();
+        }
+
+    </script>
+
 {% endblock %}

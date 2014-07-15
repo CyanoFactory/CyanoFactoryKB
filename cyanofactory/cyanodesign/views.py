@@ -6,12 +6,14 @@ from PyNetMet.metabolism import *
 from PyNetMet.fba import *
 from django.conf import settings
 from cyano.helpers import render_queryset_to_response
+import networkx as nx
+from networkx.readwrite import json_graph
 
 
 @login_required
 def index(request):
     data = {}
-    
+
     return render_queryset_to_response(request, template="cyanodesign/index.html", data=data)
 
 
@@ -36,7 +38,10 @@ def get_reactions(request):
                 "constraints": constr
             })
 
-    return HttpResponse(json.dumps({"external": org.external, "enzymes": ret, "objective": org.objective}), content_type="application/json")
+    graph = drawDesign(org)
+    return HttpResponse(
+        json.dumps({"external": org.external, "enzymes": ret, "objective": org.objective, "graph": graph}),
+        content_type="application/json")
 
 
 @login_required
@@ -82,3 +87,52 @@ def simulate(request):
 
 def export(request):
     pass
+
+
+def drawDesign(org):
+    enzymes = org.enzymes
+    svg_graph = "digraph g{k=10;\n splines=true;\n overlap=false;\n edge [dir = both];"
+    nodeDic = {}
+    edgeDic = {}
+    nodecounter = 0
+    edgecounter = 0
+    graph = nx.Graph()
+    svg_graph += "node [colorscheme = pastel19, style = filled];\n"
+    for enzyme in enzymes:
+        # TODO better Selection of not usable Nodes
+        if not "_transp" in enzyme.name:
+            nodecounter += 1
+            nodeDic[enzyme.name] = nodecounter
+            tail = "none"
+            graph.add_node(nodeDic[enzyme.name], label=enzyme.name, enzyme=True, reversible=enzyme.reversible)
+            svg_graph += str(nodeDic[enzyme.name]) + '[label = "' + enzyme.name + '", shape = box, color=' + str(
+                (nodecounter % 8) + 1) + '];\n'
+            if enzyme.reversible:
+                tail = "normal"
+            for substrate in enzyme.substrates:
+                nodecounter += 1
+                if not substrate in nodeDic:
+                    nodeDic[substrate] = nodecounter
+                    graph.add_node(nodeDic[substrate], label=substrate, enzyme=False)
+                    svg_graph += str(nodeDic[substrate]) + '[label = "' + substrate + '"];\n'
+                graph.add_edge(nodeDic[substrate], nodeDic[enzyme.name])
+                if enzyme.reversible:
+                    graph.add_edge(nodeDic[enzyme.name], nodeDic[substrate])
+                svg_graph = svg_graph + " " + str(nodeDic[substrate]) + " -> " + str(
+                    nodeDic[enzyme.name]) + "[arrowtail=" + tail + ", arrowhead=normal];\n"
+            for product in enzyme.products:
+                nodecounter += 1
+                if not product in nodeDic:
+                    nodeDic[product] = nodecounter
+                    graph.add_node(nodeDic[product], label=product, enzyme=False)
+                    svg_graph += str(nodeDic[product]) + '[label = "' + product + '"];\n'
+                graph.add_edge(nodeDic[product], nodeDic[enzyme.name])
+                if enzyme.reversible:
+                    graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
+                svg_graph = svg_graph + " " + str(nodeDic[enzyme.name]) + " -> " + str(
+                    nodeDic[product]) + "[arrowtail=" + tail + ", arrowhead=normal];\n"
+    svg_graph += "}"
+    #print svg_graph
+    print json_graph.node_link_data(graph)
+    return svg_graph
+

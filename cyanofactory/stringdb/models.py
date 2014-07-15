@@ -379,3 +379,94 @@ class SpeciesNodes(models.Model):
     class Meta:
         db_table = 'species_nodes'
 
+class ChemicalAliases(models.Model):
+    chemical = models.CharField(max_length=50)
+    alias = models.TextField()
+    source = models.TextField()
+    class Meta:
+        db_table = 'chemical_aliases'
+
+class ChemicalChemicalLinks(models.Model):
+    chemical1 = models.CharField(max_length=50)
+    chemical2 = models.CharField(max_length=50)
+    textmining = models.IntegerField()
+    class Meta:
+        db_table = 'chemical_chemical_links'
+
+class ChemicalChemicalLinksDetailed(models.Model):
+    chemical1 = models.CharField(max_length=50)
+    chemical2 = models.CharField(max_length=50)
+    similarity = models.IntegerField()
+    experimental = models.IntegerField()
+    database = models.IntegerField()
+    textmining = models.IntegerField()
+    combined_score = models.IntegerField()
+    class Meta:
+        db_table = 'chemical_chemical_links_detailed'
+
+class ChemicalSources(models.Model):
+    flat_chemical = models.CharField(max_length=50)
+    stereo_chemical = models.CharField(max_length=50)
+    source_name = models.CharField(max_length=50)
+    source_id = models.CharField(max_length=50)
+    class Meta:
+        db_table = 'chemical_sources'
+
+class Chemicals(models.Model):
+    chemical = models.TextField()
+    name = models.TextField()
+    molecular_weight = models.FloatField()
+    smiles_string = models.TextField()
+    class Meta:
+        db_table = 'chemicals'
+
+class ChemicalsInchikeys(models.Model):
+    flat_chemical_id = models.CharField(max_length=50)
+    stereo_chemical_id = models.CharField(max_length=50)
+    source_cid = models.IntegerField()
+    inchikey = models.TextField()
+    class Meta:
+        db_table = 'chemicals_inchikeys'
+
+class ProteinChemicalLinks(models.Model):
+    chemical = models.CharField(max_length=50)
+    protein = models.CharField(max_length=50)
+    combined_score = models.IntegerField()
+    class Meta:
+        db_table = 'protein_chemical_links'
+
+class ProteinChemicalLinksDetailed(models.Model):
+    chemical = models.CharField(max_length=50)
+    protein = models.CharField(max_length=50)
+    experimental = models.IntegerField()
+    prediction = models.IntegerField()
+    database = models.IntegerField()
+    textmining = models.IntegerField()
+    combined_score = models.IntegerField()
+    class Meta:
+        db_table = 'protein_chemical_links_detailed'
+
+class ProteinChemicalLinksTransfer(models.Model):
+    chemical = models.CharField(max_length=50)
+    protein = models.CharField(max_length=50)
+    experimental_direct = models.IntegerField()
+    experimental_transferred = models.IntegerField()
+    prediction_direct = models.IntegerField()
+    prediction_transferred = models.IntegerField()
+    database_direct = models.IntegerField()
+    database_transferred = models.IntegerField()
+    textmining_direct = models.IntegerField()
+    textmining_transferred = models.IntegerField()
+    combined_score = models.IntegerField()
+    class Meta:
+        db_table = 'protein_chemical_links_transfer'
+
+class Stitchactions(models.Model):
+    item_id_a = models.CharField(max_length=50)
+    item_id_b = models.CharField(max_length=50)
+    mode = models.CharField(max_length=50)
+    action = models.CharField(max_length=50, blank=True)
+    a_is_acting = models.IntegerField()
+    score = models.IntegerField()
+    class Meta:
+        db_table = 'stitchactions'
