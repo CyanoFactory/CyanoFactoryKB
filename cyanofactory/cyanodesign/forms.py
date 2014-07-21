@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2014 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 from django import forms
 
 

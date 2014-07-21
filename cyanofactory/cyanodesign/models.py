@@ -4,6 +4,7 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
+
 import base64
 
 from django.db import models

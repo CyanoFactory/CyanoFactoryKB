@@ -1,3 +1,10 @@
+"""
+Copyright (c) 2014 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 import StringIO
 import json
 import os
@@ -6,13 +13,14 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect
+from django.views.decorators.csrf import ensure_csrf_cookie
 from cyano.decorators import ajax_required
 from PyNetMet.metabolism import *
 from PyNetMet.fba import *
 from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error
 from cyanodesign.forms import UploadModelForm
+from cyanodesign.helpers import model_from_string, apply_commandlist
 from .models import DesignModel
-
 
 @login_required
 def index(request):
@@ -27,8 +35,8 @@ def index(request):
 
 
 @login_required
+@ensure_csrf_cookie
 def design(request, pk):
-
     try:
         item = DesignModel.objects.get(user=request.user.profile, pk=pk)
     except ObjectDoesNotExist:
@@ -49,13 +57,7 @@ def get_reactions(request, pk):
     except:
         return HttpResponseBadRequest("Bad Model")
 
-    with tempfile.NamedTemporaryFile(delete=False) as fid:
-        path = fid.name
-
-        fid.write(item)
-
-    org = Metabolism(path)
-    os.remove(path)
+    org = model_from_string(item)
 
     ret = []
 
@@ -76,24 +78,33 @@ def get_reactions(request, pk):
 
 @login_required
 @ajax_required
-def simulate(request):
-    if not all(x in request.GET for x in ["enzymes", "constraints", "external", "objective"]):
+def simulate(request, pk):
+    if not all(x in request.POST for x in ["commands", "disabled", "objective"]):
         return HttpResponseBadRequest("Request incomplete")
 
     try:
-        data = json.loads(request.GET["enzymes"])
-        constr = json.loads(request.GET["constraints"])
-        ext = json.loads(request.GET["external"])
-        objective = json.loads(request.GET["objective"])
+        content = DesignModel.objects.get(user=request.user.profile, pk=pk).content
+    except ObjectDoesNotExist:
+        return HttpResponseBadRequest("Bad Model")
+
+    org = model_from_string(content)
+
+    try:
+        commands = json.loads(request.POST["commands"])
+        disabled = json.loads(request.POST["disabled"])
+        objective = json.loads(request.POST["objective"])
     except ValueError:
         return HttpResponseBadRequest("Invalid JSON data")
 
-    if not all(isinstance(x, list) for x in [data, constr, ext, objective]):
+    if not all(isinstance(x, list) for x in [commands, disabled, objective]):
         return HttpResponseBadRequest("Invalid data type")
 
-    string_type = map(lambda x: all(isinstance(y, basestring) for y in x), [data, constr, ext, objective])
+    string_type = map(lambda x: all(isinstance(y, basestring) for y in x), [commands, disabled, objective])
     if not all(x for x in string_type):
         return HttpResponseBadRequest("Invalid data type")
+
+
+    org = apply_commandlist(org, commands)
 
     #print "\n".join(data)
     #print constr
@@ -101,16 +112,9 @@ def simulate(request):
     #print objective
 
     try:
-        organism = Metabolism("model_name",
-                              reactions=data,
-                              constraints=constr,
-                              external=ext,
-                              objective=objective,
-                              fromfile=False)
-
-        fba = FBA(organism)
+        fba = FBA(org)
     except ValueError:
-        return HttpResponseBadRequest("Invalid data type")
+        return HttpResponseBadRequest("FBA error")
 
     return HttpResponse(fba)
 
