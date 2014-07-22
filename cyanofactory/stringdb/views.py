@@ -443,7 +443,7 @@ def listChemicalChemicalInteractions(chemID):
             chemInfo["interactname"] = chem.chemical
             chemInfo["evidence"] = getChemChemSource(interact)
             chemInfo["preferred_name"] = chem.name
-            chemInfo["annotation"] = chemInfo["preferred_name"]
+            chemInfo["annotation"] = ""
             #chemInfo["formula"] = chem.smiles_string
             chemInfo["combined_score"] = interact.combined_score
             interactionList.append(chemInfo)
@@ -455,6 +455,7 @@ def listChemicalChemicalInteractions(chemID):
 # ToDo change Listitems
 def listProteinChemicalInteractions(protID):
     interactionList = []
+    listChems = []
     protein = Proteins.objects.get(protein_id=protID).protein_external_id
     interactions = ProteinChemicalLinksDetailed.objects.filter(protein=protein).order_by("-combined_score")
     print "Interactions", len(interactions)
@@ -462,14 +463,15 @@ def listProteinChemicalInteractions(protID):
         chemInfo = {}
         try:
             chem = Chemicals.objects.get(chemical=interact.chemical)
-
-            chemInfo["interactname"] = chem.chemical
-            chemInfo["evidence"] = getProteinChemSource(interact.protein, interact.chemical)
-            chemInfo["preferred_name"] = chem.name
-            chemInfo["annotation"] = chemInfo["preferred_name"]
-            #chemInfo["formula"] = chem.smiles_string
-            chemInfo["combined_score"] = interact.combined_score
-            interactionList.append(chemInfo)
+            if not chem.name in listChems:
+                chemInfo["interactname"] = chem.chemical
+                chemInfo["evidence"] = getProteinChemSource(interact.protein, interact.chemical)
+                chemInfo["preferred_name"] = chem.name
+                chemInfo["annotation"] = ""
+                #chemInfo["formula"] = chem.smiles_string
+                chemInfo["combined_score"] = interact.combined_score
+                listChems.append(chem.name)
+                interactionList.append(chemInfo)
         except ObjectDoesNotExist:
             chemInfo = {}
 

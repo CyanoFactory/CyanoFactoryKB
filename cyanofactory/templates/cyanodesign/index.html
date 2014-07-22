@@ -236,6 +236,7 @@ Released under the MIT license
 
         $("#design-submit").click(function(event) {
             $.ajax({
+
                 url: "{% url "cyanodesign.views.simulate" %}",
                 context: document.body,
                 beforeSend: function() {
@@ -254,8 +255,8 @@ Released under the MIT license
                     "objective": JSON.stringify([cyano_design_objective_select.val() + " 1 1"])
                 }
             }).done(function(x) {
-                simulation_result.text("");
-                $("<pre></pre>").text(x).appendTo(simulation_result);
+                var graph = Viz(x, "svg", "dot");
+                document.getElementById("visual").innerHTML = graph;
                 dialog_progressbar.dialog("close");
             });
         });
@@ -759,38 +760,40 @@ dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(
             if (x.objective.length > 0) {
                 cyano_design_objective_select.val(x.objective[0].split(" ")[0])
             }
-            var graph = Viz(x["graph"], "svg", "fdp");
+            var graph = Viz(x["graph"], "svg", "dot");
             document.getElementById("visual").innerHTML = graph;
-            visualize();
+            //visualize();
             dialog_progressbar.dialog("close");
         });
     });
 
 //Visualization
+    {
+        //var json_file = "{'directed': False, 'graph': [], 'nodes': [{'enzyme': True, 'reversible': False, 'id': 1, 'label': 'reac1'}, {'enzyme': False, 'id': 2, 'label': 'A_ext'}, {'enzyme': False, 'id': 3, 'label': 'A'}, {'enzyme': True, 'reversible': True, 'id': 4, 'label': 'reac2'}, {'enzyme': False, 'id': 6, 'label': 'B'}, {'enzyme': True, 'reversible': False, 'id': 7, 'label': 'reac3'}, {'enzyme': False, 'id': 9, 'label': 'C'}, {'enzyme': True, 'reversible': False, 'id': 10, 'label': 'reac4'}, {'enzyme': False, 'id': 13, 'label': 'D'}, {'enzyme': True, 'reversible': False, 'id': 14, 'label': 'reac5'}, {'enzyme': False, 'id': 16, 'label': 'D_ext'}, {'enzyme': True, 'reversible': False, 'id': 17, 'label': 'reac6'}, {'enzyme': False, 'id': 18, 'label': 'E_ext'}, {'enzyme': False, 'id': 19, 'label': 'E'}, {'enzyme': True, 'reversible': False, 'id': 20, 'label': 'reac7'}], 'links': [{'source': 0, 'target': 1}, {'source': 0, 'target': 2}, {'source': 2, 'target': 3}, {'source': 2, 'target': 5}, {'source': 3, 'target': 4}, {'source': 4, 'target': 7}, {'source': 5, 'target': 6}, {'source': 6, 'target': 7}, {'source': 7, 'target': 8}, {'source': 8, 'target': 14}, {'source': 8, 'target': 9}, {'source': 9, 'target': 10}, {'source': 11, 'target': 12}, {'source': 11, 'target': 13}, {'source': 13, 'target': 14}], 'multigraph': False}";
+        //var info = JSON.parse(json_file)
 
-            //var json_file = "{'directed': False, 'graph': [], 'nodes': [{'enzyme': True, 'reversible': False, 'id': 1, 'label': 'reac1'}, {'enzyme': False, 'id': 2, 'label': 'A_ext'}, {'enzyme': False, 'id': 3, 'label': 'A'}, {'enzyme': True, 'reversible': True, 'id': 4, 'label': 'reac2'}, {'enzyme': False, 'id': 6, 'label': 'B'}, {'enzyme': True, 'reversible': False, 'id': 7, 'label': 'reac3'}, {'enzyme': False, 'id': 9, 'label': 'C'}, {'enzyme': True, 'reversible': False, 'id': 10, 'label': 'reac4'}, {'enzyme': False, 'id': 13, 'label': 'D'}, {'enzyme': True, 'reversible': False, 'id': 14, 'label': 'reac5'}, {'enzyme': False, 'id': 16, 'label': 'D_ext'}, {'enzyme': True, 'reversible': False, 'id': 17, 'label': 'reac6'}, {'enzyme': False, 'id': 18, 'label': 'E_ext'}, {'enzyme': False, 'id': 19, 'label': 'E'}, {'enzyme': True, 'reversible': False, 'id': 20, 'label': 'reac7'}], 'links': [{'source': 0, 'target': 1}, {'source': 0, 'target': 2}, {'source': 2, 'target': 3}, {'source': 2, 'target': 5}, {'source': 3, 'target': 4}, {'source': 4, 'target': 7}, {'source': 5, 'target': 6}, {'source': 6, 'target': 7}, {'source': 7, 'target': 8}, {'source': 8, 'target': 14}, {'source': 8, 'target': 9}, {'source': 9, 'target': 10}, {'source': 11, 'target': 12}, {'source': 11, 'target': 13}, {'source': 13, 'target': 14}], 'multigraph': False}";
-            //var info = JSON.parse(json_file)
-    function visualize() {
-        var edges = d3.selectAll(".edge");
+        function visualize() {
+            var edges = d3.selectAll(".edge");
 
-        var graph = d3.select(".graph").select("polygon")
-                .attr("stroke", "blue")
-                .on("click", function (d) {
-                    nodes.select("polygon").attr("fill", "lightgrey");
-                    nodes.select("ellipse").attr("fill", "lightgrey");
-                    showAll();
-                });
-        var texts = d3.selectAll("text")
-                .on("click", function (d) {
-                    var parent = d3.select(this.parentNode);
-                    nodes.filter(function (d) {
-                        var anode = d3.select(this);
-                        if (anode.attr("id") == parent.attr("id")) {
-                            highlight(anode);
-                        }
+            var graph = d3.select(".graph").select("polygon")
+                    .attr("stroke", "blue")
+                    .on("click", function (d) {
+                        nodes.select("polygon").attr("fill", "lightgrey");
+                        nodes.select("ellipse").attr("fill", "lightgrey");
+                        showAll();
+                    });
+            var texts = d3.selectAll("text")
+                    .on("click", function (d) {
+                        var parent = d3.select(this.parentNode);
+                        nodes.filter(function (d) {
+                            var anode = d3.select(this);
+                            if (anode.attr("id") == parent.attr("id")) {
+                                highlight(anode);
+                            }
+                        })
+
                     })
-
-                })
+        }
 
         function highlight(anode) {
             nodes.selectAll("polygon").attr("fill", "lightgrey")
@@ -874,9 +877,9 @@ dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(
             )
 
         }
-    }
-    /**
-    function drawflux(enzymes, metabolites) {
+
+        /**
+         function drawflux(enzymes, metabolites) {
 
         var color = d3.scale.category20()
 
@@ -1119,7 +1122,8 @@ dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(
                     });
         });
     }
-    */
+         */
+}
 </script>
 
 {% endblock %}
