@@ -3,8 +3,8 @@ from stringdb import views
 
 urlpatterns = patterns('',
     #url(r'^$', proteingraph, name='graph'),
-    url(r'^graph$', views.proteingraph2json),
-    url(r'^index/$', views.index),
+    url(r'^calcTime', views.calcTimes),
+    url(r'^index/$', views.calcTimes),
     url(r'^interaction/(?P<protID>\w+\d+)/$', views.checkInteraction),
     url(r'^interaction/(?P<protID>\w+\d+)_(?P<limit>\d+)/$', views.checkInteraction),
     url(r'^interaction/ajax/prot$', views.onlyProtGraph),
