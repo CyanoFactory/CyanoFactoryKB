@@ -6,6 +6,7 @@ Released under the MIT license
 """
 from PyNetMet.enzyme import Enzyme, EnzError
 from PyNetMet.metabolism import Metabolism
+from bioparser.optgene import OptGeneParser
 
 
 def validate_bioopt(dic):
@@ -13,83 +14,19 @@ def validate_bioopt(dic):
 
     """
 
-
-def get_enzyme_index(model, name):
-    """
-    :return: Index of enzyme name in model
-    """
-    for i, enzyme in enumerate(model.enzymes):
-        if enzyme.name == name:
-            return i
-
-    return -1
-
-
 def delete_enzyme(model, name):
-    i = get_enzyme_index(model, name)
-
-
+    pass
 
 def rename_metabolite(model, met_from, met_to):
-    for enzyme in model.enzymes:
-        for i, metabolite in enumerate(enzyme.substrates):
-            if metabolite == met_from:
-                enzyme.substrates[i] = met_to
-
-        for i, metabolite in enumerate(enzyme.products):
-            if metabolite == met_from:
-                enzyme.products[i] = met_to
-
-    try:
-        i = model.external.index(met_from)
-        model.external[i] = met_to
-    except ValueError:
-        pass
-
-    try:
-        i = model.external_in.index(met_from)
-        model.external_in[i] = met_to
-    except ValueError:
-        pass
-
-    try:
-        i = model.external_out.index(met_from)
-        model.external_out[i] = met_to
-    except ValueError:
-        pass
-
+    OptGeneParser.Metabolite.instance(met_from).name = met_to
 
 def make_metabolite_external(model, metabolite):
-    try:
-        model.external.index(metabolite)
-    except ValueError:
-        model.external.append(metabolite)
-
+    OptGeneParser.Metabolite.instance(metabolite).external = True
 
 def make_metabolite_internal(model, metabolite):
-    try:
-        model.external.remove(metabolite)
-    except ValueError:
-        pass
-
-    try:
-        model.external_in.remove(metabolite)
-    except ValueError:
-        pass
-
-    try:
-        model.external_out.remove(metabolite)
-    except ValueError:
-        pass
-
+    OptGeneParser.Metabolite.instance(metabolite).external = False
 
 def apply_commandlist(model, commandlist):
-    # After applying only calling dump is save because not all data is updated
-    # properly
-
-    # PyNetMet strips spaces everywhere, except in external... why?
-    model.external = [ele.replace(" ","") for ele in model.external]
-
     # Supported commands:
     # reaction, add, name, reaction, min_const, max_const
     # reaction, edit, name, reaction, min_const, max_const
@@ -101,28 +38,32 @@ def apply_commandlist(model, commandlist):
             raise ValueError("Bad command " + str(command))
 
         if command[0] == "reaction":
-            enzyme_index = get_enzyme_index(model, command[2])
+            enzyme = model.get_reaction(command[2])
 
             if command[1] == "add":
-                if enzyme_index != -1:
-                    raise ValueError("Enzyme " + command[2] + " already in model")
-                try:
-                    Enzyme(command[3])
-                except EnzError:
-                    raise ValueError("Bad reaction " + command[3])
-                model.add_reacs([command[3]])
-                enzyme_index = get_enzyme_index(model, command[2])
-                model.constr[enzyme_index] = (command[4], command[5])
+                if enzyme is not None:
+                    raise ValueError("Reaction already in model: " + command[2])
+
+                reaction = OptGeneParser.Reaction.from_string(command[3])
+                model.add_reaction(reaction)
+                reaction.constraint = [command[4], command[5]]
 
             elif command[1] == "edit":
-                try:
-                    Enzyme(command[3])
-                except EnzError:
-                    raise ValueError("Bad reaction " + command[3])
-                model.enzymes[enzyme_index] = Enzyme(command[3])
-                model.constr[enzyme_index] = (command[4], command[5])
+                if enzyme is None:
+                    raise ValueError("Reaction not in model: " + command[2])
+
+                reaction = OptGeneParser.Reaction.from_string(command[3])
+                reaction.constraint = [command[4], command[5]]
+
+                if reaction.name != enzyme.name and model.has_reaction(reaction.name):
+                    raise ValueError("Reaction already in model: " + reaction.name)
+
+                enzyme.replace_with(reaction)
             elif command[1] == "delete":
-                model.pop(enzyme_index)
+                if enzyme is None:
+                    raise ValueError("Reaction not in model: " + command[2])
+
+                model.remove_reaction(enzyme)
             else:
                 raise ValueError("Invalid operation " + command[1])
 
@@ -142,16 +83,10 @@ def apply_commandlist(model, commandlist):
 
 
 def model_from_string(model_str):
-    import os
-    import tempfile
-    
-    with tempfile.NamedTemporaryFile(delete=False) as fid:
-        path = fid.name
+    from bioparser.optgene import OptGeneParser
+    from StringIO import StringIO
 
-        fid.write(model_str)
-
-    org = Metabolism(path)
-    os.remove(path)
+    org = OptGeneParser(StringIO(model_str))
 
     return org
 

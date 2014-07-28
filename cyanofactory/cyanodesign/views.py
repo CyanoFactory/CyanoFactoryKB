@@ -61,20 +61,24 @@ def get_reactions(request, pk):
 
     ret = []
 
-    for enzyme, constr in zip(org.enzymes, org.constr):
+    for enzyme in org.reactions:
         # Filter out auto-created external transport funcs
         if not enzyme.name.endswith("_ext_transp"):
             ret.append({
                 "name": enzyme.name,
-                "stoichiometric": enzyme.stoic,
-                "substrates": enzyme.substrates,
-                "products": enzyme.products,
+                "stoichiometric": [enzyme.reactants_stoic] + [enzyme.products_stoic],
+                "substrates": map(lambda m: m.name, enzyme.reactants),
+                "products": map(lambda m: m.name, enzyme.products),
                 "reversible": enzyme.reversible,
-                "constraints": constr
+                "constraints": enzyme.constraint
             })
 
-    return HttpResponse(json.dumps({"external": org.external, "enzymes": ret, "objective": org.objective}), content_type="application/json")
+    #print ret
 
+    return HttpResponse(json.dumps({
+        "external": map(lambda m: m.name, filter(lambda m: m.external, org.get_metabolites())),
+        "enzymes": ret,
+        "objective": org.objective.name if org.objective else None }), content_type="application/json")
 
 @login_required
 @ajax_required
@@ -96,15 +100,21 @@ def simulate(request, pk):
     except ValueError:
         return HttpResponseBadRequest("Invalid JSON data")
 
-    if not all(isinstance(x, list) for x in [commands, disabled, objective]):
+    if not all(isinstance(x, list) for x in [commands, disabled]):
         return HttpResponseBadRequest("Invalid data type")
 
-    string_type = map(lambda x: all(isinstance(y, basestring) for y in x), [commands, disabled, objective])
-    if not all(x for x in string_type):
+    if not isinstance(objective, basestring):
         return HttpResponseBadRequest("Invalid data type")
 
+    try:
+        org = apply_commandlist(org, commands)
+        obj_reac = org.get_reaction(objective)
+        if obj_reac is None:
+            raise ValueError("Objective not in model: " + objective)
+    except ValueError as e:
+        return HttpResponseBadRequest("Model error: " + e.message)
 
-    org = apply_commandlist(org, commands)
+    org.objective = obj_reac
 
     #print "\n".join(data)
     #print constr
@@ -112,12 +122,11 @@ def simulate(request, pk):
     #print objective
 
     try:
-        fba = FBA(org)
-    except ValueError:
-        return HttpResponseBadRequest("FBA error")
+        org.fba()
+    except ValueError as e:
+        return HttpResponseBadRequest("FBA error: " + e.message)
 
-    return HttpResponse(fba)
-
+    return HttpResponse(json.dumps({"flux": map(lambda x: [x.name, x.flux], org.reactions)}), content_type="application/json")
 
 @login_required
 @ajax_required

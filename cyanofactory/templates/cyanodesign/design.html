@@ -296,11 +296,29 @@ Released under the MIT license
                             filter(function(value) { return !value.enabled; }).
                             map(function(value) { return value.name })
                     ),
-                    "objective": JSON.stringify([cyano_design_objective_select.val() + " 1 1"])
+                    "objective": JSON.stringify(cyano_design_objective_select.val())
                 }
             }).done(function(x) {
                 simulation_result.text("");
-                $("<pre></pre>").text(x).appendTo(simulation_result);
+                out_str = "";
+                // Sort by flux and name
+                x["flux"].sort(function(a, b) {
+                    if (a[1] != b[1]) {
+                        if (a[1] < b[1]) return 1;
+                        if (a[1] > b[1]) return -1;
+                        return 0;
+                    }
+
+                    if (a[0] < b[0]) return -1;
+                    if (a[0] > b[0]) return 1;
+
+                    return 0;
+                });
+
+                x["flux"].forEach(function(item) {
+                    out_str += item[0] + "--->" + item[1] + "\n"
+                });
+                $("<pre></pre>").text(out_str).appendTo(simulation_result);
                 dialog_progressbar.dialog("close");
 
                 //command_list = [];
@@ -535,15 +553,16 @@ Released under the MIT license
 
                     if (bValid) {
                         var reaction = $(this).data("object");
+                        var old_name = reaction.name;
 
                         saveEnzyme(reaction);
                         reaction.convertToFloat();
 
                         if (create_new_enzyme) {
                             enzymes.push(reaction);
-                            command_list.push(["reaction", "add", reaction.name, reaction.toString(), reaction.constrained_min, reaction.constrained_max]);
+                            command_list.push(["reaction", "add", old_name, reaction.toString(), reaction.constraints[0], reaction.constraints[1]]);
                         } else {
-                            command_list.push(["reaction", "edit", reaction.name, reaction.toString(), reaction.constrained_min, reaction.constrained_max]);
+                            command_list.push(["reaction", "edit", old_name, reaction.toString(), reaction.constraints[0], reaction.constraints[1]]);
                         }
 
                         reaction.backup = undefined;
@@ -876,10 +895,12 @@ Released under the MIT license
                 enzymes.push(enz);
             });
 
-            if (x.objective.length > 0) {
-                cyano_design_objective_select.val(x.objective[0].split(" ")[0])
-            }
             updateEnzymeList();
+
+            if (x.objective) {
+                cyano_design_objective_select.val(x.objective)
+            }
+
             dialog_progressbar.dialog("close");
         });
 
