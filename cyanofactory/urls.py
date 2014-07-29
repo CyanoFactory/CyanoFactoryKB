@@ -15,8 +15,8 @@ urlpatterns = patterns('',
     url(r'^admin/', include(admin.site.urls)),
 )
 
-urlpatterns += patterns('stringdb.views',
-    url(r'^stringdb/', include("stringdb.urls"))
+urlpatterns += patterns('cyanointeraction.views',
+    url(r'^stringdb/', include("cyanointeraction.urls"))
 )
 
 

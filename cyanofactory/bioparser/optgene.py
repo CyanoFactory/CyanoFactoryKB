@@ -438,7 +438,7 @@ class OptGeneParser:
             handle.write(reaction.name + " " + str(reaction.constraint) + "\n")
 
         handle.write("\n-EXTERNAL METABOLITES\n\n")
-        for metabolite in filter(lambda m: m.external, self.metabolites()):
+        for metabolite in filter(lambda m: m.external, self.get_metabolites()):
             for comment in metabolite.comments:
                 handle.write(comment + "\n")
 
@@ -462,9 +462,6 @@ class OptGeneParser:
                 prod, prod_stoic = product
                 mi = metabolites.index(prod)
                 stoic.append((mi, i, prod_stoic))
-
-        print metabolites
-        print stoic
 
         import glpk
 
@@ -496,9 +493,9 @@ class OptGeneParser:
                 lista[i] = 1.0
 
         lp.obj[:] = lista[:]
-        lp.obj.maximize = True  # self.max
+        lp.obj.maximize = True
         ###### Matrix
-        lp.matrix = stoic   #self.Mstoic[:]
+        lp.matrix = stoic
         lp.simplex()
 
         for flux, reac in zip(lp.cols, self.reactions):

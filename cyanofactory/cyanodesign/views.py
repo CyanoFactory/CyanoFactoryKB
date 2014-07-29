@@ -122,6 +122,7 @@ def simulate(request, pk):
         obj_reac = org.get_reaction(objective)
         if obj_reac is None:
             raise ValueError("Objective not in model: " + objective)
+        org.objective = obj_reac
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + e.message)
 
