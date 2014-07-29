@@ -29,3 +29,4 @@ class Loader(filesystem.Loader):
         source, origin = self.load_template_source(template_name, template_dirs)
         template = Template(source)
         return template, origin
+

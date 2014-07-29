@@ -38,7 +38,7 @@ def checkInteraction(request, protID, protlimit=10, chemlimit=1):
         protlimit: maximal amount of Proteins which should be looked at
         chemlimit: maximal amount of Chemicals which should be looked at
     """
-    if (protID[0] == "P"):
+    if protID[0] == "P":
         protID = protID[1:]
     infos = proteingraph(protID, protlimit, chemlimit)
     json_file = infos[0]
@@ -318,7 +318,7 @@ def proteingraph(protein_id, protlimit, chemlimit):
                         pass
 
     data = findChems(G, chemlimit)
-    D = data["graph"]
+    D = data
     # d = json_graph.node_link_data(G)
     d = json_graph.node_link_data(D)
     json_file = json.dumps(d)
@@ -413,7 +413,7 @@ def chemgraph(chem_id, protlimit, chemlimit):
                         pass
 
     data = findChems(G, chemlimit)
-    D = data["graph"]
+    D = data
     #d = json_graph.node_link_data(G)
     d = json_graph.node_link_data(D)
     json_file = json.dumps(d)
@@ -1061,7 +1061,7 @@ def getTimes(ids):
     counter = 0
     procent = 0
     timeList = []
-    ids = ids[:len(ids)/4]
+    ids = ids[:len(ids)]
     for id in ids:
         startTime = time.time()
         temp = urllib.urlopen("http://127.0.0.1:8000/stringdb/interaction/" + str(id) + "/")
@@ -1101,19 +1101,19 @@ def calcTimes(request):
         listProteinIDs.append(prot.protein_id)
     listProtTime = getTimes(listProteinIDs)
 
-    outputProtTime = open("protTime", "w")
+    outputProtTime = open("protTime2", "w")
     writeTimeStatistic(listProtTime, outputProtTime)
     outputProtTime.close()
 
-    listChems = ProteinChemicalLinksDetailed.objects.filter(protein__regex="1148\.*")
-    listChemIDs = []
-    for chem in listChems:
-        listChemIDs.append(chem.chemical)
-    listChemTime = getTimes(listChemIDs)
+   ##listChems = ProteinChemicalLinksDetailed.objects.filter(protein__regex="1148\.*")
+   ##listChemIDs = []
+   ##for chem in listChems:
+   ##    listChemIDs.append(chem.chemical)
+   ##listChemTime = getTimes(listChemIDs)
 
-    outputChemTime = open("chemTime", "w")
-    writeTimeStatistic(listChemTime, outputChemTime)
-    outputChemTime.close()
+   ##outputChemTime = open("chemTime", "w")
+   ##writeTimeStatistic(listChemTime, outputChemTime)
+   ##outputChemTime.close()
 
 
     return HttpResponse("Done")

@@ -4,6 +4,7 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
+from django.contrib.contenttypes.models import ContentType
 
 from django.db.models.fields.related import ForeignKey, ReverseSingleRelatedObjectDescriptor,\
     ManyToManyField, ReverseManyRelatedObjectsDescriptor
@@ -11,9 +12,11 @@ from django.db.models.related import RelatedObject
 from django.db import router
 from django.db.models.manager import Manager
 
+import json
+
 class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDescriptor):
     def __get__(self, instance, instance_type=None):
-        from cyano.models import Revision, TableMetaColumn
+        from cyano.models import Revision
         if instance is None:
             return self
         try:
@@ -34,6 +37,20 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
                 # Assuming the database enforces foreign keys, this won't fail.
                 rel_obj = qs.get(**params)
                 if hasattr(instance, "detail_history"):
+
+                    ct_id = ContentType.objects.get_for_model(instance._meta.concrete_model).pk
+
+                    revisions = Revision.objects.filter(
+                        object_id=instance.pk,
+                        content_type__pk=ct_id,
+                        detail_id__lte=instance.detail_history).order_by("-detail")
+
+                    data = {}
+                    for revision in revisions:
+                        new_data = json.loads(revision.new_data)
+                        data.update(new_data)
+
+                    ##print "FK", self.field.name
                     rel_obj.detail_history = instance.detail_history
                     for field in rel_obj._meta.fields:
                         if isinstance(field, RelatedObject):
@@ -43,12 +60,13 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
                         elif isinstance(field, ForeignKey):
                             pass
                         else:
-                            column = TableMetaColumn.get_by_field(field)
-                            history_obj = Revision.objects.filter(current = rel_obj, detail__lte = instance.detail_history, column = column).order_by("-detail")
-                            if history_obj.exists():
-                                #print "revisioning: " + str(rel_obj) + " - " + field.name
-                                new_value = field.to_python(history_obj[0].new_value)        
+                            #print "revisioning: " + str(rel_obj) + " - " + field.name
+                            if field.name in data:
+                                new_value = field.to_python(data[field.name])
                                 setattr(rel_obj, field.name, new_value)
+                            else:
+                                ##print "Not in", field.name
+                                pass
 
                 if not self.field.rel.multiple:
                     setattr(rel_obj, self.field.related.get_cache_name(), instance)
@@ -64,23 +82,40 @@ and adds behavior for many-to-many related objects."""
 def create_history_many_related_manager(superclass):
     class HistoryManyRelatedManager(superclass):             
         def get_query_set(self):
-            from cyano.models import RevisionManyToMany, TableMetaManyToMany
             if hasattr(self.instance, "detail_history"):
+                from cyano.models import Revision
+
                 #print "m2m history"
 
                 try:
                     return self.instance._prefetched_objects_cache[self.prefetch_cache_name]
                 except (AttributeError, KeyError):
                     db = self._db or router.db_for_read(self.instance.__class__, instance=self.instance)
-                    
-                    table = TableMetaManyToMany.get_by_m2m_model_name(self.through._meta.object_name)
-                    
-                    vals = RevisionManyToMany.objects.filter(current = self.instance.pk, detail__lte = self.instance.detail_history, table = table).values_list('new_value', flat = True)
 
-                    queryset = Manager.get_query_set(self).using(db)._next_is_sticky().filter(**self.core_filters)
-                    queryset = queryset.filter(pk__in = vals)
+                    ct_id = ContentType.objects.get_for_model(self.instance._meta.concrete_model).pk
+
+                    revision = Revision.objects.filter(
+                        object_id=self.instance.pk,
+                        content_type__pk=ct_id,
+                        detail_id__lte=self.instance.detail_history).order_by("-detail").first()
+
+                    queryset = Manager.get_query_set(self).using(db)._next_is_sticky().all()#.filter(**self.core_filters)
+
+                    data = []
+                    new_data = json.loads(revision.new_data)
+                    if self.prefetch_cache_name in new_data:
+                        data = new_data[self.prefetch_cache_name]
+
+                    ##print "History:", self.instance.detail_history, "Data:", data
+
+                    queryset = queryset.filter(pk__in=data)
+
+                    for item in queryset:
+                        setattr(item, "detail_history", self.instance.detail_history)
+
+                    #queryset = queryset.filter(pk__in = vals)
                     
-                    #print queryset, self.core_filters, self.target_field_name, self.source_field_name, self._fk_val
+                    ##print "Queryset:", queryset#, self.core_filters, self.target_field_name, self.source_field_name, self._fk_val
                     
                     return queryset
             else:

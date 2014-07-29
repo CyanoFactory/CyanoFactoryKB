@@ -14,7 +14,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 import cyano.models as cmodels
 from bioparser import BioParser
-from django.db.transaction import commit_on_success
+from django.db.transaction import atomic
 from collections import OrderedDict
     
 class ProOpDB(BioParser):
@@ -81,7 +81,7 @@ class ProOpDB(BioParser):
             tu = cmodels.TranscriptionUnit.objects.for_species(self.species).for_wid(wid, create = True)
             self.tu.append([tu, genes])
 
-    @commit_on_success
+    @atomic
     def apply(self):
         
         self.detail.save()

@@ -1,0 +1,224 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Basket overview page template
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+{% load filters %}
+
+{% block head_title %}{{ block.super }} :: CyanoDesign{% endblock %}
+{% block page_title %}CyanoDesign{% endblock %}
+
+{% block action_icons_export %}
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download model list in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download model list in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download model list in XML format</a></li>
+{{ block.super }}
+{% endblock %}
+
+{% block head %}
+{{ block.super }}
+
+<script>
+$(document).ready(function() {
+    $(function () {
+        var dialog_create = $("#dialog-create");
+        var dialog_delete = $("#dialog-delete");
+
+        dialog_create.dialog({
+            autoOpen: false,
+            height: 300,
+            width: 350,
+            modal: true,
+            buttons: {
+                "OK": function () {
+                    var name = $(this).find($("#name"));
+                    var valid = checkLength($(this), name, "Name", 1, 50);
+
+                    if (valid) {
+                        $(this).find("form").submit();
+                    }
+                },
+                Cancel: function () {
+                    $(this).dialog("close");
+                }
+            },
+            close: function () {
+                $(this).find($("#basket-name")).val("");
+                $(this).find("input").removeClass("ui-state-error");
+                $(".validateTips").hide();
+            }
+        });
+
+        dialog_delete.dialog({
+            autoOpen: false,
+            height: 300,
+            width: 350,
+            modal: true,
+            buttons: {
+                "Yes": function () {
+                    $.ajax({
+                        type: "POST",
+                        url: "{% url "cyano-design-delete" %}",
+                        context: document.body,
+                        data: { "id": $(this).data("pk") }
+                    });
+
+                    $(this).dialog("close");
+
+                    $(this).data("parent").fadeOut(200, function() { $(this).remove(); });
+                },
+                Cancel: function () {
+                    $(this).dialog("close");
+                }
+            },
+            close: function () {
+            }
+        });
+
+        $("#dialog-create-open").click(function() {
+            dialog_create.dialog("open");
+        });
+
+        $(".delete-button").click(function() {
+            var parent = $(this).parents("tr");
+
+            dialog_delete.data("parent", parent);
+            dialog_delete.data("pk", parent.data("pk"));
+            dialog_delete.dialog("open");
+        });
+
+        function updateTips(dialog, t) {
+            dialog.find($(".validateTips").show());
+            dialog.find($(".validateTips"))
+                    .text(t)
+                    .addClass("ui-state-highlight");
+            setTimeout(function () {
+                //t.removeClass("ui-state-highlight", 1500);
+            }, 500);
+        }
+
+        function checkLength(dialog, o, n, min, max) {
+            if (o.val().length > max || o.val().length < min) {
+                o.addClass("ui-state-error");
+                updateTips(dialog, "Length of " + n + " must be between " +
+                        min + " and " + max + ".");
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        $(".validateTips").hide();
+    });
+});
+</script>
+
+{% endblock %}
+
+{% block extrastyles %}
+#feedback { font-size: 1.4em; }
+#selectable .ui-selecting { background: #FECA40; }
+#selectable .ui-selected { background: #F39814; color: white; }
+#selectable { list-style-type: none; margin: 0; padding: 0; width: 60%; }
+#selectable li { margin: 3px; padding: 0.4em; font-size: 1.4em; height: 18px; }
+
+input.text { margin-bottom:12px; width:95%; padding: .4em; }
+fieldset { padding:0; border:0; margin-top:25px; }
+div#users-contain { width: 350px; margin: 20px 0; }
+div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%; }
+div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
+.ui-dialog .ui-state-error { padding: .3em; }
+.validateTips { border: 1px solid transparent; padding: 0.3em }
+
+#list{
+	width:100%;
+    position: relative;
+}
+#detail tbody.data tr td:nth-child(1){
+	width:3%;
+}
+#detail tbody.data tr td:nth-child(2n){
+	width:15%;
+}
+#detail tbody.data tr td:nth-child(3){
+	width:60%;
+}
+
+#detail a {
+	color: rgb(34, 34, 34);
+}
+
+#listfilter .nofilters{
+	font-style:italic;
+	text-align:center;
+}
+
+#listfilter{
+	display:none;
+}
+{% endblock %}
+
+{% block content %}
+<table id="list">
+<thead>
+	<tr>
+		<th>
+            WID
+        </th>
+		<th>Name</th>
+        <th></th>
+	</tr>
+</thead>
+<tbody>
+{% for object in queryset %}
+<tr data-pk="{{ object.pk }}">
+	<th><a href="
+	{% url "cyano-design-design" pk=object.pk %}
+	">{{ object.name }}</a></th>
+
+    <td>
+    <a href="
+	{% url "cyano-design-design" pk=object.pk %}
+	">{{ object.num_components }} items</td>
+
+	<td>
+		<a href="#" class="delete-button" title="Delete this cart"><img src="{% get_static_prefix %}public/img/delete.png"/></a>
+	</td>
+{% endfor %}
+</tbody>
+</table>
+
+<div><a href="#" id="dialog-create-open">Create new model</a></div>
+
+<div id="dialog-create" title="Create New Model">
+    <p class="validateTips"></p>
+    <form method="post" action="{% url "cyano-design-upload" %}" enctype="multipart/form-data">
+        <fieldset>
+            {% csrf_token %}
+            <label for="name">Name</label>
+            <input type="text" name=name id="name" class="name text ui-widget-content ui-corner-all">
+
+            <label for="file">Model</label>
+            <input name="file" id="file" type="file">
+        </fieldset>
+    </form>
+</div>
+
+<div id="dialog-delete" title="Confirm deleting Model">
+    Do you really want to delete the model?
+    <form>
+        <fieldset>
+        </fieldset>
+    </form>
+</div>
+
+{% endblock %}
+

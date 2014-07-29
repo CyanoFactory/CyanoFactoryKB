@@ -1,0 +1,68 @@
+>ref|Uppsala-pSYSX-SNP 1|:3438-3439|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 2|:3503-3504|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 3|:3558-3559|C_Y
+C->[TC]
+>ref|Uppsala-pSYSX-SNP 4|:3714-3715|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 5|:4014-4015|C_Y
+C->[TC]
+>ref|Uppsala-pSYSX-SNP 6|:4151-4152|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 7|:34021-34022|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 8|:34275-34276|G_S
+G->[GC]
+>ref|Uppsala-pSYSX-SNP 9|:34453-34454|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 10|:34944-34945|C_Y
+C->[TC]
+>ref|Uppsala-pSYSX-SNP 11|:35368-35369|C_Y
+C->[TC]
+>ref|Uppsala-pSYSX-SNP 12|:35407-35408|A_R
+A->[GA]
+>ref|Uppsala-pSYSX-SNP 13|:35509-35510|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 14|:35560-35561|G_R
+G->[GA]
+>ref|Uppsala-pSYSX-SNP 15|:35686-35687|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 16|:35716-35717|C_Y
+C->[TC]
+>ref|Uppsala-pSYSX-SNP 17|:35956-35957|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 18|:36025-36026|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 19|:37253-37254|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 20|:41213-41214|T_K
+T->[GT]
+>ref|Uppsala-pSYSX-SNP 21|:48461-48462|T_W
+T->[AT]
+>ref|Uppsala-pSYSX-SNP 22|:57871-57872|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 23|:57950-57951|G_S
+G->[GC]
+>ref|Uppsala-pSYSX-SNP 24|:58057-58058|G_S
+G->[GC]
+>ref|Uppsala-pSYSX-SNP 25|:58294-58295|T_Y
+T->[TC]
+>ref|Uppsala-pSYSX-SNP 26|:58407-58408|A_M
+A->[AC]
+>ref|Uppsala-pSYSX-SNP 27|:58731-58732|C_Y
+C->[TC]
+>ref|Uppsala-pSYSX-SNP 28|:86631-86632|A_M
+A->[AC]
+>ref|Uppsala-pSYSX-SNP 29|:86669-86670|C_Y
+C->[TC]
+>ref|Uppsala-pSYSX-SNP 30|:88201-88202|C_S
+C->[GC]
+>ref|Uppsala-pSYSX-SNP 31|:93673-93674|A_W
+A->[AT]
+>ref|Uppsala-pSYSX-SNP 32|:100567-100568|A_R
+A->[GA]
+>ref|Uppsala-pSYSX-SNP 33|:103997-103998|A_R
+A->[GA]
+>ref|Uppsala-pSYSX-SNP 34|:104034-104035|A_M
+A->[AC]

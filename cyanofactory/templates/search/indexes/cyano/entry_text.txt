@@ -1,0 +1,5 @@
+{{ object.wid }}
+{{ object.name }}
+{{ object.model_type }}
+{{ object.comments }}
+

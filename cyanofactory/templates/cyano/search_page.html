@@ -1,0 +1,28 @@
+{% load static %}
+{% load templatetags %}
+{% load filters %}
+{% load endless %}
+
+{% comment %}
+list page template
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% paginate 100 queryset %}
+
+{% for search_object in queryset %}
+{% with search_object.object as object %}
+<tr>
+    <th><a href="{{ object|get_absolute_url:species }}">{{ object.wid }}</a></th>
+    <td><a href="{{ object|get_absolute_url:species }}">{{ object.name|truncatechars:80 }}</a></td>
+</tr>
+{% endwith %}
+{% endfor %}
+
+
+{% show_more "Load more" "Loading more..." %}
+

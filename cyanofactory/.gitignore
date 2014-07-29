@@ -3,7 +3,7 @@ settings_private.py
 .coverage
 fixture
 htmlcov/
-templates/search/indexes/*/*_text.txt
+templates/search/indexes/public/*_text.txt
 xapian_index
 log/*
 

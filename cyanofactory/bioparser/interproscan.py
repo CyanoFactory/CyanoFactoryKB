@@ -7,8 +7,8 @@ Released under the MIT license
 import cyano.models as cmodels
 from cyano.helpers import slugify
 from bioparser import BioParser
-from django.db.transaction import commit_on_success
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.db.transaction import atomic
+from django.core.exceptions import ObjectDoesNotExist
 
 import re
 import xml.etree.ElementTree as ET
@@ -86,13 +86,13 @@ class InterProScan(BioParser):
                                                             "length": length,
                                                             "direction": direction})
 
-    @commit_on_success
+    @atomic
     def apply(self):
         self.detail.save()
 
         match_type = cmodels.Type.objects.for_wid("Match-Type", create=True)
         match_type.save(self.detail)
-        match_type.species.add()
+        match_type.species.add(self.species)
 
         for i, values in enumerate(self.protein_monomers_cf.items()):
             protein_monomer, chromosome_feature = values
@@ -111,16 +111,17 @@ class InterProScan(BioParser):
                 if cf.wid in self.xrefs:
                     for item in self.xrefs[cf.wid]:
                         xid, source = item
-                        x = cmodels.CrossReference.objects.get_or_create(xid=xid, source=source)[0]
+                        x = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, xid=xid, source=source)
                         real_cf.cross_references.add(x)
 
                 if cf.wid in self.feature_positions:
                     for fp in self.feature_positions[cf.wid]:
-                        cmodels.FeaturePosition.objects.get_or_create(chromosome_feature=real_cf,
-                                                                      chromosome_id=fp["chromosome"],
-                                                                      coordinate=fp["coordinate"],
-                                                                      length=fp["length"],
-                                                                      direction=fp["direction"])
+                        cmodels.FeaturePosition.objects.get_or_create_with_revision(self.detail,
+                                                                                    chromosome_feature=real_cf,
+                                                                                    chromosome_id=fp["chromosome"],
+                                                                                    coordinate=fp["coordinate"],
+                                                                                    length=fp["length"],
+                                                                                    direction=fp["direction"])
 
                 if cf.wid in self.types:
                     typ = self.types[cf.wid]

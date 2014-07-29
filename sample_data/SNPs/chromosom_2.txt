@@ -1,0 +1,856 @@
+>ref|Uppsala-Chromosome-SNP 1|:1877-1879|GC_SS
+GC->[GC][GC]
+>ref|Uppsala-Chromosome-SNP 2|:2622-2623|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 3|:6655-6656|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 4|:6662-6663|A_T
+A->T
+>ref|Uppsala-Chromosome-SNP 5|:15590-15591|C_N
+C->[AGCT]
+>ref|Uppsala-Chromosome-SNP 6|:17284-17285|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 7|:22532-22533|A_N
+A->[AGCT]
+>ref|Uppsala-Chromosome-SNP 8|:48893-48894|A_N
+A->[AGCT]
+>ref|Uppsala-Chromosome-SNP 9|:49894-49895|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 10|:55876-55877|A_C
+A->C
+>ref|Uppsala-Chromosome-SNP 11|:78866-78867|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 12|:91701-91702|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 13|:99506-99507|G_N
+G->[AGCT]
+>ref|Uppsala-Chromosome-SNP 14|:110996-110997|T_C
+T->C
+>ref|Uppsala-Chromosome-SNP 15|:116557-116558|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 16|:136872-136873|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 17|:143798-143799|T_C
+T->C
+>ref|Uppsala-Chromosome-SNP 18|:148911-148912|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 19|:149164-149166|GC_SS
+GC->[GC][GC]
+>ref|Uppsala-Chromosome-SNP 20|:159680-159681|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 21|:168364-168365|T_C
+T->C
+>ref|Uppsala-Chromosome-SNP 22|:179438-179440|CG_SS
+CG->[GC][GC]
+>ref|Uppsala-Chromosome-SNP 23|:201437-201438|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 24|:208007-208008|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 25|:209185-209186|A_T
+A->T
+>ref|Uppsala-Chromosome-SNP 26|:209402-209403|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 27|:213793-213794|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 28|:219794-219795|A_T
+A->T
+>ref|Uppsala-Chromosome-SNP 29|:235812-235814|TG_KK
+TG->[GT][GT]
+>ref|Uppsala-Chromosome-SNP 30|:246086-246087|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 31|:263452-263453|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 32|:275306-275307|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 33|:278737-278738|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 34|:285153-285154|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 35|:285236-285238|TC_YY
+TC->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 36|:285599-285600|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 37|:285642-285643|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 38|:285708-285709|T_N
+T->[AGCT]
+>ref|Uppsala-Chromosome-SNP 39|:286320-286321|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 40|:296433-296434|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 41|:306345-306347|AG_RS
+AG->[GA][GC]
+>ref|Uppsala-Chromosome-SNP 42|:317353-317354|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 43|:318197-318198|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 44|:320504-320505|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 45|:335981-335982|A_C
+A->C
+>ref|Uppsala-Chromosome-SNP 46|:349109-349110|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 47|:349114-349115|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 48|:362679-362680|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 49|:365917-365918|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 50|:380159-380160|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 51|:400644-400645|T_C
+T->C
+>ref|Uppsala-Chromosome-SNP 52|:413999-414000|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 53|:421038-421039|A_C
+A->C
+>ref|Uppsala-Chromosome-SNP 54|:432759-432760|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 55|:433243-433244|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 56|:465967-465969|TC_YY
+TC->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 57|:485719-485721|AT_TW
+AT->T[AT]
+>ref|Uppsala-Chromosome-SNP 58|:488366-488367|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 59|:489220-489221|G_A
+G->A
+>ref|Uppsala-Chromosome-SNP 60|:491983-491984|C_G
+C->G
+>ref|Uppsala-Chromosome-SNP 61|:498225-498226|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 62|:517919-517920|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 63|:517984-517985|T_C
+T->C
+>ref|Uppsala-Chromosome-SNP 64|:524208-524209|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 65|:543742-543744|AC_CM
+AC->C[AC]
+>ref|Uppsala-Chromosome-SNP 66|:555673-555674|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 67|:558260-558261|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 68|:568619-568621|AC_MM
+AC->[AC][AC]
+>ref|Uppsala-Chromosome-SNP 69|:570947-570948|C_N
+C->[AGCT]
+>ref|Uppsala-Chromosome-SNP 70|:571474-571475|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 71|:579118-579119|T_C
+T->C
+>ref|Uppsala-Chromosome-SNP 72|:597784-597786|TG_GK
+TG->G[GT]
+>ref|Uppsala-Chromosome-SNP 73|:605394-605395|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 74|:613732-613733|A_G
+A->G
+>ref|Uppsala-Chromosome-SNP 75|:616921-616923|TC_YY
+TC->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 76|:616924-616925|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 77|:623182-623184|AT_WW
+AT->[AT][AT]
+>ref|Uppsala-Chromosome-SNP 78|:624248-624249|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 79|:644651-644653|GC_NS
+GC->[AGCT][GC]
+>ref|Uppsala-Chromosome-SNP 80|:645807-645809|TG_KK
+TG->[GT][GT]
+>ref|Uppsala-Chromosome-SNP 81|:652747-652748|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 82|:657648-657649|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 83|:661130-661132|AC_WM
+AC->[AT][AC]
+>ref|Uppsala-Chromosome-SNP 84|:662719-662720|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 85|:665951-665952|T_A
+T->A
+>ref|Uppsala-Chromosome-SNP 86|:671810-671811|G_N
+G->[AGCT]
+>ref|Uppsala-Chromosome-SNP 87|:690375-690376|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 88|:698298-698299|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 89|:715908-715909|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 90|:717512-717513|C_T
+C->T
+>ref|Uppsala-Chromosome-SNP 91|:720095-720096|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 92|:734779-734780|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 93|:750173-750174|G_A
+G->A
+>ref|Uppsala-Chromosome-SNP 94|:750452-750453|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 95|:751297-751298|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 96|:763737-763738|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 97|:768516-768517|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 98|:774121-774122|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 99|:782386-782387|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 100|:796667-796668|T_A
+T->A
+>ref|Uppsala-Chromosome-SNP 101|:798833-798834|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 102|:816957-816958|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 103|:836597-836599|AG_RR
+AG->[GA][GA]
+>ref|Uppsala-Chromosome-SNP 104|:843985-843986|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 105|:871469-871471|AG_RR
+AG->[GA][GA]
+>ref|Uppsala-Chromosome-SNP 106|:875255-875257|CT_YY
+CT->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 107|:891976-891977|A_N
+A->[AGCT]
+>ref|Uppsala-Chromosome-SNP 108|:914455-914456|T_G
+T->G
+>ref|Uppsala-Chromosome-SNP 109|:927285-927286|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 110|:930641-930642|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 111|:933700-933701|A_T
+A->T
+>ref|Uppsala-Chromosome-SNP 112|:939928-939929|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 113|:944183-944184|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 114|:955920-955921|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 115|:979759-979760|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 116|:991877-991879|GT_KK
+GT->[GT][GT]
+>ref|Uppsala-Chromosome-SNP 117|:1005638-1005640|GC_CG
+GC->CG
+>ref|Uppsala-Chromosome-SNP 118|:1009151-1009152|T_A
+T->A
+>ref|Uppsala-Chromosome-SNP 119|:1018029-1018030|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 120|:1019554-1019555|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 121|:1042451-1042453|TC_CY
+TC->C[TC]
+>ref|Uppsala-Chromosome-SNP 122|:1046927-1046929|CT_TY
+CT->T[TC]
+>ref|Uppsala-Chromosome-SNP 123|:1052472-1052473|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 124|:1063317-1063319|TA_WW
+TA->[AT][AT]
+>ref|Uppsala-Chromosome-SNP 125|:1064013-1064014|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 126|:1085880-1085881|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 127|:1091683-1091684|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 128|:1092999-1093000|C_A
+C->A
+>ref|Uppsala-Chromosome-SNP 129|:1095657-1095658|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 130|:1100868-1100869|A_G
+A->G
+>ref|Uppsala-Chromosome-SNP 131|:1108262-1108264|CA_MM
+CA->[AC][AC]
+>ref|Uppsala-Chromosome-SNP 132|:1122637-1122638|C_T
+C->T
+>ref|Uppsala-Chromosome-SNP 133|:1141795-1141797|TG_KK
+TG->[GT][GT]
+>ref|Uppsala-Chromosome-SNP 134|:1153170-1153171|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 135|:1163832-1163833|A_T
+A->T
+>ref|Uppsala-Chromosome-SNP 136|:1191574-1191576|CA_MC
+CA->[AC]C
+>ref|Uppsala-Chromosome-SNP 137|:1192714-1192715|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 138|:1200306-1200307|C_A
+C->A
+>ref|Uppsala-Chromosome-SNP 139|:1211620-1211621|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 140|:1211680-1211681|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 141|:1211692-1211693|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 142|:1211874-1211875|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 143|:1211923-1211924|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 144|:1212010-1212011|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 145|:1212034-1212035|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 146|:1212079-1212080|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 147|:1212124-1212125|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 148|:1212178-1212179|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 149|:1219038-1219039|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 150|:1235905-1235907|CT_YY
+CT->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 151|:1237551-1237552|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 152|:1248617-1248619|AC_MM
+AC->[AC][AC]
+>ref|Uppsala-Chromosome-SNP 153|:1255443-1255444|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 154|:1260996-1260997|G_T
+G->T
+>ref|Uppsala-Chromosome-SNP 155|:1299532-1299533|T_G
+T->G
+>ref|Uppsala-Chromosome-SNP 156|:1301287-1301288|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 157|:1304267-1304269|GT_SK
+GT->[GC][GT]
+>ref|Uppsala-Chromosome-SNP 158|:1307972-1307973|T_N
+T->[AGCT]
+>ref|Uppsala-Chromosome-SNP 159|:1309806-1309807|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 160|:1312054-1312055|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 161|:1318745-1318746|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 162|:1327304-1327306|TG_KK
+TG->[GT][GT]
+>ref|Uppsala-Chromosome-SNP 163|:1340161-1340162|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 164|:1343744-1343746|CA_MM
+CA->[AC][AC]
+>ref|Uppsala-Chromosome-SNP 165|:1354317-1354318|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 166|:1359469-1359470|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 167|:1361359-1361360|C_A
+C->A
+>ref|Uppsala-Chromosome-SNP 168|:1388533-1388534|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 169|:1397055-1397056|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 170|:1405418-1405419|T_N
+T->[AGCT]
+>ref|Uppsala-Chromosome-SNP 171|:1405475-1405476|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 172|:1409204-1409205|T_G
+T->G
+>ref|Uppsala-Chromosome-SNP 173|:1409711-1409712|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 174|:1413966-1413967|A_C
+A->C
+>ref|Uppsala-Chromosome-SNP 175|:1433733-1433734|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 176|:1434117-1434118|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 177|:1453638-1453639|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 178|:1454782-1454783|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 179|:1454910-1454911|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 180|:1454955-1454956|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 181|:1455018-1455019|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 182|:1455039-1455040|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 183|:1455073-1455074|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 184|:1455132-1455133|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 185|:1455159-1455160|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 186|:1455234-1455235|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 187|:1455375-1455377|AT_RY
+AT->[GA][TC]
+>ref|Uppsala-Chromosome-SNP 188|:1455549-1455550|T_C
+T->C
+>ref|Uppsala-Chromosome-SNP 189|:1476576-1476578|TG_NN
+TG->[AGCT][AGCT]
+>ref|Uppsala-Chromosome-SNP 190|:1479327-1479328|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 191|:1509819-1509820|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 192|:1512524-1512525|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 193|:1532879-1532881|CT_YY
+CT->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 194|:1541354-1541356|TG_KK
+TG->[GT][GT]
+>ref|Uppsala-Chromosome-SNP 195|:1551130-1551132|GC_NS
+GC->[AGCT][GC]
+>ref|Uppsala-Chromosome-SNP 196|:1578576-1578577|A_N
+A->[AGCT]
+>ref|Uppsala-Chromosome-SNP 197|:1589826-1589828|AC_MM
+AC->[AC][AC]
+>ref|Uppsala-Chromosome-SNP 198|:1605195-1605196|C_N
+C->[AGCT]
+>ref|Uppsala-Chromosome-SNP 199|:1606332-1606333|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 200|:1631553-1631554|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 201|:1633914-1633915|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 202|:1639638-1639639|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 203|:1661845-1661846|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 204|:1666291-1666292|C_N
+C->[AGCT]
+>ref|Uppsala-Chromosome-SNP 205|:1670129-1670130|G_N
+G->[AGCT]
+>ref|Uppsala-Chromosome-SNP 206|:1687164-1687165|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 207|:1702644-1702646|CT_YC
+CT->[TC]C
+>ref|Uppsala-Chromosome-SNP 208|:1706956-1706957|G_N
+G->[AGCT]
+>ref|Uppsala-Chromosome-SNP 209|:1713831-1713832|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 210|:1727497-1727498|C_A
+C->A
+>ref|Uppsala-Chromosome-SNP 211|:1746185-1746186|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 212|:1763399-1763400|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 213|:1764407-1764408|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 214|:1768600-1768601|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 215|:1778786-1778787|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 216|:1786511-1786512|T_G
+T->G
+>ref|Uppsala-Chromosome-SNP 217|:1789561-1789563|CA_AC
+CA->AC
+>ref|Uppsala-Chromosome-SNP 218|:1798958-1798959|T_G
+T->G
+>ref|Uppsala-Chromosome-SNP 219|:1799767-1799768|C_N
+C->[AGCT]
+>ref|Uppsala-Chromosome-SNP 220|:1800031-1800032|A_N
+A->[AGCT]
+>ref|Uppsala-Chromosome-SNP 221|:1816825-1816826|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 222|:1819782-1819783|A_G
+A->G
+>ref|Uppsala-Chromosome-SNP 223|:1837460-1837462|GC_SS
+GC->[GC][GC]
+>ref|Uppsala-Chromosome-SNP 224|:1842516-1842517|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 225|:1856048-1856049|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 226|:1856137-1856138|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 227|:1864773-1864774|A_T
+A->T
+>ref|Uppsala-Chromosome-SNP 228|:1876934-1876935|A_G
+A->G
+>ref|Uppsala-Chromosome-SNP 229|:1895926-1895927|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 230|:1896559-1896560|T_N
+T->[AGCT]
+>ref|Uppsala-Chromosome-SNP 231|:1903227-1903228|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 232|:1913069-1913070|A_N
+A->[AGCT]
+>ref|Uppsala-Chromosome-SNP 233|:1942574-1942575|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 234|:1943253-1943255|CG_SS
+CG->[GC][GC]
+>ref|Uppsala-Chromosome-SNP 235|:1962971-1962972|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 236|:1962974-1962975|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 237|:1964251-1964252|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 238|:1970784-1970785|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 239|:1972262-1972263|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 240|:1972409-1972410|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 241|:1972428-1972429|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 242|:1972606-1972607|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 243|:1972665-1972666|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 244|:1972727-1972728|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 245|:1979143-1979144|C_T
+C->T
+>ref|Uppsala-Chromosome-SNP 246|:1980889-1980890|A_N
+A->[AGCT]
+>ref|Uppsala-Chromosome-SNP 247|:1981695-1981696|A_G
+A->G
+>ref|Uppsala-Chromosome-SNP 248|:2005500-2005501|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 249|:2008884-2008885|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 250|:2035668-2035670|TC_YY
+TC->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 251|:2040809-2040810|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 252|:2050318-2050319|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 253|:2087154-2087156|TC_NN
+TC->[AGCT][AGCT]
+>ref|Uppsala-Chromosome-SNP 254|:2087157-2087159|AA_WT
+AA->[AT]T
+>ref|Uppsala-Chromosome-SNP 255|:2123741-2123743|AG_GA
+AG->GA
+>ref|Uppsala-Chromosome-SNP 256|:2130713-2130715|CA_MM
+CA->[AC][AC]
+>ref|Uppsala-Chromosome-SNP 257|:2137613-2137615|CT_YY
+CT->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 258|:2151572-2151573|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 259|:2163983-2163984|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 260|:2175236-2175237|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 261|:2187868-2187869|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 262|:2198276-2198277|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 263|:2212748-2212749|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 264|:2215322-2215323|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 265|:2220085-2220086|A_C
+A->C
+>ref|Uppsala-Chromosome-SNP 266|:2231634-2231635|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 267|:2273008-2273010|CA_NM
+CA->[AGCT][AC]
+>ref|Uppsala-Chromosome-SNP 268|:2275061-2275062|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 269|:2275937-2275938|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 270|:2279133-2279134|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 271|:2280370-2280372|TC_YY
+TC->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 272|:2284263-2284265|TG_KN
+TG->[GT][AGCT]
+>ref|Uppsala-Chromosome-SNP 273|:2287891-2287892|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 274|:2300531-2300532|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 275|:2302041-2302043|CT_YY
+CT->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 276|:2315383-2315384|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 277|:2315389-2315390|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 278|:2318350-2318351|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 279|:2340389-2340391|CT_YY
+CT->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 280|:2341099-2341100|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 281|:2351319-2351320|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 282|:2372147-2372148|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 283|:2379119-2379120|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 284|:2390646-2390647|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 285|:2390650-2390651|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 286|:2393974-2393975|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 287|:2397558-2397559|A_C
+A->C
+>ref|Uppsala-Chromosome-SNP 288|:2399249-2399250|A_C
+A->C
+>ref|Uppsala-Chromosome-SNP 289|:2408361-2408362|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 290|:2426545-2426546|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 291|:2439288-2439289|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 292|:2443068-2443069|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 293|:2462748-2462749|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 294|:2473970-2473972|CG_SS
+CG->[GC][GC]
+>ref|Uppsala-Chromosome-SNP 295|:2475047-2475048|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 296|:2475054-2475055|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 297|:2476817-2476818|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 298|:2491937-2491938|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 299|:2499615-2499616|A_N
+A->[AGCT]
+>ref|Uppsala-Chromosome-SNP 300|:2506087-2506088|G_N
+G->[AGCT]
+>ref|Uppsala-Chromosome-SNP 301|:2531461-2531462|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 302|:2543782-2543783|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 303|:2568475-2568477|GG_RS
+GG->[GA][GC]
+>ref|Uppsala-Chromosome-SNP 304|:2569882-2569883|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 305|:2579638-2579639|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 306|:2602717-2602718|C_A
+C->A
+>ref|Uppsala-Chromosome-SNP 307|:2616326-2616328|AC_MM
+AC->[AC][AC]
+>ref|Uppsala-Chromosome-SNP 308|:2630141-2630142|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 309|:2630147-2630148|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 310|:2640724-2640725|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 311|:2644299-2644300|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 312|:2655877-2655879|CT_YY
+CT->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 313|:2665306-2665307|T_C
+T->C
+>ref|Uppsala-Chromosome-SNP 314|:2667690-2667691|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 315|:2671291-2671292|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 316|:2676397-2676399|GC_SS
+GC->[GC][GC]
+>ref|Uppsala-Chromosome-SNP 317|:2680481-2680482|T_A
+T->A
+>ref|Uppsala-Chromosome-SNP 318|:2683337-2683338|C_A
+C->A
+>ref|Uppsala-Chromosome-SNP 319|:2690917-2690918|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 320|:2698831-2698832|C_N
+C->[AGCT]
+>ref|Uppsala-Chromosome-SNP 321|:2699301-2699302|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 322|:2704807-2704808|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 323|:2710446-2710448|GC_SN
+GC->[GC][AGCT]
+>ref|Uppsala-Chromosome-SNP 324|:2739855-2739857|GC_SS
+GC->[GC][GC]
+>ref|Uppsala-Chromosome-SNP 325|:2747442-2747443|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 326|:2751700-2751702|GC_SS
+GC->[GC][GC]
+>ref|Uppsala-Chromosome-SNP 327|:2752303-2752304|A_T
+A->T
+>ref|Uppsala-Chromosome-SNP 328|:2756353-2756354|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 329|:2760255-2760256|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 330|:2761317-2761318|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 331|:2770510-2770511|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 332|:2781073-2781075|GT_KK
+GT->[GT][GT]
+>ref|Uppsala-Chromosome-SNP 333|:2793702-2793703|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 334|:2806428-2806429|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 335|:2809796-2809797|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 336|:2810409-2810410|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 337|:2817748-2817749|C_N
+C->[AGCT]
+>ref|Uppsala-Chromosome-SNP 338|:2821910-2821911|A_T
+A->T
+>ref|Uppsala-Chromosome-SNP 339|:2831249-2831251|GA_RG
+GA->[GA]G
+>ref|Uppsala-Chromosome-SNP 340|:2841174-2841175|A_N
+A->[AGCT]
+>ref|Uppsala-Chromosome-SNP 341|:2843189-2843190|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 342|:2859981-2859982|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 343|:2867810-2867811|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 344|:2875560-2875561|T_A
+T->A
+>ref|Uppsala-Chromosome-SNP 345|:2901164-2901166|AC_NN
+AC->[AGCT][AGCT]
+>ref|Uppsala-Chromosome-SNP 346|:2907577-2907579|GG_KK
+GG->[GT][GT]
+>ref|Uppsala-Chromosome-SNP 347|:2923081-2923082|T_N
+T->[AGCT]
+>ref|Uppsala-Chromosome-SNP 348|:2937391-2937393|AC_MM
+AC->[AC][AC]
+>ref|Uppsala-Chromosome-SNP 349|:2952177-2952178|T_G
+T->G
+>ref|Uppsala-Chromosome-SNP 350|:2963856-2963857|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 351|:2975530-2975532|AA_WR
+AA->[AT][GA]
+>ref|Uppsala-Chromosome-SNP 352|:2978540-2978541|G_C
+G->C
+>ref|Uppsala-Chromosome-SNP 353|:2982954-2982955|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 354|:2986847-2986849|CA_MM
+CA->[AC][AC]
+>ref|Uppsala-Chromosome-SNP 355|:2991599-2991600|A_G
+A->G
+>ref|Uppsala-Chromosome-SNP 356|:2997706-2997707|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 357|:2997849-2997850|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 358|:2998262-2998263|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 359|:3001049-3001050|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 360|:3013302-3013304|AC_MM
+AC->[AC][AC]
+>ref|Uppsala-Chromosome-SNP 361|:3028756-3028758|GC_CG
+GC->CG
+>ref|Uppsala-Chromosome-SNP 362|:3037402-3037403|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 363|:3043803-3043804|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 364|:3043840-3043841|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 365|:3043897-3043898|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 366|:3048435-3048436|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 367|:3048557-3048558|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 368|:3053793-3053794|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 369|:3063738-3063739|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 370|:3064707-3064708|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 371|:3064748-3064749|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 372|:3064997-3064998|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 373|:3065047-3065048|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 374|:3065275-3065276|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 375|:3065305-3065306|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 376|:3065443-3065444|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 377|:3065567-3065568|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 378|:3065604-3065605|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 379|:3065821-3065822|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 380|:3078251-3078253|GT_TG
+GT->TG
+>ref|Uppsala-Chromosome-SNP 381|:3082114-3082115|T_A
+T->A
+>ref|Uppsala-Chromosome-SNP 382|:3098923-3098924|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 383|:3099187-3099188|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 384|:3106364-3106365|A_N
+A->[AGCT]
+>ref|Uppsala-Chromosome-SNP 385|:3122640-3122641|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 386|:3123969-3123970|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 387|:3128887-3128888|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 388|:3132193-3132194|C_G
+C->G
+>ref|Uppsala-Chromosome-SNP 389|:3133532-3133533|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 390|:3140631-3140632|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 391|:3144189-3144190|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 392|:3155722-3155723|G_K
+G->[GT]
+>ref|Uppsala-Chromosome-SNP 393|:3167756-3167757|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 394|:3171962-3171964|TC_YY
+TC->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 395|:3175322-3175323|C_G
+C->G
+>ref|Uppsala-Chromosome-SNP 396|:3189190-3189191|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 397|:3190965-3190966|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 398|:3228207-3228208|A_G
+A->G
+>ref|Uppsala-Chromosome-SNP 399|:3263247-3263248|C_N
+C->[AGCT]
+>ref|Uppsala-Chromosome-SNP 400|:3291992-3291993|A_G
+A->G
+>ref|Uppsala-Chromosome-SNP 401|:3310774-3310775|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 402|:3322344-3322345|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 403|:3322972-3322973|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 404|:3340509-3340510|A_W
+A->[AT]
+>ref|Uppsala-Chromosome-SNP 405|:3344747-3344748|G_R
+G->[GA]
+>ref|Uppsala-Chromosome-SNP 406|:3348715-3348716|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 407|:3348773-3348774|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 408|:3348843-3348844|C_Y
+C->[TC]
+>ref|Uppsala-Chromosome-SNP 409|:3349816-3349817|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 410|:3357550-3357551|T_G
+T->G
+>ref|Uppsala-Chromosome-SNP 411|:3360644-3360645|T_W
+T->[AT]
+>ref|Uppsala-Chromosome-SNP 412|:3363955-3363956|C_M
+C->[AC]
+>ref|Uppsala-Chromosome-SNP 413|:3397102-3397103|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 414|:3434854-3434855|T_N
+T->[AGCT]
+>ref|Uppsala-Chromosome-SNP 415|:3435710-3435711|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 416|:3439682-3439683|G_S
+G->[GC]
+>ref|Uppsala-Chromosome-SNP 417|:3443583-3443585|AG_RR
+AG->[GA][GA]
+>ref|Uppsala-Chromosome-SNP 418|:3473179-3473180|A_R
+A->[GA]
+>ref|Uppsala-Chromosome-SNP 419|:3490361-3490363|CA_AC
+CA->AC
+>ref|Uppsala-Chromosome-SNP 420|:3505781-3505783|TC_YY
+TC->[TC][TC]
+>ref|Uppsala-Chromosome-SNP 421|:3510258-3510259|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 422|:3518908-3518910|GT_KK
+GT->[GT][GT]
+>ref|Uppsala-Chromosome-SNP 423|:3531233-3531234|C_A
+C->A
+>ref|Uppsala-Chromosome-SNP 424|:3539633-3539634|C_S
+C->[GC]
+>ref|Uppsala-Chromosome-SNP 425|:3544931-3544932|T_Y
+T->[TC]
+>ref|Uppsala-Chromosome-SNP 426|:3552870-3552871|T_K
+T->[GT]
+>ref|Uppsala-Chromosome-SNP 427|:3554385-3554386|A_M
+A->[AC]
+>ref|Uppsala-Chromosome-SNP 428|:3563778-3563779|A_C
+A->C

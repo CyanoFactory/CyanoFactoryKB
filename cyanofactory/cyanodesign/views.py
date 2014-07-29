@@ -1,11 +1,26 @@
+"""
+Copyright (c) 2014 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
+import StringIO
 import json
+import os
+import tempfile
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
+from django.shortcuts import redirect
+from django.views.decorators.csrf import ensure_csrf_cookie
 from cyano.decorators import ajax_required
 from PyNetMet.metabolism import *
 from PyNetMet.fba import *
-from django.conf import settings
-from cyano.helpers import render_queryset_to_response
+from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error
+from cyanodesign.forms import UploadModelForm
+from cyanodesign.helpers import model_from_string, apply_commandlist
+from .models import DesignModel
 import networkx as nx
 from networkx.readwrite import json_graph
 import re
@@ -13,33 +28,55 @@ import math
 import pygraphviz
 import json
 
-
 @login_required
 def index(request):
-    data = {}
+    models = DesignModel.objects.filter(user=request.user.profile)
 
-    return render_queryset_to_response(request, template="cyanodesign/index.html", data=data)
+    return render_queryset_to_response(
+        request,
+        template="cyanodesign/list.html",
+        queryset=models,
+        data={}
+    )
+
+
+@login_required
+@ensure_csrf_cookie
+def design(request, pk):
+    try:
+        item = DesignModel.objects.get(user=request.user.profile, pk=pk)
+    except ObjectDoesNotExist:
+        return render_queryset_to_response_error(request, error=404, msg="Model not found")
+
+    data = {"pk": pk, "name": item.name}
+
+    return render_queryset_to_response(request, template="cyanodesign/design.html", data=data)
 
 
 @login_required
 @ajax_required
-def get_reactions(request):
-    model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model2.txt")
+def get_reactions(request, pk):
+    #model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model.txt")
 
-    org = Metabolism(model)
+    try:
+        item = DesignModel.objects.get(user=request.user.profile, pk=pk).content
+    except:
+        return HttpResponseBadRequest("Bad Model")
+
+    org = model_from_string(item)
 
     ret = []
 
-    for enzyme, constr in zip(org.enzymes, org.constr):
+    for enzyme in org.reactions:
         # Filter out auto-created external transport funcs
         if not enzyme.name.endswith("_ext_transp"):
             ret.append({
                 "name": enzyme.name,
-                "stoichiometric": enzyme.stoic,
-                "substrates": enzyme.substrates,
-                "products": enzyme.products,
+                "stoichiometric": [enzyme.reactants_stoic] + [enzyme.products_stoic],
+                "substrates": map(lambda m: m.name, enzyme.reactants),
+                "products": map(lambda m: m.name, enzyme.products),
                 "reversible": enzyme.reversible,
-                "constraints": constr
+                "constraints": enzyme.constraint
             })
 
     graphInfos = drawDesign(org)
@@ -47,64 +84,123 @@ def get_reactions(request):
     graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
     graph.node_attr.update(style="filled", colorscheme="pastel19")
     outgraph = str(graph.to_string())
-    return HttpResponse(
-        json.dumps({"external": org.external, "enzymes": ret, "objective": org.objective, "graph": outgraph}),
-        content_type="application/json")
 
+    return HttpResponse(json.dumps({
+        "external": map(lambda m: m.name, filter(lambda m: m.external, org.get_metabolites())),
+        "enzymes": ret,
+        "objective": org.objective.name if org.objective else None,
+        "graph": outgraph}), content_type="application/json")
 
 @login_required
 @ajax_required
-def simulate(request):
-    if not all(x in request.GET for x in ["enzymes", "constraints", "external", "objective"]):
+def simulate(request, pk):
+    if not all(x in request.POST for x in ["commands", "disabled", "objective"]):
         return HttpResponseBadRequest("Request incomplete")
 
     try:
-        data = json.loads(request.GET["enzymes"])
-        constr = json.loads(request.GET["constraints"])
-        ext = json.loads(request.GET["external"])
-        objective = json.loads(request.GET["objective"])
+        content = DesignModel.objects.get(user=request.user.profile, pk=pk).content
+    except ObjectDoesNotExist:
+        return HttpResponseBadRequest("Bad Model")
+
+    org = model_from_string(content)
+
+    try:
+        commands = json.loads(request.POST["commands"])
+        disabled = json.loads(request.POST["disabled"])
+        objective = json.loads(request.POST["objective"])
     except ValueError:
         return HttpResponseBadRequest("Invalid JSON data")
 
-    if not all(isinstance(x, list) for x in [data, constr, ext, objective]):
+    if not all(isinstance(x, list) for x in [commands, disabled]):
         return HttpResponseBadRequest("Invalid data type")
 
-    string_type = map(lambda x: all(isinstance(y, basestring) for y in x), [data, constr, ext, objective])
-    if not all(x for x in string_type):
+    if not isinstance(objective, basestring):
         return HttpResponseBadRequest("Invalid data type")
-
-  # print "\n".join(data)
-  # print constr
-  # print ext
-  # print objective
 
     try:
-        organism = Metabolism("model_name",
-                              reactions=data,
-                              constraints=constr,
-                              external=ext,
-                              objective=objective,
-                              fromfile=False)
+        org = apply_commandlist(org, commands)
+        obj_reac = org.get_reaction(objective)
+        if obj_reac is None:
+            raise ValueError("Objective not in model: " + objective)
+    except ValueError as e:
+        return HttpResponseBadRequest("Model error: " + e.message)
 
-        fba = FBA(organism)
+    try:
+        org.fba()
+    except ValueError as e:
+        return HttpResponseBadRequest("FBA error: " + e.message)
 
-        graphInfo = drawDesign(organism)
-        xgraph = graphInfo[0]
-        nodeIDs = graphInfo[1]
-        g = calcReactions(xgraph, nodeIDs, str(fba))
-        graph = nx.to_agraph(g)
-        graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
-        graph.node_attr.update(style="filled", colorscheme="pastel19")
-        outgraph = str(graph.to_string())
-
-    except ValueError:
-        return HttpResponseBadRequest("Invalid data type")
+    graphInfo = drawDesign(org)
+    xgraph = graphInfo[0]
+    nodeIDs = graphInfo[1]
+    g = calcReactions(xgraph, nodeIDs, org)
+    graph = nx.to_agraph(g)
+    graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
+    graph.node_attr.update(style="filled", colorscheme="pastel19")
+    outgraph = str(graph.to_string())
 
     return HttpResponse(outgraph)
 
 
+
+    #return HttpResponse(json.dumps({"flux": map(lambda x: [x.name, x.flux], org.reactions)}), content_type="application/json")
+
+@login_required
+@ajax_required
 def export(request):
     pass
+
+@login_required
+def upload(request):
+    data = {}
+
+    if request.method == 'POST':
+        form = UploadModelForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            name = form.cleaned_data.get('name')
+
+            #save to temporary file
+            filename = request.FILES['file'].name
+
+            ss = StringIO.StringIO()
+
+            with tempfile.NamedTemporaryFile(delete=False) as fid:
+                path = fid.name
+
+                for chunk in request.FILES['file'].chunks():
+                    ss.write(chunk)
+                    fid.write(chunk)
+
+            try:
+                Metabolism(path)
+                os.remove(path)
+            except:
+                os.remove(path)
+                return HttpResponseBadRequest("Bad Model")
+
+            DesignModel.objects.create(
+                user=request.user.profile,
+                name=name,
+                filename=filename,
+                content=ss.getvalue()
+            )
+
+            return redirect("cyano-design-index")
+
+    return HttpResponseBadRequest()
+
+@login_required
+@ajax_required
+def delete(request):
+    pk = request.POST.get("id", 0)
+
+    try:
+        DesignModel.objects.get(user=request.user.profile, pk=pk).delete()
+    except:
+        return HttpResponseBadRequest("Bad Model")
+
+    return HttpResponse("ok")
 
 
 def drawDesign(org):
@@ -114,7 +210,7 @@ def drawDesign(org):
     @param org: object organism from PyNetMet
     @return: Dictionary["graph": Graph in JSON-Format, "nodeDic": Dictionary of Node-IDs]
     """
-    enzymes = org.enzymes
+    enzymes = org.reactions
     nodeDic = {}
     nodecounter = 0
     graph = nx.DiGraph()
@@ -123,7 +219,7 @@ def drawDesign(org):
             nodecounter += 1
             nodeDic[enzyme.name] = nodecounter
             graph.add_node(nodeDic[enzyme.name], label=enzyme.name, shape="box")
-            for substrate in enzyme.substrates:
+            for substrate in enzyme.reactants:
                 nodecounter += 1
                 if not substrate in nodeDic:
                     nodeDic[substrate] = nodecounter
@@ -144,7 +240,7 @@ def drawDesign(org):
     return data
 
 
-def getSelectedReaction(reacIDs, jsonGraph):
+def getSelectedReaction(reacIDs, nodeDic, jsonGraph):
     """
     Filtering selected Reactions and show Results from PyNetMet calculation.
     It returns a subgraph of the Graph from the jsonGraph. The output is a DOT-Language String.
@@ -152,6 +248,7 @@ def getSelectedReaction(reacIDs, jsonGraph):
     @param jsonGraph: Graph in JSON-Format
     @return Subgraph in DOT-Language
     """
+
     g = json_graph.node_link_graph(jsonGraph)
     prelistofNodes = []
     for reacID in reacIDs:
@@ -173,10 +270,16 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
     @param jsonGraph: Graph in JSON-Format
     @param nodeDic: Dictionary with keys = Node-Name and value = node_id
     @param fluxResults: Results from PyNetMet FLUX-Analysis Calculation as String
+    @type fluxResults: bioparser.optgene.OptGeneParser
     @return Graph with added Attributes
     """
     print nodeDic
-    changeDic = readResults(fluxResults)
+    changeDic = {}
+    reactions = fluxResults.reactions
+    for reaction in reactions:
+        if not reaction.name.endswith("_transp"):
+            changeDic[reaction.name] = reaction.flux
+
     g = json_graph.node_link_graph(jsonGraph)
     vList = changeDic.values()
     while 0 in vList:
@@ -218,20 +321,4 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
             g.edge[aEdge[0]][aEdge[1]]["label"] = value
 
     return g
-
-def readResults(resultText):
-    """
-    Generating a Dictionary from the PyNetMet FLUX-Analysis with a given String Input.
-    @param resultText: Output String from FLUX-Analysis
-    @return: Dictionary[Substrate: FLUX-Result]
-    """
-    searchP = r"(\S+)\s+---->\s+(-?\d+\.\d+)"
-    #print resultText
-    resultList = re.findall(searchP, resultText)
-    changeDic = {}
-    for result in resultList:
-        if not result[0].endswith("_transp"):
-            changeDic[result[0]] = float(result[1])
-
-    return changeDic
 
