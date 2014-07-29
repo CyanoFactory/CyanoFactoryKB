@@ -21,6 +21,12 @@ from cyano.helpers import render_queryset_to_response, render_queryset_to_respon
 from cyanodesign.forms import UploadModelForm
 from cyanodesign.helpers import model_from_string, apply_commandlist
 from .models import DesignModel
+import networkx as nx
+from networkx.readwrite import json_graph
+import re
+import math
+import pygraphviz
+import json
 
 @login_required
 def index(request):
@@ -43,7 +49,7 @@ def design(request, pk):
         return render_queryset_to_response_error(request, error=404, msg="Model not found")
 
     data = {"pk": pk, "name": item.name}
-    
+
     return render_queryset_to_response(request, template="cyanodesign/design.html", data=data)
 
 
@@ -73,12 +79,17 @@ def get_reactions(request, pk):
                 "constraints": enzyme.constraint
             })
 
-    #print ret
+    graphInfos = drawDesign(org)
+    graph = nx.to_agraph(json_graph.node_link_graph(graphInfos[0]))
+    graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
+    graph.node_attr.update(style="filled", colorscheme="pastel19")
+    outgraph = str(graph.to_string())
 
     return HttpResponse(json.dumps({
         "external": map(lambda m: m.name, filter(lambda m: m.external, org.get_metabolites())),
         "enzymes": ret,
-        "objective": org.objective.name if org.objective else None }), content_type="application/json")
+        "objective": org.objective.name if org.objective else None,
+        "graph": outgraph}), content_type="application/json")
 
 @login_required
 @ajax_required
@@ -114,19 +125,25 @@ def simulate(request, pk):
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + e.message)
 
-    org.objective = obj_reac
-
-    #print "\n".join(data)
-    #print constr
-    #print ext
-    #print objective
-
     try:
         org.fba()
     except ValueError as e:
         return HttpResponseBadRequest("FBA error: " + e.message)
 
-    return HttpResponse(json.dumps({"flux": map(lambda x: [x.name, x.flux], org.reactions)}), content_type="application/json")
+    graphInfo = drawDesign(org)
+    xgraph = graphInfo[0]
+    nodeIDs = graphInfo[1]
+    g = calcReactions(xgraph, nodeIDs, org)
+    graph = nx.to_agraph(g)
+    graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
+    graph.node_attr.update(style="filled", colorscheme="pastel19")
+    outgraph = str(graph.to_string())
+
+    return HttpResponse(outgraph)
+
+
+
+    #return HttpResponse(json.dumps({"flux": map(lambda x: [x.name, x.flux], org.reactions)}), content_type="application/json")
 
 @login_required
 @ajax_required
@@ -184,3 +201,124 @@ def delete(request):
         return HttpResponseBadRequest("Bad Model")
 
     return HttpResponse("ok")
+
+
+def drawDesign(org):
+    """
+    Generating Graph for all Reaction from defined organism.
+    return networkx Graph in JSON-Format and Node-ID - Node-Label Dictionary[Node-Label: Node-ID]
+    @param org: object organism from PyNetMet
+    @return: Dictionary["graph": Graph in JSON-Format, "nodeDic": Dictionary of Node-IDs]
+    """
+    enzymes = org.reactions
+    nodeDic = {}
+    nodecounter = 0
+    graph = nx.DiGraph()
+    for enzyme in enzymes:
+        if not enzyme.name.endswith("_transp"):
+            nodecounter += 1
+            nodeDic[enzyme.name] = nodecounter
+            graph.add_node(nodeDic[enzyme.name], label=enzyme.name, shape="box")
+            for substrate in enzyme.reactants:
+                nodecounter += 1
+                if not substrate in nodeDic:
+                    nodeDic[substrate] = nodecounter
+                    graph.add_node(nodeDic[substrate], label=substrate, shape="oval", color=str((nodecounter % 8)+1))
+                graph.add_edge(nodeDic[substrate], nodeDic[enzyme.name])
+                if enzyme.reversible:
+                    graph.add_edge(nodeDic[enzyme.name], nodeDic[substrate])
+            for product in enzyme.products:
+                nodecounter += 1
+                if not product in nodeDic:
+                    nodeDic[product] = nodecounter
+                    graph.add_node(nodeDic[product], label=product, shape="oval", color=str((nodecounter % 8)+1))
+                graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
+                if enzyme.reversible:
+                    graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
+    graphJson = json_graph.node_link_data(graph)
+    data = [graphJson, nodeDic]
+    return data
+
+
+def getSelectedReaction(reacIDs, nodeDic, jsonGraph):
+    """
+    Filtering selected Reactions and show Results from PyNetMet calculation.
+    It returns a subgraph of the Graph from the jsonGraph. The output is a DOT-Language String.
+    @param reacIDs: Array of Reaction IDs which are contained in the Graph of the jsonFile
+    @param jsonGraph: Graph in JSON-Format
+    @return Subgraph in DOT-Language
+    """
+
+    g = json_graph.node_link_graph(jsonGraph)
+    prelistofNodes = []
+    for reacID in reacIDs:
+        prelistofNodes = g[reacID]
+
+    listofNodes = []
+    for node in prelistofNodes:
+        listofNodes.extend(g[node])
+    listofNodes.extend(reacIDs)
+
+    h = g.subgraph(listofNodes)
+    hGraphviz = str(nx.to_agraph(h).to_string())
+    return hGraphviz
+
+
+def calcReactions(jsonGraph, nodeDic, fluxResults):
+    """
+    Adding Results from FLUX-Analysis
+    @param jsonGraph: Graph in JSON-Format
+    @param nodeDic: Dictionary with keys = Node-Name and value = node_id
+    @param fluxResults: Results from PyNetMet FLUX-Analysis Calculation as String
+    @type fluxResults: bioparser.optgene.OptGeneParser
+    @return Graph with added Attributes
+    """
+    print nodeDic
+    changeDic = {}
+    reactions = fluxResults.reactions
+    for reaction in reactions:
+        if not reaction.name.endswith("_transp"):
+            changeDic[reaction.name] = reaction.flux
+
+    g = json_graph.node_link_graph(jsonGraph)
+    vList = changeDic.values()
+    while 0 in vList:
+        vList.remove(0)
+
+    for i in xrange(len(vList)):
+        vList[i] = math.sqrt(math.pow(vList[i], 2))
+    vList = sorted(vList)
+
+    oldMin = vList[0]
+    oldMax = vList[-1]
+    oldRange = oldMax - oldMin
+    newMin = 1
+    newMax = 20
+    newRange = newMax - newMin
+
+    for key in changeDic:
+        node = nodeDic[key]
+        value = changeDic[key]
+
+        print value
+        color = "black"
+        if value < 0:
+            color = "red"
+        elif value > 0:
+            color = "green"
+
+        newValue = 1
+        if value != 0:
+            newValue = (math.sqrt(math.pow(value, 2)) - oldMin) / oldRange * newRange + newMin
+
+        thikness = newValue
+
+        edgeList = g.out_edges(node)
+        edgeList.extend(g.in_edges(node))
+        for aEdge in edgeList:
+            g.edge[aEdge[0]][aEdge[1]]["color"] = color
+            g.edge[aEdge[0]][aEdge[1]]["penwidth"] = thikness
+            g.edge[aEdge[0]][aEdge[1]]["label"] = value
+
+    return g
+

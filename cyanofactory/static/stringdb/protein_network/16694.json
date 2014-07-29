@@ -1,0 +1,1 @@
+{"directed": false, "graph": [], "nodes": [{"name": "valS", "hood": 783, "id": 17618}, {"name": "natA", "hood": 101, "id": 17554}, {"name": "sll1439", "hood": 0, "id": 16694}], "links": [{"opacity": 1, "source": 0, "score": 402, "target": 2}, {"opacity": 1, "source": 1, "score": 173, "target": 2}], "multigraph": false}

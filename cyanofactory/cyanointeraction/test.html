@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.node {
+  stroke: #fff;
+} 
+
+.node text {
+  pointer-events: none;
+  stroke: #000;
+  stroke-width: .1px;
+  font-size: 0.7em;
+}
+
+.link {
+  stroke-opacity: .4;
+}
+
+</style>
+<body>
+<script src="../static/cyanointeraction/d3/d3.v3.min.js"></script>
+<script>
+
+var width = 960,
+    height = 500;
+	
+var lcolor = d3.scale.linear()
+	.domain([0, 180, 360, 540, 700, 900, 999, 1000])
+	.range(["red", "orange", "yellow", "green", "purple", "navy", "blue", "black"]);
+	
+var ncolor = d3.scale.linear()
+	.domain([0, 234, 467, 700, 933, 1166, 1326])
+	.range(["black", "purple", "blue", "green", "yellow", "orange","red"]);
+
+var force = d3.layout.force()
+    .charge(-100)
+	.linkDistance(100)
+    .size([width, height]);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+d3.json("15803.json", function(error, graph) {
+  force
+      .nodes(graph.nodes)
+      .links(graph.links)
+      .start();
+
+  var link = svg.selectAll(".link")
+      .data(graph.links)
+    .enter().append("line")
+      .attr("class", "link")
+      //.style("opacity", function(d) { return d.opacity; })
+	  .style("stroke", function(d) { return lcolor(d.score); })
+	  
+  var node = svg.selectAll(".node")
+      .data(graph.nodes)
+	.enter().append("g")
+      .attr("class", "node")
+      .attr("id", function(d) { return d.id; })
+      .call(force.drag)
+      .on("mouseover", nodeOver)
+      .on("mouseout", nodeOut);
+
+  
+  node.append("circle")
+      .attr("r", 5)
+      .style("fill", function(d) { return ncolor(d.hood); }) 
+  
+  node.append("text")
+	  .attr("dx", 12)
+      .attr("dy", ".35em")
+	  .style("color", "black")
+      .text(function(d) { return d.name });
+  
+  force.on("tick", function() {
+    link.attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+	node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+    });
+});
+
+function getProps(object) {
+	var output = '';
+	for (property in object) {
+	  output += '<b>' + property + '</b>: ' + object[property]+'<br> ';
+	}
+	return output;
+}
+
+
+function nodeOut() {
+	doHighlight(d3.select(this), false);
+}
+
+function nodeOver() {
+	doHighlight(d3.select(this), true);
+
+
+}
+
+/** Blendet alle links die nicht mit dem übergebenen Node verklnüpft sind ein oder aus. */
+function doHighlight(node, hl) {
+	var nd = node.datum();
+	var opacity = hl ? 0 : 0.6;
+	var oopacity = hl ? 1 : 0.6;
+	var nodeRadius = hl ?  8 : 5;
+	var nodecolor = hl ? "lawngreen" : "white";
+	//var nwidth = hl ? ".5px" : ".1px";
+	
+	// aus/einblenden aller lines die nicht an dem selektierten Node hängen
+	svg.selectAll(".link")
+		.filter(function(d) {  return d.source.index != nd.index && d.target.index != nd.index; })
+		.transition().duration(750).style("stroke-opacity", opacity);
+		
+	svg.selectAll(".link")
+		.filter(function(d) {  return d.source.index == nd.index || d.target.index == nd.index; })
+		.transition().duration(750).style("stroke-opacity", oopacity);
+
+	node.select("circle")
+		.transition()
+        .duration(750)
+        .attr("r", nodeRadius)
+		.style("stroke", nodecolor);d
+
+     // hideNodes(nd);
+}
+
+
+/** Blendet die nicht genutzten nodes aus (Funktioniert nocht nicht) */
+function hideNodes(nd) {
+
+
+	var linksToHide = svg.selectAll(".link").filter(function(d) {  return d.source.index != nd.index && d.target.index != nd.index; }).datum();
+
+	var visibleLinks = svg.selectAll(".link").filter(function(d) {  return d.source.index == nd.index || d.target.index == nd.index; }).datum();
+
+	alert(visibleLinks);
+	var hideLinksNodes = new Array();
+	for (var i = linksToHide.length - 1; i >= 0; i--) {
+		var hideL = linksToHide[i];
+		hideLinksNodes.push(hideL.source.id);
+		hideLinksNodes.push(hideL.target.id);
+	};
+
+	var visibleLinksNode = new Array();
+	for (var i = visibleLinks.length - 1; i >= 0; i--) {
+		var visibleL = visibleLinks[i];
+		visibleLinksNode.push(visibleL.source.id);
+		visibleLinksNode.push(visibleL.target.id);
+	};
+
+	for (var i = visibleLinksNode.length - 1; i >= 0; i--) {
+		alert(visibleLinksNode[i]);
+	};
+
+
+}
+// // Make hashtable of ids in B
+// var bIds = {}
+// b.forEach(function(obj){
+//     bIds[obj.id] = obj;
+// });
+
+// // Return all elements in A, unless in B
+// return a.filter(function(obj){
+//     return !(obj.id in bIds);
+// });
+
+
+</script>
