@@ -6,6 +6,7 @@ Released under the MIT license
 """
 
 import StringIO
+from collections import OrderedDict
 import json
 import os
 import tempfile
@@ -14,6 +15,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect
 from django.views.decorators.csrf import ensure_csrf_cookie
+from networkx.algorithms.shortest_paths.generic import has_path, shortest_path, all_shortest_paths
+from networkx.exception import NetworkXNoPath
 from cyano.decorators import ajax_required
 from PyNetMet.metabolism import *
 from PyNetMet.fba import *
@@ -79,11 +82,12 @@ def get_reactions(request, pk):
                 "constraints": enzyme.constraint
             })
 
-    graphInfos = drawDesign(org)
-    graph = nx.to_agraph(json_graph.node_link_graph(graphInfos[0]))
-    graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
-    graph.node_attr.update(style="filled", colorscheme="pastel19")
-    outgraph = str(graph.to_string())
+    #graphInfos = drawDesign(org)
+    #graph = nx.to_agraph(json_graph.node_link_graph(graphInfos[0]))
+    #graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
+    #graph.node_attr.update(style="filled", colorscheme="pastel19")
+    #outgraph = str(graph.to_string())
+    outgraph = ""
 
     return HttpResponse(json.dumps({
         "external": map(lambda m: m.name, filter(lambda m: m.external, org.get_metabolites())),
@@ -134,17 +138,46 @@ def simulate(request, pk):
     graphInfo = drawDesign(org)
     xgraph = graphInfo[0]
     nodeIDs = graphInfo[1]
-    g = calcReactions(xgraph, nodeIDs, org)
+    full_g = calcReactions(xgraph, nodeIDs, org)
+
+    import itertools
+    reacs = ["reac4", "reac1", "reac7"]
+    #reacs = ["Biomass", "2.7.1.2a", "H2O", "PROTONS", "Trpbm"]
+
+    g = getSelectedReaction(json_graph.node_link_data(full_g), nodeIDs, reacs)
+
+    # Add Pseudopaths
+    for reac_pairs in itertools.combinations(reacs, 2):
+        if not has_path(g, nodeIDs[reac_pairs[0]], nodeIDs[reac_pairs[1]]):
+            # Test for theoretical path
+            try:
+                all_paths = all_shortest_paths(full_g, nodeIDs[reac_pairs[0]], nodeIDs[reac_pairs[1]])
+
+                for path in all_paths:
+                    # Take second to last
+                    g.add_edge(path[1], path[-2])
+                    print "Pseudopath from", path[1], "to", path[-2]
+            except NetworkXNoPath:
+                pass
+
+        if not has_path(g, nodeIDs[reac_pairs[1]], nodeIDs[reac_pairs[0]]):
+            # Test for theoretical path
+            try:
+                all_paths = all_shortest_paths(full_g, nodeIDs[reac_pairs[1]], nodeIDs[reac_pairs[0]])
+
+                for path in all_paths:
+                    # Take second to last
+                    g.add_edge(path[1], path[-2])
+                    print "Pseudopath from", path[1], "to", path[-2]
+            except NetworkXNoPath:
+                pass
+
     graph = nx.to_agraph(g)
     graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
     graph.node_attr.update(style="filled", colorscheme="pastel19")
     outgraph = str(graph.to_string())
 
     return HttpResponse(outgraph)
-
-
-
-    #return HttpResponse(json.dumps({"flux": map(lambda x: [x.name, x.flux], org.reactions)}), content_type="application/json")
 
 @login_required
 @ajax_required
@@ -212,7 +245,7 @@ def drawDesign(org):
     @return: Dictionary["graph": Graph in JSON-Format, "nodeDic": Dictionary of Node-IDs]
     """
     enzymes = org.reactions
-    nodeDic = {}
+    nodeDic = OrderedDict()
     nodecounter = 0
     graph = nx.DiGraph()
     for enzyme in enzymes:
@@ -221,6 +254,7 @@ def drawDesign(org):
             nodeDic[enzyme.name] = nodecounter
             graph.add_node(nodeDic[enzyme.name], label=enzyme.name, shape="box")
             for substrate in enzyme.reactants:
+                substrate = substrate.name
                 nodecounter += 1
                 if not substrate in nodeDic:
                     nodeDic[substrate] = nodecounter
@@ -229,6 +263,7 @@ def drawDesign(org):
                 if enzyme.reversible:
                     graph.add_edge(nodeDic[enzyme.name], nodeDic[substrate])
             for product in enzyme.products:
+                product = product.name
                 nodecounter += 1
                 if not product in nodeDic:
                     nodeDic[product] = nodecounter
@@ -236,34 +271,34 @@ def drawDesign(org):
                 graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
                 if enzyme.reversible:
                     graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
+    print nodeDic
     graphJson = json_graph.node_link_data(graph)
     data = [graphJson, nodeDic]
+
     return data
 
+def flatten(li):
+    return [item for sublist in li for item in sublist]
 
-def getSelectedReaction(reacIDs, nodeDic, jsonGraph):
+def getSelectedReaction(jsonGraph, nodeDic, reacIDs):
     """
     Filtering selected Reactions and show Results from PyNetMet calculation.
     It returns a subgraph of the Graph from the jsonGraph. The output is a DOT-Language String.
-    @param reacIDs: Array of Reaction IDs which are contained in the Graph of the jsonFile
     @param jsonGraph: Graph in JSON-Format
-    @return Subgraph in DOT-Language
+    @param nodeDic: dict mapping names to ids
+    @param reacIDs: Name of reactions that contained in the nodeDic
+    @return Subgraph
     """
-
+    # Translate reac names to IDs
+    reacIDs = map(lambda x: nodeDic[x], reacIDs)
+    print reacIDs
     g = json_graph.node_link_graph(jsonGraph)
-    prelistofNodes = []
-    for reacID in reacIDs:
-        prelistofNodes = g[reacID]
 
-    listofNodes = []
-    for node in prelistofNodes:
-        listofNodes.extend(g[node])
-    listofNodes.extend(reacIDs)
+    # Get products/substrates directly connected to filter
+    reacIDs += flatten(g.in_edges(reacIDs)) + flatten(g.out_edges(reacIDs))
 
-    h = g.subgraph(listofNodes)
-    hGraphviz = str(nx.to_agraph(h).to_string())
-    return hGraphviz
-
+    h = g.subgraph(reacIDs)
+    return h
 
 def calcReactions(jsonGraph, nodeDic, fluxResults):
     """
