@@ -2461,7 +2461,7 @@ class Genome(Molecule):
         if len(accession) > 0:
             record.annotations["accession"] = accession[0].xid
 
-        record.annotations["date"] = self.detail.date.strftime("%d-%b-%Y").upper()
+        record.annotations["date"] = self.last_revision().detail.date.strftime("%d-%b-%Y").upper()
         record.annotations["source"] = species.name
         record.annotations["organism"] = species.name
         record.annotations["comment"] = self.comments
@@ -4005,7 +4005,7 @@ class ProteinMonomer(Protein):
         if len(accession) > 0:
             record.annotations["accession"] = accession[0].xid
 
-        record.annotations["date"] = self.detail.date.strftime("%d-%b-%Y").upper()
+        record.annotations["date"] = self.last_revision().detail.date.strftime("%d-%b-%Y").upper()
         record.annotations["source"] = species.name
         record.annotations["organism"] = species.name
         record.annotations["comment"] = self.comments
