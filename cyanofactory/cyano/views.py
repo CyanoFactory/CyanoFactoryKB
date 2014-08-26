@@ -427,23 +427,27 @@ def search_haystack(request, species, query):
 
     model_type = request.GET.get('model_type', '')
 
-    if facets.facet_counts():
-        tmp = facets.facet_counts()['fields']['model_type']
-        ##print tmp
-        for tmp2 in tmp:
-            ##print "tmp2", tmp2
-            model_name = cmodels.TableMeta.objects.get(model_name__iexact=tmp2[0]).model_name
-            model_name_facet.append({
-                'name':model_name,
-                'verbose_name': chelpers.getModel(model_name)._meta.verbose_name,
-                'count':tmp2[1],
-                })
-            models.append(chelpers.getModel(model_name))
-        model_name_facet.sort(lambda x, y:cmp(x['verbose_name'], y['verbose_name']))
+    try:
+        if facets.facet_counts():
+            tmp = facets.facet_counts()['fields']['model_type']
+            ##print tmp
+            for tmp2 in tmp:
+                ##print "tmp2", tmp2
+                model_name = cmodels.TableMeta.objects.get(model_name__iexact=tmp2[0]).model_name
+                model_name_facet.append({
+                    'name':model_name,
+                    'verbose_name': chelpers.getModel(model_name)._meta.verbose_name,
+                    'count':tmp2[1],
+                    })
+                models.append(chelpers.getModel(model_name))
+            model_name_facet.sort(lambda x, y:cmp(x['verbose_name'], y['verbose_name']))
 
-        #narrow search by facets
-        if model_type:
-            results = results.filter(model_type=model_type)
+            #narrow search by facets
+            if model_type:
+                results = results.filter(model_type=model_type)
+    except TypeError:
+        # passing ".." results in TypeError: SWIG director type mismatch in output value of type
+        pass
 
     #order results
     results = results.order_by('wid')
@@ -485,7 +489,7 @@ def listing(request, species, model):
 
     objects = model.objects.for_species(species)
 
-    facet_fields = []    
+    facet_fields = []
     for field_full_name in model._meta.facet_fields:
         #facet
         field_names = str(field_full_name).split('__')
