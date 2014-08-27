@@ -4,11 +4,13 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
+from collections import OrderedDict
 
 import re
 
 class OptGeneParser:
-    """Parses the specified OptGene file.
+    """
+    Parses the specified OptGene file.
     
     OptGene (or BioOpt) is a text data format to describe interaction
     between different metabolites.
@@ -72,11 +74,14 @@ class OptGeneParser:
         self.header = []
         self.errors = []
         self.line_no = 0
-        self.current_section = self._parse_header
+        self.current_section_name = ""
+        self.current_section = OptGeneParser._parse_header
         self.reactions = []
         self.temp_comment_storage = []
         self.multi_line_comment = False
+        self.unknown_sections = OrderedDict()
         self._objective = None
+        self._design_objective = None
 
         self.parse()
 
@@ -91,6 +96,18 @@ class OptGeneParser:
                 self._objective = value
 
         raise ValueError("Objective not in model: " + value.name)
+
+    @property
+    def design_objective(self):
+        return self._objective
+
+    @design_objective.setter
+    def design_objective(self, value):
+        for reac in self.reactions:
+            if reac is value:
+                self._design_objective = value
+
+        raise ValueError("Design objective not in model: " + value.name)
 
     def add_reaction(self, reaction):
         for reac in self.reactions:
@@ -257,11 +274,22 @@ class OptGeneParser:
             self._constraint = value
 
         def __repr__(self):
+            def reac_printer(arg):
+                stoic, metabolite = arg
+
+                if stoic == 1:
+                    return str(metabolite)
+                else:
+                    if stoic == int(stoic):
+                        stoic = int(stoic)
+
+                    return "%s %s" % (stoic, str(metabolite))
+
             return "{} : {} {} {}".format(
                 self.name,
-                " + ".join(map(lambda x: "%s %s" % (x[0], x[1]), zip(self.reactants_stoic, self.reactants))),
+                " + ".join(map(reac_printer, zip(self.reactants_stoic, self.reactants))),
                 "<->" if self.reversible else "->",
-                " + ".join(map(lambda x: "%s %s" % (x[0], x[1]), zip(self.products_stoic, self.products))))
+                " + ".join(map(reac_printer, zip(self.products_stoic, self.products))))
 
     def has_metabolite(self, name):
         from itertools import chain
@@ -319,6 +347,7 @@ class OptGeneParser:
 
             reaction = self.get_reaction(name)
             reaction.comments["constraints"] = self.temp_comment_storage
+            self.temp_comment_storage = []
             reaction.constraint = [begin, end]
         else:
             raise ValueError("No interval found")
@@ -331,34 +360,41 @@ class OptGeneParser:
         metabolite = OptGeneParser.Metabolite.instance(line)
         metabolite.external = True
 
-        # Create reaction for external meta
-        reaction = OptGeneParser.Reaction(
-            metabolite.name + "_ext_transp",
-            products=[metabolite],
-            products_stoic=[1.0],
-            reversible=True
-        )
-
-        self.add_reaction(reaction)
-
         self.temp_comment_storage = []
 
     def _parse_objective(self, line):
         m = re.match(r"^(.+)\s+(-?[0-9]+)\s+(-?[0-9]+)$", line)
         if m:
+            if self.objective is not None:
+                raise ValueError("Only one objective supported: " + line)
+
             self.objective = self.get_reaction(m.group(1))
+            self.objective.comments["objective"] = self.temp_comment_storage
+            self.temp_comment_storage = []
         else:
             raise ValueError("Invalid Objective " + line)
 
     def _parse_design_objective(self, line):
         m = re.match(r"^(.+)\s+(-?[0-9]+)\s+(-?[0-9]+)$", line)
         if m:
-            pass
+            if self.design_objective is not None:
+                raise ValueError("Only one design objective supported: " + line)
+
+            self.design_objective = self.get_reaction(m.group(1))
+            self.design_objective.comments["design objective"] = self.temp_comment_storage
+            self.temp_comment_storage = []
         else:
             raise ValueError("Invalid Design Objective " + line)
 
     def _parse_unknown(self, line):
-        print "Unknown", line
+        if not self.current_section_name in self.unknown_sections:
+            self.unknown_sections[self.current_section_name] = []
+
+        for item in self.temp_comment_storage:
+            self.unknown_sections[self.current_section_name].append(item)
+        self.temp_comment_storage = []
+
+        self.unknown_sections[self.current_section_name].append(line)
 
     Sections = {
         "reactions": _parse_reactions,
@@ -404,9 +440,10 @@ class OptGeneParser:
                 continue
             elif line.startswith("-"):
                 if len(self.temp_comment_storage) > 0:
-                    self._add_error(line_no, "Lonely comment omitted: " + "; ".join(self.temp_comment_storage))
+                    self._add_error(line_no, "End of section comment omitted: " + "; ".join(self.temp_comment_storage))
                     self.temp_comment_storage = []
-                self.current_section = self.Sections.get(line[1:].lower(), OptGeneParser._parse_unknown)
+                self.current_section_name = line[1:]
+                self.current_section = self.Sections.get(self.current_section_name.lower(), OptGeneParser._parse_unknown)
                 continue
 
             try:
@@ -414,6 +451,14 @@ class OptGeneParser:
             except ValueError as e:
                 self._add_error(line_no, str(e))
                 self.temp_comment_storage = []
+
+        # Check for reactions that have same name as metabolites
+        metabolites = self.get_metabolites()
+        for reaction in self.reactions:
+            for metabolite in metabolites:
+                if reaction.name == metabolite.name:
+                    self._add_error(0, "Reaction %s conflicted with metabolite %s and was renamed" % (reaction.name, metabolite))
+                    reaction.name += "_reac"
 
     def write(self, handle):
         for item in self.header:
@@ -444,15 +489,51 @@ class OptGeneParser:
 
             handle.write(metabolite.name + "\n")
 
+        if self.objective:
+            handle.write("\n-OBJECTIVE\n\n")
+
+            for comment in self.objective.comments.get("objective", []):
+                handle.write(comment + "\n")
+
+            handle.write(self.objective.name + " 1 1\n")
+
+        if self.design_objective:
+            handle.write("\n-DESIGNOBJ\n\n")
+
+            for comment in self.design_objective.comments.get("design objective", []):
+                handle.write(comment + "\n")
+
+            handle.write(self.design_objective.name + " 1 1\n")
+
+        for unknown_section in self.unknown_sections:
+            handle.write("\n-" + unknown_section + "\n\n")
+
+            for line in self.unknown_sections[unknown_section]:
+                handle.write(line + "\n")
+
     def fba(self):
         """
         Simplex algorithm through glpk.
         """
+        if self.objective is None:
+            raise ValueError("No objective specified")
+
+        # Create fake reactions for external metabolites
+        fba_reactions = self.reactions[:]
+        for metabolite in self.get_metabolites():
+            reaction = OptGeneParser.Reaction(
+                metabolite.name + "_transp\x00",
+                products=[metabolite],
+                products_stoic=[1.0],
+                reversible=True
+            )
+
+            fba_reactions.append(reaction)
 
         # Calculate stoic
         stoic = []
         metabolites = self.get_metabolites()
-        for i, reac in enumerate(self.reactions):
+        for i, reac in enumerate(fba_reactions):
             for j, substrate in enumerate(zip(reac.reactants, reac.reactants_stoic)):
                 subst, subst_stoic = substrate
                 mi = metabolites.index(subst)
@@ -468,17 +549,17 @@ class OptGeneParser:
         lp = glpk.LPX()
         lp.name = " FBA SOLUTION "
         lp.rows.add(len(metabolites))
-        lp.cols.add(len(self.reactions))
+        lp.cols.add(len(fba_reactions))
 
         for i, met in enumerate(metabolites):
             lp.rows[i].name = met.name
 
-        for i, reac in enumerate(self.reactions):
+        for i, reac in enumerate(fba_reactions):
             lp.cols[i].name = reac.name
 
         #constraints
 
-        for i, reac in enumerate(self.reactions):
+        for i, reac in enumerate(fba_reactions):
             lp.cols[i].bounds = tuple(reac.constraint)
             print tuple(reac.constraint)
 
@@ -486,9 +567,9 @@ class OptGeneParser:
             lp.rows[n].bounds = (0., 0.)
 
         ###### Objective
-        lista = [0. for ele in self.reactions]
+        lista = [0. for ele in fba_reactions]
 
-        for i, reac in enumerate(self.reactions):
+        for i, reac in enumerate(fba_reactions):
             if self.objective is reac:
                 lista[i] = 1.0
 
@@ -498,7 +579,7 @@ class OptGeneParser:
         lp.matrix = stoic
         lp.simplex()
 
-        for flux, reac in zip(lp.cols, self.reactions):
+        for flux, reac in zip(lp.cols, fba_reactions):
             flux = flux.value
 
             reac.flux = round(flux, 9)
