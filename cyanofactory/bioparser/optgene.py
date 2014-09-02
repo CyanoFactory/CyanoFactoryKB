@@ -163,7 +163,7 @@ class OptGeneParser:
             return self.name
 
     class Reaction(object):
-        def __init__(self, name, reactants=[], reactants_stoic=[], products=[], products_stoic=[], reversible=False):
+        def __init__(self, name, reactants=[], reactants_stoic=[], products=[], products_stoic=[], reversible=False, disabled=False):
             self.name = name
             self.reactants = reactants
             self.reactants_stoic = reactants_stoic
@@ -173,6 +173,7 @@ class OptGeneParser:
             self.comments = {}
             self._constraint = None
             self.flux = None
+            self.disabled = disabled
 
         def replace_with(self, with_reaction):
             self.name = with_reaction.name
@@ -182,6 +183,7 @@ class OptGeneParser:
             self.products_stoic = with_reaction.products_stoic
             self.reversible = with_reaction.reversible
             self.constraint = with_reaction.constraint
+            self.disabled = with_reaction.disabled
 
         @staticmethod
         def from_string(string):
@@ -248,13 +250,19 @@ class OptGeneParser:
 
                 line = line[1:]
 
+            disabled = False
+            if name[:1] == "!":
+                name = name[1:]
+                disabled = True
+
             return OptGeneParser.Reaction(
                 name,
                 reactants=map(lambda x: x[1], reactants),
                 reactants_stoic=map(lambda x: x[0], reactants),
                 products=map(lambda x: x[1], products),
                 products_stoic=map(lambda x: x[0], products),
-                reversible=arrow == "<->"
+                reversible=arrow == "<->",
+                disabled=disabled
             )
 
         def is_constrained(self):
@@ -285,7 +293,8 @@ class OptGeneParser:
 
                     return "%s %s" % (stoic, str(metabolite))
 
-            return "{} : {} {} {}".format(
+            return "{}{} : {} {} {}".format(
+                "!" if self.disabled else "",
                 self.name,
                 " + ".join(map(reac_printer, zip(self.reactants_stoic, self.reactants))),
                 "<->" if self.reversible else "->",
@@ -519,10 +528,10 @@ class OptGeneParser:
             raise ValueError("No objective specified")
 
         # Create fake reactions for external metabolites
-        fba_reactions = self.reactions[:]
-        for metabolite in self.get_metabolites():
+        fba_reactions = filter(lambda x: not x.disabled, self.reactions[:])
+        for metabolite in filter(lambda x: x.external, self.get_metabolites()):
             reaction = OptGeneParser.Reaction(
-                metabolite.name + "_transp\x00",
+                metabolite.name + "_transp",
                 products=[metabolite],
                 products_stoic=[1.0],
                 reversible=True
@@ -561,7 +570,7 @@ class OptGeneParser:
 
         for i, reac in enumerate(fba_reactions):
             lp.cols[i].bounds = tuple(reac.constraint)
-            print tuple(reac.constraint)
+            #print tuple(reac.constraint)
 
         for n in xrange(len(metabolites)):
             lp.rows[n].bounds = (0., 0.)

@@ -79,7 +79,8 @@ def get_reactions(request, pk):
                 "substrates": map(lambda m: m.name, enzyme.reactants),
                 "products": map(lambda m: m.name, enzyme.products),
                 "reversible": enzyme.reversible,
-                "constraints": enzyme.constraint
+                "constraints": enzyme.constraint,
+                "disabled": enzyme.disabled
             })
 
     #graphInfos = drawDesign(org)
@@ -98,11 +99,147 @@ def get_reactions(request, pk):
 @login_required
 @ajax_required
 def simulate(request, pk):
-    if not all(x in request.POST for x in ["commands", "disabled", "objective"]):
+    if not all(x in request.POST for x in ["commands", "disabled", "objective", "display", "auto_flux"]):
         return HttpResponseBadRequest("Request incomplete")
 
     try:
         content = DesignModel.objects.get(user=request.user.profile, pk=pk).content
+    except ObjectDoesNotExist:
+        return HttpResponseBadRequest("Bad Model")
+
+    org = model_from_string(content)
+
+    try:
+        commands = json.loads(request.POST["commands"])
+        disabled = json.loads(request.POST["disabled"])
+        objective = json.loads(request.POST["objective"])
+        display = json.loads(request.POST["display"])
+        auto_flux = json.loads(request.POST["auto_flux"])
+    except ValueError:
+        return HttpResponseBadRequest("Invalid JSON data")
+
+    try:
+        auto_flux = bool(auto_flux)
+    except ValueError:
+        return HttpResponseBadRequest("Invalid data type")
+
+    if not all(isinstance(x, list) for x in [commands, disabled, display]):
+        return HttpResponseBadRequest("Invalid data type")
+
+    if not isinstance(objective, basestring):
+        return HttpResponseBadRequest("Invalid data type")
+
+    try:
+        org = apply_commandlist(org, commands)
+        obj_reac = org.get_reaction(objective)
+        if obj_reac is None:
+            raise ValueError("Objective not in model: " + objective)
+        org.objective = obj_reac
+    except ValueError as e:
+        return HttpResponseBadRequest("Model error: " + e.message)
+
+    for reaction in org.reactions:
+        reaction.disabled = False
+
+    for item in disabled:
+        try:
+            reac = org.get_reaction(item)
+        except ValueError:
+            return HttpResponseBadRequest("Bad disabled list: " + item)
+
+        reac.disabled = True
+
+    if obj_reac.disabled:
+        return HttpResponseBadRequest("Objective disabled: " + objective)
+
+    for item in display:
+        if not org.has_reaction(item):
+            return HttpResponseBadRequest("Bad display list: " + item)
+
+    try:
+        org.fba()
+    except ValueError as e:
+        return HttpResponseBadRequest("FBA error: " + e.message)
+
+    graphInfo = drawDesign(org)
+    xgraph = graphInfo[0]
+    nodeIDs = graphInfo[1]
+    full_g = calcReactions(xgraph, nodeIDs, org)
+
+    import itertools
+
+    display = json.loads(request.POST["display"])
+
+    # Auto filter by FBA
+    if auto_flux:
+        flux = filter(lambda x: not x.disabled, org.reactions[:])
+        flux = sorted(flux, key=lambda x: -x.flux)
+        display = map(lambda x: x.name, flux[:10])
+
+    g = getSelectedReaction(json_graph.node_link_data(full_g), nodeIDs, display)
+
+    # Add Pseudopaths
+    for reac_pairs in itertools.combinations(display, 2):
+        if not has_path(g, nodeIDs[reac_pairs[0]], nodeIDs[reac_pairs[1]]):
+            # Test for theoretical path
+            try:
+                all_paths = all_shortest_paths(full_g, nodeIDs[reac_pairs[0]], nodeIDs[reac_pairs[1]])
+
+                for path in all_paths:
+                    # Take second to last
+                    #g.add_edge(path[1], path[-2])
+                    #print "Pseudopath from", path[1], "to", path[-2]
+                    pass
+            except NetworkXNoPath:
+                pass
+
+        if not has_path(g, nodeIDs[reac_pairs[1]], nodeIDs[reac_pairs[0]]):
+            # Test for theoretical path
+            try:
+                all_paths = all_shortest_paths(full_g, nodeIDs[reac_pairs[1]], nodeIDs[reac_pairs[0]])
+
+                for path in all_paths:
+                    # Take second to last
+                    #g.add_edge(path[1], path[-2])
+                    #print "Pseudopath from", path[1], "to", path[-2]
+                    pass
+            except NetworkXNoPath:
+                pass
+
+    graph = nx.to_agraph(g)
+    graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
+    graph.node_attr.update(style="filled", colorscheme="pastel19")
+    outgraph = str(graph.to_string())
+
+    return HttpResponse(outgraph)
+
+@login_required
+def export(request, pk):
+    try:
+        model = DesignModel.objects.get(user=request.user.profile, pk=pk)
+        content = model.content
+    except ObjectDoesNotExist:
+        return HttpResponseBadRequest("Bad Model")
+
+    response = HttpResponse(
+        content,
+        mimetype="application/x-bioopt; charset=UTF-8",
+        content_type="application/x-bioopt; charset=UTF-8"
+    )
+    response['Content-Disposition'] = "attachment; filename=" + model.filename
+
+    return response
+
+
+@login_required
+@ajax_required
+def save(request, pk):
+    if not all(x in request.POST for x in ["commands", "disabled", "objective"]):
+        return HttpResponseBadRequest("Request incomplete")
+
+    try:
+        model = DesignModel.objects.get(user=request.user.profile, pk=pk)
+        content = model.content
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
 
@@ -130,59 +267,25 @@ def simulate(request, pk):
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + e.message)
 
-    try:
-        org.fba()
-    except ValueError as e:
-        return HttpResponseBadRequest("FBA error: " + e.message)
+    for reaction in org.reactions:
+        reaction.disabled = False
 
-    graphInfo = drawDesign(org)
-    xgraph = graphInfo[0]
-    nodeIDs = graphInfo[1]
-    full_g = calcReactions(xgraph, nodeIDs, org)
+    for item in disabled:
+        try:
+            reac = org.get_reaction(item)
+        except ValueError:
+            return HttpResponseBadRequest("Bad disabled list: " + item)
 
-    import itertools
-    reacs = ["reac4", "reac1", "reac7"]
-    #reacs = ["Biomass", "2.7.1.2a", "H2O", "PROTONS", "Trpbm"]
+        reac.disabled = True
 
-    g = getSelectedReaction(json_graph.node_link_data(full_g), nodeIDs, reacs)
+    from StringIO import StringIO
+    sio = StringIO()
+    org.write(sio)
+    model.content = sio.getvalue()
+    model.save()
 
-    # Add Pseudopaths
-    for reac_pairs in itertools.combinations(reacs, 2):
-        if not has_path(g, nodeIDs[reac_pairs[0]], nodeIDs[reac_pairs[1]]):
-            # Test for theoretical path
-            try:
-                all_paths = all_shortest_paths(full_g, nodeIDs[reac_pairs[0]], nodeIDs[reac_pairs[1]])
+    return HttpResponse("OK")
 
-                for path in all_paths:
-                    # Take second to last
-                    g.add_edge(path[1], path[-2])
-                    print "Pseudopath from", path[1], "to", path[-2]
-            except NetworkXNoPath:
-                pass
-
-        if not has_path(g, nodeIDs[reac_pairs[1]], nodeIDs[reac_pairs[0]]):
-            # Test for theoretical path
-            try:
-                all_paths = all_shortest_paths(full_g, nodeIDs[reac_pairs[1]], nodeIDs[reac_pairs[0]])
-
-                for path in all_paths:
-                    # Take second to last
-                    g.add_edge(path[1], path[-2])
-                    print "Pseudopath from", path[1], "to", path[-2]
-            except NetworkXNoPath:
-                pass
-
-    graph = nx.to_agraph(g)
-    graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
-    graph.node_attr.update(style="filled", colorscheme="pastel19")
-    outgraph = str(graph.to_string())
-
-    return HttpResponse(outgraph)
-
-@login_required
-@ajax_required
-def export(request):
-    pass
 
 @login_required
 def upload(request):
@@ -271,7 +374,7 @@ def drawDesign(org):
                 graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
                 if enzyme.reversible:
                     graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
-    print nodeDic
+
     graphJson = json_graph.node_link_data(graph)
     data = [graphJson, nodeDic]
 
@@ -291,7 +394,6 @@ def getSelectedReaction(jsonGraph, nodeDic, reacIDs):
     """
     # Translate reac names to IDs
     reacIDs = map(lambda x: nodeDic[x], reacIDs)
-    print reacIDs
     g = json_graph.node_link_graph(jsonGraph)
 
     # Get products/substrates directly connected to filter
@@ -309,9 +411,8 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
     @type fluxResults: bioparser.optgene.OptGeneParser
     @return Graph with added Attributes
     """
-    print nodeDic
     changeDic = {}
-    reactions = fluxResults.reactions
+    reactions = filter(lambda x: not x.disabled, fluxResults.reactions)
     for reaction in reactions:
         if not reaction.name.endswith("_transp"):
             changeDic[reaction.name] = reaction.flux
@@ -325,6 +426,9 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
         vList[i] = math.sqrt(math.pow(vList[i], 2))
     vList = sorted(vList)
 
+    if len(vList) == 0:
+        return g
+
     oldMin = vList[0]
     oldMax = vList[-1]
     oldRange = oldMax - oldMin
@@ -336,7 +440,6 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
         node = nodeDic[key]
         value = changeDic[key]
 
-        print value
         color = "black"
         if value < 0:
             color = "red"

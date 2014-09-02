@@ -15,6 +15,7 @@ urlpatterns = patterns('cyanodesign.views',
     url(r'^edit/' + pk_str, 'design', name="cyano-design-design"),
     url(r'^get_reactions/' + pk_str, 'get_reactions', name="cyano-design-get-reactions"),
     url(r'^simulate/' + pk_str, 'simulate', name="cyano-design-simulate"),
-    url(r'^export/$', 'export'),
+    url(r'^export/' + pk_str, 'export', name="cyano-design-export"),
+    url(r'^save/' + pk_str, 'save', name="cyano-design-save"),
     url(r'^delete/$', 'delete', name="cyano-design-delete")
 )

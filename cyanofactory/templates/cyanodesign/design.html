@@ -22,8 +22,10 @@ Released under the MIT license
 <script src="{% get_static_prefix %}stringdb/d3/d3.v3.min.js"></script>
 <script src="{% get_static_prefix %}cyano/js/viz.js"></script>
 <script type="text/javascript">
+
     var enzymes = [];
     var metabolites = [];
+    var enzymes_design = [];
     var design_objective;
     var dialog_metabolite_edit;
     var dialog_enzyme;
@@ -40,6 +42,7 @@ Released under the MIT license
     var metabolite_combobox;
     var command_list = [];
     var svg;
+    var design_objective_visible_combobox;
 
     function Filter() {};
 
@@ -246,6 +249,7 @@ Released under the MIT license
         enzyme.stoichiometric_products = reaction.stoichiometric[1];
         enzyme.reversible = reaction.reversible;
         enzyme.constraints = reaction.constraints;
+        enzyme.enabled = !reaction.disabled;
 
         return enzyme;
     }
@@ -263,6 +267,7 @@ Released under the MIT license
         add_button = $("#add-button");
         delete_button = $("#delete-button");
         metabolite_combobox = $("#metabolite-combobox");
+        design_objective_visible_combobox = $("#design-objective-visible-combobox");
 
         add_button.hide();
         delete_button.hide();
@@ -298,15 +303,50 @@ Released under the MIT license
                             filter(function(value) { return !value.enabled; }).
                             map(function(value) { return value.name })
                     ),
-                    "objective": JSON.stringify(cyano_design_objective_select.val())
+                    "objective": JSON.stringify(cyano_design_objective_select.val()),
+                    "display": JSON.stringify(enzymes_design.map(function(obj) { return obj.name; })),
+                    "auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
                 }
             }).done(function(x) {
                 var graph = Viz(x, "svg", "dot");
+                simulation_result.hide();
+                $("#visual").show();
+                $("#visual").val(graph);
                 document.getElementById("visual").innerHTML = graph;
                 dialog_progressbar.dialog("close");
 
                 //command_list = [];
             }).error(function(x) {
+                $("#visual").hide();
+                simulation_result.show();
+                simulation_result.text("");
+                $("<pre></pre>").text(x.status + " " + x.statusText + ": " + x.responseText).appendTo(simulation_result);
+                dialog_progressbar.dialog("close");
+            });
+        });
+
+        $("#design-save").click(function(event) {
+            dialog_progressbar.dialog("open");
+            $.ajax({
+                url: "{% url "cyano-design-save" pk=pk %}",
+                type: "POST",
+                context: document.body,
+                data: {
+                    "commands": JSON.stringify(command_list),
+                    "disabled": JSON.stringify(
+                            enzymes.
+                            filter(function(value) { return !value.enabled; }).
+                            map(function(value) { return value.name })
+                    ),
+                    "objective": JSON.stringify(cyano_design_objective_select.val()),
+                }
+            }).done(function(x) {
+                dialog_progressbar.dialog("close");
+
+                command_list = [];
+            }).error(function(x) {
+                $("#visual").hide();
+                simulation_result.show();
                 simulation_result.text("");
                 $("<pre></pre>").text(x.status + " " + x.statusText + ": " + x.responseText).appendTo(simulation_result);
                 dialog_progressbar.dialog("close");
@@ -368,9 +408,17 @@ Released under the MIT license
             }
         }
 
+        function getEnzymeByName(name) {
+            return enzymes.find(function(obj) {
+                if (obj.name == name) {
+                    return true;
+                }
+                return false;
+            });
+        }
+
         function updateEnzymeList() {
             $(cyano_design_enzymes).text("");
-            $(cyano_design_objective_select).text("");
             var shown = 0;
 
             for (var i = 0; i < enzymes.length; ++i) {
@@ -384,10 +432,16 @@ Released under the MIT license
                     enzyme.toHTML().appendTo(cyano_design_enzymes);
                     shown++;
                 }
-                $("<option></option>").text(enzyme.name).appendTo(cyano_design_objective_select);
             }
 
             $(".cyano-design-filter-text").text(shown + " of " + enzymes.length + " reactions displayed.");
+        }
+
+        function updateEnzymeDesignList() {
+            $(".cyano-design-reactions").text("");
+            enzymes_design.forEach(function(obj) {
+                $("<div></div>").addClass("cyano-design-reaction").text(obj.name).appendTo(".cyano-design-reactions");
+            });
         }
 
         function showEnzymeDialog(enzyme, create_new) {
@@ -455,6 +509,7 @@ Released under the MIT license
             dialog_metabolite_add.data("object", enzyme);
             dialog_metabolite_add.data("substrate", isSubstrate);
             dialog_metabolite_add.dialog("open");
+            $(dialog_metabolite_add.find(".custom-combobox-input")).value("");
         }
 
         function saveEnzyme(enzyme) {
@@ -614,7 +669,7 @@ Released under the MIT license
                         var enzyme = $(this).data("object");
                         var isSubstrate = $(this).data("substrate");
                         // Check if metabolite already exists
-                        var idx = indexOfMetabolite(name.val())
+                        var idx = indexOfMetabolite(name.val());
                         if (idx == -1) {
                             metabolites.push(new Metabolite(name.val(), false));
                             // command_list.push(["metabolite", name.val(), "add", name.val()]);
@@ -656,6 +711,13 @@ Released under the MIT license
             saveEnzyme(dialog_enzyme.data("object"));
             showAddMetaboliteDialog(dialog_enzyme.data("object"), false);
         });
+        $(".cyano-design-reactions").on("click", ".cyano-design-reaction", function() {
+            var index = enzymes_design.indexOf(getEnzymeByName($(this).text()));
+            if (index > -1) {
+                enzymes_design.splice(index, 1);
+            }
+            updateEnzymeDesignList();
+        });
         dialog_enzyme.on("click", "div.cyano-metabolite", function(event) {
             var item = $(event.target).data("object");
             saveEnzyme(dialog_enzyme.data("object"));
@@ -688,13 +750,21 @@ Released under the MIT license
             var index = target.data("count");
             dialog_enzyme.data("substrates_del").push(index);
             target.parent().remove();
-        })
+        });
         dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(event) {
             var target = $(event.target);
             var index = target.data("count");
             dialog_enzyme.data("products_del").push(index);
             target.parent().remove();
+        });
+        $("#auto_flux").prop("checked", true);
+        $(".cyano-design-reaction-filter").hide();
+        $("#auto_flux").change(function() {
+            $(".cyano-design-reaction-filter").hide();
         })
+        $("#manual_flux").change(function() {
+            $(".cyano-design-reaction-filter").show();
+        });
         dialog_progressbar.dialog({
             autoOpen: false,
             height: 'auto',
@@ -730,7 +800,7 @@ Released under the MIT license
                 $(this).find("fieldset > div").each(function() {
                     $(this).find("select").each(function() {
                         $($(this).children()[this.selectedIndex]).attr("selected", "selected");
-                    })
+                    });
                 });
 
                 $(this).data("filter", $(this).find("fieldset > div").clone());
@@ -739,122 +809,146 @@ Released under the MIT license
             }
         });
 
-        $.widget("custom.auto_combobox", {
-            _create: function () {
-                this.wrapper = $("<span>")
-                        .addClass("custom-combobox")
-                        .insertAfter(this.element);
-                this.element.hide();
-                this._createAutocomplete();
-                this._createShowAllButton();
+        (function ($) {
+        $.widget("ui.combobox", {
+            _create: function() {
+                var wrapper = this.wrapper = $("<span />").addClass("ui-combobox")
+                    , self = this;
+
+                this.element.wrap(wrapper);
+
+                this.element
+                    .addClass("ui-state-default ui-combobox-input ui-widget ui-widget-content ui-corner-left")
+                    .autocomplete($.extend({
+                        minLength: 0
+                    }, this.options));
+
+                $("<a />")
+                    .insertAfter(this.element)
+                    .button({
+                        icons: {
+                            primary: "ui-icon-triangle-1-s"
+                        },
+                        text: false
+                    })
+                    .removeClass("ui-corner-all")
+                    .addClass("ui-corner-right ui-combobox-toggle")
+                    .click(function () {
+                        if (self.element.autocomplete("widget" ).is(":visible")) {
+                            self.element.autocomplete("close");
+                            return;
+                        }
+
+                        $(this).blur();
+
+                        self.element.autocomplete("search", "");
+                        self.element.focus();
+                    });
             },
-            _createAutocomplete: function () {
-                var selected = this.element.children(":selected"),
-                        value = selected.val() ? selected.text() : "";
-                this.input = $("<input>")
-                        .appendTo(this.wrapper)
-                        .val(value)
-                        .attr("title", "")
-                        .addClass("custom-combobox-input ui-widget ui-widget-content ui-state-default ui-corner-left")
-                        .autocomplete({
-                            delay: 0,
-                            minLength: 0,
-                            source: $.proxy(this, "_source")
-                        })
-                        .tooltip({
-                            tooltipClass: "ui-state-highlight"
-                        });
-                /*this.input.data("ui-autocomplete")._renderItem = function(ul, item) {
-                    $("<li>").append("<i>" + item.label + "</i>").appendTo(ul);
-                    return ul;
-                };*/
-                this._on(this.input, {
-                    autocompleteselect: function (event, ui) {
-                        ui.item.option.selected = true;
-                        this._trigger("select", event, {
-                            item: ui.item.option
-                        });
-                    },
-                    autocompletechange: "_removeIfInvalid"
-                });
-            },
-            _createShowAllButton: function () {
-                var input = this.input,
-                        wasOpen = false;
-                $("<a>")
-                        .attr("tabIndex", -1)
-                        .attr("title", "Show All Items")
-                        .tooltip()
-                        .appendTo(this.wrapper)
-                        .button({
-                            icons: {
-                                primary: "ui-icon-triangle-1-s"
-                            },
-                            text: false
-                        })
-                        .removeClass("ui-corner-all")
-                        .addClass("custom-combobox-toggle ui-corner-right")
-                        .mousedown(function () {
-                            wasOpen = input.autocomplete("widget").is(":visible");
-                        })
-                        .click(function () {
-                            input.focus();
-// Close if already visible
-                            if (wasOpen) {
-                                return;
-                            }
-// Pass empty string as value to search for, displaying all results
-                            input.autocomplete("search", "");
-                        });
-            },
-            _source: function (request, response) {
-                var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
-                response(metabolites.filter(function (value) {
+
+            destroy: function() {
+                this.wrapper.remove();
+                $.Widget.prototype.destroy.call(this);
+            }
+        });
+        })(jQuery);
+
+        var metabolite_source = function(request, response) {
+            var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
+            var ret_val = metabolites.filter(function (value) {
                     var text = value.name;
-                    return true;
                     return !request.term || matcher.test(text);
-                }).map(function(value) {
+                }).map(function (value) {
                     return {
                         label: value.name,
                         value: value.name,
                         option: this
                     };
-                }));
-            },
-            _removeIfInvalid: function (event, ui) {
-// Selected an item, nothing to do
+                });
+            return response(ret_val);
+        };
+
+        metabolite_combobox.combobox({
+            source: metabolite_source,
+            change: function(event, ui) {
                 var creation = dialog_metabolite_add.find(".creationState");
                 creation.text("");
+
+                // Selected from dropdown, nothing to do
                 if (ui.item) {
                     return;
                 }
-// Search for a match (case-insensitive)
-                var value = this.input.val(),
-                        valueLowerCase = value.toLowerCase(),
-                        valid = false;
-                this.element.children("option").each(function () {
-                    if ($(this).text().toLowerCase() === valueLowerCase) {
-                        this.selected = valid = true;
-                        return false;
-                    }
-                });
-// Found a match, nothing to do
-                if (valid) {
-                    return;
+
+                // Search for a match (case-insensitive)
+                var value = event.currentTarget.value;
+                var valueLowerCase = value.toLowerCase();
+
+                if (metabolite_source({term:value}, function(arg) {
+                    return arg.filter(
+                        function(val) {
+                            return val.value.toLowerCase() == valueLowerCase;
+                        });
+                }).length == 1) {
+                    // Found a match, nothing to do
+                    return false;
                 }
 
-                //this.input.attr("title", "New metabolite will be created").tooltip("open");
-
-                var creation = dialog_metabolite_add.find(".creationState");
                 creation.text("A new metabolite will be created");
-            },
-            _destroy: function () {
-                this.wrapper.remove();
-                this.element.show();
             }
         });
-        metabolite_combobox.auto_combobox();
-        //$(".combobox").combobox();
+
+        var reac_filter_source = function(request, response) {
+            var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
+            var ret_val = enzymes.filter(function (value) {
+                var text = value.name;
+
+                // Reaction already selected?
+                var reac_in = enzymes_design.some(function(obj) {
+                    return obj.name.toLowerCase() == text.toLowerCase();
+                });
+
+                return !reac_in && (!request.term || matcher.test(text));
+            }).map(function (value) {
+                return {
+                    label: value.name,
+                    value: value.name,
+                    option: this
+                };
+            });
+            return response(ret_val);
+        };
+
+        var reac_source = function(request, response) {
+            var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
+            var ret_val = enzymes.filter(function (value) {
+                var text = value.name;
+
+                return !request.term || matcher.test(text);
+            }).map(function (value) {
+                return {
+                    label: value.name,
+                    value: value.name,
+                    option: this
+                };
+            });
+            return response(ret_val);
+        };
+
+        design_objective_visible_combobox.combobox({
+            source: reac_filter_source,
+            select: function(event, ui) {
+                enzymes_design.push(getEnzymeByName(ui.item.value));
+                enzymes_design.sort(function(a,b) {
+                    return a.name.localeCompare(b.name);
+                });
+                updateEnzymeDesignList();
+            }
+        });
+
+        cyano_design_objective_select.combobox({
+            source: reac_source
+        });
+
         $("#toggle").click(function () {
             metabolite_combobox.toggle();
         });
@@ -904,120 +998,8 @@ Released under the MIT license
 
         dialog_filter.find("[name=filter-template]").hide();
         dialog_filter.find("[name=filter-template]").clone().appendTo(
-            dialog_filter.find("fieldset")).attr("name", null).show();
+        dialog_filter.find("fieldset")).attr("name", null).show();
     });
-
-//Visualization
-    {
-        //var json_file = "{'directed': False, 'graph': [], 'nodes': [{'enzyme': True, 'reversible': False, 'id': 1, 'label': 'reac1'}, {'enzyme': False, 'id': 2, 'label': 'A_ext'}, {'enzyme': False, 'id': 3, 'label': 'A'}, {'enzyme': True, 'reversible': True, 'id': 4, 'label': 'reac2'}, {'enzyme': False, 'id': 6, 'label': 'B'}, {'enzyme': True, 'reversible': False, 'id': 7, 'label': 'reac3'}, {'enzyme': False, 'id': 9, 'label': 'C'}, {'enzyme': True, 'reversible': False, 'id': 10, 'label': 'reac4'}, {'enzyme': False, 'id': 13, 'label': 'D'}, {'enzyme': True, 'reversible': False, 'id': 14, 'label': 'reac5'}, {'enzyme': False, 'id': 16, 'label': 'D_ext'}, {'enzyme': True, 'reversible': False, 'id': 17, 'label': 'reac6'}, {'enzyme': False, 'id': 18, 'label': 'E_ext'}, {'enzyme': False, 'id': 19, 'label': 'E'}, {'enzyme': True, 'reversible': False, 'id': 20, 'label': 'reac7'}], 'links': [{'source': 0, 'target': 1}, {'source': 0, 'target': 2}, {'source': 2, 'target': 3}, {'source': 2, 'target': 5}, {'source': 3, 'target': 4}, {'source': 4, 'target': 7}, {'source': 5, 'target': 6}, {'source': 6, 'target': 7}, {'source': 7, 'target': 8}, {'source': 8, 'target': 14}, {'source': 8, 'target': 9}, {'source': 9, 'target': 10}, {'source': 11, 'target': 12}, {'source': 11, 'target': 13}, {'source': 13, 'target': 14}], 'multigraph': False}";
-        //var info = JSON.parse(json_file)
-
-        function visualize() {
-            var edges = d3.selectAll(".edge");
-
-            var graph = d3.select(".graph").select("polygon")
-                    .attr("stroke", "blue")
-                    .on("click", function (d) {
-                        nodes.select("polygon").attr("fill", "lightgrey");
-                        nodes.select("ellipse").attr("fill", "lightgrey");
-                        showAll();
-                    });
-            var texts = d3.selectAll("text")
-                    .on("click", function (d) {
-                        var parent = d3.select(this.parentNode);
-                        nodes.filter(function (d) {
-                            var anode = d3.select(this);
-                            if (anode.attr("id") == parent.attr("id")) {
-                                highlight(anode);
-                            }
-                        })
-
-                    })
-        }
-
-        function highlight(anode) {
-            nodes.selectAll("polygon").attr("fill", "lightgrey")
-            nodes.selectAll("ellipse").attr("fill", "lightgrey")
-            anode.select("polygon")
-                    .attr("fill", "orange");
-            anode.select("ellipse")
-                    .attr("fill", "orange");
-            showPath(anode, [], [])
-        }
-
-        function showAll() {
-            nodes.transition().duration(750).attr("opacity", 1);
-            edges.transition().duration(750).attr("opacity", 1);
-        }
-
-        /** Shows the Path from selected Node as far as it gets.
-         *  Only using svg information.*/
-        function showPath(anode, nodeworkedList, edgeworkedList) {
-            var anodeID = anode.attr("id")
-            var nodeTitle = anode.select("title").text();
-            if (nodeworkedList.indexOf(anodeID) == -1) {
-                nodeworkedList.push(anodeID)
-                edges.each(
-                        function (d) {
-                            if (edgeworkedList.indexOf(d3.select(this).select("title").text()) == -1) {
-                                var aedge = d3.select(this),
-                                        edgeTitle = aedge.select("title").text(),
-                                        edgeID = aedge.attr("id"),
-                                        re = /(\d+)->(\d+)/,
-                                        hit = re.exec(edgeTitle);
-                                if (hit[1] == nodeTitle) {
-                                    aedge.attr("opacity", "1")
-                                    var nextNode = "";
-                                    nodes.each(function (d) {
-                                        var viewedNode = d3.select(this);
-                                        if (viewedNode.select("title").text() == hit[2]) {
-                                            showPath(viewedNode, nodeworkedList, edgeworkedList)
-                                        }
-                                    })
-                                    edgeworkedList.push(edgeID);
-                                }
-                                else if (hit[2] == nodeTitle) {
-                                    var polygons = d3.select(this).selectAll("polygon");
-                                    if (polygons.size() > 1) {
-                                        var nextNode = "";
-                                        nodes.each(function (d) {
-                                            var viewedNode = d3.select(this);
-                                            if (viewedNode.select("title").text() == hit[1]) {
-                                                showPath(viewedNode, nodeworkedList, edgeworkedList);
-                                            }
-                                        })
-                                        edgeworkedList.push(edgeID);
-                                    }
-                                }
-                            }
-                        }
-                )
-            }
-            nodes.each(
-                    function (d) {
-                        var aNode = d3.select(this);
-                        if (nodeworkedList.indexOf(aNode.attr("id")) > -1) {
-                            aNode.transition().duration(750).attr("opacity", 1)
-                        }
-                        else {
-                            aNode.transition().duration(750).attr("opacity", 0)
-                        }
-                    }
-            )
-            edges.each(
-                    function (d) {
-                        var aEdge = d3.select(this);
-                        if (edgeworkedList.indexOf(aEdge.attr("id")) > -1) {
-                            aEdge.transition().duration(750).attr("opacity", 1);
-                        }
-                        else {
-                            aEdge.transition().duration(750).attr("opacity", 0);
-                        }
-                    }
-            )
-
-        }
-}
 </script>
 
 {% endblock %}
@@ -1061,7 +1043,7 @@ div.cyano-metabolite {
     display: inline;
 }
 
-div.cyano-reaction:hover,div.cyano-metabolite:hover {
+div.cyano-reaction:hover,div.cyano-metabolite:hover, div.cyano-design-reaction:hover {
     background-color: #E3E3E3;
     cursor: pointer;
 }
@@ -1099,6 +1081,25 @@ span.external-metabolite { color: blue }
 
 .ui-progressbar-value {
     background: rgb(61, 128, 179);
+}
+
+.ui-combobox {
+    position: relative;
+    display: inline-block;
+}
+.ui-combobox-toggle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    margin-left: -1px;
+    padding: 0;
+    /* adjust styles for IE 6/7 */
+    *height: 1.7em;
+    *top: 0.1em;
+}
+.ui-combobox-input {
+    margin: 0;
+    padding: 0.3em;
 }
 
 path.link {
@@ -1157,8 +1158,8 @@ path.link {
     <p class="validateTips"></p>
     <form>
         <fieldset>
-            <select id="metabolite-combobox">
-            </select>
+            <input id="metabolite-combobox">
+            </input>
         </fieldset>
     </form>
     <p class="creationState"></p>
@@ -1220,23 +1221,42 @@ path.link {
 <input type="submit" id="design-filters" value="Manage filters">
 </div>
 
+<div id="products">
+    <h1 class="ui-widget-header">Simulation settings</h1>
+
+    <div>
+        <input id="auto_flux" type="radio" name="flux" value="auto_flux" selected> Display reactions with highest flux<br>
+        <input id="manual_flux" type="radio" name="flux" value="manual_flux"> Display selected reactions<br>
+    </div>
+</div>
+
 <div class="cyano-design-objective">
-Design objective: <select id="cyano-design-objective-select"></select>
+    Design objective: <input id="cyano-design-objective-select"></select>
+</div>
+
+<input type="submit" id="design-save" value="Save">
+
+<div class="cyano-design-reaction-filter">
+    <h1 class="ui-widget-header">Select visible reactions</h1>
+    <input id="design-objective-visible-combobox">
+    </input>
+    <div class="cyano-design-reactions">
+    </div>
 </div>
 
 <div class="cyano-design-submit">
+<h1 class="ui-widget-header">Start simulation</h1>
 <input type="submit" id="design-submit" value="Simulate">
 </div>
 
-<div id="products">
-    <h1 class="ui-widget-header">Results</h1>
+<h1 class="ui-widget-header">Results</h1>
 
-    <div id="simulation-result">
+<div id="simulation-result">
 
-    </div>
-    <div id="visual">
+</div>
+<div id="visual">
 
-    </div>
+</div>
 </div>
 
 {% endblock %}
