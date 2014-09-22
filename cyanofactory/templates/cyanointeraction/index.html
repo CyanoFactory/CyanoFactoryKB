@@ -21,8 +21,8 @@ Released under the MIT license
 <script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless.js"></script>
 <script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless_on_scroll.js"></script>
 <script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
-<script src="{% get_static_prefix %}stringdb/d3/d3.v3.min.js"></script>
-<script src="{% get_static_prefix %}stringdb/d3-tip.js"></script>
+<script src="{% get_static_prefix %}cyanointeraction/d3/d3.v3.min.js"></script>
+<script src="{% get_static_prefix %}cyanointeraction/d3-tip.js"></script>
 <script type="text/javascript">
 {% include "kegg/script.js" %}
 </script>
@@ -749,7 +749,7 @@ Released under the MIT license
                                                     id = d.id;
                                                 }
                                         })
-                                        var url = "{% url "stringdb.views.checkRequest" %}?requestID="+id;
+                                        var url = "{% url "cyanointeraction.views.checkRequest" %}?requestID="+id;
                                         return url;
                                 })
                                 .append("text")
@@ -789,10 +789,10 @@ Released under the MIT license
                 if(amount != 0){
                     var text = "";
                     if(selectedItem[0] == "C"){
-                        text = "{% url "stringdb.views.onlyChemGraph" %}?chemid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
+                        text = "{% url "cyanointeraction.views.onlyChemGraph" %}?chemid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
                     }
                     else{
-                        text = "{% url "stringdb.views.onlyProtGraph" %}?protid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
+                        text = "{% url "cyanointeraction.views.onlyProtGraph" %}?protid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
                     }
                     $.ajax({url:text,
                          beforeSend: function() {
@@ -817,10 +817,10 @@ Released under the MIT license
                 if(amount > -1){
                     var text = "";
                     if(selectedItem[0] == "C"){
-                        text = "{% url "stringdb.views.onlyChemGraph" %}?chemid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
+                        text = "{% url "cyanointeraction.views.onlyChemGraph" %}?chemid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
                     }
                     else{
-                        text = "{% url "stringdb.views.onlyProtGraph" %}?protid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
+                        text = "{% url "cyanointeraction.views.onlyProtGraph" %}?protid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
                     }
                     $.ajax({url:text,
                          beforeSend: function() {
@@ -1007,7 +1007,8 @@ Released under the MIT license
 
             /** dynamical calculation of Nodesize */
             function calculateNodesize(){
-                return 1/totalamount*80;
+                var a = width>height ? width/height*20 : height/width*20
+                return 1/totalamount*a;
             }
 
             /** dynamical calculation Linkstrengt */
@@ -1239,7 +1240,7 @@ Released under the MIT license
                         if(ids.indexOf(d) > -1){
                             aID = d;
                         }
-                        var url = "{% url "stringdb.views.checkRequest" %}?requestID="+aID;
+                        var url = "{% url "cyanointeraction.views.checkRequest" %}?requestID="+aID;
                         return url;
                     })
                     .style("color", "black")
