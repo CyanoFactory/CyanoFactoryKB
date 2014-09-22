@@ -1,5 +1,4 @@
 from django.conf.urls import patterns, url
-from cyanointeraction import views
 
 urlpatterns = patterns('',
     #url(r'^$', proteingraph, name='graph'),

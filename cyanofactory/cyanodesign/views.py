@@ -433,7 +433,7 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
     oldMax = vList[-1]
     oldRange = oldMax - oldMin
     newMin = 1
-    newMax = 20
+    newMax = 10
     newRange = newMax - newMin
 
     for key in changeDic:

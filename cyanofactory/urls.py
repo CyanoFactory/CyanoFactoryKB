@@ -16,7 +16,7 @@ urlpatterns = patterns('',
 )
 
 urlpatterns += patterns('cyanointeraction.views',
-    url(r'^stringdb/', include("cyanointeraction.urls"))
+    url(r'^cyanointeraction/', include("cyanointeraction.urls"))
 )
 
 

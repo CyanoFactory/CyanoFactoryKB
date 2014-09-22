@@ -170,28 +170,22 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 <table id="list">
 <thead>
 	<tr>
-		<th>
-            WID
-        </th>
 		<th>Name</th>
         <th></th>
 	</tr>
 </thead>
 <tbody>
 {% for object in queryset %}
-<tr data-pk="{{ object.pk }}">
-	<th><a href="
-	{% url "cyano-design-design" pk=object.pk %}
-	">{{ object.name }}</a></th>
+    <tr data-pk="{{ object.pk }}">
+        <th><a href="
+        {% url "cyano-design-design" pk=object.pk %}
+        ">{{ object.name }}</a></th>
 
-    <td>
-    <a href="
-	{% url "cyano-design-design" pk=object.pk %}
-	">{{ object.num_components }} items</td>
-
-	<td>
-		<a href="#" class="delete-button" title="Delete this cart"><img src="{% get_static_prefix %}public/img/delete.png"/></a>
-	</td>
+        <td>
+            <a href="{% url "cyano-design-export" pk=object.pk %}" title="Export model"><img src="{% get_static_prefix %}cyano/img/basket_remove.png"/></a>
+            <a href="#" class="delete-button" title="Delete model"><img src="{% get_static_prefix %}public/img/delete.png"/></a>
+        </td>
+    </tr>
 {% endfor %}
 </tbody>
 </table>
