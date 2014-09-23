@@ -257,7 +257,7 @@ def proteingraph(protein_id, protlimit, chemlimit):
     for i in interactions:
         linked = i.node_id_b
         linkedprot = Proteins.objects.get(protein_id=linked)
-        hoodsize = len(NodeNodeLinks.objects.filter(node_id_a=linked))
+        hoodsize = NodeNodeLinks.objects.filter(node_id_a=linked).count()
         G.add_node("P" + str(linked),
                    name=linkedprot.preferred_name,
                    protein=1,
@@ -345,7 +345,7 @@ def chemgraph(chem_id, protlimit, chemlimit):
     minScore = 10000
     G = nx.Graph()
     chemical = Chemicals.objects.get(chemical=chem_id)
-    interactions = ProteinChemicalLinks.objects.filter(chemical=chem_id, protein__regex="1148\.*").order_by('-combined_score')[:protlimit]
+    interactions = ProteinChemicalLinks.objects.filter(chemical=chem_id, protein__startswith="1148").order_by('-combined_score')[:protlimit]
     interactions2 = []
     calledProts = []
     G.add_node(chem_id,
@@ -361,7 +361,7 @@ def chemgraph(chem_id, protlimit, chemlimit):
         if not linkedprot.preferred_name in calledProts:
             calledProts.append(linkedprot.preferred_name)
             interactions2.append(i)
-            hoodsize = len(NodeNodeLinks.objects.filter(node_id_a=linkedprot.protein_id))
+            hoodsize = NodeNodeLinks.objects.filter(node_id_a=linkedprot.protein_id).count()
             if not G.has_node("P" + str(linkedprot.protein_id)):
                 G.add_node("P" + str(linkedprot.protein_id),
                            name=linkedprot.preferred_name,
@@ -486,7 +486,7 @@ def listProteinInteractions(protID):
         protInfo["annotation"] = prot.annotation
         protInfo["combined_score"] = interact.combined_score
 
-        if protInfo["annotation"].__contains__(";"):
+        if ";" in protInfo["annotation"]:
             protInfo["annotation"], rest = protInfo["annotation"].split(";", 1)
 
         interactionList.append(protInfo)
@@ -571,7 +571,7 @@ def listChemicalProteinInteractions(chemID):
         combined_score = interaction score of protein with selected chemical
     """
     interactionList = []
-    interactions = ProteinChemicalLinksDetailed.objects.filter(chemical=chemID, protein__regex="1148\.*").order_by("-combined_score")
+    interactions = ProteinChemicalLinksDetailed.objects.filter(chemical=chemID, protein__startswith="1148").order_by("-combined_score")
     prots = Proteins.objects.filter(protein_external_id__in=map(lambda x: x.protein, interactions))
     for interact, prot in zip(interactions, prots):
         #prot = Proteins.objects.get(protein_external_id=interact.protein)
@@ -728,8 +728,8 @@ def findChems(graph, chemLimit):
                     name = ""
                 if not name == "":
                     if not graph.has_node(chemInteract.chemical):
-                        hood = len(ProteinChemicalLinks.objects.filter(chemical=chemInteract.chemical,
-                                                                       protein__regex="1148\.*"))
+                        hood = ProteinChemicalLinks.objects.filter(chemical=chemInteract.chemical,
+                                                                       protein__startswith="1148").count()
                         graph.add_node(chemInteract.chemical,
                                        name=name,
                                        protein=0,
@@ -896,19 +896,19 @@ To do: Divide between source of information --> Multigraph
 
 def proteingraph2json(request):
     proteins = Proteins.objects.filter(species_id=1148)
-    print len(proteins)
+    #print len(proteins)
     counter = 0
     for prot in proteins:
         counter += 1
         if not os.path.isfile("cyanofactory/cyanointeraction/protein_network/" + str(prot.protein_id) + ".json"):
-            print str(counter) + " - " + str(len(proteins))
+            #print str(counter) + " - " + str(len(proteins))
             G = nx.Graph()
             interactions = NodeNodeLinks.objects.filter(node_id_a=prot.protein_id).order_by('-combined_score')[:10]
             G.add_node(prot.protein_id, name=prot.preferred_name, hood=0, selectvis=1)
             for i in interactions:
                 linked = i.node_id_b
-                G.add_node(linked, name=Proteins.objects.get(protein_id=linked).preferred_name, hood=len(
-                    NodeNodeLinks.objects.filter(node_id_a=linked).order_by('-combined_score')), selectvis=1)
+                G.add_node(linked, name=Proteins.objects.get(protein_id=linked).preferred_name, hood=
+                    NodeNodeLinks.objects.filter(node_id_a=linked).order_by('-combined_score').count(), selectvis=1)
                 G.add_edge(prot.protein_id, linked, score=i.combined_score, opacity=1, selectvis=1)
 
             ''' Looking at each Protein and connecting them, if they interact'''
@@ -930,7 +930,7 @@ def proteingraph2json(request):
             a = prot.preferred_name
         else:
             print prot.preferred_name + " already exists"
-    a = len(proteins)
+    a = proteins.count()
     return HttpResponse("Finished - " + str(a))
 
 
