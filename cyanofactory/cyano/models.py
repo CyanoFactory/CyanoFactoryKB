@@ -3991,7 +3991,18 @@ class ProteinMonomer(Protein):
 
     def get_as_html_gravy(self, species, is_user_anonymous):
         return self.get_gravy(species)
-    
+
+    def get_as_html_interactions(self, species, is_user_anonymous):
+        from cyanointeraction.models import Proteins as Iproteins
+
+        try:
+            prot = Iproteins.objects.get(preferred_name=self.gene.wid)
+        except ObjectDoesNotExist:
+            return ""
+
+        return '<a href="{}">Show interactions</a>'.format(
+            reverse("cyanointeraction.views.checkInteraction", kwargs={"protID": prot.protein_id}))
+
     def get_as_fasta(self, species):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(species, cache=True)) + "\r\n"
 
@@ -4087,6 +4098,7 @@ class ProteinMonomer(Protein):
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}),
             ('Parameters', {'fields': ['parameters']}),
+            ('Interactions', {'fields': [{'verbose_name': 'Protein/Metabolite interactions', 'name': 'interactions'}]}),
             ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]

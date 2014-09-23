@@ -115,7 +115,7 @@ MIDDLEWARE_CLASSES = (
 )
 
 #if DEBUG:
- #   MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
+#    MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
 
 ROOT_URLCONF = 'urls'
 
@@ -164,7 +164,9 @@ INSTALLED_APPS = (
     'djcelery',
     'haystack',
     'endless_pagination',
-    'south'
+    'south',
+    #'debug_toolbar'
+
 )
 
 

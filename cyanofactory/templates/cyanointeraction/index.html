@@ -498,8 +498,8 @@ Released under the MIT license
                         .attr("transform", function(d) { return "translate(" + d + ")"; })
                         //.on("mouseover", nodeOver)
                         //.on("mouseout", nodeOut)
-                        .on("click", nodeOver);
-                        //.on("dbclick", dragstop);
+                        .on("click", nodeOver)
+                        .on("dbclick", dragstop);
 
                 var background = svg.select("rect")
                         .on("click", nodeOut);
