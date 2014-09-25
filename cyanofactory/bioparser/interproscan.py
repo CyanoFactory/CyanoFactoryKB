@@ -92,7 +92,7 @@ class InterProScan(BioParser):
 
         match_type = cmodels.Type.objects.for_wid("Match-Type", create=True)
         match_type.save(self.detail)
-        match_type.species.add()
+        match_type.species.add(self.species)
 
         for i, values in enumerate(self.protein_monomers_cf.items()):
             protein_monomer, chromosome_feature = values

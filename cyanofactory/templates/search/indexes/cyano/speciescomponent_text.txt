@@ -1,0 +1,36 @@
+{{ object.wid }}
+{{ object.name }}
+{{ object.model_type }}
+{{ object.comments }}
+
+{% comment %}
+{% for specie in object.species.all %}
+{{ specie.wid }}
+{{ specie.name }}
+{% endfor %}
+{% endcomment %}
+
+{% for typ in object.type.all %}
+{{ typ.wid }}
+{{ typ.name }}
+{% endfor %}
+
+{% for publication in object.publication_references.all %}
+{{ publication.wid }}
+{{ publication.name }}
+{{ publication.authors }}
+{{ publication.editors }}
+{{ publication.year }}
+{{ publication.title }}
+{{ publication.publication }}
+{{ publication.publisher }}
+{{ publication.volume }}
+{{ publication.issue }}
+{{ publication.pages }}
+{% endfor %}
+
+{% for cross_ref in object.cross_references.all %}
+{{ cross_ref.xid }}
+{{ cross_ref.source }}
+{% endfor %}
+

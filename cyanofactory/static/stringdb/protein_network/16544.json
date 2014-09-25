@@ -1,0 +1,1 @@
+{"directed": false, "graph": [], "nodes": [{"name": "sll1236", "hood": 0, "id": 16544}, {"name": "spoT", "hood": 634, "id": 18179}, {"name": "engA", "hood": 665, "id": 18651}], "links": [{"opacity": 1, "source": 0, "score": 248, "target": 1}, {"opacity": 1, "source": 0, "score": 238, "target": 2}, {"opacity": 0.2, "source": 1, "score": 848, "target": 2}], "multigraph": false}

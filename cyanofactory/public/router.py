@@ -5,12 +5,16 @@ class WarehouseRouter(object):
         
         #if model._meta.app_label == 'djcelery':
         #    return "djcelery"
+        if model._meta.app_label == 'cyanointeraction':
+            return 'stringdb'
         return None
 
     def db_for_write(self, model, **hints):
         #if model._meta.app_label == 'biowarehouse':
         #    return 'cyano'
-        
+        if model._meta.app_label == 'cyanointeraction':
+            return 'stringdb'
+
         if model._meta.app_label == 'djcelery':
             return "djcelery"
         
@@ -23,6 +27,10 @@ class WarehouseRouter(object):
         #if obj1._meta.app_label == 'biowarehouse' or \
         #   obj2._meta.app_label == 'biowarehouse':
         #    return True
+        if obj1._meta.app_label == 'cyanointeraction' or \
+           obj2._meta.app_label == 'cyanointeraction':
+            return True
+
 
         return None
 
@@ -35,4 +43,10 @@ class WarehouseRouter(object):
             return model._meta.app_label == 'biowarehouse'
         elif model._meta.app_label == 'biowarehouse':
             return False
+
+        if db == 'stringdb':
+            return model._meta.app_label == 'cyanointeraction'
+        elif model._meta.app_label == 'cyanointeraction':
+            return False
+
         return None

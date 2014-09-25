@@ -1,0 +1,1287 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Protein-Interaction Page
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>,  Eric Zuchantke <ezuchant@hs-mitteida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+{% load filters %}
+
+{% block head_title %}{{ block.super }} :: Interaction: {{ prot_name }}{% endblock %}
+{% block page_title %} {{ prot_name }} - {{ name }} {% endblock %}
+
+{% block head %}
+{{ block.super }}
+<script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless.js"></script>
+<script language="javascript" type="text/javascript" src="{% get_static_prefix %}cyano/js/endless_on_scroll.js"></script>
+<script type="text/javascript" charset="utf-8">var endless_on_scroll_margin = 200;</script>
+<script src="{% get_static_prefix %}cyanointeraction/d3/d3.v3.min.js"></script>
+<script src="{% get_static_prefix %}cyanointeraction/d3-tip.js"></script>
+<script type="text/javascript">
+{% include "kegg/script.js" %}
+</script>
+
+{% endblock %}
+
+{% block extrastyles %}
+#listfilter .nofilters{
+	font-style:italic;
+	text-align:center;
+}
+
+#list{
+	width:100%;
+}
+
+#listfilter{
+	display:none;
+}
+
+#search_box {
+	width: 100%;
+	border:1px solid #3d80b3;
+	border-radius:6px;
+}
+
+.node {
+    stroke: #fff;
+}
+
+.node text {
+    pointer-events: none;
+    stroke: #000;
+    stroke-width: .1px;
+}
+
+.link {
+  stroke-opacity: .4;
+}
+
+#checkboxcontainer > .checkboxcontainer_field {display:inline;}
+
+#buttoncontainer > .buttoncontainer_field {display:inline;}
+
+#listChoice > .listChoic {display:inline;}
+
+#chemCheckbox {
+    display:inline;
+    }
+
+#checkboxcontainer{
+    margin-left: 15px;
+    }
+
+#buttoncontainer{
+    margin-top: 8px;
+    margin-left: 15px;
+    float: left;
+    }
+#javascriptcontainer{
+    border-radius: 8px;
+    }
+#helpbox{
+    margin-top: 15px;
+    float: right;
+    }
+
+.ui-progressbar-value {
+    background: rgb(61, 128, 179);
+    }
+
+    .no-close .ui-dialog-titlebar-close {
+    display: none;
+    }
+#networkvisualization{
+    position: relative;
+	border:1px solid #3d80b3;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    }
+
+.overlay {
+    fill: none;
+    pointer-events: all;
+    }
+
+#content table th, #content table td {
+    padding-right: 10px;
+    text-align: center;
+}
+
+#detail tbody tr th, #detail tbody tr td {
+    padding-left: 2px;
+    padding-right: 2px;
+    vertical-align: middle;
+}
+
+.interacttable {
+    position:absolute;
+	right: -100px;
+	width: 100px;
+	margin: 200px -30px;
+	padding: 10px 10px;
+
+    color: black;
+    font-weight: normal;
+}
+
+.d3-tip {
+  line-height: 1;
+  font-weight: bold;
+  padding: 12px;
+  background: #3d7fb2;
+  color: #fff;
+  border-radius: 2px;
+}
+}
+{% endblock %}
+
+{% block content %}
+
+    <div id="networkvisualization">
+        <div id="interacttable" class="interacttable">
+        </div>
+        <div id="dialog-progressbar" title="Please wait...">
+        <div id="progressbar"></div>
+        </div>
+
+         <div id="checkboxcontainer" class="checkboxcontainer">
+            <h3>Select Source</h3>
+
+        </div>
+        <div id="helpbox" class="helpbox">
+        </div>
+        <div id="buttoncontainer" class="buttoncontainer">
+            <h3>Add/Remove Proteins</h3>
+            <input name="-10" type="button" class="demo" value=-10 onclick="expandNetwork(value)"/>
+            <input name="-5" type="button" class="demo" value=-5 onclick="expandNetwork(value)"/>
+            <input name="-1" type="button" class="demo" value=-1 onclick="expandNetwork(value)"/>
+            <input name="+1" type="button" class="demo" value=+1 onclick="expandNetwork(value)"/>
+            <input name="+5" type="button" class="demo" value=+5 onclick="expandNetwork(value)"/>
+            <input name="+10" type="button" class="demo" value=+10 onclick="expandNetwork(value)"/>
+        </div>
+
+
+        <div id="javascriptcontainer" class="javascriptcontainer"></div>
+        <div id="chemicals" style="display: inline">
+            <div id="chemCheckbox" style="display: inline"></div>
+            <div id="chembuttoncontainer" class="chembuttoncontainer">
+                <h3>Add/Remove Chemicals</h3>
+                <input name="-5" type="button" class="demo" value=-5 onclick="expandChemNetwork(value)"/>
+                <input name="-1" type="button" class="demo" value=-1 onclick="expandChemNetwork(value)"/>
+                <input name="+1" type="button" class="demo" value=+1 onclick="expandChemNetwork(value)"/>
+                <input name="+5" type="button" class="demo" value=+5 onclick="expandChemNetwork(value)"/>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script id="network">
+            var selectedItem = "{{ protid }}";
+            /** Generate Checkboxes */
+            createSourceCheckboxes();
+
+            createChemCheckboxes();
+            /** Create checkboxes with given Source items and checks the status of these checkboxes */
+            function createSourceCheckboxes(){
+                d3.select(".checkboxcontainer").selectAll("div")
+                        .data([
+                            {% for key in list %}
+                            {% if not forloop.first %}, {% endif %}
+                                "{{ key }}"
+                            {% endfor %}
+                        ])
+                        .enter()
+                        .append("div")
+                        .attr("class", "checkboxcontainer_field")
+                        .append("label")
+                        .each(function (d) {
+                            d3.select(this).append("input")
+                                    .attr("type", "checkbox")
+                                    .attr("class", "sourceCheckbox")
+                                    .attr("id", function(d) {
+                                        return d;
+                                    })
+                            .property("checked", false)
+                                    /** after un-/checking of an checkbox calling function filterlinks()*/
+                                    .on("click", function(d) {
+                                        filterLinks()
+                                    })
+                            d3.select(this).append("span")
+                                    .text(function (d) {
+                                        return d;
+                                    });
+                        })
+            }
+
+            function createChemCheckboxes() {
+                var chemicalsBox = d3.select("#chemCheckbox")
+                var box = chemicalsBox.append("input")
+                        .attr("type", "checkbox")
+                        .attr("class", "chemCheckbox")
+                        .attr("id", function (d) {
+                            return d;
+                        })
+                        .property("checked", function() {
+                            if(selectedItem[0] == "C"){
+                                return true;
+                            }
+                            else {
+                                return false;
+                            }
+                        });
+                box.on("click", function (d) {
+                            showChemicals();
+                        }
+                )
+                chemicalsBox.append("span")
+                        .text("Show Chemicals")
+            }
+            var dialog_progressbar = $("#dialog-progressbar");
+
+            dialog_progressbar.dialog({
+                autoOpen: false,
+                height: 100,
+                width: 350,
+                modal: true,
+                closeOnEscape: false,
+                dialogClass: "no-close"
+            });
+            var pbar = dialog_progressbar.find("#progressbar");
+            pbar.progressbar();
+            pbar.progressbar( "option", "value", false );
+
+            var width = 800,
+                height = 400;
+
+
+            /** Generate Network */
+            var jsonfile = '{{ json|safe }}';
+            var json;
+
+            /** 2 fache parsen abstellen */
+            var help = JSON.parse(jsonfile),
+                ldomainlist = new Array,
+                ndomainlist = new Array,
+                nrangelist = new Array,
+                lrangelist = new Array;
+
+            for (var i in help.linkcolor){
+                ldomainlist.push(help.linkcolor[i].value);
+                lrangelist.push(help.linkcolor[i].color);
+            };
+            for (var i in help.nodecolor){
+                ndomainlist.push(help.nodecolor[i].value);
+                nrangelist.push(help.nodecolor[i].color);
+            }
+
+            var lcolor = d3.scale.linear()
+                .domain(ldomainlist)
+                .range(lrangelist);
+
+            var ncolor = d3.scale.linear()
+                .domain(ndomainlist)
+                .range(nrangelist);
+
+            var helpwidth = 200;
+            var helpheight = 100;
+            var helplegend = d3.select(".helpbox").append("svg")
+                    .attr("width", helpwidth)
+                    .attr("height", helpheight);
+
+            drawhelp(jsonfile, []);
+
+            function drawhelp(help, lDomainList){
+
+                help = JSON.parse(help);
+                ldomainlist = new Array;
+                ndomainlist = new Array;
+                nrangelist = new Array;
+                lrangelist = new Array;
+
+                helplegend.selectAll("text").remove();
+
+                for (var i in help.linkcolor){
+                    ldomainlist.push(help.linkcolor[i].value);
+                    lrangelist.push(help.linkcolor[i].color);
+                }
+
+                for (var i in help.nodecolor){
+                    ndomainlist.push(help.nodecolor[i].value);
+                    nrangelist.push(help.nodecolor[i].color);
+                }
+
+                if(lDomainList.length != 0){
+                    ldomainlist = lDomainList;
+                    for (var i in lDomainList){
+                        help.linkcolor[i].value = Math.round(lDomainList[i]);
+                    }
+                }
+
+                lcolor = d3.scale.linear()
+                    .domain(ldomainlist)
+                    .range(lrangelist);
+
+                ncolor = d3.scale.linear()
+                    .domain(ndomainlist)
+                    .range(nrangelist);
+
+                helplegend.selectAll("rect").remove();
+                helplegend.selectAll("circle").remove();
+
+                var fontsize = "10px",
+                rectx = 90,
+                recty = 40,
+                rectwidth = 20,
+                rectheight = 5,
+                stepsize = 15,
+                rectexty = recty+5,
+                rectextx = rectx + 27;
+
+                var rects = helplegend.selectAll("rect")
+                        .data(help.linkcolor)
+                        .enter()
+                            .append("g");
+
+                rects.append("rect")
+                    .attr("width", rectwidth)
+                    .attr("height", rectheight)
+                    .attr("y", function(){
+                            var result = recty;
+                            recty += stepsize;
+                            return result;
+                        })
+                    .attr("x", rectx)
+                    .attr("fill", function (d){ return d.color});
+
+                rects.append("text")
+                        .attr("x", rectextx)
+                        .attr("y", function(){
+                            var result = rectexty;
+                            rectexty += 15;
+                            return result;})
+                        .style("color", "black")
+                        .style("font-size", fontsize)
+                        .text(function(d) {return d.value == 0 ? "" : "... "+d.value});
+
+                var circley = 25,
+                    circlex = 10,
+                    radius = 5,
+                    dxtext = circlex+10,
+                    dytext = circley+3;
+
+                var circls = helplegend.selectAll("circle")
+                        .data(help.nodecolor)
+                        .enter().append("g");
+
+                circls.append("circle")
+                        .attr("cy", function () {
+                                var result = circley;
+                                circley += 15;
+                                return result;
+                            })
+                        .attr("cx", circlex)
+                        .attr("r", radius)
+                        .attr("fill", function(d) {return d.color});
+
+                circls.append("text")
+                        .attr("dx", dxtext)
+                        .attr("dy", function () {
+                                var result = dytext;
+                                dytext += 15;
+                                return result;
+                            })
+                        .style("color", "black")
+                        .style("font-size", fontsize)
+                        .text(function (d){ return d.value == 0 ? "selected" : "... " + d.value })
+
+                var legendNode = helplegend.append("text")
+                            .attr("x", 5)
+                            .attr("y", 10)
+                            .style("font-size", "10px")
+                            .text("Nr. of Interaction-Partner");
+
+                var legendLink = helplegend.append("text")
+                            .attr("x", 90)
+                            .attr("y", 30)
+                            .style("font-size", "10px")
+                            .text("Interaction-Score");
+
+            }
+
+            var force = d3.layout.force()
+                    .charge(calculateCharge())
+                    .gravity(0.9)
+                    .friction(0.1)
+                    .size([width, height]);
+
+            var totalamount = +{{ limit }}
+            var protamount = +{{ protlimit }};
+            var chemamount = +{{ chemlimit }};
+
+            var svg = d3.select(".javascriptcontainer").append("svg")
+                    .attr("width", width)
+                    .attr("height", height)
+                    .attr("pointer-events","all")
+                    .call(d3.behavior.zoom().on("zoom", zoomed))
+                    .append("svg:g");
+
+            svg.append("rect")
+                    .attr("class", "overlay")
+                    .attr("width", width)
+                    .attr("height", height)
+                    .attr("fill", "white");
+
+            function zoomed(){
+                if (d3.select(this)){
+                    svg.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+                }
+            }
+
+            update(jsonfile);
+
+            /** Creating Interaction-Network */
+            function update(json){
+
+                drawhelp(json, [])
+
+                svg.selectAll(".link")
+                        .remove();
+                svg.selectAll(".node")
+                        .remove();
+
+                json = JSON.parse(json);
+                var graph = json;
+
+                var nodes = graph.nodes;
+                var links = graph.links;
+
+                totalamount = nodes.length
+
+                var nodesize = calculateNodesize();
+                var textsize = ""+calculateTextSize()+"px";
+
+
+
+                force
+                    .nodes(nodes)
+                    .links(links)
+                    .linkDistance(function (d) {
+                          return calculateLinkDistance(d, graph.links);
+                      })
+                    .start();
+
+                var link = svg.selectAll("line")
+                        .data(graph.links)
+                    .enter().append("line")
+                        .attr("class", "link")
+                        .attr("stroke-width", calculateLinkThikness())
+                        .style("stroke", function(d) { return lcolor(d.score);});
+
+                var drag = force.drag()
+                      .on("dragstart", dragstart);
+
+                var node = svg.selectAll(".node")
+                        .data(graph.nodes)
+                    .enter().append("g")
+                        .attr("class", "node")
+                        .attr("id", function(d) { return d.id; })
+                        .call(drag)
+                        .attr("transform", function(d) { return "translate(" + d + ")"; })
+                        //.on("mouseover", nodeOver)
+                        //.on("mouseout", nodeOut)
+                        .on("click", nodeOver)
+                        .on("dbclick", dragstop);
+
+                var background = svg.select("rect")
+                        .on("click", nodeOut);
+
+                node.append("svg:a")
+                    .append("svg:circle")
+                        .attr("r", nodesize)
+                        .style("fill", function(d) {
+                            if (d.protein == 1){
+                                return ncolor(d.hood);
+                            }
+                            else {
+                                return "white";
+                            }
+                        })
+                        .style("stroke", function (d) {
+                            if (d.protein == 0) {
+                                return ncolor(d.hood);
+                            }
+                            else {
+                                return "black";
+                            }
+                        })
+                        .style("stroke-width", calculateLinkThikness());
+
+                node.append("text")
+                    .attr("dx", ""+(nodesize+7-0.7)+"")
+                    .attr("dy", ".35em")
+                    .style("color", "black")
+                    .style("font-size", textsize)
+                    .text(function(d) { return d.name });
+
+                force.on("tick", function() {
+                    var qtree = d3.geom.quadtree(nodes),
+                          i = 0,
+                          n = nodes.length;
+
+                    while (++i < n) qtree.visit(collide(nodes[i]));
+
+                    link.attr("x1", function(d) { return d.source.x; })
+                        .attr("y1", function(d) { return d.source.y; })
+                        .attr("x2", function(d) { return d.target.x; })
+                        .attr("y2", function(d) { return d.target.y; });
+
+                    node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; })
+                        .attr("cx", function(d) { return d.x = Math.max(nodesize, Math.min(width - (nodesize), d.x)); })
+                        .attr("cy", function(d) { return d.y = Math.max(nodesize, Math.min(height - (nodesize), d.y)); });
+                    });
+                filterLinks();
+                showChemicals();
+            }
+
+            function nodeOut() {
+                svg.selectAll(".link").each(function (d){
+                    d.clicked = 1;
+                    d3.select(this).transition().duration(750).style("stroke-opacity", 0.4);
+                })
+
+                var nodesize = calculateNodesize();
+                var fontsize = calculateTextSize();
+                svg.selectAll(".node")
+                        .each( function (d) {
+                            d.isselected = 0;
+                            d.clicked = 1;
+                            d3.select(this).select("circle")
+                                .transition()
+                                .duration(750)
+                                .attr("r", nodesize)
+                            d3.select(this).select("text")
+                                .transition()
+                                .duration(750)
+                                .style("font-size", ""+fontsize+"px")
+                            }
+                        );
+                d3.select("#interacttable")
+                                .style("border", 0)
+                                .style("border-radius", 0)
+                                .style("color", 0);
+                d3.select("#interacttable").select("table").remove();
+                setvisible(".node");
+                setvisible(".link");
+                showChemicals();
+            }
+
+            function nodeOver() {
+                showChemicals();
+                var liste = doHighlight(d3.select(this), true);
+                setvisible(".node");
+                setvisible(".link");
+                d3.select("#interacttable").select("table").remove();
+                showTable(liste);
+
+            }
+
+            /** Highlight all links which are bounded with selected Node and hide all others*/
+            function doHighlight(node, hl) {
+
+                var nd = node.datum();
+                var opacity = hl ? 0 : 0.4;
+                var oopacity = hl ? 1 : 0.4;
+                var nodeopacity = hl ? 0 : 1;
+                var nodeoopacity = hl ? 1 : 0;
+                var nodesize = calculateNodesize();
+                var fontsize = calculateTextSize();
+                var font = hl ? fontsize+Math.exp(1/fontsize*15) : fontsize;
+                var nodeRadius = hl ?  nodesize+nodesize/2: nodesize;
+                //var nodecolor = hl ? "lawngreen" : "black";
+                //var nwidth = hl ? ".5px" : ".1px";
+
+                var protlist = new Array();
+                protlist.push(nd.index);
+                /** show/hide all links which are not connected with the selected node */
+                svg.selectAll(".link")
+                        .each(function(d) {
+                            if(d.source.index == nd.index && d.checkbox == 1){
+                                    protlist.push(d.target.index);
+                                    d.clicked = 1;
+                                    if (d.selectvis == 1){
+                                        d3.select(this).transition().duration(750)
+                                            .style("stroke-opacity", oopacity);
+                                    }
+                            }
+                            else if(d.target.index == nd.index && d.checkbox == 1 && d.selectvis == 1){
+                                    protlist.push(d.source.index);
+                                    d.clicked = 1;
+                                    if (d.selectvis == 1){
+                                        d3.select(this).transition().duration(750)
+                                            .style("stroke-opacity", oopacity);
+                                    }
+                            }
+                            else{
+                                d.clicked = 0;
+                                d3.select(this).transition().duration(750)
+                                    .style("stroke-opacity", opacity);
+                            }
+                        });
+
+                svg.selectAll(".node")
+                        .each( function (d) {
+                            d.isselected = 0;
+                            d3.select(this).select("circle")
+                                .transition()
+                                .duration(750)
+                                .attr("r", nodesize)
+                            d3.select(this).select("text")
+                                .transition()
+                                .duration(750)
+                                .style("font-size", ""+fontsize+"px");
+                            }
+                        )
+
+                var textlist = new Array(),
+                    lookednode = new Array();
+
+                svg.selectAll(".node")
+                        .each(function (d) {
+                            if(protlist.indexOf(d.index) != -1  && d.checkbox == 1){
+                                if (lookednode.indexOf(d.name) == -1) {
+                                    textlist.push({name: d.name});
+                                    lookednode.push(d.name);
+                                    d.clicked = 1;
+                                }
+                            }
+                            else{
+                                d.clicked = 0;
+                            }
+                            if(d.index == nd.index){
+                                d.isselected = 1;
+                            }
+                        });
+
+                node.select("circle")
+                    .transition().duration(750)
+                        .attr("r", nodeRadius)
+                        //.style("stroke", nodecolor);
+                node.select("text")
+                    .transition().duration(750)
+                        .style("font-size", ""+font+"px");
+                return textlist;
+            }
+
+            function showTable(list){
+                var tip = d3.tip()
+                    .attr("class", "d3-tip")
+                    .offset([-10, -100])
+                    .html(function(d) {
+                        var ad = d;
+                        var selectedd = d;
+                        svg.selectAll(".node")
+                                .each(function(d){
+                                    if(ad == d.name){
+                                        selectedd = d;
+                                    }
+                                })
+                        var returnText = ""
+                        if(selectedd.id[0] != "C"){
+                            returnText = selectedd.name +" - "+selectedd.annotation
+                        }
+                        else{
+                            returnText = selectedd.name
+                        }
+                        return returnText;
+                    });
+                var table = d3.select("#interacttable")
+                                .style("border", "1px solid #3D80B3")
+                                .style("border-radius", "8px")
+                                .style("color", "black")
+                                .append("table").attr("id", "detail");
+                var thead = table.append("thead").selectAll("th")
+                                .data(["Selected Element"])
+                                .enter().append("th").text(function(d) {return d});
+                var tbody = table.append("tbody").attr("class", "data");
+
+                thead
+                    .style("border-radius", "6px 6px 0 0" )
+                    .style("width", "10%")
+                    .style("background", "#3D80B3")
+                    .style("border", "1px solid #3D80B3")
+                    .style("color", "#FFFFFF")
+                    .style("padding", "2px");
+
+                //rows
+                var row = tbody.selectAll("tr")
+                    .data(list)
+                    .enter()
+                    .append("tr");
+
+                // cells
+                var cells = row.selectAll("td")
+                    .data(function(d) {return d3.values(d)})
+                    .enter()
+                    .append("td")
+                    .append("svg")
+                            .attr("width", 50)
+                            .attr("height", 30)
+                            .attr("fill", "blue")
+                            .call(tip)
+                            .on('mouseover', tip.show)
+                            .on('mouseout', tip.hide)
+                            .append("svg:a")
+                                .attr("xlink:href", function(d){
+                                        var ad = d,
+                                            id = 0;
+                                        svg.selectAll(".node")
+                                            .each(function(d){
+                                                if(d.name == ad ){
+                                                    id = d.id;
+                                                }
+                                        })
+                                        var url = "{% url "cyanointeraction.views.checkRequest" %}?requestID="+id;
+                                        return url;
+                                })
+                                .append("text")
+                                    .attr("x", 0)
+                                    .attr("y", 20)
+                                    .text(function (d){return d})
+                                    .attr("fill", "black")
+                                    .attr("font-size", "14px")
+                                    .on('mouseover', function(){
+                                        d3.select(this).attr("fill", "blue");
+                                        })
+                                    .on('mouseout', function(){
+                                        d3.select(this).attr("fill", "black");
+                                       });
+
+            }
+
+            function setvisible(selected){
+                showChemicals();
+                svg.selectAll(selected)
+                        .each(function(d){
+                            var show = 0;
+                            if (d.checkbox == 1 && d.clicked == 1 && d.selectvis == 1){
+                                show = 1;
+                            }
+                            d3.select(this)
+                                    .transition().duration(750).attr("opacity", show);
+
+                        });
+            }
+
+            /** Expanding/Contract the Network based on the clicked Button */
+            function expandNetwork(d){
+                var nnumber = +d;
+                var amount = protamount + nnumber;
+                protamount = amount;
+                if(amount != 0){
+                    var text = "";
+                    if(selectedItem[0] == "C"){
+                        text = "{% url "cyanointeraction.views.onlyChemGraph" %}?chemid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
+                    }
+                    else{
+                        text = "{% url "cyanointeraction.views.onlyProtGraph" %}?protid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
+                    }
+                    $.ajax({url:text,
+                         beforeSend: function() {
+                            dialog_progressbar.dialog("open")},
+                         success:function(result){
+                            jsonfile = result;
+                            update(jsonfile);
+
+                            dialog_progressbar.dialog("close");
+                         }});
+                }
+                else{
+                    alert("Not possible")
+                }
+            }
+
+            function expandChemNetwork(d) {
+                var nnumber = +d;
+                var amount = chemamount + nnumber;
+                chemamount = amount;
+                totalamount = protamount + chemamount;
+                if(amount > -1){
+                    var text = "";
+                    if(selectedItem[0] == "C"){
+                        text = "{% url "cyanointeraction.views.onlyChemGraph" %}?chemid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
+                    }
+                    else{
+                        text = "{% url "cyanointeraction.views.onlyProtGraph" %}?protid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
+                    }
+                    $.ajax({url:text,
+                         beforeSend: function() {
+                            dialog_progressbar.dialog("open")},
+                         success:function(result){
+                            jsonfile = result;
+                            update(jsonfile);
+                            dialog_progressbar.dialog("close");
+                         }});
+                }
+                else{
+                    alert("Not possible")
+                }
+            }
+
+            /** Changing the opacity of each link depending on link stats, using checkBoxes() */
+            function filterLinks(){
+                var listchecked = isCheckboxChecked();
+
+                var transition = 1000;
+                var hiddenNodesIndexList = new Array();
+                d3.selectAll(".link")
+                        .each(function (d) {
+                            if (checkBoxes(d)){
+                                d.checkbox = 0;
+                                if (hiddenNodesIndexList.indexOf(d.source.index) == -1){
+                                    hiddenNodesIndexList.push(d.source.index);
+                                }
+                                if (hiddenNodesIndexList.indexOf(d.target.index) == -1){
+                                    hiddenNodesIndexList.push(d.target.index);
+                                }
+                            }
+                            else{
+                                d.checkbox = 1;
+                            }
+                        })
+
+                var singleList = new Array();
+                var passedlinks = d3.selectAll(".link")
+                        .filter(function (d) {
+                            if (!checkBoxes(d)){
+                                var index1 = hiddenNodesIndexList.indexOf(d.source.index);
+                                if(index1 > -1){
+                                    hiddenNodesIndexList.splice(index1, 1);
+                                }
+                                var index2 = hiddenNodesIndexList.indexOf(d.target.index);
+                                if(index2 > -1){
+                                    hiddenNodesIndexList.splice(index2, 1);
+                                }
+                                return true;
+                            }
+                            else{
+                                return false;
+                            }
+                        })
+                        .each(function (d){
+                            var scoreList = new Array();
+
+                            if (d.Homology != 0 && listchecked.indexOf("Homology") != -1) { scoreList.push(d.Homology) };
+
+                            if (d.Experiment != 0 && listchecked.indexOf("Experiment") != -1) { scoreList.push(d.Experiment) };
+
+                            if (d.Database != 0 && listchecked.indexOf("Database") != -1) { scoreList.push(d.Database) };
+
+                            if (d.Textmining != 0 && listchecked.indexOf("Textmining") != -1) { scoreList.push(d.Textmining) };
+
+                            if (d.Genfusion != 0 && listchecked.indexOf("Genfusion") != -1) { scoreList.push(d.Genfusion) };
+
+                            if (d.Coocurence != 0 && listchecked.indexOf("Coocurence") != -1) { scoreList.push(d.Coocurence) };
+
+                            if (d.Neighborhood != 0 && listchecked.indexOf("Neighborhood") != -1) { scoreList.push(d.Neighborhood) };
+
+                            if (d.Coexpression != 0 && listchecked.indexOf("Coexpression") != -1) { scoreList.push(d.Coexpression) };
+
+                            if(scoreList != 0){
+                                var comboscore = 1;
+
+                                for(var i in scoreList){
+                                    comboscore *= (1-(scoreList[i]/1000)).toFixed(3);
+                                }
+                                var result = (1-comboscore).toFixed(3);
+                                result*=1000;
+                                singleList.push(result);
+                                d.filterscore = result;
+                            }
+                        });
+                d3.selectAll(".node")
+                        .each(function (d){
+                            if (hiddenNodesIndexList.indexOf(d.index) == -1){
+                                d.checkbox = 1;
+                            }
+                            else{
+                                d.checkbox = 0;
+                            }
+                        });
+
+                if(singleList != 0){
+                    var min = Math.min.apply(Math, singleList),
+                        max = Math.max.apply(Math, singleList),
+                        range = (max - min)/4;
+                    drawhelp(jsonfile , [min, min+range, max-range, max]);
+                    passedlinks.style("stroke", function(d) {
+                        return lcolor(d.filterscore);});
+                }
+                else{
+                    drawhelp(jsonfile , []);
+                    passedlinks.style("stroke", function(d) { return lcolor(d.score);});
+                }
+
+                svg.selectAll(".node")
+                        .each(function(d){
+                            if(d.isselected == 1){
+                                var list = doHighlight(d3.select(this), true);
+                                d3.select("#interacttable").select("table").remove();
+                                showTable(list);
+                            }
+                        })
+                setvisible(".node");
+                setvisible(".link");
+            }
+
+            /** Giving the name of Selected Checkboxes */
+            function isCheckboxChecked(){
+                var listchecked = new Array
+                d3.select("#checkboxcontainer").selectAll("input")
+                        .each(function (d) {
+                            if (this.checked){
+                                listchecked.push(d);
+                            }
+                        });
+                return listchecked;
+            }
+
+            /** Checking if selected link has stats for the selected Checkbox*/
+            function checkBoxes(alink){
+                var hide = false;
+                d3.select("#checkboxcontainer").selectAll('input')
+                        .each(function (d){
+                            var abox = d
+                            {% for key in list %}
+                                if(abox === "{{ key }}"){
+                                    if (this.checked && alink.{{ key }} == 0){
+                                        hide = true;
+                                    }
+
+                                }
+                            {% endfor %}
+                            return false;
+                        })
+                return hide
+            }
+
+            /** dragging nodes ends with pin the node to specific place */
+            function dragstart(d){
+                d3.event.sourceEvent.stopPropagation();
+                d3.select(this).classed("fixed", d.fixed = true)
+            }
+
+            /** unpinning node ### NOT IN USE AT THIS MOMENT ### */
+            function dragstop(d){
+                d3.select(this).classed("fixed", d.fixed = false);
+            }
+
+            /** dynamical calculation of Distance between nodes, using the score Value of each link */
+            function calculateLinkDistance(alink, links){
+                var mean = 0;
+                for (var i = 0; i < links.length; i++){
+                    var dat = +links[i].score;
+                    var scorev = dat;
+                    mean = mean + scorev;
+                }
+                mean = mean/links.length;
+                var k1 = 160;
+                var unscaledDistance = (1/alink.score)*mean*k1;
+                var k2 = 400
+                var scaledDistance = unscaledDistance/(Math.exp(totalamount/k2));
+                return scaledDistance;
+            }
+
+            /** dynamical calculation of Charge-Value after refresh of the network */
+            function calculateCharge(){
+                return -5*totalamount*2;
+            }
+
+            /** dynamical calculation of Nodesize */
+            function calculateNodesize(){
+                var a = width>height ? width/height*20 : height/width*20
+                return 1/totalamount*a;
+            }
+
+            /** dynamical calculation Linkstrengt */
+            function calculateLinkThikness(){
+                return 1/totalamount*20
+            }
+
+            /** dynamical calculation Linkstrengt */
+            function calculateTextSize(){
+                return 1/totalamount*150
+            }
+
+            /** Calculating Collision between nodes an prevent node overlapping*/
+            function collide(node) {
+                var r = calculateNodesize()*2,
+                nx1 = node.x - r,
+                nx2 = node.x + r,
+                ny1 = node.y - r,
+                ny2 = node.y + r;
+                return function(quad, x1, y1, x2, y2){
+                    if (quad.point && (quad.point !== node)){
+
+                        var x = node.x - quad.point.x,
+                            y = node.y - quad.point.y,
+                            l = Math.sqrt(x * x + y * y),
+                            r =  calculateNodesize()*8;
+                        if (l < r) {
+                            l = (l - r) / l * 0.5;
+                            node.x -= x *= l;
+                            node.y -= y *= l;
+                            quad.point.x += x;
+                            quad.point.y += y;
+                        }
+                    }
+                    return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+                };
+            }
+
+            /** Creates Buttons for Selecting Size of Network - NOT WORKING CORRECT, NOT ENABLED*/
+            function createButtons(){
+                d3.select(".buttoncontainer").selectAll("div")
+                        .data(["-10", "-5", "-1", "+1", "+5", "+10"])
+                        .enter()
+                        .append("div")
+                        .attr("class", "buttoncontainer_field")
+                        .append("label")
+                        .each(function (d) {
+                            d3.select(this).append("input")
+                                    .attr("type", "button")
+                                    .attr("id", function(d) {
+                                        return d;
+                                    })
+                                    .attr("value", function (d) {
+                                        return d;
+                                    })
+                            .onclick(expandNetwork(d));
+                        })
+            }
+
+            function showChemicals(){
+                d3.select(".chemCheckbox").each(function (d){
+                    var show = this.checked ? 1 : 0
+                    var chems = d3.selectAll(".node").filter(function (d){
+                        if(d.clicked == 1 && d.checkbox == 1) {
+                            if (d.protein == 0) {
+                                d.selectvis = show ? 1 : 0;
+                                return true;
+                            }
+                            else{return false}
+                        }
+                        else {
+                            return false;
+                        }
+                    })
+                    var chemLinks = d3.selectAll(".link").filter(function (d){
+                        if(d.clicked == 1 && d.checkbox == 1) {
+                            if (d.protein == 0) {
+                                d.selectvis = show ? 1 : 0;
+                                return true;
+                            }
+                            else{return false}
+                        }
+                        else {
+                            return false;
+                        }
+                    })
+                    chemLinks.transition().duration(750).attr("opacity", show);
+                    chems.transition().duration(750).attr("opacity", show);
+                    d3.select(".chembuttoncontainer").style("display", function(){
+                        if(show){
+                            return "inline";
+                        }
+                        else{
+                            return "none";
+                        }
+                    })
+                })
+
+            }
+        </script>
+    <div id="interactiondiv">
+        <div id="listChoice">
+        </div>
+    </div>
+    <div id="interactbuttondiv">
+        <input name="loadmore" type="button" class="demo" value="Load more" onclick="loadmore()"/>
+    </div>
+
+    <script id="interactionListing">
+        var maxRows = 14;
+
+        createTableCheckboxes();
+
+        updateList();
+
+
+        function updateList(){
+            d3.select("#interactiondiv").select("table").remove();
+            var selectedList = filterList()
+            if(maxRows>selectedList.length){
+                maxRows = selectedList.length;
+            }
+            var finishedList = generateList(selectedList.slice(0,maxRows));
+            makeTable(finishedList);
+        }
+
+        function createTableCheckboxes() {
+            d3.select("#listChoice").selectAll("div")
+                    .data(["Proteins", "Chemicals"])
+                    .enter()
+                    .append("div")
+                    .attr("class", "listChoic")
+                    .append("label")
+                    .each(function (d) {
+                        d3.select(this).append("input")
+                                .attr("type", "checkbox")
+                                .attr("class", "listCheckbox")
+                                .attr("id", function(d) {
+                                    return d;
+                                })
+                        .property("checked", function(d){
+                                    if(d=="Proteins"){
+                                        return true;
+                                    }
+                                    else {
+                                        return false
+                                    }
+
+                                })
+                        .on("click", function() {
+                            maxRows = 14;
+                            updateList();
+                        })
+                        d3.select(this).append("span")
+                                .text(function (d) {
+                                    return d;
+                                });
+                    })
+        }
+
+        function filterList(){
+            var protList = {{ protInteracts|safe }};
+            var chemList = {{ chemInteracts|safe }};
+            var emptyList = [];
+            var allList = {{ allInteracts|safe }};
+
+            var checks = d3.select("#listChoice").selectAll("input");
+            var list =[]
+            checks.each(function (d){
+                if(this.checked){
+                    list.push(d)
+                }
+            })
+            if(list.length == 0){
+                return emptyList;
+            }
+            if(list.length == 2){
+                return allList;
+            }
+            if(list.indexOf("Proteins")>-1){
+                return protList;
+            }
+            if(list.indexOf("Chemicals">-1)){
+                return chemList;
+            }
+
+
+        }
+
+        function makeTable(showList){
+            var table = d3.select("#interactiondiv").append("table")
+                                    .attr("id", "detail")
+                                    .style("border", "1px solid #3D80B3")
+                                    .style("border-radius", "8px")
+                                    .style("color", "black")
+                                    //.append("table").attr("id", "detail");
+            var thead = table.append("thead").selectAll("th")
+                            .data(d3.keys(showList[0]))
+                            .enter().append("th").text(function(d) {
+                                return d});
+            var tbody = table.append("tbody").attr("class", "data");
+
+            thead
+                //.style("border-radius", "6px 6px 0 0" )
+                .style("width", "10%")
+                .style("background", "#3D80B3")
+                .style("border", "1px solid #3D80B3")
+                .style("color", "#FFFFFF")
+                .style("padding", "2px");
+
+            //rows
+            var row = tbody.selectAll("tr")
+                .data(showList)
+                .enter()
+                .append("tr");
+
+            // cells
+            var ids = [],
+                aID = "";
+            var cells = row.selectAll("td")
+                .data(function(d) {
+                        ids.push(d3.values(d)[0]);
+                        return d3.values(d)})
+                .enter()
+                .append("td")
+                .append("a")
+                    .text(function (d){return d;})
+                    .attr("href", function(d){
+                        if(ids.indexOf(d) > -1){
+                            aID = d;
+                        }
+                        var url = "{% url "cyanointeraction.views.checkRequest" %}?requestID="+aID;
+                        return url;
+                    })
+                    .style("color", "black")
+        }
+
+        function generateList(preList){
+            var clearList = new Array();
+            for (entry in preList){
+                var listData = preList[entry],
+                    evidence = listData.evidence;
+
+                var clearData = {
+                    "ID": listData.interactname,
+                    "Name": listData.preferred_name,
+                    "Annotation": listData.annotation,
+                    "Homology": "",
+                    "Experiment": "",
+                    "Database": "",
+                    "Textmining": "",
+                    "Genfusion": "",
+                    "Coocurence": "",
+                    "Neighborhood": "",
+                    "Coexpression": "",
+                    "Score": listData.combined_score
+                };
+
+                for (i in evidence){
+                       if(evidence[i] > 0){
+                        clearData[i] = "•"
+                       }
+                }
+                clearList.push(clearData);
+            }
+            return clearList
+        }
+
+        function loadmore(){
+            maxRows += 15;
+            updateList();
+        }
+
+    </script>
+
+{% endblock %}

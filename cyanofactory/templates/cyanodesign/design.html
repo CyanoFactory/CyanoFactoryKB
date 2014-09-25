@@ -1,0 +1,1262 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Cyanodesign index page
+
+Copyright (c) 2013 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+{% load staticfiles %}
+{% load templatetags %}
+{% load filters %}
+
+{% block head_title %}{{ block.super }} :: CyanoDesign{% endblock %}
+{% block page_title %}CyanoDesign &ndash; {{ name }}{% endblock %}
+
+{% block head %}
+{{ block.super }}
+<script src="{% get_static_prefix %}cyanointeraction/d3/d3.v3.min.js"></script>
+<script src="{% get_static_prefix %}cyano/js/viz.js"></script>
+<script type="text/javascript">
+
+    var enzymes = [];
+    var metabolites = [];
+    var enzymes_design = [];
+    var design_objective;
+    var dialog_metabolite_edit;
+    var dialog_enzyme;
+    var dialog_metabolite_add;
+    var dialog_progressbar;
+    var dialog_filter;
+    var cyano_design_objective_select;
+    var cyano_design_enzymes;
+    var constraints_div;
+    var simulation_result;
+    var add_button;
+    var delete_button;
+    var create_new_enzyme = false;
+    var metabolite_combobox;
+    var command_list = [];
+    var svg;
+    var design_objective_visible_combobox;
+
+    function Filter() {};
+
+    Filter.prototype = {
+        predicates: [
+            function(s, x) { return s.toLowerCase().contains(x.toLowerCase()) },
+            function(s, x) { return s.toLowerCase().startsWith(x.toLowerCase()) },
+            function(s, x) { return s.toLowerCase().endsWith(x.toLowerCase()) },
+            function(s, x) { return s.toLowerCase() == x.toLowerCase() },
+            function(s, x) { return !Filter.prototype.predicates[0](s, x) },
+            function(s, x) { return !Filter.prototype.predicates[1](s, x) },
+            function(s, x) { return !Filter.prototype.predicates[2](s, x) },
+            function(s, x) { return !Filter.prototype.predicates[3](s, x) }
+        ],
+        getters: [
+            function(e) { return [e.name] },
+            function(e) { return e.substrates.concat(e.products).map(function(x) { return x.name } ) },
+            function(e) { return e.substrates.map(function(x) { return x.name } ) },
+            function(e) { return e.products.map(function(x) { return x.name } ) }
+        ],
+        apply: function(enzyme, getter, predicate, search_string) {
+            return Filter.prototype.getters[getter](enzyme).some(function(x) {
+                return Filter.prototype.predicates[predicate](x, search_string)
+            });
+        },
+        getAll: function() {
+            return dialog_filter.find("fieldset > div").map(function() {
+                var child = $(this).children();
+                // jquery map flattens
+                return [[child[0].selectedIndex - 1, child[1].selectedIndex, child[2].value]];
+            }).toArray().slice(0, -1);
+        },
+        matchAll: function(e) {
+            return Filter.prototype.getAll().every(function(x) {
+                return Filter.prototype.apply(e, x[0], x[1], x[2]);
+            });
+        }
+    };
+
+    function Enzyme(name) {
+        this.name = name;
+        this.reversible = false;
+        this.substrates = [];
+        this.products = [];
+        this.stoichiometric_substrates = [];
+        this.stoichiometric_products = [];
+        this.constraints = [0, null];
+        this.enabled = true;
+
+        this.isConstrained = function() {
+            return this.constraints[1] !== null;
+        }
+
+        this.makeUnconstrained = function() {
+            this.constraints[0] = this.reversible ? null : 0;
+            this.constraints[1] = null;
+        }
+
+        this.toHTML = function() {
+            var reac = function(substrates) {
+                return function(value, index) {
+                    var elem = substrates[index] + " ";
+                    if (value.external) {
+                        return elem + $("<span></span>").addClass("external-metabolite").text(value.name)[0].outerHTML;
+                    }
+                    return elem + value.name;
+                }
+            }
+
+            var outer = $("<div></div");
+            var checkbox = $("<input>")
+                    .addClass("reaction-checkbox")
+                    .attr("type", "checkbox")
+                    .attr("checked", this.enabled)
+                    .data("object", this)
+                    .appendTo(outer);
+            var element = $("<div>").addClass("cyano-reaction").data("object", this);
+            if (!this.enabled) {
+                element.addClass("cyano-reaction-disabled");
+            }
+            element.append(this.name + ": ");
+            element.append(this.substrates.map(reac(this.stoichiometric_substrates)).join(" + "));
+            element.append(this.reversible ? " <-> " : " -> ");
+            element.append(this.products.map(reac(this.stoichiometric_products)).join(" + "));
+
+            if (this.isConstrained()) {
+                element.append(" [" + this.constraints[0] + ", " + this.constraints[1] + "]");
+            } else {
+                element.append(" <i>unconstrained</i>");
+            }
+            element.append("</div>");
+            element.appendTo(outer);
+
+            return outer;
+        }
+
+        this.toString = function() {
+            var reac = function(substrates) {
+                return function(value, index) {
+                    var elem = substrates[index] + " ";
+                    return elem + value.name;
+                }
+            }
+
+            var element = "";
+            element = element.concat(this.name + " : ");
+            element = element.concat(this.substrates.map(reac(this.stoichiometric_substrates)).join(" + "));
+            element = element.concat(this.reversible ? " <-> " : " -> ");
+            element = element.concat(this.products.map(reac(this.stoichiometric_products)).join(" + "));
+            return element;
+        }
+
+        this.constraintsToString = function() {
+            if (!this.isConstrained()) {
+                return "";
+            } else {
+                return this.name + " [" + this.constraints.join(", ") + "]";
+            }
+        }
+
+        this.convertToFloat = function() {
+            this.constraints[0] = parseFloat(this.constraints[0]);
+            if (this.constraints[1] !== null) {
+                this.constraints[1] = parseFloat(this.constraints[1]);
+            }
+
+            this.stoichiometric_substrates = this.stoichiometric_substrates.map(parseFloat);
+            this.stoichiometric_products = this.stoichiometric_products.map(parseFloat);
+        }
+    }
+
+    function Metabolite(name, external) {
+        this.external = external;
+        this.name = name;
+
+        this.updateName = function(new_name) {
+            var idx = indexOfMetabolite(new_name);
+
+            if (idx === -1 ||
+                metabolites[idx] == this) {
+                this.name = new_name;
+                metabolites[idx] = this;
+                return true;
+            }
+            return false;
+        }
+    }
+
+    function indexOfMetabolite(value) {
+        for (var index = 0; index < metabolites.length; ++index) {
+            if (metabolites[index].name == value) {
+                return index;
+            }
+        }
+        return -1;
+    }
+
+    function createMetabolites(reaction) {
+        var metabolite_fn = function(value) {
+            var idx = indexOfMetabolite(value);
+            if (idx == -1) {
+                metabolites.push(new Metabolite(value, false));
+            }
+        }
+
+        reaction["substrates"].forEach(metabolite_fn);
+        reaction["products"].forEach(metabolite_fn);
+    }
+
+    function createExternalMetabolites(external) {
+        var metabolite_fn = function(value) {
+           var idx = indexOfMetabolite(value);
+            if (idx == -1) {
+                metabolites.push(new Metabolite(value, true));
+            } else {
+                metabolites[idx].external = true;
+            }
+        }
+        external.forEach(metabolite_fn);
+    }
+
+    function getExternalMetabolites() {
+        return metabolites.filter(function(value) {
+            return value.external;
+        });
+    }
+
+    function createEnzyme(reaction) {
+        var enzyme = new Enzyme(reaction["name"]);
+
+        enzyme.products = reaction.products.map(
+            function(value) {
+                return metabolites[indexOfMetabolite(value)];
+            }
+        );
+
+        enzyme.substrates = reaction.substrates.map(
+            function(value) {
+                return metabolites[indexOfMetabolite(value)];
+            }
+        );
+
+        enzyme.stoichiometric_substrates = reaction.stoichiometric[0];
+        enzyme.stoichiometric_products = reaction.stoichiometric[1];
+        enzyme.reversible = reaction.reversible;
+        enzyme.constraints = reaction.constraints;
+        enzyme.enabled = !reaction.disabled;
+
+        return enzyme;
+    }
+
+    $(function () {
+        dialog_metabolite_edit = $("#dialog-edit-metabolite");
+        dialog_enzyme = $("#dialog-reaction");
+        dialog_metabolite_add = $("#dialog-add-metabolite");
+        dialog_progressbar = $("#dialog-progressbar");
+        dialog_filter = $("#dialog-filter");
+        cyano_design_objective_select = $("#cyano-design-objective-select");
+        cyano_design_enzymes = $(".cyano-design-enzymes");
+        constraints_div = $("#constraints-min-max");
+        simulation_result = $("#simulation-result");
+        add_button = $("#add-button");
+        delete_button = $("#delete-button");
+        metabolite_combobox = $("#metabolite-combobox");
+        design_objective_visible_combobox = $("#design-objective-visible-combobox");
+
+        add_button.hide();
+        delete_button.hide();
+
+        $( ".check" ).button();
+
+        // Array Remove - By John Resig (MIT Licensed)
+        Array.prototype.remove = function(from, to) {
+          var rest = this.slice((to || from) + 1 || this.length);
+          this.length = from < 0 ? this.length + from : from;
+          return this.push.apply(this, rest);
+        };
+
+        $(".spinner").spinner();
+        $(".checkbox").button();
+        $(".validateTips").hide();
+        $("input[type=submit], button")
+            .button()
+            .click(function( event ) {
+                event.preventDefault();
+            });
+
+        $("#design-submit").click(function(event) {
+            dialog_progressbar.dialog("open");
+            $.ajax({
+                url: "{% url "cyano-design-simulate" pk=pk %}",
+                type: "POST",
+                context: document.body,
+                data: {
+                    "commands": JSON.stringify(command_list),
+                    "disabled": JSON.stringify(
+                            enzymes.
+                            filter(function(value) { return !value.enabled; }).
+                            map(function(value) { return value.name })
+                    ),
+                    "objective": JSON.stringify(cyano_design_objective_select.val()),
+                    "display": JSON.stringify(enzymes_design.map(function(obj) { return obj.name; })),
+                    "auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
+                }
+            }).done(function(x) {
+                var graph = Viz(x, "svg", "dot");
+                simulation_result.hide();
+                $("#visual").show();
+                $("#visual").val(graph);
+                document.getElementById("visual").innerHTML = graph;
+                dialog_progressbar.dialog("close");
+
+                //command_list = [];
+            }).error(function(x) {
+                $("#visual").hide();
+                simulation_result.show();
+                simulation_result.text("");
+                $("<pre></pre>").text(x.status + " " + x.statusText + ": " + x.responseText).appendTo(simulation_result);
+                dialog_progressbar.dialog("close");
+            });
+        });
+
+        $("#design-save").click(function(event) {
+            dialog_progressbar.dialog("open");
+            $.ajax({
+                url: "{% url "cyano-design-save" pk=pk %}",
+                type: "POST",
+                context: document.body,
+                data: {
+                    "commands": JSON.stringify(command_list),
+                    "disabled": JSON.stringify(
+                            enzymes.
+                            filter(function(value) { return !value.enabled; }).
+                            map(function(value) { return value.name })
+                    ),
+                    "objective": JSON.stringify(cyano_design_objective_select.val()),
+                }
+            }).done(function(x) {
+                dialog_progressbar.dialog("close");
+
+                command_list = [];
+            }).error(function(x) {
+                $("#visual").hide();
+                simulation_result.show();
+                simulation_result.text("");
+                $("<pre></pre>").text(x.status + " " + x.statusText + ": " + x.responseText).appendTo(simulation_result);
+                dialog_progressbar.dialog("close");
+            });
+        });
+
+        $("#design-filters").click(function(event) {
+            dialog_filter.dialog("open");
+        });
+
+        function updateTips(dialog, t) {
+            dialog.find($(".validateTips").show());
+            dialog.find($(".validateTips"))
+                    .text(t)
+                    .addClass("ui-state-highlight");
+            setTimeout(function () {
+                //t.removeClass("ui-state-highlight", 1500);
+            }, 500);
+        }
+
+        function checkLength(dialog, o, n, min, max) {
+            if (o.val().length > max || o.val().length < min) {
+                o.addClass("ui-state-error");
+                updateTips(dialog, "Length of " + n + " must be between " +
+                        min + " and " + max + ".");
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        function checkPredicate(dialog, o, predicate, error) {
+            if (predicate(o.val)) {
+                return true;
+            } else {
+                o.addClass("ui-state-error");
+                updateTips(dialog, error);
+                return false;
+            }
+        }
+
+        function checkBool(dialog, o, bool, error) {
+            if (bool) {
+                return true;
+            } else {
+                o.addClass("ui-state-error");
+                updateTips(dialog, error);
+                return false;
+            }
+        }
+
+        function checkRegexp(dialog, o, regexp, n) {
+            if (!( regexp.test(o.val()) )) {
+                o.addClass("ui-state-error");
+                updateTips(dialog, n);
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        function getEnzymeByName(name) {
+            return enzymes.find(function(obj) {
+                if (obj.name == name) {
+                    return true;
+                }
+                return false;
+            });
+        }
+
+        function updateEnzymeList() {
+            $(cyano_design_enzymes).text("");
+            var shown = 0;
+
+            for (var i = 0; i < enzymes.length; ++i) {
+                var enzyme = enzymes[i];
+                if (typeof enzyme.backup != 'undefined') {
+                    enzymes[i] = enzyme.backup;
+                    enzyme = enzymes[i];
+                }
+
+                if (Filter.prototype.matchAll(enzyme)) {
+                    enzyme.toHTML().appendTo(cyano_design_enzymes);
+                    shown++;
+                }
+            }
+
+            $(".cyano-design-filter-text").text(shown + " of " + enzymes.length + " reactions displayed.");
+        }
+
+        function updateEnzymeDesignList() {
+            $(".cyano-design-reactions").text("");
+            enzymes_design.forEach(function(obj) {
+                $("<div></div>").addClass("cyano-design-reaction").text(obj.name).appendTo(".cyano-design-reactions");
+            });
+        }
+
+        function showEnzymeDialog(enzyme, create_new) {
+            if (typeof create_new == 'undefined') {
+                create_new = create_new_enzyme;
+            }
+            create_new_enzyme = create_new;
+
+            if (typeof enzyme == 'undefined') {
+                enzyme = dialog_enzyme.data("object");
+            } else {
+                enzyme.backup = jQuery.extend(true, {}, enzyme);
+            }
+
+            dialog_enzyme.data("object", enzyme);
+            dialog_enzyme.data("substrates_del", []);
+            dialog_enzyme.data("products_del", []);
+            dialog_enzyme.find("input.name").val(enzyme.name);
+            dialog_enzyme.find("#reversible").prop("checked", enzyme.reversible);
+
+            var substrates = dialog_enzyme.find("div#reaction-substrates");
+            var products = dialog_enzyme.find("div#reaction-products");
+            var constrained = dialog_enzyme.find("#constrained");
+            var constrained_min = dialog_enzyme.find("#constrained-min");
+            var constrained_max = dialog_enzyme.find("#constrained-max");
+
+            $(substrates).text("");
+            $(products).text("");
+
+            var each_func = function(target) {
+                return function(item, value) {
+                    var element = $("<div></div>");
+                    delete_button.clone().show().addClass("hoverable").data("count", value).appendTo(element);
+                    var spinner = $("<input>").attr("type", "text").appendTo(element);
+                    spinner.spinner();
+                    $("<div></div>").text(item.name).addClass("cyano-metabolite").data("object", item).appendTo(element);
+                    element.appendTo(target);
+                }
+            }
+
+            enzyme.substrates.forEach(each_func(substrates));
+            enzyme.products.forEach(each_func(products));
+
+            substrates.find("input.ui-spinner-input").each(function(index, value) {
+                $(value).val(enzyme.stoichiometric_substrates[index]);
+            });
+            products.find("input.ui-spinner-input").each(function(index, value) {
+                $(value).val(enzyme.stoichiometric_products[index]);
+            });
+
+            constrained.prop("checked", enzyme.isConstrained());
+            constrained_min.val(enzyme.constraints[0]);
+            constrained_max.val(enzyme.constraints[1]);
+
+            if (enzyme.isConstrained()) {
+                constraints_div.show();
+            } else {
+                constraints_div.hide();
+            }
+
+            dialog_enzyme.dialog("open");
+        }
+
+        function showAddMetaboliteDialog(enzyme, isSubstrate) {
+            dialog_metabolite_add.data("object", enzyme);
+            dialog_metabolite_add.data("substrate", isSubstrate);
+            dialog_metabolite_add.dialog("open");
+            $(dialog_metabolite_add.find(".custom-combobox-input")).value("");
+        }
+
+        function saveEnzyme(enzyme) {
+            var name = dialog_enzyme.find(".name");
+            var reversible = dialog_enzyme.find("#reversible");
+            var constrained = dialog_enzyme.find("#constrained");
+            var constrained_min = dialog_enzyme.find("#constrained-min");
+            var constrained_max = dialog_enzyme.find("#constrained-max");
+            var substrates = dialog_enzyme.find("div#reaction-substrates");
+            var products = dialog_enzyme.find("div#reaction-products");
+
+            enzyme.name = name.val();
+            enzyme.reversible = reversible.prop("checked");
+            if (constrained.prop("checked")) {
+                enzyme.constraints[0] = constrained_min.val();
+                enzyme.constraints[1] = constrained_max.val();
+            } else {
+                enzyme.makeUnconstrained();
+            }
+
+            substrates.find("input.ui-spinner-input").each(function(index, value) {
+                enzyme.stoichiometric_substrates[index] = $(value).val();
+            });
+            products.find("input.ui-spinner-input").each(function(index, value) {
+                enzyme.stoichiometric_products[index] = $(value).val();
+            });
+        }
+
+        dialog_enzyme.dialog({
+            autoOpen: false,
+            height: 300,
+            width: 350,
+            modal: true,
+            buttons: {
+                "OK": function () {
+                    var name = $(this).find(".name");
+                    var reversible = $(this).find("#reversible");
+                    var constrained = dialog_enzyme.find("#constrained");
+                    var constrained_min = dialog_enzyme.find("#constrained-min");
+                    var constrained_max = dialog_enzyme.find("#constrained-max");
+                    var substrates = dialog_enzyme.find("div#reaction-substrates");
+                    var products = dialog_enzyme.find("div#reaction-products");
+
+                    var bValid = true;
+
+                    var numeric = /^\-?[0-9]+$/;
+
+                    var self = $(this);
+
+                    self.find("input").removeClass("ui-state-error");
+
+                    for (var i = 0; i < enzymes.length; ++i) {
+                        var enz = enzymes[i];
+                        if (name.val() == enz.name) {
+                             bValid &= checkBool($(this), name, enz == dialog_enzyme.data("object"), "Name already in use");
+                        }
+                    }
+
+                    bValid &= checkRegexp($(this), name, /^[a-zA-Z0-9_.]+$/, "Name must only contain A-Z, a-z, 0-9, . and _");
+                    bValid &= checkLength($(this), name, "Name", 1, 50);
+
+                    if (constrained.prop("checked")) {
+                        var cmin_float = isFinite(parseFloat(constrained_min.val()));
+                        var cmax_float = isFinite(parseFloat(constrained_max.val()));
+                        bValid &= checkBool($(this), constrained_min, cmin_float, "Min constraint must be numeric");
+                        bValid &= checkBool($(this), constrained_max, cmax_float, "Max constraint must be numeric");
+                        if (bValid) {
+                            bValid &= checkBool($(this), constrained_min, parseFloat(constrained_min.val()) <= parseFloat(constrained_max.val()), "Min constraint > Max constraint");
+                        }
+                    }
+
+                    substrates.find("input.ui-spinner-input").each(function(index, value) {
+                        var is_float = isFinite(parseFloat($(value).val()));
+                        bValid &= checkBool(self, $(value), is_float, "Stoichiometry must be numeric");
+                    });
+                    products.find("input.ui-spinner-input").each(function(index, value) {
+                        var is_float = isFinite(parseFloat($(value).val()));
+                        bValid &= checkBool(self, $(value), is_float, "Stoichiometry must be numeric");
+                    });
+
+                    if (bValid) {
+                        var reaction = $(this).data("object");
+                        var old_name = reaction.name;
+
+                        saveEnzyme(reaction);
+                        reaction.convertToFloat();
+
+                        if (create_new_enzyme) {
+                            enzymes.push(reaction);
+                            command_list.push(["reaction", "add", old_name, reaction.toString(), reaction.constraints[0], reaction.constraints[1]]);
+                        } else {
+                            command_list.push(["reaction", "edit", old_name, reaction.toString(), reaction.constraints[0], reaction.constraints[1]]);
+                        }
+
+                        reaction.backup = undefined;
+
+                        $(this).dialog("close");
+                    }
+                },
+                Cancel: function () {
+                    $(this).dialog("close");
+                }
+            },
+            close: function () {
+                $(this).find("input").removeClass("ui-state-error");
+                updateEnzymeList();
+                $(".validateTips").hide();
+            }
+        });
+
+        dialog_metabolite_edit.dialog({
+            autoOpen: false,
+            height: 300,
+            width: 350,
+            modal: true,
+            buttons: {
+                "OK": function () {
+                    var name = $(this).find(".name");
+                    var external = $(this).find("#external");
+
+                    var valid = checkLength($(this), name, "Name", 1, 50);
+                    if (valid) {
+                        var metabolite = $(this).data("object");
+                        metabolite.updateName(name.val());
+                        old_external = metabolite.external;
+                        metabolite.external = external.prop("checked");
+                        showEnzymeDialog(dialog_enzyme.data("object"));
+
+                        if (name.val() != metabolite.name || old_external != metabolite.external) {
+                            command_list.push(["metabolite", "edit", name.val(), metabolite.name, metabolite.external]);
+                        }
+
+                        $(this).dialog("close");
+                    }
+                },
+                Cancel: function () {
+                    $(this).dialog("close");
+                }
+            },
+            close: function () {
+                $(this).find("input").removeClass("ui-state-error");
+                $(".validateTips").hide();
+            }
+        });
+
+        dialog_metabolite_add.dialog({
+            autoOpen: false,
+            height: 300,
+            width: 350,
+            modal: true,
+            buttons: {
+                "OK": function () {
+                    var name = $(this).find($(".custom-combobox-input"));
+                    var valid = checkLength($(this), name, "Name", 1, 50);
+
+                    if (valid) {
+                        var enzyme = $(this).data("object");
+                        var isSubstrate = $(this).data("substrate");
+                        // Check if metabolite already exists
+                        var idx = indexOfMetabolite(name.val());
+                        if (idx == -1) {
+                            metabolites.push(new Metabolite(name.val(), false));
+                            // command_list.push(["metabolite", name.val(), "add", name.val()]);
+                            idx = metabolites.length - 1;
+                        }
+                        if (isSubstrate) {
+                            enzyme.substrates.push(metabolites[idx]);
+                            enzyme.stoichiometric_substrates.push(1);
+                        } else {
+                            enzyme.products.push(metabolites[idx]);
+                            enzyme.stoichiometric_products.push(1);
+                        }
+                        showEnzymeDialog(undefined);
+                        $(this).dialog("close");
+                    }
+                },
+                Cancel: function () {
+                    $(this).dialog("close");
+                }
+            },
+            close: function () {
+                $(this).find("input").removeClass("ui-state-error");
+                $(".validateTips").hide();
+                $(this).find(".creationState").text("");
+            }
+        });
+
+        cyano_design_enzymes.on("click", "div.cyano-reaction", function(event) {
+            showEnzymeDialog($(event.target).data("object"), false);
+        });
+        $("#add-enzyme-button").click(function (event) {
+            showEnzymeDialog(new Enzyme(""), true);
+        });
+        $("#add-substrate-button").click(function (event) {
+            saveEnzyme(dialog_enzyme.data("object"));
+            showAddMetaboliteDialog(dialog_enzyme.data("object"), true);
+        });
+        $("#add-product-button").click(function (event) {
+            saveEnzyme(dialog_enzyme.data("object"));
+            showAddMetaboliteDialog(dialog_enzyme.data("object"), false);
+        });
+        $(".cyano-design-reactions").on("click", ".cyano-design-reaction", function() {
+            var index = enzymes_design.indexOf(getEnzymeByName($(this).text()));
+            if (index > -1) {
+                enzymes_design.splice(index, 1);
+            }
+            updateEnzymeDesignList();
+        });
+        dialog_enzyme.on("click", "div.cyano-metabolite", function(event) {
+            var item = $(event.target).data("object");
+            saveEnzyme(dialog_enzyme.data("object"));
+            dialog_metabolite_edit.find("input.name").val(item.name);
+            dialog_metabolite_edit.find("#external").prop("checked", item.external);
+            dialog_metabolite_edit.data("object", item);
+
+            dialog_metabolite_edit.dialog("open");
+        });
+        dialog_enzyme.find("#constrained:checkbox").change(function() {
+            if ($(this).is(":checked")) {
+                constraints_div.show();
+            } else {
+                constraints_div.hide();
+            }
+        });
+        cyano_design_enzymes.on("change", ".reaction-checkbox:checkbox", function(event) {
+            var target = $(event.target);
+            var obj = target.data("object");
+            obj.enabled = $(this).is(":checked");
+            var reac = target.next();
+            if (obj.enabled) {
+                reac.removeClass("cyano-reaction-disabled");
+            } else {
+                reac.addClass("cyano-reaction-disabled");
+            }
+        });
+        dialog_enzyme.find("#reaction-substrates").on("click", ".delete-button", function(event) {
+            var target = $(event.target);
+            var index = target.data("count");
+            dialog_enzyme.data("substrates_del").push(index);
+            target.parent().remove();
+        });
+        dialog_enzyme.find("#reaction-products").on("click", ".delete-button", function(event) {
+            var target = $(event.target);
+            var index = target.data("count");
+            dialog_enzyme.data("products_del").push(index);
+            target.parent().remove();
+        });
+        $("#auto_flux").prop("checked", true);
+        $(".cyano-design-reaction-filter").hide();
+        $("#auto_flux").change(function() {
+            $(".cyano-design-reaction-filter").hide();
+        })
+        $("#manual_flux").change(function() {
+            $(".cyano-design-reaction-filter").show();
+        });
+        dialog_progressbar.dialog({
+            autoOpen: false,
+            height: 'auto',
+            width: 350,
+            modal: true,
+            closeOnEscape: false,
+            dialogClass: "no-close"
+        });
+        var pbar = dialog_progressbar.find("#progressbar");
+        pbar.progressbar();
+        pbar.progressbar( "option", "value", false );
+
+        dialog_filter.dialog({
+            autoOpen: false,
+            height: 300,
+            width: 500,
+            modal: true,
+            buttons: {
+                "OK": function () {
+                    updateEnzymeList();
+                    $(this).dialog("close");
+                },
+                Cancel: function () {
+                    //$(this).data("filter").insertAfter($(this).find("fieldset > div"));
+                    $(this).find("fieldset").empty();
+                    $(this).data("filter").appendTo($(this).find("fieldset"));
+                    //$(this).find("fieldset > div").replaceWith($(this).data("filter"));
+                    $(this).dialog("close");
+                }
+            },
+            open: function() {
+                // Add selected tags
+                $(this).find("fieldset > div").each(function() {
+                    $(this).find("select").each(function() {
+                        $($(this).children()[this.selectedIndex]).attr("selected", "selected");
+                    });
+                });
+
+                $(this).data("filter", $(this).find("fieldset > div").clone());
+            },
+            close: function () {
+            }
+        });
+
+        (function ($) {
+        $.widget("ui.combobox", {
+            _create: function() {
+                var wrapper = this.wrapper = $("<span />").addClass("ui-combobox")
+                    , self = this;
+
+                this.element.wrap(wrapper);
+
+                this.element
+                    .addClass("ui-state-default ui-combobox-input ui-widget ui-widget-content ui-corner-left")
+                    .autocomplete($.extend({
+                        minLength: 0
+                    }, this.options));
+
+                $("<a />")
+                    .insertAfter(this.element)
+                    .button({
+                        icons: {
+                            primary: "ui-icon-triangle-1-s"
+                        },
+                        text: false
+                    })
+                    .removeClass("ui-corner-all")
+                    .addClass("ui-corner-right ui-combobox-toggle")
+                    .click(function () {
+                        if (self.element.autocomplete("widget" ).is(":visible")) {
+                            self.element.autocomplete("close");
+                            return;
+                        }
+
+                        $(this).blur();
+
+                        self.element.autocomplete("search", "");
+                        self.element.focus();
+                    });
+            },
+
+            destroy: function() {
+                this.wrapper.remove();
+                $.Widget.prototype.destroy.call(this);
+            }
+        });
+        })(jQuery);
+
+        var metabolite_source = function(request, response) {
+            var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
+            var ret_val = metabolites.filter(function (value) {
+                    var text = value.name;
+                    return !request.term || matcher.test(text);
+                }).map(function (value) {
+                    return {
+                        label: value.name,
+                        value: value.name,
+                        option: this
+                    };
+                });
+            return response(ret_val);
+        };
+
+        metabolite_combobox.combobox({
+            source: metabolite_source,
+            change: function(event, ui) {
+                var creation = dialog_metabolite_add.find(".creationState");
+                creation.text("");
+
+                // Selected from dropdown, nothing to do
+                if (ui.item) {
+                    return;
+                }
+
+                // Search for a match (case-insensitive)
+                var value = event.currentTarget.value;
+                var valueLowerCase = value.toLowerCase();
+
+                if (metabolite_source({term:value}, function(arg) {
+                    return arg.filter(
+                        function(val) {
+                            return val.value.toLowerCase() == valueLowerCase;
+                        });
+                }).length == 1) {
+                    // Found a match, nothing to do
+                    return false;
+                }
+
+                creation.text("A new metabolite will be created");
+            }
+        });
+
+        var reac_filter_source = function(request, response) {
+            var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
+            var ret_val = enzymes.filter(function (value) {
+                var text = value.name;
+
+                // Reaction already selected?
+                var reac_in = enzymes_design.some(function(obj) {
+                    return obj.name.toLowerCase() == text.toLowerCase();
+                });
+
+                return !reac_in && (!request.term || matcher.test(text));
+            }).map(function (value) {
+                return {
+                    label: value.name,
+                    value: value.name,
+                    option: this
+                };
+            });
+            return response(ret_val);
+        };
+
+        var reac_source = function(request, response) {
+            var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
+            var ret_val = enzymes.filter(function (value) {
+                var text = value.name;
+
+                return !request.term || matcher.test(text);
+            }).map(function (value) {
+                return {
+                    label: value.name,
+                    value: value.name,
+                    option: this
+                };
+            });
+            return response(ret_val);
+        };
+
+        design_objective_visible_combobox.combobox({
+            source: reac_filter_source,
+            select: function(event, ui) {
+                enzymes_design.push(getEnzymeByName(ui.item.value));
+                enzymes_design.sort(function(a,b) {
+                    return a.name.localeCompare(b.name);
+                });
+                updateEnzymeDesignList();
+            }
+        });
+
+        cyano_design_objective_select.combobox({
+            source: reac_source
+        });
+
+        $("#toggle").click(function () {
+            metabolite_combobox.toggle();
+        });
+
+        $.ajax({
+            url: "{% url "cyano-design-get-reactions" pk=pk %}",
+            context: document.body,
+            beforeSend: function() {
+                dialog_progressbar.dialog("open");
+            }
+        }).done(function(x) {
+            x["enzymes"].forEach(function(value) {
+                //$('<div>' + this + '</div>').appendTo('#content')
+                //$('<li>' + value + '</li>').addClass("ui-widget-content").appendTo('#reactions');
+                createMetabolites(value);
+            });
+
+            createExternalMetabolites(x["external"]);
+
+            x["enzymes"].forEach(function(value) {
+                var enz = createEnzyme(value);
+                enzymes.push(enz);
+            });
+
+            updateEnzymeList();
+
+            if (x.objective) {
+                cyano_design_objective_select.val(x.objective)
+            }
+            //var graph = Viz(x["graph"], "svg", "dot");
+            //document.getElementById("visual").innerHTML = graph;
+            //visualize();
+            dialog_progressbar.dialog("close");
+        });
+
+        dialog_filter.find("fieldset").on("change", "[name=filter-value]:last", function() {
+            if (this.selectedIndex != 0) {
+                dialog_filter.find("[name=filter-template]").clone().appendTo(
+                    dialog_filter.find("fieldset").first()).attr("name", null).show();
+            }
+        });
+        dialog_filter.find("fieldset").on("change", "[name=filter-value]", function() {
+            if (this.selectedIndex == 0) {
+                $(this).parent().remove();
+            }
+        });
+
+        dialog_filter.find("[name=filter-template]").hide();
+        dialog_filter.find("[name=filter-template]").clone().appendTo(
+        dialog_filter.find("fieldset")).attr("name", null).show();
+    });
+</script>
+
+{% endblock %}
+
+{% block extrastyles %}
+#feedback { font-size: 1.4em; }
+#selectable .ui-selecting { background: #FECA40; }
+#selectable .ui-selected { background: #F39814; color: white; }
+#selectable { list-style-type: none; margin: 0; padding: 0; width: 60%; }
+#selectable li { margin: 3px; padding: 0.4em; font-size: 1.4em; height: 18px; }
+
+input.text { margin-bottom:12px; width:95%; padding: .4em; }
+fieldset { padding:0; border:0; margin-top:25px; }
+div#users-contain { width: 350px; margin: 20px 0; }
+div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%; }
+div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
+.ui-dialog .ui-state-error { padding: .3em; }
+.validateTips { border: 1px solid transparent; padding: 0.3em }
+
+.no-close .ui-dialog-titlebar-close {
+    display: none;
+}
+
+div.cyano-reaction {
+    display: inline;
+}
+
+div.cyano-reaction-disabled {
+    color: #BBBBBB;
+}
+
+div.cyano-reaction:hover {
+    display: inline;
+}
+
+span.ui-spinner {
+    width: 20%;
+}
+
+div.cyano-metabolite {
+    display: inline;
+}
+
+div.cyano-reaction:hover,div.cyano-metabolite:hover, div.cyano-design-reaction:hover {
+    background-color: #E3E3E3;
+    cursor: pointer;
+}
+
+span.external-metabolite { color: blue }
+
+.hoverable {
+    cursor: pointer;
+}
+
+.custom-combobox {
+    position: relative;
+    display: inline-block;
+}
+.custom-combobox-toggle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    margin-left: -1px;
+    padding: 0;
+    /* support: IE7 */
+    *height: 1.7em;
+    *top: 0.1em;
+}
+.custom-combobox-input {
+    margin: 0;
+    padding: 0.3em;
+}
+.ui-autocomplete {
+    max-height: 100px;
+    overflow-y: auto;
+    /* prevent horizontal scrollbar */
+    overflow-x: hidden;
+}
+
+.ui-progressbar-value {
+    background: rgb(61, 128, 179);
+}
+
+.ui-combobox {
+    position: relative;
+    display: inline-block;
+}
+.ui-combobox-toggle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    margin-left: -1px;
+    padding: 0;
+    /* adjust styles for IE 6/7 */
+    *height: 1.7em;
+    *top: 0.1em;
+}
+.ui-combobox-input {
+    margin: 0;
+    padding: 0.3em;
+}
+
+path.link {
+  fill: black;
+  stroke: #666;
+  stroke-width: 1.5px;
+}
+{% endblock %}
+
+{% block content %}
+
+<img src="{% static "public/img/delete.png" %}" id="delete-button" class="delete-button" alt="Delete"/>
+<img src="{% static "public/img/add.png" %}" id="add-button" class="add-button" alt="Add"/>
+
+<div id="dialog-reaction" title="Edit Reaction">
+    <p class="validateTips"></p>
+
+    <form>
+        <fieldset>
+            <label for="name">Name</label>
+            <input type="text" name="name" id="name" class="name text ui-widget-content ui-corner-all">
+            <div>
+                <label for="substrates">Substrates</label>
+                <div id="reaction-substrates"></div>
+                <img src="{% static "public/img/add.png" %}" id="add-substrate-button" class="hoverable" alt="Add"/>
+            </div>
+            <div>
+                <label for="products">Products</label>
+                <div id="reaction-products"></div>
+                <img src="{% static "public/img/add.png" %}" id="add-product-button" class="hoverable" alt="Add"/>
+            </div>
+            <div>
+                <input type="checkbox" name="reversible" id="reversible">
+                <label for="reversible">Reversible</label>
+            </div>
+            <div>
+                <input type="checkbox" name="constrained" id="constrained">
+                <label for="constrained">Constrained</label>
+            </div>
+            <div id="constraints-min-max">
+                <div>
+                    <label for="constrained-min">Min</label>
+                    <input type="text" name="constrained_min" id="constrained-min" class="spinner">
+                </div>
+                <div>
+                    <label for="constrained-max">Max</label>
+                    <input type="text" name="constrained_max" id="constrained-max" class="spinner">
+                </div>
+            </div>
+        </fieldset>
+    </form>
+</div>
+
+<div id="dialog-add-metabolite" title="Add Metabolite">
+    <p>Select an existing metabolite or create a new one by providing a new name.</p>
+    <p class="validateTips"></p>
+    <form>
+        <fieldset>
+            <input id="metabolite-combobox">
+            </input>
+        </fieldset>
+    </form>
+    <p class="creationState"></p>
+</div>
+
+<div id="dialog-edit-metabolite" title="Edit Metabolite">
+    <p>The metabolite is modified in all reactions.</p>
+    <p class="validateTips"></p>
+
+    <form>
+        <fieldset>
+            <label for="name">Name</label>
+            <input type="text" name="name" id="name" class="name text ui-widget-content ui-corner-all">
+            <label for="external">External</label>
+            <input type="checkbox" name="external" id="external">
+        </fieldset>
+    </form>
+</div>
+
+<div id="dialog-progressbar" title="Please wait...">
+<div id="progressbar"></div>
+</div>
+
+<div id="dialog-filter" title="Manage filters">
+    <form>
+        <fieldset>
+        </fieldset>
+    </form>
+    <div name="filter-template">
+        <select name="filter-value" class="combobox">
+            <option>(Select)</option>
+            <option>Name</option>
+            <option>Metabolites</option>
+            <option>Substrates</option>
+            <option>Products</option>
+        </select>
+        <select name="filter-type" class="combobox">
+            <option>Contains</option>
+            <option>Starts with</option>
+            <option>Ends with</option>
+            <option>Is</option>
+            <option>Doesn't contain</option>
+            <option>Doesn't start with</option>
+            <option>Doesn't end with</option>
+            <option>Is not</option>
+        </select>
+        <input type="text" name="filter-text">
+    </div>
+</div>
+
+<div class="cyano-design-enzymes">
+</div>
+<img src="{% static "public/img/add.png" %}" id="add-enzyme-button" class="hoverable" alt="Add"/>
+
+<div class="cyano-design-filter">
+<div class="cyano-design-filter-text">
+
+</div>
+<input type="submit" id="design-filters" value="Manage filters">
+</div>
+
+<div id="products">
+    <h1 class="ui-widget-header">Simulation settings</h1>
+
+    <div>
+        <input id="auto_flux" type="radio" name="flux" value="auto_flux" selected> Display reactions with highest flux<br>
+        <input id="manual_flux" type="radio" name="flux" value="manual_flux"> Display selected reactions<br>
+    </div>
+</div>
+
+<div class="cyano-design-objective">
+    Design objective: <input id="cyano-design-objective-select"></select>
+</div>
+
+<input type="submit" id="design-save" value="Save">
+
+<div class="cyano-design-reaction-filter">
+    <h1 class="ui-widget-header">Select visible reactions</h1>
+    <input id="design-objective-visible-combobox">
+    </input>
+    <div class="cyano-design-reactions">
+    </div>
+</div>
+
+<div class="cyano-design-submit">
+<h1 class="ui-widget-header">Start simulation</h1>
+<input type="submit" id="design-submit" value="Simulate">
+</div>
+
+<h1 class="ui-widget-header">Results</h1>
+
+<div id="simulation-result">
+
+</div>
+<div id="visual">
+
+</div>
+</div>
+
+{% endblock %}

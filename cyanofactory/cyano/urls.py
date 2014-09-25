@@ -31,6 +31,16 @@ urlpatterns = patterns('cyano.views',
     url(r'^license/$', 'licensing'),
     url(r'^' + _species_wid + '/license/$', 'licensing'),
 
+    url(r'^' + _species_wid + r'/basket/$', 'basket', name="cyano-basket"),
+    url(r'^basket/$', 'basket', name="cyano-basket"),
+
+    url(r'^' + _species_wid + r'/basket/(?P<basket_id>[0-9]+)/$', 'basket', name="cyano-basket"),
+    url(r'^basket/(?P<basket_id>[0-9]+)/$', 'basket', name="cyano-basket"),
+
+    url(r'^basket/op/$', 'basket_op', name="cyano-basket-op"),
+    url(r'^' + _species_wid + r'/basket/op/$', 'basket_op', name="cyano-basket-op"),
+    #url(r'^' + _species_wid_model_type + r'/basket/op/$', 'basket_op', name="cyano-basket-op"),
+
     #url(r'^about/$', 'about'),
     #url(r'^' + _species_wid + '/about/$', 'about'),
 

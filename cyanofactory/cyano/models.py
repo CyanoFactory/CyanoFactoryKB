@@ -51,6 +51,8 @@ from django.conf import settings
 
 from model_utils.managers import PassThroughManager
 
+from django.db import models
+
 from south.modelsinspector import add_introspection_rules
 add_introspection_rules([], ["^cyano\.history\.HistoryForeignKey"])
 add_introspection_rules([], ["^cyano\.history\.HistoryManyToManyField"])
@@ -1353,6 +1355,9 @@ class Entry(AbstractEntry):
 
     def natural_key(self):
         return self.wid
+    
+    def get_model(self):
+        return TableMeta.get_by_id(self.model_type_id)
 
     def get_name_or_wid(self):
         return self.name or self.wid
@@ -2448,7 +2453,7 @@ class Genome(Molecule):
     def get_as_genbank(self, species):
         genbank = StringIO.StringIO()
         genes = Gene.objects.filter(species=species, chromosome_id=self.pk).prefetch_related("cross_references", "protein_monomers")
-        record = SeqRecord.SeqRecord(Seq(self.sequence, IUPAC.IUPACUnambiguousDNA()))
+        record = SeqRecord.SeqRecord(Seq(self.sequence, IUPAC.IUPACAmbiguousDNA()))
 
         record.description = self.name
         record.name = self.wid
@@ -2456,7 +2461,7 @@ class Genome(Molecule):
         if len(accession) > 0:
             record.annotations["accession"] = accession[0].xid
 
-        record.annotations["date"] = self.detail.date.strftime("%d-%b-%Y").upper()
+        record.annotations["date"] = self.last_revision().detail.date.strftime("%d-%b-%Y").upper()
         record.annotations["source"] = species.name
         record.annotations["organism"] = species.name
         record.annotations["comment"] = self.comments
@@ -2605,7 +2610,7 @@ class FeaturePosition(EntryData):
 
         seq = chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
         if self.direction == 'r':
-            seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
+            seq = unicode(Seq(seq, IUPAC.ambiguous_dna).reverse_complement())
         return seq
 
     def get_genes(self):
@@ -2763,7 +2768,7 @@ class Gene(Molecule):
         seq = chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
 
         if self.direction == 'r':
-            seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
+            seq = unicode(Seq(seq, IUPAC.ambiguous_dna).reverse_complement())
         return seq
 
     def get_length(self):
@@ -2790,7 +2795,7 @@ class Gene(Molecule):
     def get_extinction_coefficient(self):
         from cyano.helpers import ExtinctionCoefficient
 
-        seq = Seq(self.get_sequence(), IUPAC.unambiguous_dna).transcribe()
+        seq = Seq(self.get_sequence(), IUPAC.ambiguous_dna).transcribe()
 
         value = 0;
         for i in range(len(seq) - 1):
@@ -3796,7 +3801,7 @@ class ProteinMonomer(Protein):
 
     #getters
     def get_sequence(self, species, cache=False):
-        return unicode(Seq(self.gene.get_sequence(cache=cache), IUPAC.unambiguous_dna).translate(table=species.genetic_code))
+        return unicode(Seq(self.gene.get_sequence(cache=cache), IUPAC.ambiguous_dna).translate(table=species.genetic_code))
 
     def get_length(self, species):
         return len(self.get_sequence(species))
@@ -3986,7 +3991,18 @@ class ProteinMonomer(Protein):
 
     def get_as_html_gravy(self, species, is_user_anonymous):
         return self.get_gravy(species)
-    
+
+    def get_as_html_interactions(self, species, is_user_anonymous):
+        from cyanointeraction.models import Proteins as Iproteins
+
+        try:
+            prot = Iproteins.objects.get(preferred_name=self.gene.wid)
+        except ObjectDoesNotExist:
+            return ""
+
+        return '<a href="{}">Show interactions</a>'.format(
+            reverse("cyanointeraction.views.checkInteraction", kwargs={"protID": prot.protein_id}))
+
     def get_as_fasta(self, species):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(species, cache=True)) + "\r\n"
 
@@ -4000,7 +4016,7 @@ class ProteinMonomer(Protein):
         if len(accession) > 0:
             record.annotations["accession"] = accession[0].xid
 
-        record.annotations["date"] = self.detail.date.strftime("%d-%b-%Y").upper()
+        record.annotations["date"] = self.last_revision().detail.date.strftime("%d-%b-%Y").upper()
         record.annotations["source"] = species.name
         record.annotations["organism"] = species.name
         record.annotations["comment"] = self.comments
@@ -4082,6 +4098,7 @@ class ProteinMonomer(Protein):
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}),
             ('Parameters', {'fields': ['parameters']}),
+            ('Interactions', {'fields': [{'verbose_name': 'Protein/Metabolite interactions', 'name': 'interactions'}]}),
             ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
@@ -4531,7 +4548,7 @@ class TranscriptionUnit(Molecule):
     def get_sequence(self, cache=False):
         seq = self.get_chromosome(cache=cache).sequence[self.get_coordinate() - 1:self.get_coordinate() - 1 + self.get_length()]
         if self.get_direction() == 'r':
-            seq = unicode(Seq(seq, IUPAC.unambiguous_dna).reverse_complement())
+            seq = unicode(Seq(seq, IUPAC.ambiguous_dna).reverse_complement())
         return seq
 
     def get_gc_content(self):
@@ -5382,6 +5399,21 @@ class MassSpectrometryProteinDetail(EntryData):
 
 ''' END: specific data types'''
 
+class Basket(Model):
+    user = ForeignKey(UserProfile, related_name = 'baskets', verbose_name = "Users baskets")
+    name = CharField(max_length=255, blank=False, default='', verbose_name = "Basket name")
+    
+    def __unicode__(self):
+        return self.name + " " + str(self.components.all())
+
+class BasketComponent(Model):
+    basket = ForeignKey(Basket, related_name = "components", verbose_name = "In basket")
+    component = ForeignKey(SpeciesComponent, related_name = "+", verbose_name = "component")
+    species = ForeignKey(Species, related_name = "+", verbose_name = "Species component belongs to")
+    
+    def __unicode__(self):
+        return str(self.component)
+
 #http://isoelectric.ovh.org/files/practise-isoelectric-point.html
 def calculate_nucleic_acid_pi(seq):
     numA = float(seq.count('A'))
@@ -5540,3 +5572,9 @@ def sub_rate_law(species):
         except:
             return match.group(0)
     return inner_method
+
+class ProteinComparison(models.Model):
+    wid = models.AutoField(primary_key=True)
+    protein_a = models.IntegerField()
+    protein_b = models.IntegerField()
+    equal_score = models.FloatField()

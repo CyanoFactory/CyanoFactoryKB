@@ -111,9 +111,9 @@ $(document).ready(function() {
 	<div class="block" id="genbank">
 		<h1>Provide additional information for GenBank</h1>
 		<div class="content" style="width:340px;">
-			{{ form.chromosome.label_tag }}:{% render_field form.chromosome class+="text" style+="width:300px" %}<br/>
+			{{ form.chromosome.label_tag }}{% render_field form.chromosome class+="text" style+="width:300px" %}<br/>
 			{% if form.chromosome.errors|length > 0 %}<div class="errors">{{ form.chromosome.errors|join:" " }}</div>{% endif %}
-			{{ form.chromosome_wid.label_tag }}:{% render_field form.chromosome_wid class+="text" style+="width:300px" %}
+			{{ form.chromosome_wid.label_tag }}{% render_field form.chromosome_wid class+="text" style+="width:300px" %}
 			{% if form.chromosome_wid.errors|length > 0 %}<div class="errors">{{ form.chromosome_wid.errors|join:" " }}</div>{% endif %}
 		</div>
 	</div>

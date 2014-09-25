@@ -1,0 +1,1 @@
+{"directed": false, "graph": [], "nodes": [{"name": "purM", "hood": 587, "id": 17816}, {"name": "ssl1552", "hood": 0, "id": 19019}, {"name": "sll0830", "hood": 326, "id": 16287}], "links": [{"opacity": 1, "source": 0, "score": 429, "target": 1}, {"opacity": 0.2, "source": 0, "score": 660, "target": 2}, {"opacity": 1, "source": 1, "score": 573, "target": 2}], "multigraph": false}

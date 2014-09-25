@@ -12,10 +12,12 @@ Released under the MIT license
 """
 
 from __future__ import absolute_import
+import json
 
 import os
 from django.contrib.contenttypes.models import ContentType
 from django.template.context import Context
+from django.views.decorators.csrf import ensure_csrf_cookie
 from haystack.inputs import AutoQuery
 import settings
 import tempfile
@@ -23,7 +25,7 @@ from copy import deepcopy
 from itertools import chain
 
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db import transaction
 from django.db.models import Count, Sum
@@ -39,9 +41,11 @@ from cyano.forms import ExportDataForm, ImportDataForm, ImportSpeciesForm
 import cyano.helpers as chelpers
 import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
-from cyano.decorators import resolve_to_objects, permission_required
+from cyano.decorators import resolve_to_objects, permission_required,\
+    ajax_required
 from django.db.transaction import atomic
 from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse
+from django.http.response import HttpResponse
 
 
 def index(request):
@@ -423,23 +427,27 @@ def search_haystack(request, species, query):
 
     model_type = request.GET.get('model_type', '')
 
-    if facets.facet_counts():
-        tmp = facets.facet_counts()['fields']['model_type']
-        ##print tmp
-        for tmp2 in tmp:
-            ##print "tmp2", tmp2
-            model_name = cmodels.TableMeta.objects.get(model_name__iexact=tmp2[0]).model_name
-            model_name_facet.append({
-                'name':model_name,
-                'verbose_name': chelpers.getModel(model_name)._meta.verbose_name,
-                'count':tmp2[1],
-                })
-            models.append(chelpers.getModel(model_name))
-        model_name_facet.sort(lambda x, y:cmp(x['verbose_name'], y['verbose_name']))
+    try:
+        if facets.facet_counts():
+            tmp = facets.facet_counts()['fields']['model_type']
+            ##print tmp
+            for tmp2 in tmp:
+                ##print "tmp2", tmp2
+                model_name = cmodels.TableMeta.objects.get(model_name__iexact=tmp2[0]).model_name
+                model_name_facet.append({
+                    'name':model_name,
+                    'verbose_name': chelpers.getModel(model_name)._meta.verbose_name,
+                    'count':tmp2[1],
+                    })
+                models.append(chelpers.getModel(model_name))
+            model_name_facet.sort(lambda x, y:cmp(x['verbose_name'], y['verbose_name']))
 
-        #narrow search by facets
-        if model_type:
-            results = results.filter(model_type=model_type)
+            #narrow search by facets
+            if model_type:
+                results = results.filter(model_type=model_type)
+    except TypeError:
+        # passing ".." results in TypeError: SWIG director type mismatch in output value of type
+        pass
 
     #order results
     results = results.order_by('wid')
@@ -481,7 +489,7 @@ def listing(request, species, model):
 
     objects = model.objects.for_species(species)
 
-    facet_fields = []    
+    facet_fields = []
     for field_full_name in model._meta.facet_fields:
         #facet
         field_names = str(field_full_name).split('__')
@@ -503,7 +511,7 @@ def listing(request, species, model):
             tmp = model.objects.for_species(species).order_by(field_full_name).values(field_full_name).annotate(count=Count(field_full_name))
         facets = []
         for facet in tmp:
-            value = facet[field_full_name]            
+            value = facet[field_full_name]
             if value is None or unicode(value) == '':
                 continue
             
@@ -577,7 +585,11 @@ def listing(request, species, model):
             #print groups
     else:
         objects = objects.order_by("wid")
-    
+
+    baskets = None
+    if request.user.is_authenticated():
+        baskets = cmodels.Basket.objects.filter(user=request.user.profile)
+
     return chelpers.render_queryset_to_response(
         species=species,
         request=request,
@@ -586,9 +598,11 @@ def listing(request, species, model):
         template=template,
         data={
             'groups': groups,
-            'facet_fields': facet_fields
+            'facet_fields': facet_fields,
+            'baskets': baskets,
         }
     )
+
 
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
@@ -605,19 +619,25 @@ def detail(request, species, model, item):
         #filter out empty fields
         fieldsets = chelpers.create_detail_fieldset(species, item, fieldsets, request.user.is_anonymous())
 
-    qs = chelpers.objectToQuerySet(item, model = model)
+    qs = chelpers.objectToQuerySet(item, model=model)
+
+    baskets = None
+    if request.user.is_authenticated():
+        baskets = cmodels.Basket.objects.filter(user=request.user.profile)
 
     #render response
     return chelpers.render_queryset_to_response(
-        species = species,        
-        request = request, 
-        models = [model],
-        queryset = qs,
-        template = 'cyano/detail.html', 
-        data = {
+        species=species,
+        request=request,
+        models=[model],
+        queryset=qs,
+        template='cyano/detail.html',
+        data={
             'fieldsets': fieldsets,
             'message': request.GET.get('message', ''),
-            })
+            'baskets': baskets,
+        }
+    )
 
 
 @resolve_to_objects
@@ -914,7 +934,7 @@ def delete(request, species, model = None, item = None):
 @permission_required(perm.READ_NORMAL)
 def exportData(request, species):
     form = ExportDataForm(None)
-    if not form.is_valid():        
+    if not form.is_valid():
         return chelpers.render_queryset_to_response(
             species=species,
             request = request,
@@ -958,8 +978,6 @@ def importData(request, species=None):
         form = ImportDataForm(request.POST, request.FILES)
         
         if form.is_valid():
-            selected_species_wid = None
-
             if form.cleaned_data.get('species'):
                 selected_species_wid = form.cleaned_data.get('species')
             else:
@@ -1407,3 +1425,141 @@ def sbgn(request):
         request,
         template="cyano/sbgn.html",
     )
+
+@login_required
+@ensure_csrf_cookie
+@resolve_to_objects
+def basket(request, species=None, basket_id=0):
+    if basket_id == 0:
+        bask = None
+        template = "cyano/basket.html"
+
+        # Fetch basket list
+        queryset = cmodels.Basket.objects.filter(user=request.user.profile).annotate(num_components=Count('components'));
+    else:
+        template = "cyano/basket_content.html"
+
+        try:
+            bask = cmodels.Basket.objects.get(user=request.user.profile, pk=basket_id)
+        except ObjectDoesNotExist:
+            return chelpers.render_queryset_to_response_error(
+                request=request,
+                error=404,
+                msg="Invalid basket: {}".format(basket_id)
+            )
+
+        queryset = bask.components.all().prefetch_related("component")
+
+    return chelpers.render_queryset_to_response(
+        species=species,
+        request=request,
+        queryset=queryset,
+        template=template,
+        data={'basket': bask})
+
+@ajax_required
+@login_required
+@resolve_to_objects
+def basket_op(request, species=None):
+    from django.http import HttpResponseBadRequest
+
+    # Supported operations:
+    # create - Creates a new basket with name 'wid'
+    #  return: {id, url}
+    # add - Adds item with pk 'wid' to basket 'id'
+    #  return {new_op}
+    # remove - Removes item with pk 'wid' from basket 'id'
+    #  return {new_op}
+    # delete - Deletes basket with 'id'
+    #  return {}
+    # rename - Renames basket with 'id' to 'wid'
+    #  return wid
+    # list_basket - Lists items in basket 'id'
+    #  return {id, items: [list of ids]}
+    # list_item - Lists baskets containing item 'id'
+    #  return {id, baskets: [list of baskets]}
+    # Errors return a bad request
+
+    pk = request.POST.get('id', None)
+    wid = request.POST.get('wid', None)
+    op = request.POST.get('op', None)
+    
+    if not op or op not in ["add", "delete", "create", "remove", "rename", "list_basket", "list_item"]:
+        return HttpResponseBadRequest("Invalid op")
+
+    if op in ["add", "create", "remove", "rename"] and not wid:
+        return HttpResponseBadRequest("Invalid wid")
+
+    if op in ["add", "delete", "remove", "rename"] and not pk:
+        return HttpResponseBadRequest("Invalid id")
+
+    if op in ["add", "remove", "list_basket", "list_item"] and not species:
+        return HttpResponseBadRequest("Invalid species")
+
+    if op == "create":
+        basket = cmodels.Basket.objects.create(user=request.user.profile, name=wid)
+
+        url = {"basket_id": basket.pk}
+        if species:
+            url.update({"species_wid": species.wid})
+
+        return HttpResponse(json.dumps(
+            {"id": basket.pk,
+             "url": reverse("cyano-basket", kwargs=url)
+            })
+        )
+    elif op == "delete":
+        try:
+            cmodels.Basket.objects.get(user=request.user.profile, pk=pk).delete()
+            return HttpResponse(json.dumps({}))
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Invalid basket")
+    elif op == "rename":
+        try:
+            bask = cmodels.Basket.objects.get(user=request.user.profile, pk=pk)
+            bask.name = wid
+            bask.save()
+            return HttpResponse(wid.replace("<", "&lt;").replace(">", "&gt;"))
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Invalid basket")
+    elif op == "list_basket":
+        try:
+            bask = cmodels.Basket.objects.get(user=request.user.profile, components__species=species.pk, pk=pk)
+            items = list(bask.components.filter(species=species.pk).values_list("pk", flat=True))
+            return HttpResponse(json.dumps({"id": bask.pk, "items": items}))
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Invalid basket")
+    elif op == "list_item":
+        bask = list(cmodels.Basket.objects.filter(user=request.user.profile, components__species=species.pk, components__component=pk).values_list("pk", flat=True))
+        return HttpResponse(json.dumps({"id": pk, "baskets": bask}))
+
+    # op is add or remove
+    try:
+        basket = cmodels.Basket.objects.get(user=request.user.profile, pk=pk)
+    except ObjectDoesNotExist:
+        return HttpResponseBadRequest("Invalid basket")
+
+    try:
+        item = cmodels.SpeciesComponent.objects.for_species(species).get(pk=wid)
+    except ObjectDoesNotExist:
+        return HttpResponseBadRequest("Invalid item")
+
+    kwargs = {"basket": basket,
+              "component": item,
+              "species": species}
+
+    if op == "add":
+        basket_component, created = cmodels.BasketComponent.objects.get_or_create(**kwargs)
+        if not created:
+            return HttpResponseBadRequest("Already in basket")
+
+        new_op = "remove"
+    else:  # remove
+        try:
+            cmodels.BasketComponent.objects.get(**kwargs).delete()
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Not in basket")
+
+        new_op = "add"
+
+    return HttpResponse(json.dumps({"new_op": new_op}))

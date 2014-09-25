@@ -1,0 +1,1 @@
+{"directed": false, "graph": [], "nodes": [{"name": "psaK2", "hood": 269, "id": 16137}, {"name": "sll0630", "hood": 0, "id": 16138}, {"name": "nadB", "hood": 437, "id": 16139}], "links": [{"opacity": 1, "source": 0, "score": 591, "target": 1}, {"opacity": 0.2, "source": 0, "score": 409, "target": 2}, {"opacity": 1, "source": 1, "score": 573, "target": 2}], "multigraph": false}

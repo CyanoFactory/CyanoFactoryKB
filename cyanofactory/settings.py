@@ -114,8 +114,8 @@ MIDDLEWARE_CLASSES = (
     #'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-if DEBUG:
-    MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
+#if DEBUG:
+#    MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
 
 ROOT_URLCONF = 'urls'
 
@@ -126,7 +126,7 @@ TEMPLATE_DIRS = (
 
 HAYSTACK_CONNECTIONS = {
     'default': {
-        'ENGINE': 'xapian_backend.XapianEngine',
+        'ENGINE': 'haystack.backends.simple_backend.SimpleEngine',
         'PATH': os.path.join(os.path.dirname(__file__), 'xapian_index'),
     },
 }
@@ -157,20 +157,22 @@ INSTALLED_APPS = (
     'bioparser',
     'boehringer',
     'kegg',
+    'cyanointeraction',
 
     #helpers
     'django_dumpdb',
     'djcelery',
     'haystack',
     'endless_pagination',
-    'south'
+    'south',
+    #'debug_toolbar'
+
 )
+
 
 if UNIT_TEST_RUNNING:
     INSTALLED_APPS += ('django_nose',)
 
-if DEBUG:
-    INSTALLED_APPS += ('debug_toolbar',)
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
