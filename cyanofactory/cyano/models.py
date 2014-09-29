@@ -3993,15 +3993,15 @@ class ProteinMonomer(Protein):
         return self.get_gravy(species)
 
     def get_as_html_interactions(self, species, is_user_anonymous):
-        from cyanointeraction.models import Proteins as Iproteins
+        from cyanointeraction.models import ProteinsNames as IproteinsNames
 
-        try:
-            prot = Iproteins.objects.get(preferred_name=self.gene.wid)
-        except ObjectDoesNotExist:
-            return ""
+        prot_name = IproteinsNames.objects.filter(protein_name=self.gene.wid).first()
 
-        return '<a href="{}">Show interactions</a>'.format(
-            reverse("cyanointeraction.views.checkInteraction", kwargs={"protID": prot.protein_id}))
+        if prot_name:
+            return '<a href="{}">Show interactions</a>'.format(
+                reverse("cyanointeraction.views.checkInteraction", kwargs={"protID": prot_name.protein_id}))
+
+        return ""
 
     def get_as_fasta(self, species):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(species, cache=True)) + "\r\n"
