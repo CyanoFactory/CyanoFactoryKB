@@ -164,9 +164,9 @@ INSTALLED_APPS = (
     'djcelery',
     'haystack',
     'endless_pagination',
+    'rest_framework',
     'south',
     #'debug_toolbar'
-
 )
 
 
@@ -255,3 +255,12 @@ CELERY_ACCEPT_CONTENT = ['pickle', 'json', 'msgpack', 'yaml']
 CELERY_RESULT_BACKEND = "djcelery.backends.database:DatabaseBackend"
 
 JOHNNY_TABLE_BLACKLIST = ["djcelery_crontabschedule", "djcelery_intervalschedule", "djcelery_periodictask", "djcelery_periodictasks", "djcelery_taskstate", "djcelery_workerstate", "celery_taskmeta", "celery_tasksetmeta"]
+
+REST_FRAMEWORK = {
+      'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.XMLRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+      ),
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
+}

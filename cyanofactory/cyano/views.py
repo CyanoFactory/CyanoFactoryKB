@@ -18,6 +18,7 @@ import os
 from django.contrib.contenttypes.models import ContentType
 from django.template.context import Context
 from django.views.decorators.csrf import ensure_csrf_cookie
+from djcelery.db import get_queryset
 from haystack.inputs import AutoQuery
 import settings
 import tempfile
@@ -44,7 +45,7 @@ from cyano.models import PermissionEnum as perm
 from cyano.decorators import resolve_to_objects, permission_required,\
     ajax_required
 from django.db.transaction import atomic
-from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse
+from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse, Http404
 from django.http.response import HttpResponse
 
 
@@ -604,6 +605,78 @@ def listing(request, species, model):
     )
 
 
+from rest_framework import generics, filters
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from cyano.serializers import Entry as EntrySerializer
+
+class EntryList(generics.GenericAPIView):
+    lookup_field = 'wid'
+    filter_backends = (filters.SearchFilter,)
+    search_fields = ('wid', 'synonyms')
+    serializer_class = EntrySerializer
+
+    def get_queryset(self, species_wid, model_type):
+        species = cmodels.Species.objects.for_wid(species_wid, get=False)
+
+        try:
+            species.get()
+        except ObjectDoesNotExist as e:
+            raise Http404
+
+        model = chelpers.getModel(model_type)
+        if model is None or not issubclass(model, cmodels.SpeciesComponent):
+            raise Http404
+
+        return model.objects.for_species(species.get())
+
+    def get(self, request, species_wid, model_type, format=None):
+        objects = self.get_queryset(species_wid, model_type)
+        objects = self.filter_queryset(objects)
+        serializer = chelpers.getSerializer(model_type)(objects, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, species, model, format=None):
+        #serializer = EntrySerializer(data=request.DATA)
+
+
+        #return self.create(request, *args, **kwargs)
+        raise Http404
+
+
+class EntryDetail(APIView):
+    serializer_class = EntrySerializer
+
+    def get_object(self, species_wid, model_type, wid):
+        species = cmodels.Species.objects.for_wid(species_wid, get=False)
+
+        try:
+            species.get()
+        except ObjectDoesNotExist as e:
+            raise Http404
+
+        model = chelpers.getModel(model_type)
+        if model is None or not issubclass(model, cmodels.SpeciesComponent):
+            raise Http404
+
+        obj = model.objects.for_species(species.get()).for_wid(wid=wid, get=False)
+
+        if obj.count() != 1:
+            raise Http404
+
+        return obj
+
+    def get(self, request, species_wid, model_type, wid, format=None):
+        objects = self.get_object(species_wid, model_type, wid)
+        serializer = chelpers.getSerializer(model_type)(objects, many=True)
+        return Response(serializer.data)
+
+    def put(self, request, *args, **kwargs):
+        return self.update(request, *args, **kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        return self.destroy(request, *args, **kwargs)
+
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def detail(request, species, model, item):
@@ -665,6 +738,8 @@ def detail_field(request, species, model, item):
         rendered = strip_tags(rendered)
 
     return HttpResponse(rendered)
+
+
 
 @resolve_to_objects
 @permission_required(perm.READ_HISTORY)
@@ -1263,7 +1338,7 @@ def permission(request, species, model = None, item = None, edit = False):
                     species = species,
                     error = 400,
                     msg = "Invalid request on permission page.",
-                    msg_debug = "POST was: " + str(request.POST.lists()))        
+                    msg_debug = "POST was: " + str(request.POST.lists()))
             
             # Data is valid, begin with database operations
             

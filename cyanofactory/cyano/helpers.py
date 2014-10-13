@@ -363,6 +363,14 @@ def getModelDataFieldNames(model):
             fields.append(field.name)
     return fields
 
+def getSerializer(s):
+    import cyano.serializers
+
+    try:
+        return getattr(cyano.serializers, s)
+    except AttributeError:
+        return None
+
 def is_entrydata_model(cls):
     return inspect.isclass(cls) and issubclass(cls, cmodels.EntryData)
 

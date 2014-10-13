@@ -48,6 +48,7 @@ from .history import HistoryManyToManyField as ManyToManyField
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from copy import deepcopy
 from django.conf import settings
+from rest_framework import serializers
 
 from model_utils.managers import PassThroughManager
 

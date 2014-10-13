@@ -10,6 +10,8 @@ Released under the MIT license
 """
 
 from django.conf.urls import patterns, url
+from rest_framework.urlpatterns import format_suffix_patterns
+from cyano import views
 
 _species_wid = r'(?P<species_wid>[a-zA-Z0-9_\-]+)'
 _wid = r'(?P<wid>[a-zA-Z0-9_\-]+)'
@@ -17,7 +19,14 @@ _wid = r'(?P<wid>[a-zA-Z0-9_\-]+)'
 _species_wid_model_type = _species_wid + r'/(?P<model_type>[a-zA-Z0-9_\-]+)'
 _species_wid_model_type_wid = _species_wid + r'/(?P<model_type>[a-zA-Z0-9_\-]+)/' + _wid
 
-urlpatterns = patterns('cyano.views',
+urlpatterns = patterns('',
+    url(r'^api/' + _species_wid_model_type + '/$', views.EntryList.as_view()),
+    url(r'^api/' + _species_wid_model_type_wid + '/$', views.EntryDetail.as_view()),
+)
+
+urlpatterns = format_suffix_patterns(urlpatterns, allowed=['json', 'xml', 'html'])
+
+urlpatterns += patterns('cyano.views',
     url(r'^login/$', 'login', name="login"),
     url(r'^' + _species_wid + r'/login/$', 'login', name="login"),
 
