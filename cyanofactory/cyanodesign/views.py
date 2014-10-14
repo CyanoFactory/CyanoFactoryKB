@@ -419,8 +419,6 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
 
     g = json_graph.node_link_graph(jsonGraph)
     vList = changeDic.values()
-    while 0 in vList:
-        vList.remove(0)
 
     for i in xrange(len(vList)):
         vList[i] = math.sqrt(math.pow(vList[i], 2))
@@ -460,4 +458,3 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
             g.edge[aEdge[0]][aEdge[1]]["label"] = value
 
     return g
-
