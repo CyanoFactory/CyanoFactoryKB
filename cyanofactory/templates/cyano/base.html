@@ -36,11 +36,171 @@ Released under the MIT license
             $("#action_icons_export").remove();
         }
     });
+
+    register_action = function(category, callback) {
+        var page_actions = $("#page_actions");
+
+        if (page_actions.children().hasClass("disabled")) {
+            page_actions.children().remove();
+        }
+
+        if (page_actions.find(".dropdown-header:contains(" + category + ")").length == 0) {
+            // If that isn't the first category add a divider
+            if (page_actions.children().count != 0) {
+                page_actions.append($("<li></li>").addClass("divider"));
+            }
+
+            page_actions.append($("<li></li>").addClass("dropdown-header").text(category));
+        }
+
+        var cat = page_actions.find(".dropdown-header:contains(" + category + ")");
+
+        var divider = cat.nextAll(".divider");
+
+        if (divider.length == 0) {
+            // Append at the end
+            page_actions.append(callback());
+        } else {
+            // Append before devider
+            $(divider[0]).before(callback());
+        }
+    }
     </script>
 	{% endblock %}
 </head>
 <body>
 	<!-- header -->
+
+    <nav class="navbar navbar-default navbar-fixed-top navbar-custom" role="navigation">
+        <div class="container">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="#">CyanoFactory KB</a>
+            </div>
+            <div id="navbar" class="navbar-collapse collapse">
+                <ul class="nav navbar-nav navbar-left">
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Species <span class="caret"></span></a>
+                        <ul class="dropdown-menu" role="menu">
+                            {% for species in species_list %}
+                            <li><a href="{{ species.get_absolute_url }}"><i>{{ species.name }}</i></a></li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Browse <span class="caret"></span></a>
+                        <ul class="dropdown-menu" role="menu">
+                        {% for key1 in modelnames %}
+                            {% for key2, modelmetadata in modelmetadatas.iteritems %}
+                                {% if key1 == key2 %}
+                                    {% if species %}
+                            <li>
+                                <a href="{% url "cyano.views.listing" species_wid=species.wid model_type=key2 %}">{{ modelmetadata.verbose_name_plural }}</a>
+                            </li>
+                                    {% else %}
+                            <li class="disabled">
+                                <a href="#">{{ modelmetadata.verbose_name_plural }}</a>
+                            </li>
+                                    {% endif %}
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Tools <span class="caret"></span></a>
+                        <ul class="dropdown-menu" role="menu">
+                            <li class="dropdown-header">CyanoMaps</li>
+                            <li><a href="{% url "boehringer.views.index" %}" title="Biochemical Pathways">Biochemical Pathways</a></li>
+                            <li><a href="{% url "kegg.views.index" %}" title="KEGG Pathways">KEGG Pathways</a></li>
+                            <li><a href="{% url "cyano.views.sbgn" %}" title="SBGN of Synechocystis">SBGN of Synechocystis</a></li>
+                            <li class="divider"></li>
+                            <li><a href="{% url "cyanodesign.views.index" %}" title="CyanoDesign">CyanoDesign</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Import <span class="caret"></span></a>
+                        <ul class="dropdown-menu" role="menu">
+                            <li><a href="{% if species %}{% url "cyano.views.importSpeciesData" species_wid=species.wid %}{% else %}{% url "cyano.views.importSpeciesData" %}{% endif %}">{% if species %}Create Mutant{% else %}Create New Species{% endif %}</a></li>
+                            <li><a href="{% if species %}{% url "cyano.views.importData" species_wid=species.wid %}{% else %}{% url "cyano.views.importData" %}{% endif %}">Import Data</a></li>
+                            <li><a href="{% if species %}{% url "cyano.views.jobs" species_wid=species.wid %}{% else %}{% url "cyano.views.jobs" %}{% endif %}">View Import Jobs</a></li>
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Page <span class="caret"></span></a>
+                        <ul class="dropdown-menu" role="menu" id="page_actions">
+                            {% block action_icons %}
+                            <li class="dropdown-header">Actions</li>
+                                {% block action_icons_edit %}
+                                {% endblock %}
+                            </li>
+                            <li class="divider"></li>
+                            <li class="dropdown-header">Export</li>
+                                {% block action_icons_export %}
+                                <li><a href="?{% makeurl queryargs 'format' 'pdf' %}" title="Convert to PDF">Convert to PDF</a></li>
+                                <li><a href="javascript:window.print()" title="Print this page">Print this page</a></li>
+                                {% endblock %}
+                            </li>
+                            <li class="divider"></li>
+                            <li class="dropdown-header">Share</li>
+                                {% block action_icons_share %}
+                                <li>
+                                    <a href="https://www.facebook.com/sharer/sharer.php?s=100&amp;p[url]={{ request.build_absolute_uri }}&amp;p[title]=CyanoFactory%20KB&amp;p[summary]={{ social_text }}" onclick="javascript:window.open('https://www.facebook.com/sharer/sharer.php?s=100&amp;p[url]={{ request.build_absolute_uri }}&amp;p[title]=CyanoFactory%20KB&amp;p[summary]={{ social_text }}', '', 'width=500,height=300'); return false;" target="_blank" title="Share on Facebook">Share on Facebook</a>
+                                </li>
+                                <li>
+                                    <a href="https://twitter.com/intent/tweet?source=webclient&amp;text=https://twitter.com/intent/tweet?source=webclient&amp;text=CyanoFactory%20KB:{% if social_text %}%20{{ social_text }}%20at{% endif %}&amp;url={{ request.build_absolute_uri }}" onclick="javascript:window.open('https://twitter.com/intent/tweet?source=webclient&amp;text=CyanoFactory%20KB:{% if social_text %}%20{{ social_text }}%20at{% endif %}&amp;url={{ request.build_absolute_uri }}', '', 'width=500,height=300'); return false;" target="_blank" title="Share on Twitter">Share on Twitter</a>
+                                </li>
+                                <li>
+                                    <a href="https://plus.google.com/share?url={{ request.build_absolute_uri }}" onclick="javascript:window.open('https://plus.google.com/share?url={{ request.build_absolute_uri }}', '', 'width=500,height=500'); return false;" target="_blank" title="Share on Google Plus">Share on Google+</a>
+                                </li>
+                                <li>
+                                    <a href="mailto:name@example.org?subject=CyanoFactory%20KB&amp;body={% if social_text %}{{ social_text }}%20at%20{% endif %}{{ request.build_absolute_uri }}" title="Share via E-Mail">Share via Mail</a>
+                                </li>
+                                {% endblock %}
+                            {% endblock %}
+                        </ul>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Help <span class="caret"></span></a>
+                        <ul class="dropdown-menu" role="menu">
+                            <li><a href="{% if species %}{% url "cyano.views.licensing" species_wid=species.wid %}{% else %}{% url "cyano.views.licensing" %}{% endif %}">License</a></li>
+                        </ul>
+                    </li>
+                    {% if request.user.is_authenticated %}
+                    <li class="dropdown">
+                        <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">{{ request.user.username }} <span class="caret"></span></a>
+                        <ul class="dropdown-menu" role="menu">
+                            <li><a href="{% if species %}{% url "cyano.views.users" species_wid=species.wid %}{% else %}{% url "cyano.views.users" %}{% endif %}">Members</a></li>
+                            <li class="divider"></li>
+                            <li><a href="{% if species %}{% url "cyano.views.user" username=request.user.username species_wid=species.wid %}{% else %}{% url "cyano.views.user" username=request.user.username %}{% endif %}">My Profile</a></li>
+                            <li><a href="{% if species %}{% url "cyano.views.basket" species_wid=species.wid %}{% else %}{% url "cyano.views.basket" %}{% endif %}">My Baskets</a></li>
+                            <li class="divider"></li>
+                            <li><a href="{% url "password_change" %}">Change password</a></li>
+                            <li><a href="{% if species %}{% url "logout" species_wid=species.wid %}{% else %}{% url "logout" %}{% endif %}">Logout</a></li>
+                        </ul>
+                    </li>
+                    {% if request.user.profile.is_admin %}
+                    <li>
+                        <a href="#" style="font-weight: bold; color: red;" data-toggle="tooltip" title="All permission checks are ignored.">Warning! Admin Permission.</a>
+                        <!--<ul class="dropdown-menu" role="menu">
+                        <li>All permission checks are ignored.</li>
+                        <li>Login with a normal account when finished.</li>
+                        </ul>-->
+                    </li>
+                    {% endif %}
+                    {% else %}
+                    <li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% url "login" species_wid=species.wid %}{% else %}{% url "login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
 	<div id="header">
 		<div class="title"><a href="{% if species %}{% url "cyano.views.species" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}">{{ species.name }}</a></div>
 		<div class="banner"><a href="{% if species %}{% url "cyano.views.species" species_wid=species.wid %}{% else %}{% url "cyano.views.index" %}{% endif %}"><img src="{% get_static_prefix %}cyano/img/banner.png" /></a></div>
@@ -187,47 +347,6 @@ Released under the MIT license
 		<h1>{% block page_title %}{% endblock %}
 		</h1>
 		{% block content %}{% endblock %}		
-		</div>
-	</div>
-		
-	<!-- footer -->
-	<div id="footer">
-		<div class="left">
-		</div>
-		
-		<div class="center">			
-			{% if last_updated_date %}Last updated {{ last_updated_date }}. {% endif %}Contact: <a href="mailto:{{ email }}">{{ email }}</a>.<br/> 
-			&copy; <a href="https://www.hs-mittweida.de/wuenschi">Experimental &amp; Computational Biology</a>, <a href="https://www.hs-mittweida.de">University of Applied Sciences Mittweida</a> 2013.
-		</div>
-		
-		<div class="right">
-            <ul class="menu">
-                {% block action_icons %}
-                <li id="action_icons_share">Share
-                    <ul>
-                        {% block action_icons_share %}
-                        <li><a href="https://www.facebook.com/sharer/sharer.php?s=100&amp;p[url]={{ request.build_absolute_uri }}&amp;p[title]=CyanoFactory%20KB&amp;p[summary]={{ social_text }}" onclick="javascript:window.open('https://www.facebook.com/sharer/sharer.php?s=100&amp;p[url]={{ request.build_absolute_uri }}&amp;p[title]=CyanoFactory%20KB&amp;p[summary]={{ social_text }}', '', 'width=500,height=300'); return false;" target="_blank" title="Share on Facebook"><img src="{% get_static_prefix %}cyano/img/social/facebook.png" />Share on Facebook</a></li>
-                        <li><a href="https://twitter.com/intent/tweet?source=webclient&amp;text=https://twitter.com/intent/tweet?source=webclient&amp;text=CyanoFactory%20KB:{% if social_text %}%20{{ social_text }}%20at{% endif %}&amp;url={{ request.build_absolute_uri }}" onclick="javascript:window.open('https://twitter.com/intent/tweet?source=webclient&amp;text=CyanoFactory%20KB:{% if social_text %}%20{{ social_text }}%20at{% endif %}&amp;url={{ request.build_absolute_uri }}', '', 'width=500,height=300'); return false;" target="_blank" title="Share on Twitter"><img src="{% get_static_prefix %}cyano/img/social/twitter.png" />Share on Twitter</a></li>
-                        <li><a href="https://plus.google.com/share?url={{ request.build_absolute_uri }}" onclick="javascript:window.open('https://plus.google.com/share?url={{ request.build_absolute_uri }}', '', 'width=500,height=500'); return false;" target="_blank" title="Share on Google Plus"><img src="{% get_static_prefix %}cyano/img/social/google+.png" />Share on Google+</a></li>
-                        <li><a href="mailto:name@example.org?subject=CyanoFactory%20KB&amp;body={% if social_text %}{{ social_text }}%20at%20{% endif %}{{ request.build_absolute_uri }}" title="Share via E-Mail"><img src="{% get_static_prefix %}cyano/img/social/email.png" />Share via Mail</a></li>
-                        {% endblock %}
-                    </ul>
-                <li id="action_icons_export">Export
-                    <ul>
-                        {% block action_icons_export %}
-                        <li><a href="?{% makeurl queryargs 'format' 'pdf' %}" title="Convert to PDF"><img src="{% get_static_prefix %}public/img/page_white_acrobat.png" />Convert to PDF</a></li>
-                        <li><a href="javascript:window.print()" title="Print this page"><img src="{% get_static_prefix %}public/img/printer.png" />Print this page</a></li>
-                        {% endblock %}
-                    </ul>
-                </li>
-                <li id="action_icons_edit">Actions
-                    <ul>
-                        {% block action_icons_edit %}
-                        {% endblock %}
-                    </ul>
-                </li>
-                {% endblock %}
-            </ul>
 		</div>
 	</div>
 

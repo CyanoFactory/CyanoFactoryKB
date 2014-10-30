@@ -17,9 +17,9 @@ Released under the MIT license
 {% block page_title %}My Baskets{% endblock %}
 
 {% block action_icons_export %}
-<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download basket list in Excel format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download basket list in JSON format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download basket list in XML format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}">Download basket list in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}">Download basket list in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}">Download basket list in XML format</a></li>
 {{ block.super }}
 {% endblock %}
 

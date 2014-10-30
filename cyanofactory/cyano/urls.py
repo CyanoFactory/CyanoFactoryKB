@@ -20,8 +20,8 @@ _species_wid_model_type = _species_wid + r'/(?P<model_type>[a-zA-Z0-9_\-]+)'
 _species_wid_model_type_wid = _species_wid + r'/(?P<model_type>[a-zA-Z0-9_\-]+)/' + _wid
 
 urlpatterns = patterns('',
-    url(r'^api/' + _species_wid_model_type + '/$', views.EntryList.as_view()),
-    url(r'^api/' + _species_wid_model_type_wid + '/$', views.EntryDetail.as_view()),
+    url(r'^api/' + _species_wid_model_type + '/$', views.EntryList.as_view(), name="cyano-api-list"),
+    url(r'^api/' + _species_wid_model_type_wid + '/$', views.EntryDetail.as_view(), name="cyano-api-detail"),
 )
 
 urlpatterns = format_suffix_patterns(urlpatterns, allowed=['json', 'xml', 'html'])

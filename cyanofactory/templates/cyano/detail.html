@@ -125,17 +125,17 @@ $(document).ready(function() {
 
 {% block action_icons_edit %}
 {% with object=queryset.0 %}
-<li data-pk="{{ object.pk }}"><a href="#" class="cart-add-button" title="Add to basket"><img src="{% get_static_prefix %}cyano/img/cart/cart.png" />Add to basket</a></li>
-<li><a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" />Edit {{ object.wid }}</a></li>
-<li><a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" />Delete {{ object.wid }}</a></li>
-<li><a href="{% url "cyano.views.permission" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/lock.png" title="View permissions" alt="View permissions" />View permissions of {{ object.wid }}</a></li>
+<li data-pk="{{ object.pk }}"><a href="#" class="cart-add-button" title="Add to basket">Add to basket</a></li>
+<li><a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}">Edit {{ object.wid }}</a></li>
+<li><a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}">Delete {{ object.wid }}</a></li>
+<li><a href="{% url "cyano.views.permission" species_wid=species.wid model_type=model_type wid=object.wid %}">View permissions of {{ object.wid }}</a></li>
 {% endwith %}
 {% endblock %}
 {% block action_icons_export %}
 {% with object=queryset.0 %}
-<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download {{ object.wid }} in Excel format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download {{ object.wid }} in JSON format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download {{ object.wid }} in XML format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}">Download {{ object.wid }} in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}">Download {{ object.wid }} in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}">Download {{ object.wid }} in XML format</a></li>
 <li><a href="?{% makeurl queryargs 'format' 'fasta' %}">Download {{ object.wid }} in FASTA format</a></li>
 <li><a href="?{% makeurl queryargs 'format' 'genbank' %}">Download {{ object.wid }} in GenBank format</a></li>
 {{ block.super }}

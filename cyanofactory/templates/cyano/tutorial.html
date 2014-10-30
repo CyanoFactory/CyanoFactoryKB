@@ -14,14 +14,14 @@ Last updated: 2012-07-17
 {% block page_title %}{% endblock %}
 
 {% block action_icons_export %}
-<li><img src="{% get_static_prefix %}public/img/json.png" title="Export as JSON" alt="Export as JSON" /></li>
-<li><img src="{% get_static_prefix %}public/img/xml.gif" title="Export as XML" alt="Export as XML" /></li>
-<li><img src="{% get_static_prefix %}public/img/page_excel.png" title="Export as Excel" alt="Export as Excel" /></li>
+<li><a>Export as JSON</a></li>
+<li><a>Export as XML</a></li>
+<li><a>Export as Excel</a></li>
 {{ block.super }}
 {% endblock %}
 
 {% block action_icons_edit %}
-<li><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" /></li>
+<li><a>Edit</a></li>
 {{ block.super }}
 {% endblock %}
 

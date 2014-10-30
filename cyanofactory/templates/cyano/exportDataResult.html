@@ -17,9 +17,9 @@ Last updated: 2012-07-17
 
 {% block action_icons_export %}
 {% with object=queryset.0 %}
-<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download in Excel format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download in JSON format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download in XML format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}">Download in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}">Download in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}">Download in XML format</a></li>
 {{ block.super }}
 {% endwith %}
 {% endblock %}

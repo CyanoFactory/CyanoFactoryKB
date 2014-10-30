@@ -35,11 +35,11 @@ Released under the MIT license
 {% block action_icons_edit %}
 {% with object=queryset.0 %}
 {% if object %}
-<li><a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" />View {{ object.wid }}</a></li>
-<li><a href="{% url "cyano.views.permission_edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/lock_edit.png" title="Edit permissions of {{ object.wid }}" alt="Edit permissions of {{ object.wid }}" />Edit permissions of {{ object.wid }}</a></li>
+<li><a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=object.wid %}">View {{ object.wid }}</a></li>
+<li><a href="{% url "cyano.views.permission_edit" species_wid=species.wid model_type=model_type wid=object.wid %}">Edit permissions of {{ object.wid }}</a></li>
 {% else %}
-<li><a href="{% url "cyano.views.species" species_wid=species.wid %}"><img src="{% get_static_prefix %}public/img/page_white_text.png" title="View" alt="View" />View {{ species.wid }}</a></li>
-<li><a href="{% url "cyano.views.permission_edit" species_wid=species.wid %}"><img src="{% get_static_prefix %}public/img/lock_edit.png" title="Edit permissions of {{ species.wid }}" alt="Edit permissions of {{ species.wid }}" />Edit permissions of {{ species.wid }}</a></li>
+<li><a href="{% url "cyano.views.species" species_wid=species.wid %}">View {{ species.wid }}</a></li>
+<li><a href="{% url "cyano.views.permission_edit" species_wid=species.wid %}">Edit permissions of {{ species.wid }}</a></li>
 {{ block.super }}
 {% endif %}
 {% endwith %}

@@ -633,7 +633,7 @@ class EntryList(generics.GenericAPIView):
     def get(self, request, species_wid, model_type, format=None):
         objects = self.get_queryset(species_wid, model_type)
         objects = self.filter_queryset(objects)
-        serializer = chelpers.getSerializer(model_type)(objects, many=True)
+        serializer = chelpers.getSerializer(model_type)(objects, many=True, context={'request': request})
         return Response(serializer.data)
 
     def post(self, request, species, model, format=None):

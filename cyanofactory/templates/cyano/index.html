@@ -17,7 +17,7 @@ Released under the MIT license
 {% load templatetags %}
 
 {% block action_icons_edit %}
-<li><a href="{% if species %}{% url "cyano.views.add" species_wid=species.wid model_type='Species' %}{% else %}{% url "cyano.views.add" model_type='Species' %}{% endif %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" />Add new species</a></li>
+<li><a href="{% if species %}{% url "cyano.views.add" species_wid=species.wid model_type='Species' %}{% else %}{% url "cyano.views.add" model_type='Species' %}{% endif %}">Add new species</a></li>
 {{ block.super }}
 {% endblock %}
 
