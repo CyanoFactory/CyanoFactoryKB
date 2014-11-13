@@ -616,13 +616,18 @@ class EntryList(generics.GenericAPIView):
     search_fields = ('wid', 'synonyms')
     serializer_class = EntrySerializer
 
-    def get_queryset(self, species_wid, model_type):
+    def get_species(self, species_wid):
         species = cmodels.Species.objects.for_wid(species_wid, get=False)
 
         try:
             species.get()
         except ObjectDoesNotExist as e:
             raise Http404
+
+        return species
+
+    def get_queryset(self, species_wid, model_type):
+        species = self.get_species(species_wid)
 
         model = chelpers.getModel(model_type)
         if model is None or not issubclass(model, cmodels.SpeciesComponent):
@@ -633,7 +638,11 @@ class EntryList(generics.GenericAPIView):
     def get(self, request, species_wid, model_type, format=None):
         objects = self.get_queryset(species_wid, model_type)
         objects = self.filter_queryset(objects)
-        serializer = chelpers.getSerializer(model_type)(objects, many=True, context={'request': request})
+
+        serializer = chelpers.getSerializer(model_type)(
+            objects,
+            many=True,
+            context={'request': request, 'species': self.get_species(species_wid)})
         return Response(serializer.data)
 
     def post(self, request, species, model, format=None):

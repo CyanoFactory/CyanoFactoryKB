@@ -144,8 +144,33 @@ $(document).ready(function() {
 
 {% block content %}
 {% autoescape off %}
+
 {% with object=queryset.0 %}
-<table id="detail">	
+	{% with object=queryset.0 %}
+	{% for fieldset in fieldsets %}
+        <div class="panel panel-primary">
+            <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th colspan="2">{{ fieldset.0 }}</th>
+                </tr>
+            </thead>
+            <tbody>
+		{% for field in fieldset.1.fields %}
+                <tr>
+                    <th>{{ field.verbose_name }}</th>
+                    <td>{{ field.data }}</td>
+                </tr>
+		{% endfor %}
+            </tbody>
+            </table>
+        </div>
+	{% endfor %}
+	{% endwith %}
+{% endwith %}
+
+{% with object=queryset.0 %}
+<table id="detail">
 	{% with object=queryset.0 %}
 	{% for fieldset in fieldsets %}
 		{% if not forloop.first %}

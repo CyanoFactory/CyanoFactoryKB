@@ -31,6 +31,8 @@
 <!--<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/jquery.dataTables.css">-->
 <link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/dataTables.bootstrap.css">
 
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/bootstrap-combobox.css">
+
 <style type="text/css" media="print">
 {{ pdfstyles }}
 </style>
@@ -57,3 +59,17 @@
 
 <script type="text/javascript" charset="utf8" src="{% get_static_prefix %}cyano/js/jquery.dataTables.js"></script>
 <script type="text/javascript" charset="utf8" src="{% get_static_prefix %}cyano/js/dataTables.bootstrap.js"></script>
+
+<script type="text/javascript" charset="utf8" src="{% get_static_prefix %}cyano/js/bootstrap-combobox.js"></script>
+
+<script type="text/javascript" charset="utf8">
+$(document).ready(function() {
+    var cbox = $('.combobox').combobox();
+
+    cbox.combobox();
+
+    cbox.click(function(){
+        $(this).siblings('.dropdown-toggle').click();
+    });
+});
+</script>

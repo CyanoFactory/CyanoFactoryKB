@@ -98,11 +98,14 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block content %}
-<table id="detail" style="position:relative;">
-	<tbody class="data">
+<div class="panel panel-primary">
+<table class="table table-striped">
+    <thead>
 		<tr>
 			<th colspan="2">Search results</th>
 		</tr>
+    </thead>
+	<tbody>
 		<tr>
 			<th>Enzymes</th>
 			<td>{{ enzymes_hits }} hit{% if enzymes_hits != 1 %}s{% endif %} - {{ enzymes_no_hits }} miss{% if enzymes_no_hits != 1 %}es{% endif %}</td>
@@ -112,18 +115,22 @@ $(document).ready(function() {
 			<td>{{ metabolites_hits }} hit{% if metabolites_hits != 1 %}s{% endif %} - {{ metabolites_no_hits}} miss{% if metabolites_no_hits != 1 %}es{% endif %}</td>
 		</tr>
 	</tbody>
-	<tbody class="spacing">
-		<tr><td colspan="2">&nbsp;</td></tr>
-	</tbody>
-	<tbody class="data">
+</table>
+</div>
+
+<div class="panel panel-primary">
+<table class="table table-striped">
+    <thead>
 		<tr>
 			<th colspan="2">Navigator</th>
 		</tr>
+    </thead>
+	<tbody>
 		<tr>
 			<th>Navigate to</th>
 			<td>
-			<select id="selectionField" class="select">
-				<option id="0">(Select an item)</option>
+			<select name="load" id="selectionField" class="input-large form-control combobox">
+				<option id="0" value="">Select an item</option>
 				<optgroup label="Enzymes">
 				  {% for enzyme in enzymes %}
 				  {% with object=enzyme.0 %}
@@ -140,15 +147,17 @@ $(document).ready(function() {
 			</td>
         </tr>
 	</tbody>
-	
-	<tbody class="spacing">
-		<tr><td colspan="2">&nbsp;</td></tr>
-	</tbody>
-	
-	<tbody class="data">
+</table>
+</div>
+
+<div class="panel panel-primary">
+<table class="table table-striped">
+    <thead>
 		<tr>
 			<th colspan="2">Map</th>
 		</tr>
+    </thead>
+	<tbody>
 		<tr>
 			<td colspan="2" id="map_box">
 			<div id="sidebar">
@@ -163,7 +172,7 @@ $(document).ready(function() {
 			</form>
             <form id="load_form" method="get">
                 <p><b>Load</b> existing query:<br/>
-                <select name="load" class="select" style="width:100%">
+                <select name="load" class="input-large form-control combobox">
                     {% for query in queries %}
                     <option name="{{ query.pk }}">{{ query.name }}</option>
                     {% endfor %}
@@ -204,5 +213,6 @@ $(document).ready(function() {
 		</tr>
 	</tbody>
 </table>
+</div>
 
 {% endblock %}

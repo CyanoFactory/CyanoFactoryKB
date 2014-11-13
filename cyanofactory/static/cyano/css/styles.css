@@ -352,9 +352,8 @@ select.select{
 /* content */
 #main{
     margin: 80px auto 40px;
-    width:800px;
-	padding:0px;
-	height:100%;
+    padding: 0px 40px;
+    height:100%;
 }
 
 #content{
@@ -391,9 +390,7 @@ select.select{
 	text-align:left;
 	padding-right:10px;
 }
-#content table th:last-child, #content table td:last-child{
-	padding-right:0px;
-}
+
 
 /* index content */
 #index , #about {
@@ -626,7 +623,6 @@ select.select{
 /* import/export content */
 #form{
 	width:100%;
-	text-align:right;
 	margin:0px;
 	padding:0px;
 }
