@@ -71,9 +71,9 @@ class Genbank(BioParser):
         chromosome.name = self.name
         chromosome.sequence = str(self.record.seq) # Cast needed, otherwise revision-compare fails!
         chromosome.length = len(self.record.seq)
+        chromosome.species = self.species
         chromosome.save(self.detail)
-        chromosome.species.add(self.species)
-        
+
         if self.record.dbxrefs:
             for xref in self.record.dbxrefs:
                 # BioPython doesnt always properly split the db xrefs
@@ -117,17 +117,17 @@ class Genbank(BioParser):
                 pubref.authors = ref.authors
                 pubref.title = ref.title
                 pubref.publication = ref.journal
+                pubref.species = self.species
                 pubref.save(self.detail)
-    
+
                 if ref.pubmed_id:
                     xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source="PUBMED", xid=ref.pubmed_id)
                     pubref.cross_references.add(xref)
-    
+
                 if ref.medline_id:
                     xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source="MEDLINE", xid=ref.medline_id)
                     pubref.cross_references.add(xref)
-                    
-                pubref.species.add(self.species)
+
                 chromosome.publication_references.add(pubref)
     
         if "gi" in self.annotation:
@@ -190,35 +190,36 @@ class Genbank(BioParser):
             if "gene" in qualifiers:
                 g.name = qualifiers["gene"][0]
                 g.symbol = qualifiers["gene"][0]
-    
+
             g.direction = 'f' if v.location.strand == 1 else 'r'
-            
+
             # __len__ because len() fails for numbers < 0
             # Joins output the wrong length
             if v.location.__len__() < 0:
                 g.length = v.location.__len__() + len(self.record.seq)
             else:
                 g.length = len(v.location)
-            
+
             g.coordinate = v.location.start + 1 if 'f' else v.location.start
-    
+
             if "note" in qualifiers:
                 g.comments = "\n".join(qualifiers["note"])
-            
+
+            g.species = self.species
             g.save(self.detail)
-            
+
             if "db_xref" in qualifiers:
                 for xref in qualifiers["db_xref"]:
                     if ":" in xref:
                         source, xid = xref.split(":")
                         xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source=source, xid=xid)
                         g.cross_references.add(xref)
-            
+
             if "EC_number" in qualifiers:
                 for ec in qualifiers["EC_number"]:
                     xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source="EC", xid=ec)
                     g.cross_references.add(xref)
-            
+
             if "gene_synonym" in qualifiers:
                 for synonym in qualifiers["gene_synonym"]:
                     # Inconsistency: Multiple synonyms appear in one entry,
@@ -226,36 +227,35 @@ class Genbank(BioParser):
                     for syn in synonym.split(";"):
                         obj = cmodels.Synonym.objects.get_or_create_with_revision(self.detail, name=syn.strip())
                         g.synonyms.add(obj)
-            
+
             if "protein_id" in qualifiers:
                 protxref = qualifiers["protein_id"][0]
                 wid = slugify(g.wid + "_Monomer")
 
                 protein = cmodels.ProteinMonomer.objects.for_species(self.species).for_wid(wid, create=True)
-         
+
                 if "product" in qualifiers:
                     protein.name = qualifiers["product"][0]
-                    
+
                 xref = cmodels.CrossReference.objects.get_or_create_with_revision(self.detail, source="RefSeq", xid=protxref)
 
                 protein.gene = g
+                protein.species = self.species
                 protein.save(self.detail)
-    
-                protein.species.add(self.species)
+
 
                 protein.cross_references.add(xref)
-    
-            g.species.add(self.species)
-            
+
+
             if v.type == "CDS":
                 v.type = "mRNA"
             
             t = cmodels.Type.objects.for_wid(wid=slugify(v.type), create=True)
             t.name = v.type
 
+            t.species = self.species
             t.save(self.detail)
-            t.species.add(self.species)
-    
+
             g.type.add(t)
             
         if hasattr(self, "notify_progress"):

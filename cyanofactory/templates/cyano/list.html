@@ -98,24 +98,103 @@ $(document).ready(function() {
 
     var button = $("#button_text").text();
 
-    $('#new_list').dataTable({
-        ajax: "{% url "cyano-api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=wid,name",
+    // Setup - add a text input to each footer cell
+    $('#new_list tfoot th').each( function () {
+        var title = $('#new_list thead th').eq( $(this).index() ).text();
+        $(this).html( '<input type="text" placeholder="Search '+title+'" />' );
+    } );
+
+    // DataTable
+    // ajax: "{% url "cyano-api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=wid,name,url",
+
+    var table = $('#new_list').DataTable({
         columns: [
             { "data": "wid" },
             { "data": "name" },
             {}
         ],
-        columnDefs: [ {
-            "targets": -1,
-            "data": null,
-            "defaultContent": button
-        } ],
+        columnDefs: [
+            {
+                "targets": [0, 1],
+                "createdCell": function (td, cellData, rowData, row, col) {
+                    $(td).wrapInner($("<a></a>").attr("href", rowData["url"]));
+                }
+            },
+            {
+                "targets": 2,
+                "data": null,
+                "defaultContent": button
+            }
+        ],
         deferRender: true,
         sAjaxDataProp: "",
         "stripeClasses": [],
         stateSave: true
     });
+
+    // Apply the search
+    table.columns().eq( 0 ).each( function ( colIdx ) {
+        $( 'input', table.column( colIdx ).header() ).on( 'keyup change', function () {
+            table
+                .column( colIdx )
+                .search( this.value )
+                .draw();
+        } );
+    } );
+
+    $($("#filter_row").text()).insertAfter($(".dataTables_wrapper").children()[0]);
+
+    $('select.cyano-filter').on('change', function() {
+        updateTable();
+    });
+
+    updateTable();
 });
+
+var updateTable = function() {
+    var filters = [];
+
+    $(".cyano-filter").each(function() {
+        var field = $(this).data("field");
+        var id = $($(this).children(':selected')).data("id");
+
+        if (typeof id != 'undefined') {
+            filters.push(field + "=" + id);
+        }
+    });
+
+    var filterString = filters.join("&");
+
+    $('#new_list').DataTable().ajax.url("{% url "cyano-api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=wid,name,url&" + filterString).load();
+}
+
+</script>
+
+<script id="filter_row" type="text/plain">
+<div class="row">
+{% for field in facet_fields %}
+	{% with field_name=field.name field_verbose_name=field.verbose_name %}
+
+	<div class="col-sm-3">
+	<label for="{{ field_name }}_id">{{ field_verbose_name }}</label>
+    <select id="{{ field_name }}_id" class="form-control combobox cyano-filter" data-field="{{ field_name }}">
+        <option {% if not queryargs|getattribute:field_name %} selected="selected"{% endif %}>All</option>
+		{% for facet in field.facets %}
+		<option
+				{% if queryargs|getattribute:field_name %}
+					{% if facet.id in queryargs|getattribute:field_name %}
+			selected="selected"
+					{% endif %}
+				{% endif %} data-id="{{ facet.id }}">
+			{{ facet.name }} ({{ facet.count }})</option>
+		{% endfor %}
+    </select>
+
+	</div>
+
+	{% endwith %}
+{% endfor %}
+</div>
 
 </script>
 

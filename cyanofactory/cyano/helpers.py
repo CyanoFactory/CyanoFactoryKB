@@ -371,6 +371,15 @@ def getSerializer(s):
     except AttributeError:
         return None
 
+def getFilter(s):
+    import cyano.filters
+
+    try:
+        return getattr(cyano.filters, s)
+    except AttributeError:
+        return None
+
+
 def is_entrydata_model(cls):
     return inspect.isclass(cls) and issubclass(cls, cmodels.EntryData)
 
@@ -1373,7 +1382,9 @@ def objectToQuerySet(obj, model = None):
     if model is None:
         model = obj.__class__
     qs = model.objects.filter(pk = obj.pk)
+
     #qs._result_cache.append(obj)
+
     return qs
 
 def create_detail_fieldset(species, item, fieldsets, is_anonymous):
@@ -1437,7 +1448,7 @@ def create_detail_fieldset(species, item, fieldsets, is_anonymous):
 
 def format_field_detail_view(species, obj, field_name, is_user_anonymous, history_id = None):
     if hasattr(obj, 'get_as_html_%s' % field_name):
-        val = getattr(obj, 'get_as_html_%s' % field_name)(species, is_user_anonymous)
+        val = getattr(obj, 'get_as_html_%s' % field_name)(is_user_anonymous)
         if isinstance(val, float) and val != 0. and val is not None:
             return ('%.' + str(int(math.ceil(max(0, -math.log10(abs(val)))+2))) + 'f') % val
         return val
@@ -1461,7 +1472,7 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
         if issubclass(field_model, cmodels.Entry):
             results = []
             for subvalue in value:
-                results.append('<a href="%s" title="%s">%s</a>' % (subvalue.get_absolute_url(species, history_id), subvalue.name, subvalue.wid))
+                results.append('<a href="%s" title="%s">%s</a>' % (subvalue.get_absolute_url(history_id), subvalue.name, subvalue.wid))
             return cmodels.format_list_html(results)        
             
         results = []
@@ -1495,7 +1506,7 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
     elif isinstance(field, ForeignKey):
         if issubclass(field_model, cmodels.Entry):
             if value is not None:
-                return format_list_html_url([value], species, history_id)
+                return format_list_html_url([value], history_id)
             else:
                 return ''
         
@@ -1624,10 +1635,10 @@ def format_field_detail_view_diff(species, old_obj, new_obj, field_name, is_user
         return diffgen(d.diff_main(old_item, new_item))
 
 
-def format_list_html_url(iterable, species, history_id=None):
+def format_list_html_url(iterable, history_id=None):
     from cyano.models import format_list_html
     return format_list_html(
-        map(lambda x: '<a href="%s" title="%s">%s</a>' % (x.get_absolute_url(species, history_id), x.name, x.wid), iterable),
+        map(lambda x: '<a href="%s" title="%s">%s</a>' % (x.get_absolute_url(history_id), x.name, x.wid), iterable),
         comma_separated=True)
 
 def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = []):
@@ -2100,7 +2111,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
             obj.save()
             
         if isinstance(obj, cmodels.SpeciesComponent):
-            obj.species.add(cmodels.Species.objects.for_wid(species.wid))
+            obj.species = cmodels.Species.objects.for_wid(species.wid)
     
     #many-to-many fields
     for field in fields:

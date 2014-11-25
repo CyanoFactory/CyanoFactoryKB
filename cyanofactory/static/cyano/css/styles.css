@@ -904,3 +904,9 @@ select.select{
 .highlight-border {
     border: medium dashed;
 }
+
+.table a
+{
+    display:block;
+    text-decoration:none;
+}

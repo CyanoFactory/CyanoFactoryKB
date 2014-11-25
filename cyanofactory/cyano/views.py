@@ -536,9 +536,9 @@ def listing(request, species, model):
                     'name': unicode(name or id_),
                     'count': facet['count']})
         if len(facets) > 1:
-            facet_fields.append({ 
+            facet_fields.append({
                 'name': field_full_name,
-                'verbose_name': field_verbose_name, 
+                'verbose_name': field_verbose_name,
                 'facets': facets,
                 })
     
@@ -611,9 +611,10 @@ from rest_framework.views import APIView
 from cyano.serializers import Entry as EntrySerializer
 
 class EntryList(generics.GenericAPIView):
-    lookup_field = 'wid'
-    filter_backends = (filters.SearchFilter,)
-    search_fields = ('wid', 'synonyms')
+    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter,)
+    search_fields = ('wid', 'name', 'synonyms')
+    filter_fields = ('id', 'wid', 'name')
+    filter_class = None
     serializer_class = EntrySerializer
 
     def get_species(self, species_wid):
@@ -637,17 +638,24 @@ class EntryList(generics.GenericAPIView):
 
     def get(self, request, species_wid, model_type, format=None):
         objects = self.get_queryset(species_wid, model_type)
+
+        model = chelpers.getModel(model_type)
+        self.filter_fields += tuple(model._meta.facet_fields)
+
+        self.serializer_class = chelpers.getSerializer(model_type)
+        self.filter_class = chelpers.getFilter(model_type)
+
         objects = self.filter_queryset(objects)
 
         serializer = chelpers.getSerializer(model_type)(
             objects,
             many=True,
             context={'request': request, 'species': self.get_species(species_wid)})
+
         return Response(serializer.data)
 
     def post(self, request, species, model, format=None):
         #serializer = EntrySerializer(data=request.DATA)
-
 
         #return self.create(request, *args, **kwargs)
         raise Http404
@@ -656,8 +664,18 @@ class EntryList(generics.GenericAPIView):
 class EntryDetail(APIView):
     serializer_class = EntrySerializer
 
-    def get_object(self, species_wid, model_type, wid):
+    def get_species(self, species_wid):
         species = cmodels.Species.objects.for_wid(species_wid, get=False)
+
+        try:
+            species.get()
+        except ObjectDoesNotExist as e:
+            raise Http404
+
+        return species
+
+    def get_object(self, species_wid, model_type, wid):
+        species = self.get_species(species_wid)
 
         try:
             species.get()
@@ -668,7 +686,22 @@ class EntryDetail(APIView):
         if model is None or not issubclass(model, cmodels.SpeciesComponent):
             raise Http404
 
-        obj = model.objects.for_species(species.get()).for_wid(wid=wid, get=False)
+        species_obj = model.objects.for_species(species.get())
+
+        # resolve numeric wid to real wid
+        try:
+            i_wid = int(wid)
+            obj = species_obj.filter(pk=i_wid)
+
+            if obj.count() != 1:
+                raise Http404
+
+            wid = obj[0].pk
+
+        except ValueError:
+            pass
+
+        obj = species_obj.for_wid(wid=wid, get=False)
 
         if obj.count() != 1:
             raise Http404
@@ -677,7 +710,12 @@ class EntryDetail(APIView):
 
     def get(self, request, species_wid, model_type, wid, format=None):
         objects = self.get_object(species_wid, model_type, wid)
-        serializer = chelpers.getSerializer(model_type)(objects, many=True)
+        serializer = chelpers.getSerializer(model_type)(
+            objects,
+            many=True,
+            context={'request': request, 'species': self.get_species(species_wid)}
+        )
+
         return Response(serializer.data)
 
     def put(self, request, *args, **kwargs):
@@ -949,7 +987,7 @@ def edit(request, species, model = None, item = None, action='edit'):
                     obj = chelpers.save_object_data(species, obj, data, {data['wid']: obj}, request.user, save=True, save_m2m=True)
 
                     #redirect to details page
-                    return HttpResponseRedirect(obj.get_absolute_url(species))
+                    return HttpResponseRedirect(obj.get_absolute_url())
             except ValidationError as error:
                 if hasattr(error, "message_dict"):
                     error_messages = error.message_dict

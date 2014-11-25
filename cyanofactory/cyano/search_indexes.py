@@ -34,10 +34,10 @@ class SpeciesComponentIndex(EntryIndex, indexes.Indexable):
     species_wid = indexes.MultiValueField()
 
     def prepare_species_id(self, obj):
-        return [species.pk for species in obj.species.all()]
+        return obj.species.pk
 
     def prepare_species_wid(self, obj):
-        return [species.wid for species in obj.species.all()]
+        return obj.species.wid
 
     def get_model(self):
         return cmodels.SpeciesComponent

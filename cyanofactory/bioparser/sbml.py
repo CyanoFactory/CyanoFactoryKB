@@ -46,8 +46,8 @@ class SBML(BioParser):
             cobj = cmodels.Compartment.objects.for_species(self.species).for_wid(wid, create = True)
             
             cobj.name = name
+            cobj.species = self.species
             cobj.save(self.detail)
-            cobj.species.add(self.species)
 
         # Species (= Metabolites) importer
         for i, specie in enumerate(self.sbml_species):
@@ -72,9 +72,9 @@ class SBML(BioParser):
             sobj.name = name
             sobj.charge = 0 # TODO
             sobj.is_hydrophobic = False # TODO
+            sobj.species = self.species
             sobj.save(self.detail)
-            sobj.species.add(self.species)
-        
+
         for i, reaction in enumerate(self.reactions):
             wid = slugify(reaction.getId())
             if reaction.getName():
@@ -113,36 +113,34 @@ class SBML(BioParser):
                 reaction_obj.name = name
                 reaction_obj.direction = 'r' if reaction.getReversible() else 'f'
                 reaction_obj.is_spontaneous = False  # TODO
+                reaction_obj.species = self.species
                 reaction_obj.save(self.detail)
-                
+
                 for reactant in reactants:
                     #try:
                     #    participant_obj = cmodels.ReactionStoichiometryParticipant.objects.get(wid = wid)
                     #except ObjectDoesNotExist:
                     #    participant_obj = cmodels.ReactionStoichiometryParticipant(wid = wid)
-                
+
                     participant_obj = cmodels.ReactionStoichiometryParticipant()
                     participant_obj.molecule = cmodels.Metabolite.objects.for_species(self.species).for_wid(slugify(reactant.getSpecies()))
                     participant_obj.coefficient = -reactant.getStoichiometry()
                     participant_obj.compartment = cmodels.Compartment.objects.for_species(self.species).for_wid(slugify(self.model.getSpecies(reactant.getSpecies()).getCompartment()))
                     participant_obj.save(self.detail)
-                    
+
                     reaction_obj.stoichiometry.add(participant_obj)
-                
+
                 for product in products:
                     #try:
                     #    participant_obj = cmodels.ReactionStoichiometryParticipant.objects.get(wid = wid)
                     #except ObjectDoesNotExist:
                     #    participant_obj = cmodels.ReactionStoichiometryParticipant(wid = wid)
-                
+
                     participant_obj = cmodels.ReactionStoichiometryParticipant()
                     participant_obj.molecule = cmodels.Metabolite.objects.for_species(self.species).for_wid(slugify(product.getSpecies()))
                     participant_obj.coefficient = product.getStoichiometry()
                     participant_obj.compartment = cmodels.Compartment.objects.for_species(self.species).for_wid(slugify(self.model.getSpecies(product.getSpecies()).getCompartment()))
                     participant_obj.detail = self.detail
                     participant_obj.save(self.detail)
-            
+
                     reaction_obj.stoichiometry.add(participant_obj)
-                
-                reaction_obj.save(self.detail)
-                reaction_obj.species.add(self.species)

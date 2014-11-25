@@ -127,8 +127,8 @@
   background-color: #FFFFFF;
 }
 
-.table-striped thead th {
-    background-color: #3d80b3;
+.table thead th {
+    background-color: #3d80b3 !important ;
     color: white;
 }
 
@@ -147,5 +147,10 @@
 
 form .dropdown-menu {
   width: 100%;
+}
+
+.dataTable thead th {
+    text-align: center;
+    background: #66a9bd;
 }
 

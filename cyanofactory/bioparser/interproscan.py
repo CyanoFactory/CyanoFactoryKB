@@ -91,8 +91,8 @@ class InterProScan(BioParser):
         self.detail.save()
 
         match_type = cmodels.Type.objects.for_wid("Match-Type", create=True)
+        match_type.species = self.species
         match_type.save(self.detail)
-        match_type.species.add(self.species)
 
         for i, values in enumerate(self.protein_monomers_cf.items()):
             protein_monomer, chromosome_feature = values
@@ -104,9 +104,9 @@ class InterProScan(BioParser):
                 real_cf = cmodels.ChromosomeFeature.objects.for_species(self.species).for_wid(cf.wid, create=True)
                 real_cf.name = cf.name
                 real_cf.comments = cf.comments
+                real_cf.species = self.species
                 real_cf.save(self.detail)
 
-                real_cf.species.add(self.species)
 
                 if cf.wid in self.xrefs:
                     for item in self.xrefs[cf.wid]:
@@ -127,11 +127,12 @@ class InterProScan(BioParser):
                     typ = self.types[cf.wid]
                     if typ in self.type_cache:
                         typ_obj = self.type_cache[typ]
+                        typ_obj.species = self.species
                     else:
                         typ_obj = cmodels.Type.objects.for_wid(typ, create=True)
                         typ_obj.parent = match_type
+                        typ_obj.species = self.species
                         typ_obj.save(self.detail)
                         self.type_cache[typ] = typ_obj
-                    typ_obj.species.add(self.species)
 
                     real_cf.type.add(typ_obj)

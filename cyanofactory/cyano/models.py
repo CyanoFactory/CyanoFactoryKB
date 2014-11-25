@@ -1327,7 +1327,7 @@ class EntryQuerySet(QuerySet):
 
 class SpeciesComponentQuerySet(EntryQuerySet):
     def for_species(self, species):
-        return self.filter(species__pk = species.pk)
+        return self.filter(species=species.pk)
 
 class AbstractEntry(Model):
     objects = PassThroughManager.for_queryset_class(EntryQuerySet)()
@@ -1392,9 +1392,6 @@ class Entry(AbstractEntry):
 
             old_item = None
 
-            if self._meta.concrete_model._meta.wid_unique and self._meta.concrete_model.objects.for_wid(self.wid, get=False).exists():
-                raise ValidationError("Wid {} for model_type {} is shared and must be unique for all species".format(self.wid, self.model_type.model_name))
-
             super(Entry, self).save(*args, **kwargs)
 
         save_data = {}
@@ -1455,16 +1452,16 @@ class Entry(AbstractEntry):
         super(Entry, self).delete(using=using)
 
     #html formatting
-    def get_as_html_synonyms(self, species, is_user_anonymous):
+    def get_as_html_synonyms(self, is_user_anonymous):
         return format_list_html([x.name for x in self.synonyms.all()], comma_separated=True)
 
-    def get_as_html_cross_references(self, species, is_user_anonymous):
+    def get_as_html_cross_references(self, is_user_anonymous):
         results = []
         for cr in self.cross_references.all():
             results.append('%s: <a href="%s">%s</a>' % (cr.source, reverse("db_xref.views.dbxref", kwargs={"source" : cr.source, "xid" : cr.xid}), cr.xid ))
         return format_list_html(results, separator=', ')
 
-    def get_as_html_created_user(self, species, is_user_anonymous):
+    def get_as_html_created_user(self, is_user_anonymous):
         revision = self.first_revision()
         detail = revision.detail
         if is_user_anonymous:
@@ -1473,7 +1470,7 @@ class Entry(AbstractEntry):
             user = detail.user.user
             return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
 
-    def get_as_html_last_updated_user(self, species, is_user_anonymous):
+    def get_as_html_last_updated_user(self, is_user_anonymous):
         revision = self.last_revision()
         detail = revision.detail
         if is_user_anonymous:
@@ -1482,16 +1479,16 @@ class Entry(AbstractEntry):
             user = detail.user.user
             return '<a href="%s">%s %s</a> on %s<br>%s' % (user.get_absolute_url(), user.first_name, user.last_name, detail.date.strftime("%Y-%m-%d %H:%M:%S"), detail.reason)
 
-    def get_as_fasta(self, species):
+    def get_as_fasta(self):
         raise NotImplementedError("FASTA export not supported for %s" % self._meta.verbose_name_plural)
 
     def get_fasta_header(self):
         return ">" + self.wid + "|" + self.name
 
-    def get_as_genbank(self, species):
+    def get_as_genbank(self):
         raise NotImplementedError("GenBank export not supported for %s" % self._meta.verbose_name_plural)
     
-    def get_as_sbml(self, species):
+    def get_as_sbml(self):
         raise NotImplementedError("SBML export not supported for %s" % self._meta.verbose_name_plural)
 
     #meta information
@@ -1504,7 +1501,7 @@ class Entry(AbstractEntry):
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
         field_list = [
-            'id', 'wid', 'name', 'synonyms', 'cross_references', 'comments'
+            'id', 'wid', 'name', 'synonyms', 'comments'
             ]
         listing = ['wid', 'name']
         facet_fields = []
@@ -1528,7 +1525,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
     * ``cross_references``: Databases referencing that entry
     * ``publication_references``: Publications referencing that entry
     '''
-    species = ManyToManyField("Species", verbose_name = "Organism containing that entry", related_name = "species_components")
+    species = ForeignKey('Species', related_name='components', verbose_name='Species')
     type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
     cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
     publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publications')
@@ -1536,47 +1533,39 @@ class SpeciesComponent(AbstractSpeciesComponent):
 
     #getters
 
-    def delete(self, species, revision_detail, using=None):
-        """
-        Delete is referenced counted and only detached when at least one more item is left
-        """
-        if self.species.count() > 1:
-            # Detach
-            self.species.remove(species.pk)
-        else:
-            # Delete
-            super(SpeciesComponent, self).delete(revision_detail, using=using)
+    def delete(self, revision_detail, using=None):
+        super(SpeciesComponent, self).delete(revision_detail, using=using)
 
     #@permalink
-    def get_absolute_url(self, species, history_id = None):
+    def get_absolute_url(self, history_id=None):
         if history_id is None:
-            return "%s/%s/%s/%s" % (settings.ROOT_URL, species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid)
+            return "%s/%s/%s/%s" % (settings.ROOT_URL, self.species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid)
         else:
-            return "%s/%s/%s/%s/history/%s" % (settings.ROOT_URL, species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid, history_id)
+            return "%s/%s/%s/%s/history/%s" % (settings.ROOT_URL, self.species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid, history_id)
 
     def get_all_references(self):
         return self.publication_references.all() | PublicationReference.objects.filter(evidence__species_component__id = self.id)
 
     #html formatting
-    def get_as_html_parameters(self, species, is_user_anonymous):
+    def get_as_html_parameters(self, is_user_anonymous):
         results = []
         for p in self.parameters.all():
-            results.append('<a href="%s">%s</a>: <i>%s</i> = %s %s' % (p.get_absolute_url(species), p.wid, p.name, p.value.value, p.value.units))
+            results.append('<a href="%s">%s</a>: <i>%s</i> = %s %s' % (p.get_absolute_url(self.species), p.wid, p.name, p.value.value, p.value.units))
         return format_list_html(results)
 
-    def get_as_html_comments(self, species, is_user_anonymous):
+    def get_as_html_comments(self, is_user_anonymous):
         txt = self.comments
 
         #provide links to references
         return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]',
-            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':species.wid, 'model_type': 'PublicationReference', 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
+            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':self.species.wid, 'model_type': 'PublicationReference', 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
 
-    def get_as_html_publication_references(self, species, is_user_anonymous):
+    def get_as_html_publication_references(self, is_user_anonymous):
         results = {}
         for r in self.get_all_references():
             key = r.authors + ' ' + r.editors
-            results[key] = r.get_citation(species, cross_references=True)
+            results[key] = r.get_citation(self.species, cross_references=True)
 
         keys = results.keys()
         keys.sort()
@@ -1615,8 +1604,7 @@ class Molecule(SpeciesComponent):
         return EmpiricalFormula()
 
     def get_molecular_weight(self):
-        return 0 # FIXME
-        #return self.get_empirical_formula().get_molecular_weight()
+        return self.get_empirical_formula().get_molecular_weight()
 
     def get_atoms(self):
         return sum(self.get_empirical_formula().values())
@@ -1625,57 +1613,50 @@ class Molecule(SpeciesComponent):
         return 1 / self.get_extinction_coefficient()
 
     #html formatting        
-    def get_as_html_empirical_formula(self, species, is_user_anonymous):
-        return ""# FIXME
-        #return self.get_empirical_formula().get_as_html()
+    def get_as_html_empirical_formula(self, is_user_anonymous):
+        return self.get_empirical_formula().get_as_html()
 
-    def get_as_html_molecular_weight(self, species, is_user_anonymous):
-        return ""# FIXME
+    def get_as_html_molecular_weight(self, is_user_anonymous):
         return self.get_molecular_weight()
 
-    def get_as_html_extinction_coefficient(self, species, is_user_anonymous):
-        return ""# FIXME
+    def get_as_html_extinction_coefficient(self, is_user_anonymous):
         return self.get_extinction_coefficient()
 
-    def get_as_html_absorbance_factor(self, species, is_user_anonymous):
-        return ""# FIXME
+    def get_as_html_absorbance_factor(self, is_user_anonymous):
         return self.get_absorbance_factor()
 
-    def get_as_html_pi(self, species, is_user_anonymous):
-        return ""# FIXME
+    def get_as_html_pi(self,  is_user_anonymous):
         if hasattr(self, 'pi'):
             return self.pi
         else:
             return self.get_pi()
 
-    def get_as_html_modification_reactions(self, species, is_user_anonymous):
+    def get_as_html_modification_reactions(self, is_user_anonymous):
         return ""# FIXME
         results = []
         for obj in self.modification_reactions.all():
             if len(obj.reactions.all()) == 0:
                 continue
             rxn = obj.reactions.all()[0]
-            results.append('<a href="%s">%s</a><br/>%s' % (rxn.get_absolute_url(species), rxn.name, rxn.get_as_html_stoichiometry(is_user_anonymous)))
+            results.append('<a href="%s">%s</a><br/>%s' % (rxn.get_absolute_url(), rxn.name, rxn.get_as_html_stoichiometry(is_user_anonymous)))
         return format_list_html(results, vertical_spacing=True)
 
-    def get_as_html_reaction_stoichiometry_participants(self, species, is_user_anonymous):
-        return ""# FIXME
+    def get_as_html_reaction_stoichiometry_participants(self, is_user_anonymous):
         results = []
         for obj in self.reaction_stoichiometry_participants.all():
             if len(obj.reactions.all()) == 0:
                 continue
             rxn = obj.reactions.all()[0]
-            results.append('<a href="%s">%s</a><br/>%s' % (rxn.get_absolute_url(species), rxn.name, rxn.get_as_html_stoichiometry(is_user_anonymous)))
+            results.append('<a href="%s">%s</a><br/>%s' % (rxn.get_absolute_url(), rxn.name, rxn.get_as_html_stoichiometry(is_user_anonymous)))
         return format_list_html(list(set(results)), vertical_spacing=True)
 
-    def get_as_html_protein_complex_biosythesis_participants(self, species, is_user_anonymous):
-        return ""# FIXME
+    def get_as_html_protein_complex_biosythesis_participants(self, is_user_anonymous):
         results = []
         for obj in self.protein_complex_biosythesis_participants.all():
             if len(obj.protein_complexes.all()) == 0:
                 continue
             pc = obj.protein_complexes.all()[0]
-            results.append('<a href="%s">%s</a><br/>%s' % (pc.get_absolute_url(species), pc.name, pc.get_as_html_biosynthesis(is_user_anonymous)))
+            results.append('<a href="%s">%s</a><br/>%s' % (pc.get_absolute_url(), pc.name, pc.get_as_html_biosynthesis(is_user_anonymous)))
         return format_list_html(results)
 
     #meta information
@@ -1712,46 +1693,46 @@ class Protein(Molecule):
     regulatory_rule = ForeignKey(EntryCharData, null=True, blank=True, on_delete=SET_NULL, verbose_name='Regulatory rule', related_name='+')
 
     #html formatting
-    def get_as_html_prosthetic_groups(self, species, is_user_anonymous):
+    def get_as_html_prosthetic_groups(self,  is_user_anonymous):
         results = []
         for p in self.prosthetic_groups.all():
-            results.append(format_with_evidence(list_item = True, obj = p, txt = '(%s) <a href="%s">%s</a> [<a href="%s">%s</a>]' % (p.coefficient, p.metabolite.get_absolute_url(species), p.metabolite.wid, p.compartment.get_absolute_url(species), p.compartment.wid)))
+            results.append(format_with_evidence(list_item = True, obj = p, txt = '(%s) <a href="%s">%s</a> [<a href="%s">%s</a>]' % (p.coefficient, p.metabolite.get_absolute_url(), p.metabolite.wid, p.compartment.get_absolute_url(), p.compartment.wid)))
         return format_list_html(results, force_list=True)
 
-    def get_as_html_chaperones(self, species, is_user_anonymous):
+    def get_as_html_chaperones(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.chaperones.all(), species)
+        return format_list_html_url(self.chaperones.all(), self.species)
 
-    def get_as_html_chaperone_substrates(self, species, is_user_anonymous):
+    def get_as_html_chaperone_substrates(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.chaperone_substrates.all(), species)
+        return format_list_html_url(self.chaperone_substrates.all(), self.species)
 
-    def get_as_html_dna_footprint(self, species, is_user_anonymous):
+    def get_as_html_dna_footprint(self, is_user_anonymous):
         if self.dna_footprint is None:
             return None
         return format_with_evidence(obj = self.dna_footprint, txt = 'Length: %s (nt), Binding: %s, Region: %s' % (self.dna_footprint.length, self.dna_footprint.binding, self.dna_footprint.region))
 
-    def get_as_html_regulatory_rule(self, species, is_user_anonymous):
+    def get_as_html_regulatory_rule(self, is_user_anonymous):
         if self.regulatory_rule is not None and self.regulatory_rule.value is not None and self.regulatory_rule.value != '':
             return parse_regulatory_rule(self.regulatory_rule.value, {}, self.species.wid)
         return ''
 
-    def get_as_html_transcriptional_regulations(self, species, is_user_anonymous):
+    def get_as_html_transcriptional_regulations(self, is_user_anonymous):
         results = []
         for r in self.transcriptional_regulations.all():
-            results.append('<a href="%s">%s</a>: <a href="%s">%s</a>' % (r.get_absolute_url(species), r.wid, r.transcription_unit.get_absolute_url(species), r.transcription_unit.wid))
+            results.append('<a href="%s">%s</a>: <a href="%s">%s</a>' % (r.get_absolute_url(), r.wid, r.transcription_unit.get_absolute_url(), r.transcription_unit.wid))
         return format_list_html(results)
 
-    def get_as_html_enzyme_participants(self, species, is_user_anonymous):
+    def get_as_html_enzyme_participants(self, is_user_anonymous):
         results = []
         for obj in self.enzyme_participants.all():
             if len(obj.reactions.all()) == 0:
                 continue
             rxn = obj.reactions.all()[0]
-            results.append('<a href="%s">%s</a><br/>%s' % (rxn.get_absolute_url(species), rxn.name, rxn.get_as_html_stoichiometry(is_user_anonymous)))
+            results.append('<a href="%s">%s</a><br/>%s' % (rxn.get_absolute_url(), rxn.name, rxn.get_as_html_stoichiometry(is_user_anonymous)))
         return format_list_html(results, vertical_spacing=True)
 
-    def get_as_html_half_life(self, species, is_user_anonymous):
+    def get_as_html_half_life(self, is_user_anonymous):
         return self.get_half_life()
 
     #meta information
@@ -1853,11 +1834,11 @@ class Genome(Molecule):
         return calculate_nucleic_acid_pi(self.sequence)
 
     #html formatting
-    def get_as_html_sequence(self, species, is_user_anonymous):
+    def get_as_html_sequence(self, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
-        return format_sequence_as_html(species, self.sequence, show_protein_seq=True)
+        return format_sequence_as_html(self.species, self.sequence, show_protein_seq=True)
 
-    def get_as_html_diff_sequence(self, species, new_obj, is_user_anonymouse):
+    def get_as_html_diff_sequence(self, new_obj, is_user_anonymouse):
             from Bio import pairwise2
             pairwise2.MAX_ALIGNMENTS = 1
             align = pairwise2.align.globalxx(self.sequence[:100], new_obj[:100])
@@ -1889,13 +1870,13 @@ class Genome(Molecule):
 
             return None, output.getvalue()
 
-    def get_as_html_structure(self, species, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None, zoom = 0):
+    def get_as_html_structure(self, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None, zoom = 0):
         if zoom == 0:
-            return self.get_as_html_structure_global(species, is_user_anonymous)
+            return self.get_as_html_structure_global(self.species, is_user_anonymous)
         else:
-            return self.get_as_html_structure_local(species, is_user_anonymous, start_coordinate = start_coordinate, end_coordinate = end_coordinate, highlight_wid = highlight_wid)
+            return self.get_as_html_structure_local(self.species, is_user_anonymous, start_coordinate = start_coordinate, end_coordinate = end_coordinate, highlight_wid = highlight_wid)
 
-    def get_as_html_structure_global(self, species, is_user_anonymous):
+    def get_as_html_structure_global(self, is_user_anonymous):
         from .helpers import shift, overlaps
         from collections import namedtuple
 
@@ -1958,7 +1939,7 @@ class Genome(Molecule):
             #tip_text = 'Transcription unit: %s' % (tu or "(None)")
 
             fake_gene.wid = gene.wid
-            url = fake_gene.get_absolute_url(species)
+            url = fake_gene.get_absolute_url()
 
             title = (gene.name or gene.wid).replace("'", "\'")
 
@@ -2121,7 +2102,7 @@ class Genome(Molecule):
 
                 if not tu_coordinate > chr_attrib.end or tu_coordinate + tu_length - 1 < chr_attrib.start:
                     tip_title = transcription_unit.name or transcription_unit.wid
-                    url = transcription_unit.get_absolute_url(species)
+                    url = transcription_unit.get_absolute_url()
 
                     draw_segment(transcription_unit.wid, tu_coordinate, tu_length, tip_title, 'Promoter -35 box', url)
 
@@ -2131,14 +2112,14 @@ class Genome(Molecule):
 
                 if not (tu_coordinate > chr_attrib.end or tu_coordinate + tu_length - 1 < chr_attrib.start):
                     tip_title = transcription_unit.name or transcription_unit.wid
-                    url = transcription_unit.get_absolute_url(species)
+                    url = transcription_unit.get_absolute_url()
 
                     promoters.append(draw_segment(transcription_unit.wid, tu_coordinate, tu_length, tip_title, 'Promoter -10 box', url))
 
             for tr in transcription_unit.transcriptional_regulations.all():
                 if tr.binding_site is not None and not (tr.binding_site.coordinate > chr_attrib.end or tr.binding_site.coordinate + tr.binding_site.length - 1 < chr_attrib.start):
                     tip_title = transcription_unit.name or transcription_unit.wid
-                    url = transcription_unit.get_absolute_url(species)
+                    url = transcription_unit.get_absolute_url()
 
                     tf_sites.append(draw_segment(transcription_unit.wid, tr.binding_site.coordinate, tr.binding_site.length, tip_title, 'Transcription factor binding site', url))
 
@@ -2161,7 +2142,7 @@ class Genome(Molecule):
             else:
                 typ = None
             fake_cf.wid = feature["chromosome_feature__wid"]
-            url = fake_cf.get_absolute_url(species)
+            url = fake_cf.get_absolute_url()
 
             add_segment(fake_cf.wid, coordinate, length, typ, url)
 
@@ -2206,7 +2187,7 @@ class Genome(Molecule):
         H = row_offset[-1] + len(feature_rows[-1]) * (feature_height + 2)
 
         c = Context({
-            'species': species,
+            'species': self.species,
             'genes': [item for sublist in genes for item in sublist],
             'height': H,
             'chromosomes': chromosomes,
@@ -2222,7 +2203,7 @@ class Genome(Molecule):
 
         return rendered
 
-    def get_as_html_structure_local(self, species, is_user_anonymous, start_coordinate=None, end_coordinate=None, highlight_wid=[]):
+    def get_as_html_structure_local(self, is_user_anonymous, start_coordinate=None, end_coordinate=None, highlight_wid=[]):
         from .helpers import overlaps
 
         attrib_class = type(str("StructureAttribClass"), (object,), dict())
@@ -2316,7 +2297,7 @@ class Genome(Molecule):
 
             gene_attrib.title = (gene.name or gene.wid).replace("'", "\'")
 
-            gene_attrib.url = gene.get_absolute_url(species)
+            gene_attrib.url = gene.get_absolute_url()
 
             gene_attrib.color = transcription_unit_index % num_colors
 
@@ -2381,7 +2362,7 @@ class Genome(Molecule):
 
                 if not tu_coordinate > chr_attrib.end or tu_coordinate + tu_length - 1 < chr_attrib.start:
                     tip_title = transcription_unit.name or transcription_unit.wid
-                    url = transcription_unit.get_absolute_url(species)
+                    url = transcription_unit.get_absolute_url()
 
                     promoters.append(draw_segment(transcription_unit.wid, tu_coordinate, tu_length, tip_title, 'Promoter -35 box', url))
 
@@ -2391,14 +2372,14 @@ class Genome(Molecule):
 
                 if not (tu_coordinate > chr_attrib.end or tu_coordinate + tu_length - 1 < chr_attrib.start):
                     tip_title = transcription_unit.name or transcription_unit.wid
-                    url = transcription_unit.get_absolute_url(species)
+                    url = transcription_unit.get_absolute_url()
 
                     promoters.append(draw_segment(transcription_unit.wid, tu_coordinate, tu_length, tip_title, 'Promoter -10 box', url))
 
             for tr in transcription_unit.transcriptional_regulations.all():
                 if tr.binding_site is not None and not (tr.binding_site.coordinate > chr_attrib.end or tr.binding_site.coordinate + tr.binding_site.length - 1 < chr_attrib.start):
                     tip_title = transcription_unit.name or transcription_unit.wid
-                    url = transcription_unit.get_absolute_url(species)
+                    url = transcription_unit.get_absolute_url()
 
                     tf_sites.append(draw_segment(transcription_unit.wid, tr.binding_site.coordinate, tr.binding_site.length, tip_title, 'Transcription factor binding site', url))
 
@@ -2409,7 +2390,7 @@ class Genome(Molecule):
                 continue
 
             tip_title = feature.chromosome_feature.name or feature.chromosome_feature.wid
-            url = feature.chromosome_feature.get_absolute_url(species)
+            url = feature.chromosome_feature.get_absolute_url()
 
             if feature.chromosome_feature.type.all().count() > 0:
                 type_ = feature.chromosome_feature.type.all()[0]
@@ -2421,7 +2402,7 @@ class Genome(Molecule):
         H = 2 + gene_height + 2 + 4 + 1 * (2 + len(feature_draw) * (feature_height + 2)) + 2
 
         c = Context({
-            'species': species,
+            'species': self.species,
             'genes': genes,
             'height': H,
             'chromosomes': [chr_attrib],
@@ -2437,23 +2418,23 @@ class Genome(Molecule):
 
         return rendered
 
-    def get_as_html_genes(self, species, is_user_anonymous):
+    def get_as_html_genes(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.genes.all(), species)
+        return format_list_html_url(self.genes.all())
 
-    def get_as_html_features(self, species, is_user_anonymous):
+    def get_as_html_features(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
 
         features = self.features.all().values_list("chromosome_feature__pk", flat=True)
         
-        return format_list_html_url(ChromosomeFeature.objects.for_species(species).filter(pk__in=features).distinct(), species)
+        return format_list_html_url(ChromosomeFeature.objects.for_species(self.species).filter(pk__in=features).distinct())
 
-    def get_as_fasta(self, species):
+    def get_as_fasta(self):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence()) + "\r\n"
     
-    def get_as_genbank(self, species):
+    def get_as_genbank(self):
         genbank = StringIO.StringIO()
-        genes = Gene.objects.filter(species=species, chromosome_id=self.pk).prefetch_related("cross_references", "protein_monomers")
+        genes = Gene.objects.filter(species=self.species, chromosome_id=self.pk).prefetch_related("cross_references", "protein_monomers")
         record = SeqRecord.SeqRecord(Seq(self.sequence, IUPAC.IUPACAmbiguousDNA()))
 
         record.description = self.name
@@ -2463,19 +2444,19 @@ class Genome(Molecule):
             record.annotations["accession"] = accession[0].xid
 
         record.annotations["date"] = self.last_revision().detail.date.strftime("%d-%b-%Y").upper()
-        record.annotations["source"] = species.name
-        record.annotations["organism"] = species.name
+        record.annotations["source"] = self.species.name
+        record.annotations["organism"] = self.species.name
         record.annotations["comment"] = self.comments
         
         features = record.features
 
         source = SeqFeature(FeatureLocation(0, self.length - 1), type="source")
-        source.qualifiers["organism"] = species.name
+        source.qualifiers["organism"] = self.species.name
 
         features += [source]
 
         for item in genes:
-            features += item.get_as_seqfeature(species, record.seq)
+            features += item.get_as_seqfeature(self.species, record.seq)
         
         SeqIO.write(record, genbank, "genbank")
         
@@ -2552,8 +2533,8 @@ class ChromosomeFeature(SpeciesComponent):
 
     #additional fields
     #positions = reverse relation
-    def get_as_html_tooltip(self, species, is_user_anonymous):
-        return ", ".join(map(lambda x: x.name or x.wid, self.type.filter(species=species)))
+    def get_as_html_tooltip(self, is_user_anonymous):
+        return ", ".join(map(lambda x: x.name or x.wid, self.type.filter(species=self.species)))
 
     #meta information
     class Meta:
@@ -2645,33 +2626,33 @@ class FeaturePosition(EntryData):
         return tus
 
     #html formatting
-    def get_as_html_structure(self, species, is_user_anonymous):
-        return self.chromosome.get_as_html_structure(species, is_user_anonymous,
+    def get_as_html_structure(self, is_user_anonymous):
+        return self.chromosome.get_as_html_structure(self.species, is_user_anonymous,
                                                      zoom=1,
                                                      start_coordinate=self.coordinate - 500,
                                                      end_coordinate=self.coordinate + self.length + 500,
                                                      highlight_wid=[self.chromosome_feature.wid])
 
-    def get_as_html_sequence(self, species, is_user_anonymous):
+    def get_as_html_sequence(self, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
 
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]
 
         return '%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
             self.chromosome.model_type.model_name,
-            self.chromosome.get_absolute_url(species), self.chromosome.wid,
+            self.chromosome.get_absolute_url(), self.chromosome.wid,
             self.coordinate, self.length, direction,
-            format_sequence_as_html(species, self.get_sequence(), seq_offset=self.coordinate))
+            format_sequence_as_html(self.species, self.get_sequence(), seq_offset=self.coordinate))
 
-    def get_as_html_genes(self, species, is_user_anonymous):
+    def get_as_html_genes(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.get_genes(), species)
+        return format_list_html_url(self.get_genes(), self.species)
 
-    def get_as_html_transcription_units(self, species, is_user_anonymous):
+    def get_as_html_transcription_units(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.get_transcription_units(), species)
+        return format_list_html_url(self.get_transcription_units(), self.species)
 
-    def get_as_fasta(self, species):
+    def get_as_fasta(self):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
 
     class Meta:
@@ -2694,30 +2675,30 @@ class Compartment(SpeciesComponent):
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_compartment', parent_link=True, verbose_name='Species component')
 
     #additional fields
-    def get_protein_complexes(self, species):
+    def get_protein_complexes(self):
         arr = []
-        for obj in ProteinComplex.objects.for_species(species):
+        for obj in ProteinComplex.objects.for_species(self.species):
             if self.pk == obj.get_localization().pk:
                 arr.append(obj)
         return arr
 
     #getters
-    def get_as_html_biomass_compositions(self, species, is_user_anonymous):
+    def get_as_html_biomass_compositions(self, is_user_anonymous):
         results = []
         for bm in self.biomass_compositions.all():
             if len(bm.metabolites.all()) == 0:
                 continue
             m = bm.metabolites.all()[0]
-            results.append('<a href="%s">%s</a>: %.4f' % (m.get_absolute_url(species), m.name, bm.concentration))
+            results.append('<a href="%s">%s</a>: %.4f' % (m.get_absolute_url(), m.name, bm.concentration))
         return format_list_html(results, comma_separated=False)
 
-    def get_as_html_protein_monomers(self, species, is_user_anonymous):
+    def get_as_html_protein_monomers(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.protein_monomers.all(), species)
+        return format_list_html_url(self.protein_monomers.all())
 
-    def get_as_html_protein_complexes(self, species, is_user_anonymous):
+    def get_as_html_protein_complexes(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.get_protein_complexes(species), species)
+        return format_list_html_url(self.get_protein_complexes())
 
     #meta information
     class Meta:
@@ -2815,41 +2796,41 @@ class Gene(Molecule):
         return math.log(2) / self.half_life.value
 
     #html formatting    
-    def get_as_html_codons(self, species, is_user_anonymous):
+    def get_as_html_codons(self, is_user_anonymous):
         result = []
         for codon in self.codons.all():
             result.append(format_with_evidence(list_item = True, obj = codon, txt = '<tt>%s</tt>' % codon.sequence))
         return format_list_html(result, force_list=True)
 
-    def get_as_html_homologs(self, species, is_user_anonymous):
+    def get_as_html_homologs(self, is_user_anonymous):
         results = []
         for h in self.homologs.all():
             results.append(format_with_evidence(list_item = True, obj = h, txt = '%s: <a href="%s">%s</a>' % (h.species, HOMOLOG_SPECIES_URLS[h.species] % h.xid, h.xid)))
         return format_list_html(results, force_list=True)
 
-    def get_as_html_structure(self, species, is_user_anonymous):
-        return self.chromosome.get_as_html_structure(species, is_user_anonymous,
+    def get_as_html_structure(self, is_user_anonymous):
+        return self.chromosome.get_as_html_structure(self.species, is_user_anonymous,
             zoom = 1,
             start_coordinate = self.coordinate - 2500,
             end_coordinate = self.coordinate + self.length + 2500,
             highlight_wid = [self.wid])
 
-    def get_as_html_sequence(self, species, is_user_anonymous):
+    def get_as_html_sequence(self, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
 
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.direction)][1]
 
         return '%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, G/C content: %.1f%%, Sequence: %s' % (
             self.chromosome.model_type.model_name,
-            self.chromosome.get_absolute_url(species), self.chromosome.wid,
+            self.chromosome.get_absolute_url(), self.chromosome.wid,
             self.coordinate, self.length, direction,
             self.get_gc_content() * 100,
-            format_sequence_as_html(species, self.get_sequence(), seq_offset=self.coordinate, show_protein_seq=True))
+            format_sequence_as_html(self.species, self.get_sequence(), seq_offset=self.coordinate, show_protein_seq=True))
 
-    def get_as_fasta(self, species):
+    def get_as_fasta(self):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
     
-    def get_as_seqfeature(self, species, sequence):
+    def get_as_seqfeature(self, sequence):
         gene = SeqFeature(FeatureLocation(self.coordinate - 1,
                                           self.coordinate + self.length - (0 if self.direction == "f" else 1),
                                           strand=1 if self.direction == "f" else -1), type="gene")
@@ -2872,7 +2853,7 @@ class Gene(Molecule):
             cds.qualifiers["note"] = [self.comments]
         if len(EC_number) > 0:
             gene.qualifiers["EC_number"] = EC_number
-        cds.qualifiers["transl_table"] = [species.genetic_code]
+        cds.qualifiers["transl_table"] = [self.species.genetic_code]
         cds.qualifiers["codon_start"] = [1]
 
         typ = list(self.type.all()[:1])
@@ -2880,7 +2861,7 @@ class Gene(Molecule):
         if cds.type == "mRNA":
             cds.type = "CDS"
             s = gene.extract(sequence)
-            cds.qualifiers["translation"] = [s.translate(table=species.genetic_code)[:-1]]
+            cds.qualifiers["translation"] = [s.translate(table=self.species.genetic_code)[:-1]]
 
         #monomer = ProteinMonomer.objects.values_list('wid', 'name').filter(species = species).get(gene_id = self.pk)
         monomer = list(self.protein_monomers.all()[:1])
@@ -2890,9 +2871,9 @@ class Gene(Molecule):
 
         return gene, cds
 
-    def get_as_html_tooltip(self, species, is_user_anonymous):
+    def get_as_html_tooltip(self, is_user_anonymous):
         from cyano.helpers import format_field_detail_view
-        return "Transcription unit: %s" % (format_field_detail_view(species, self, "transcription_units", is_user_anonymous))
+        return "Transcription unit: %s" % (format_field_detail_view(self.species, self, "transcription_units", is_user_anonymous))
 
     #meta information
     class Meta:
@@ -2995,21 +2976,21 @@ class Metabolite(Molecule):
         self.deltag_formation = subprocess.call('gcm')
 
     #html formatting
-    def get_as_html_structure(self, species, is_user_anonymous):
+    def get_as_html_structure(self, is_user_anonymous):
         from cyano.helpers import draw_molecule
         return draw_molecule(self.smiles, 'svg', 636, 150)
 
-    def get_as_html_empirical_formula(self, species, is_user_anonymous):
+    def get_as_html_empirical_formula(self, is_user_anonymous):
         from cyano.helpers import EmpiricalFormula
         return EmpiricalFormula(self.empirical_formula).get_as_html()
 
-    def get_as_html_biomass_composition(self, species, is_user_anonymous):
+    def get_as_html_biomass_composition(self, is_user_anonymous):
         results = []
         for b in self.biomass_composition.all():
-            results.append(format_with_evidence(list_item = True, obj = b, txt = '%s [<a href="%s">%s</a>]' % (b.concentration, b.compartment.get_absolute_url(species), b.compartment.wid)))
+            results.append(format_with_evidence(list_item = True, obj = b, txt = '%s [<a href="%s">%s</a>]' % (b.concentration, b.compartment.get_absolute_url(), b.compartment.wid)))
         return format_list_html(results, force_list=True)
 
-    def get_as_html_media_composition(self, species, is_user_anonymous):
+    def get_as_html_media_composition(self, is_user_anonymous):
         m = self.media_composition
         if m is None:
             return
@@ -3020,22 +3001,22 @@ class Metabolite(Molecule):
 
         return format_with_evidence(obj = m, txt = txt)
 
-    def get_as_html_coenzyme_participants(self, species, is_user_anonymous):
+    def get_as_html_coenzyme_participants(self, is_user_anonymous):
         results = []
         for obj in self.coenzyme_participants.all():
             if len(obj.reactions.all()) == 0:
                 continue
             rxn = obj.reactions.all()[0]
-            results.append('<a href="%s">%s</a><br/>%s' % (rxn.get_absolute_url(species), rxn.name, rxn.get_as_html_stoichiometry(is_user_anonymous)))
+            results.append('<a href="%s">%s</a><br/>%s' % (rxn.get_absolute_url(), rxn.name, rxn.get_as_html_stoichiometry(is_user_anonymous)))
         return format_list_html(results, vertical_spacing=True)
 
-    def get_as_html_prosthetic_group_participants(self, species, is_user_anonymous):
+    def get_as_html_prosthetic_group_participants(self, is_user_anonymous):
         results = []
         for obj in self.prosthetic_group_participants.all():
             if len(obj.proteins.all()) == 0:
                 continue
             p = obj.proteins.all()[0]
-            results.append('<a href="%s">%s</a>' % (p.get_absolute_url(species), p.name))
+            results.append('<a href="%s">%s</a>' % (p.get_absolute_url(), p.name))
         return format_list_html(results)
 
     #meta information
@@ -3159,21 +3140,19 @@ class Pathway(SpeciesComponent):
     @staticmethod
     def add_boehringer_pathway(species, revdetail):
         wid = "Boehringer"
-        try:
-            x = Pathway.objects.for_species(species).for_wid(wid)
-            return
-        except ObjectDoesNotExist:
-            # Create new boehringer (if it was never created yet) or assign to one
-            x, created = Pathway.objects.for_wid(wid, create=True, creation_status=True)
-            if created:
-                typ = Type.objects.for_wid("Main-Pathway", create=True)
-                typ.save(revdetail)
-                typ.species.add(species)
-                x.name = "Biochemical Pathways"
-                x.save(revdetail)
-                x.type.add(typ)
 
-        x.species.add(species)
+        # Create new boehringer (if it was never created yet) or assign to one
+        x, created = Pathway.objects.for_species(species).for_wid(wid, create=True, creation_status=True)
+        if created:
+            typ = Type.objects.for_wid("Main-Pathway", create=True)
+            typ.species = species
+            typ.save(revdetail)
+            x.name = "Biochemical Pathways"
+            x.species = species
+            x.save(revdetail)
+            x.type.add(typ)
+
+        x.species = species
 
     @staticmethod
     def add_kegg_pathway(species, revdetail):
@@ -3183,15 +3162,15 @@ class Pathway(SpeciesComponent):
         maps = Map.objects.filter(ec_numbers__name__in=crs).distinct()
 
         for map_ in maps:
-            x = Pathway.objects.for_wid(map_.name, create=True)
+            x = Pathway.objects.for_species(species).for_wid(map_.name, create=True)
             x.name = map_.title
+            x.species = species
             x.save(revdetail)
             if map_.overview:
                 typ = Type.objects.for_wid("Main-Pathway", create=True)
+                typ.species = species
                 typ.save(revdetail)
-                typ.species.add(species)
                 x.type.add(typ)
-            x.species.add(species)
 
     def extract_ecs(self, text):
         """Extracts EC numbers out of a string and returns a list with all numbers"""
@@ -3212,12 +3191,12 @@ class Pathway(SpeciesComponent):
             result.append(item)
         return result
 
-    def get_boehringer_hits(self, species):
+    def get_boehringer_hits(self):
         import boehringer.models as bmodels
-        species_ecs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
+        species_ecs = CrossReference.objects.filter(cross_referenced_components__species = self.species, source = "EC").values_list('xid', flat=True)
         enzymes = bmodels.Enzyme.objects.filter(ec__in = species_ecs).order_by('title')
 
-        species_metabolites = Metabolite.objects.for_species(species).values_list('name', flat=True)
+        species_metabolites = Metabolite.objects.for_species(self.species).values_list('name', flat=True)
         metabolites = bmodels.Metabolite.objects.filter(title__in = species_metabolites).order_by('title')
 
         return enzymes, metabolites
@@ -3225,11 +3204,11 @@ class Pathway(SpeciesComponent):
     # TODO: The current logic hardcodes on Boehringer and uses KEGG otherwise
     # Not really nice solution...
 
-    def get_as_html_navigator(self, species, is_user_anonymous):
+    def get_as_html_navigator(self, is_user_anonymous):
         if self.wid != "Boehringer":
             return ""
 
-        enzymes, metabolites = self.get_boehringer_hits(species)
+        enzymes, metabolites = self.get_boehringer_hits(self.species)
 
         template = loader.get_template("cyano/pathway/navigator.html")
 
@@ -3239,12 +3218,12 @@ class Pathway(SpeciesComponent):
         return rendered
 
     #html formatting
-    def get_as_html_reaction_map(self, species, is_user_anonymous):
+    def get_as_html_reaction_map(self, is_user_anonymous):
         W = 731
         H = 600
 
         if self.wid == "Boehringer":
-            enzymes, metabolites = self.get_boehringer_hits(species)
+            enzymes, metabolites = self.get_boehringer_hits()
             template = loader.get_template("cyano/pathway/reaction_map_boehringer.html")
             c = Context({'enzymes': enzymes, 'metabolites': metabolites,
                          'width': W, 'height': H})
@@ -3260,7 +3239,7 @@ class Pathway(SpeciesComponent):
         from xml.etree.ElementTree import ElementTree, Element
 
         # All Pathways of the organism
-        species_ecs = CrossReference.objects.filter(cross_referenced_components__species = species, source = "EC").values_list('xid', flat=True)
+        species_ecs = CrossReference.objects.filter(cross_referenced_components__species = self.species, source = "EC").values_list('xid', flat=True)
 
         with open("{}/kegg/img/{}.png".format(settings.STATICFILES_DIRS[0], self.wid), "rb") as image:
 
@@ -3348,8 +3327,8 @@ class Pathway(SpeciesComponent):
                     color_component = "blue"
 
                     try:
-                        pw_obj = Pathway.objects.for_species(species).for_wid(pathway_name)
-                        elem.set("xlink:href", pw_obj.get_absolute_url(species))
+                        pw_obj = Pathway.objects.for_species(self.species).for_wid(pathway_name)
+                        elem.set("xlink:href", pw_obj.get_absolute_url())
                         fill_opacity = "0.2"
                         fill_color = "blue"
                     except ObjectDoesNotExist:
@@ -3428,6 +3407,7 @@ class Pathway(SpeciesComponent):
             'id', 'wid', 'name', 'synonyms', 'cross_references',
             'comments',
             'publication_references',
+            'type'
             ]
         group_field = 'type'
         facet_fields = ['type']
@@ -3445,16 +3425,16 @@ class Process(SpeciesComponent):
     #getters
 
     #html formatting    
-    def get_as_html_reactions(self, species, is_user_anonymous):
+    def get_as_html_reactions(self, is_user_anonymous):
         results = []
         for reaction in self.reactions.all():
-            results.append('<a href="%s">%s</a><br/>%s' % (reaction.get_absolute_url(species), reaction.name, reaction.get_as_html_stoichiometry(is_user_anonymous)))
+            results.append('<a href="%s">%s</a><br/>%s' % (reaction.get_absolute_url(), reaction.name, reaction.get_as_html_stoichiometry(is_user_anonymous)))
         return format_list_html(results, vertical_spacing=True)
 
-    def get_as_html_formed_complexes(self, species, is_user_anonymous):
+    def get_as_html_formed_complexes(self, is_user_anonymous):
         results = []
         for complexe in self.formed_complexes.all():
-            results.append('<a href="%s">%s</a><br/>%s' % (complexe.get_absolute_url(species), complexe.name, complexe.get_as_html_biosynthesis(is_user_anonymous)))
+            results.append('<a href="%s">%s</a><br/>%s' % (complexe.get_absolute_url(), complexe.name, complexe.get_as_html_biosynthesis(is_user_anonymous)))
         return format_list_html(results, vertical_spacing=True)
 
     #meta information
@@ -3515,7 +3495,7 @@ class ProteinComplex(Protein):
                     n -= subunit.coefficient * getEntry(species_wid = self.species.wid, wid = subunit.molecule.wid).get_num_subunits()
         return n
 
-    def get_as_html_num_subunits(self, species, is_user_anonymous):
+    def get_as_html_num_subunits(self, is_user_anonymous):
         return '%0.0f' % self.get_num_subunits()
 
     def get_empirical_formula(self):
@@ -3621,7 +3601,7 @@ class ProteinComplex(Protein):
         return val
 
     #html formatting    
-    def get_as_html_biosynthesis(self, species, is_user_anonymous):
+    def get_as_html_biosynthesis(self, is_user_anonymous):
         compartments = []
         for s in self.biosynthesis.all():
             compartments.append(s.compartment)
@@ -3634,36 +3614,36 @@ class ProteinComplex(Protein):
                 tmp = ''
                 if s.coefficient != -1:
                     tmp += '(%d) ' % -s.coefficient
-                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.wid)
+                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(), s.molecule.wid)
                 if len(compartments) > 1:
-                    tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(species), s.compartment.wid)
+                    tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(), s.compartment.wid)
                 pos.append(tmp)
             else:
                 tmp = ''
                 if s.coefficient != 1:
                     tmp += '(%d) ' % s.coefficient
-                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.wid)
+                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(), s.molecule.wid)
                 if len(compartments) > 1:
-                    tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(species), s.compartment.wid)
+                    tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(), s.compartment.wid)
                 neg.append(tmp)
 
         result = ''
         if len(compartments) == 1:
-            result += '[<a href="%s">%s</a>]: ' % (compartments[0].get_absolute_url(species), compartments[0].wid)
+            result += '[<a href="%s">%s</a>]: ' % (compartments[0].get_absolute_url(), compartments[0].wid)
         result += ' + '.join(pos)
         result += ' &rArr; '
         result += ' + '.join(neg)
         return format_with_evidence(obj = self.biosynthesis.all(), txt = result)
 
-    def get_as_html_disulfide_bonds(self, species, is_user_anonymous):
+    def get_as_html_disulfide_bonds(self, is_user_anonymous):
         results = [];
         for b in self.disulfide_bonds.all():
-            results.append(format_with_evidence(list_item = True, obj = b, txt = '<a href="%s">%s</a>: %s-%s' % (b.protein_monomer.get_absolute_url(species), b.protein_monomer.wid, b.residue_1, b.residue_2)))
+            results.append(format_with_evidence(list_item = True, obj = b, txt = '<a href="%s">%s</a>: %s-%s' % (b.protein_monomer.get_absolute_url(), b.protein_monomer.wid, b.residue_1, b.residue_2)))
         return format_list_html(results, force_list=True)
 
-    def get_as_html_localization(self, species, is_user_anonymous):
+    def get_as_html_localization(self, is_user_anonymous):
         localization = self.get_localization()
-        return '<a href="%s">%s</a>' % (localization.get_absolute_url(species), localization.wid, )
+        return '<a href="%s">%s</a>' % (localization.get_absolute_url(), localization.wid, )
 
     #meta information
     class Meta:
@@ -3801,27 +3781,27 @@ class ProteinMonomer(Protein):
     signal_sequence = ForeignKey(SignalSequence, blank=True, null=True, related_name='protein_monomers', on_delete=SET_NULL, verbose_name='Sequence sequence')
 
     #getters
-    def get_sequence(self, species, cache=False):
-        return unicode(Seq(self.gene.get_sequence(cache=cache), IUPAC.ambiguous_dna).translate(table=species.genetic_code))
+    def get_sequence(self, cache=False):
+        return unicode(Seq(self.gene.get_sequence(cache=cache), IUPAC.ambiguous_dna).translate(table=self.species.genetic_code))
 
-    def get_length(self, species):
-        return len(self.get_sequence(species))
+    def get_length(self):
+        return len(self.get_sequence())
 
-    def get_neg_aa(self, species):
-        seq = self.get_sequence(species)
+    def get_neg_aa(self):
+        seq = self.get_sequence
         return seq.count('E') + seq.count('D')
 
-    def get_pos_aa(self, species):
-        seq = self.get_sequence(species)
+    def get_pos_aa(self):
+        seq = self.get_sequence()
         return seq.count('R') + seq.count('H') + seq.count('K')
 
-    def get_n_terminal_aa(self, species):
-        return self.get_sequence(species)[0]
+    def get_n_terminal_aa(self):
+        return self.get_sequence()[0]
 
-    def get_empirical_formula(self, species):
+    def get_empirical_formula(self):
         from cyano.helpers import EmpiricalFormula
 
-        seq = self.get_sequence(species)
+        seq = self.get_sequence()
         return \
             + Metabolite.objects.for_species(self.species).for_wid('ALA').get_empirical_formula() * seq.count('A') \
             + Metabolite.objects.for_species(self.species).for_wid('ARG').get_empirical_formula() * seq.count('R') \
@@ -3845,8 +3825,8 @@ class ProteinMonomer(Protein):
             + Metabolite.objects.for_species(self.species).for_wid('VAL').get_empirical_formula() * seq.count('V') \
             - EmpiricalFormula(H=2, O=1) * (len(seq)-1)
 
-    def get_pi(self, species):
-        seq = self.get_sequence(species)
+    def get_pi(self):
+        seq = self.get_sequence()
 
         numAsp = float(seq.count('D'))
         numGlu = float(seq.count('E'))
@@ -3905,10 +3885,10 @@ class ProteinMonomer(Protein):
         return 20 * 60
 
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_instability(self, species):
+    def get_instability(self):
         from cyano.helpers import DipeptideInstabilityWeight
 
-        seq = self.get_sequence(species)
+        seq = self.get_sequence()
         value = 0.
         for i in range(len(seq)-1):
             if seq[i] != '*' and seq[i+1] != '*':
@@ -3916,12 +3896,12 @@ class ProteinMonomer(Protein):
         return 10. / float(len(seq)) * value
 
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_is_stable(self, species):
-        return self.get_instability(species) < 40.
+    def get_is_stable(self):
+        return self.get_instability() < 40.
 
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_aliphatic(self, species):
-        seq = self.get_sequence(species)
+    def get_aliphatic(self):
+        seq = self.get_sequence()
         return 100. * (
             + 1.0 * float(seq.count('A'))
             + 2.9 * float(seq.count('V'))
@@ -3930,8 +3910,8 @@ class ProteinMonomer(Protein):
                       ) / float(len(seq))
 
     #http://ca.expasy.org/tools/protparam-doc.html
-    def get_gravy(self, species):
-        seq = self.get_sequence(species)
+    def get_gravy(self):
+        seq = self.get_sequence()
         return \
             (
                 + 1.8 * float(seq.count('A'))
@@ -3957,43 +3937,43 @@ class ProteinMonomer(Protein):
             ) / float(len(seq))
 
     #Source: http://ca.expasy.org/tools/protparam-doc.html
-    def get_extinction_coefficient(self, species):
-        seq = self.get_sequence(species)
+    def get_extinction_coefficient(self):
+        seq = self.get_sequence()
         return \
             + seq.count('W') * 5500 \
             + seq.count('Y') * 1490 \
             + seq.count('C') * 125
 
     #html formatting
-    def get_as_html_sequence(self, species, is_user_anonymous):
+    def get_as_html_sequence(self, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
-        return format_sequence_as_html(species, self.get_sequence(species))
+        return format_sequence_as_html(self.species, self.get_sequence())
 
-    def get_as_html_signal_sequence(self, species, is_user_anonymous):
+    def get_as_html_signal_sequence(self, is_user_anonymous):
         ss = self.signal_sequence
         if ss is None:
             return
         return format_with_evidence(obj = ss, txt = 'Type: %s, Location: %s, Length: %s (nt)' % (ss.type, ss.location, ss.length))
 
-    def get_as_html_disulfide_bonds(self, species, is_user_anonymous):
+    def get_as_html_disulfide_bonds(self, is_user_anonymous):
         results = []
         for b in self.disulfide_bonds.all():
-            results.append('<a href="%s">%s</a>: %s-%s' % (b.protein_complexes.all()[0].get_absolute_url(species), b.protein_complexes.all()[0].wid, b.residue_1, b.residue_2))
+            results.append('<a href="%s">%s</a>: %s-%s' % (b.protein_complexes.all()[0].get_absolute_url(), b.protein_complexes.all()[0].wid, b.residue_1, b.residue_2))
         return format_list_html(results)
 
-    def get_as_html_instability(self, species, is_user_anonymous):
-        return self.get_instability(species)
+    def get_as_html_instability(self, is_user_anonymous):
+        return self.get_instability()
 
-    def get_as_html_is_stable(self, species, is_user_anonymous):
-        return self.get_is_stable(species)
+    def get_as_html_is_stable(self, is_user_anonymous):
+        return self.get_is_stable()
 
-    def get_as_html_aliphatic(self, species, is_user_anonymous):
-        return self.get_aliphatic(species)
+    def get_as_html_aliphatic(self, is_user_anonymous):
+        return self.get_aliphatic()
 
-    def get_as_html_gravy(self, species, is_user_anonymous):
-        return self.get_gravy(species)
+    def get_as_html_gravy(self, is_user_anonymous):
+        return self.get_gravy()
 
-    def get_as_html_interactions(self, species, is_user_anonymous):
+    def get_as_html_interactions(self, is_user_anonymous):
         from cyanointeraction.models import ProteinsNames as IproteinsNames
 
         prot_name = IproteinsNames.objects.filter(protein_name=self.gene.wid).first()
@@ -4004,13 +3984,13 @@ class ProteinMonomer(Protein):
 
         return ""
 
-    def get_as_fasta(self, species):
-        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(species, cache=True)) + "\r\n"
+    def get_as_fasta(self):
+        return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
 
-    def get_as_genbank(self, species):
+    def get_as_genbank(self):
         genbank = StringIO.StringIO()
 
-        record = SeqRecord.SeqRecord(Seq(self.get_sequence(species)[:-1], IUPAC.IUPACProtein()))
+        record = SeqRecord.SeqRecord(Seq(self.get_sequence()[:-1], IUPAC.IUPACProtein()))
         record.description = self.name
         record.name = self.wid
         accession = self.cross_references.filter(source="RefSeq")
@@ -4018,22 +3998,22 @@ class ProteinMonomer(Protein):
             record.annotations["accession"] = accession[0].xid
 
         record.annotations["date"] = self.last_revision().detail.date.strftime("%d-%b-%Y").upper()
-        record.annotations["source"] = species.name
-        record.annotations["organism"] = species.name
+        record.annotations["source"] = self.species.name
+        record.annotations["organism"] = self.species.name
         record.annotations["comment"] = self.comments
 
-        source = SeqFeature(FeatureLocation(0, self.get_length(species) - 1), type="source")
-        source.qualifiers["organism"] = species.name
+        source = SeqFeature(FeatureLocation(0, self.get_length() - 1), type="source")
+        source.qualifiers["organism"] = self.species.name
 
         record.features += [source]
-        record.features += self.get_as_seqfeature(species)
+        record.features += self.get_as_seqfeature()
 
         SeqIO.write(record, genbank, "genbank")
 
         return genbank.getvalue()
 
-    def get_as_seqfeature(self, species):
-        gene = SeqFeature(FeatureLocation(0, self.get_length(species) - 1), type="Protein")
+    def get_as_seqfeature(self):
+        gene = SeqFeature(FeatureLocation(0, self.get_length() - 1), type="Protein")
         gene.qualifiers["locus_tag"] = [self.wid]
         if self.name:
             gene.qualifiers["gene"] = [self.name]
@@ -4053,7 +4033,7 @@ class ProteinMonomer(Protein):
             cds.qualifiers["note"] = [self.comments]
         if len(EC_number) > 0:
             gene.qualifiers["EC_number"] = EC_number
-        cds.qualifiers["transl_table"] = [species.genetic_code]
+        cds.qualifiers["transl_table"] = [self.species.genetic_code]
         cds.qualifiers["codon_start"] = [1]
 
         cds.type = "CDS"
@@ -4158,7 +4138,7 @@ class Reaction(SpeciesComponent):
     #getters
 
     #html formatting
-    def get_as_html_stoichiometry(self, species, is_user_anonymous):
+    def get_as_html_stoichiometry(self, is_user_anonymous):
         compartments = []
         for s in self.stoichiometry.all():
             compartments.append(s.compartment)
@@ -4171,22 +4151,22 @@ class Reaction(SpeciesComponent):
                 tmp = ''
                 if s.coefficient != -1:
                     tmp += '(%d) ' % -s.coefficient
-                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.name)
+                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(), s.molecule.name)
                 if len(compartments) > 1:
-                    tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(species), s.compartment.wid)
+                    tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(), s.compartment.wid)
                 pos.append(tmp)
             else:
                 tmp = ''
                 if s.coefficient != 1:
                     tmp += '(%d) ' % s.coefficient
-                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(species), s.molecule.name)
+                tmp += '<a href="%s">%s</a>' % (s.molecule.get_absolute_url(), s.molecule.name)
                 if len(compartments) > 1:
-                    tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(species), s.compartment.wid)
+                    tmp += '[<a href="%s">%s</a>]' % (s.compartment.get_absolute_url(), s.compartment.wid)
                 neg.append(tmp)
 
         result = ''
         if len(compartments) == 1:
-            result += '[<a href="%s">%s</a>]: ' % (compartments[0].get_absolute_url(species), compartments[0].wid)
+            result += '[<a href="%s">%s</a>]: ' % (compartments[0].get_absolute_url(), compartments[0].wid)
         result += ' + '.join(pos)
         if self.direction == 'f':
             result += ' &rArr; '
@@ -4197,34 +4177,34 @@ class Reaction(SpeciesComponent):
         result += ' + '.join(neg)
         return format_with_evidence(obj = self.stoichiometry.all(), txt = result)
 
-    def get_as_html_modification(self, species, is_user_anonymous):
+    def get_as_html_modification(self, is_user_anonymous):
         m = self.modification
         if m is None:
             return
         if m.position is None:
-            txt = '<a href="%s">%s</a> [<a href="%s">%s</a>]' % (m.molecule.get_absolute_url(species), m.molecule.wid, m.compartment.get_absolute_url(species), m.compartment.wid)
+            txt = '<a href="%s">%s</a> [<a href="%s">%s</a>]' % (m.molecule.get_absolute_url(), m.molecule.wid, m.compartment.get_absolute_url(), m.compartment.wid)
         else:
-            txt = '(%d) <a href="%s">%s</a> [<a href="%s">%s</a>]' % (m.position, m.molecule.get_absolute_url(species), m.molecule.wid, m.compartment.get_absolute_url(species), m.compartment.wid)
+            txt = '(%d) <a href="%s">%s</a> [<a href="%s">%s</a>]' % (m.position, m.molecule.get_absolute_url(), m.molecule.wid, m.compartment.get_absolute_url(), m.compartment.wid)
 
         return format_with_evidence(obj = m, txt = txt)
 
-    def get_as_html_enzyme(self, species, is_user_anonymous):
+    def get_as_html_enzyme(self, is_user_anonymous):
         e = self.enzyme
         if e is None:
             return
-        return format_with_evidence(obj = e, txt = '<a href="%s">%s</a> [<a href="%s">%s</a>]' % (e.protein.get_absolute_url(species), e.protein.wid, e.compartment.get_absolute_url(species), e.compartment.wid))
+        return format_with_evidence(obj = e, txt = '<a href="%s">%s</a> [<a href="%s">%s</a>]' % (e.protein.get_absolute_url(), e.protein.wid, e.compartment.get_absolute_url(), e.compartment.wid))
 
-    def get_as_html_coenzymes(self, species, is_user_anonymous):
+    def get_as_html_coenzymes(self, is_user_anonymous):
         results = []
         for c in self.coenzymes.all():
             if c.coefficient is None:
-                results.append(format_with_evidence(list_item = True, obj = c, txt = '<a href="%s">%s</a> [<a href="%s">%s</a>]' % (c.metabolite.get_absolute_url(species), c.metabolite.wid, c.compartment.get_absolute_url(species), c.compartment.wid)))
+                results.append(format_with_evidence(list_item = True, obj = c, txt = '<a href="%s">%s</a> [<a href="%s">%s</a>]' % (c.metabolite.get_absolute_url(), c.metabolite.wid, c.compartment.get_absolute_url(), c.compartment.wid)))
             else:
-                results.append(format_with_evidence(list_item = True, obj = c, txt = '(%d) <a href="%s">%s</a> [<a href="%s">%s</a>]' % (c.coefficient, c.metabolite.get_absolute_url(species), c.metabolite.wid, c.compartment.get_absolute_url(species), c.compartment.wid)))
+                results.append(format_with_evidence(list_item = True, obj = c, txt = '(%d) <a href="%s">%s</a> [<a href="%s">%s</a>]' % (c.coefficient, c.metabolite.get_absolute_url(), c.metabolite.wid, c.compartment.get_absolute_url(), c.compartment.wid)))
 
         return format_list_html(results, force_list=True)
 
-    def get_as_html_kinetics_forward(self, species, is_user_anonymous):
+    def get_as_html_kinetics_forward(self, is_user_anonymous):
         k = self.kinetics_forward
         if k is None:
             return
@@ -4252,7 +4232,7 @@ class Reaction(SpeciesComponent):
             vmax = '<i>V</i><sub>max</sub> = %s %s' % (k.vmax, k.vmax_unit, )
         return format_with_evidence(obj = k, txt = '%s %s %s' % (law, kms_html, vmax))
 
-    def get_as_html_kinetics_backward(self, species, is_user_anonymous):
+    def get_as_html_kinetics_backward(self, is_user_anonymous):
         k = self.kinetics_backward
         if k is None:
             return
@@ -4407,7 +4387,7 @@ class Species(Entry):
         return ('cyano.views.species', (), {'species_wid': self.wid})
 
     #html formatting
-    def get_as_html_comments(self, species, is_user_anonymous):
+    def get_as_html_comments(self, is_user_anonymous):
         txt = self.comments
 
         #provide links to references
@@ -4415,7 +4395,7 @@ class Species(Entry):
             lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':self.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
 
-    def get_as_html_genetic_code(self, species, is_user_anonymous):
+    def get_as_html_genetic_code(self, is_user_anonymous):
         return '<a href="http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi#SG%s">%s</a>' % (self.genetic_code, self.genetic_code, )
 
     #meta information
@@ -4557,35 +4537,35 @@ class TranscriptionUnit(Molecule):
         return float(seq.count('G') + seq.count('C')) / float(len(seq))
 
     #html formatting
-    def get_as_html_structure(self, species, is_user_anonymous):
-        return self.get_chromosome().get_as_html_structure(species, is_user_anonymous,
+    def get_as_html_structure(self, is_user_anonymous):
+        return self.get_chromosome().get_as_html_structure(is_user_anonymous,
             zoom = 1,
             start_coordinate = self.get_coordinate() - 500,
             end_coordinate = self.get_coordinate() + self.get_length() + 500,
             highlight_wid = [self.wid] + [g.wid for g in self.genes.all()])
 
-    def get_as_html_genes(self, species, is_user_anonymous):
+    def get_as_html_genes(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.genes.all(), species)
+        return format_list_html_url(self.genes.all())
 
-    def get_as_html_sequence(self, species, is_user_anonymous):
+    def get_as_html_sequence(self, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
 
         direction = CHOICES_DIRECTION[[x[0] for x in CHOICES_DIRECTION].index(self.get_direction())][1]
 
         return '%s: <a href="%s">%s</a>, Coordinate: %s, Length: %s, Direction: %s, Sequence: %s' % (
             self.get_chromosome().model_type.model_name,
-            self.get_chromosome().get_absolute_url(species), self.get_chromosome().wid,
+            self.get_chromosome().get_absolute_url(), self.get_chromosome().wid,
             self.get_coordinate(), self.get_length(), direction,
-            format_sequence_as_html(species, self.get_sequence()))
+            format_sequence_as_html(self.species, self.get_sequence()))
 
-    def get_as_html_transcriptional_regulations(self, species, is_user_anonymous):
+    def get_as_html_transcriptional_regulations(self, is_user_anonymous):
         results = []
         for r in self.transcriptional_regulations.all():
-            results.append('<a href="%s">%s</a>: <a href="%s">%s</a>' % (r.get_absolute_url(species), r.wid, r.transcription_factor.get_absolute_url(species), r.transcription_factor.wid))
+            results.append('<a href="%s">%s</a>: <a href="%s">%s</a>' % (r.get_absolute_url(), r.wid, r.transcription_factor.get_absolute_url(), r.transcription_factor.wid))
         return format_list_html(results)
     
-    def get_as_fasta(self, species):
+    def get_as_fasta(self):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
 
     #meta information
@@ -4676,7 +4656,7 @@ class TranscriptionalRegulation(SpeciesComponent):
         return seq
 
     #html formatting
-    def get_as_html_binding_site(self, species, is_user_anonymous):
+    def get_as_html_binding_site(self, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
 
         bs = self.binding_site
@@ -4687,7 +4667,7 @@ class TranscriptionalRegulation(SpeciesComponent):
 
         chro = self.transcription_unit.get_chromosome()
 
-        structure = chr.get_as_html_structure(species, is_user_anonymous,
+        structure = chro.get_as_html_structure(is_user_anonymous,
                 zoom = 1,
                 start_coordinate = bs.coordinate - 500,
                 end_coordinate = bs.coordinate + bs.length + 500,
@@ -4695,9 +4675,9 @@ class TranscriptionalRegulation(SpeciesComponent):
 
         txt = '%s<br/>%s: <a href="%s">%s</a>, Coordinate: %s (nt), Length: %s (nt), Direction: %s, Sequence: %s' % (
             chro.model_type.model_name,
-            structure, chro.get_absolute_url(species), chro.wid,
+            structure, chro.get_absolute_url(), chro.wid,
             bs.coordinate, bs.length, direction,
-            format_sequence_as_html(species, self.get_binding_site_sequence(), show_protein_seq=True))
+            format_sequence_as_html(self.species, self.get_binding_site_sequence(), show_protein_seq=True))
 
         return format_with_evidence(obj = bs, txt = txt)
 
@@ -4774,32 +4754,32 @@ class Type(SpeciesComponent):
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_type', parent_link=True, verbose_name='Species component')
 
     #getters
-    def get_all_members(self, species):
+    def get_all_members(self):
         members = []
-        for m in self.members.for_species(species):
+        for m in self.members:
             members.append(m)
 
-        children_pks = self.children.for_species(species).values_list("pk", flat=True)
+        children_pks = self.children.values_list("pk", flat=True)
         t = Type.objects.filter(pk__in=children_pks)
         for c in t:
-            members += c.get_all_members(species)
+            members += c.get_all_members()
         return members
 
     #html formatting    
-    def get_as_html_parent(self, species, is_user_anonymous):
+    def get_as_html_parent(self, is_user_anonymous):
         if self.parent is not None:
-            result = '<a href="%s">%s</a>' % (self.parent.get_absolute_url(species), self.parent.wid, )
+            result = '<a href="%s">%s</a>' % (self.parent.get_absolute_url(), self.parent.wid, )
             if self.parent.parent is not None:
                 result = self.parent.get_as_html_parent(is_user_anonymous) + ' &#8250; ' + result
             return result
 
-    def get_as_html_children(self, species, is_user_anonymous):
+    def get_as_html_children(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.children.for_species(species), species)
+        return format_list_html_url(self.children)
 
-    def get_as_html_members(self, species, is_user_anonymous):
+    def get_as_html_members(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.get_all_members(species), species)
+        return format_list_html_url(self.get_all_members())
 
     #meta information
     class Meta:
@@ -4848,7 +4828,7 @@ class PublicationReference(SpeciesComponent):
     pages = CharField(max_length=255, blank=True, default='', verbose_name='Page(s)')
 
     #getters
-    def get_citation(self, species, cross_references = False):
+    def get_citation(self, cross_references = False):
         if self.type.exists():
             if self.type.all()[0].wid == 'article':
                 txt = '%s. %s. <i>%s</i> <b>%s</b>, %s (%s).' % (self.authors, self.title, self.publication, self.volume, self.pages, self.year, )
@@ -4867,27 +4847,27 @@ class PublicationReference(SpeciesComponent):
         else:
             txt = '%s. <i>%s</i>. (%s) %s.' % (self.authors, self.title, self.publication, self.year)
 
-        cr = self.get_as_html_cross_references(species, True)
+        cr = self.get_as_html_cross_references(True)
         cr_spacer = ''
         if cr != '':
             cr_spacer = ', '
-        return '%s CyanoFactory: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(species), self.wid, cr_spacer, cr)
+        return '%s CyanoFactory: <a href="%s">%s</a>%s%s' % (txt, self.get_absolute_url(), self.wid, cr_spacer, cr)
 
-    def get_all_referenced_entries(self, species):
+    def get_all_referenced_entries(self):
         entries = []
-        for entry in self.publication_referenced_components.filter(species = species):
+        for entry in self.publication_referenced_components.filter(species = self.species):
             entries.append(entry)
         for ev in Evidence.objects.filter(references__id=self.id):
             entries.append(ev.species_component)
         return entries
 
     #html formatting    
-    def get_as_html_citation(self, species, is_user_anonymous):
-        return self.get_citation(species)
+    def get_as_html_citation(self, is_user_anonymous):
+        return self.get_citation()
 
-    def get_as_html_referenced_entries(self, species, is_user_anonymous):
+    def get_as_html_referenced_entries(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.get_all_referenced_entries(species), species)
+        return format_list_html_url(self.get_all_referenced_entries())
 
     def get_as_bibtex(self):
         cite_type = None
@@ -5039,7 +5019,7 @@ class MassSpectrometryJob(SpeciesComponent):
     #getters
 
     #html formatting
-    def get_as_html_target_peptide(self, species, is_user_anonymous):
+    def get_as_html_target_peptide(self, is_user_anonymous):
         results = []
         try:
             target_type = Type.objects.for_wid("Target-Peptide")
@@ -5047,9 +5027,9 @@ class MassSpectrometryJob(SpeciesComponent):
             return ""
 
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.children.for_species(species).filter(type=target_type).order_by("wid"), species)
+        return format_list_html_url(self.children.filter(type=target_type).order_by("wid"))
 
-    def get_as_html_decoy_peptide(self, species, is_user_anonymous):
+    def get_as_html_decoy_peptide(self, is_user_anonymous):
         results = []
         try:
             decoy_type = Type.objects.for_wid("Decoy-Peptide")
@@ -5057,11 +5037,11 @@ class MassSpectrometryJob(SpeciesComponent):
             return ""
 
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.children.for_species(species).filter(type=decoy_type).order_by("wid"), species)
+        return format_list_html_url(self.children.filter(type=decoy_type).order_by("wid"))
 
-    def get_as_html_related_proteins(self, species, is_user_anonymous):
+    def get_as_html_related_proteins(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.children.for_species(species).filter(model_type=TableMeta.get_by_model_name("MassSpectrometryProtein")).order_by("wid"), species)
+        return format_list_html_url(self.children.filter(model_type=TableMeta.get_by_model_name("MassSpectrometryProtein")).order_by("wid"))
 
     #meta information
     class Meta:
@@ -5108,18 +5088,18 @@ class Peptide(Protein):
     #getters
 
     #html formatting
-    def get_as_html_sequence(self, species, is_user_anonymous):
+    def get_as_html_sequence(self, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
-        return format_sequence_as_html(species, self.sequence)
+        return format_sequence_as_html(self.sequence)
 
-    def get_as_html_matched_proteins(self, species, is_user_anonymous):
+    def get_as_html_matched_proteins(self, is_user_anonymous):
         results = []
 
         for matched_protein in self.proteins.all():
             try:
-                res = Protein.objects.for_species(species).get(
+                res = Protein.objects.for_species(self.species).get(
                     parent=MassSpectrometryJob.objects.all()[0], wid__startswith=matched_protein.value + "_")
-                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(), res.wid))
             except ObjectDoesNotExist:
                 results.append(matched_protein.value)
 
@@ -5181,11 +5161,11 @@ class MassSpectrometryProtein(Protein):
     mass = FloatField(verbose_name="Protein Mass (Da)")
 
     #html formatting
-    def get_as_html_sequence(self, species, is_user_anonymous):
+    def get_as_html_sequence(self, is_user_anonymous):
         from cyano.helpers import format_sequence_as_html
-        return format_sequence_as_html(species, self.sequence)
+        return format_sequence_as_html(self.species, self.sequence)
 
-    def get_as_html_structure(self, species, is_user_anonymous):
+    def get_as_html_structure(self, is_user_anonymous):
         from .helpers import overlaps, create_detail_fieldset
 
         length = self.length
@@ -5236,7 +5216,7 @@ class MassSpectrometryProtein(Protein):
             w = max(chrL, min(chrR, w)) - x
 
             fieldsets = deepcopy(feature._meta.fieldsets)
-            fielddata = create_detail_fieldset(species, feature, fieldsets, False)
+            fielddata = create_detail_fieldset(self.species, feature, fieldsets, False)
 
             tip_title = fielddata[0][0]
             tip_text = StringIO.StringIO()
@@ -5250,7 +5230,7 @@ class MassSpectrometryProtein(Protein):
             context_dict = {'h': featureHeight,
                             'title': tip_title,
                             'text': tip_text.getvalue(),
-                            'url': feature.protein.get_absolute_url(species),
+                            'url': feature.protein.get_absolute_url(),
                             'x': x,
                             'w': w,
                             'opacity': opacity}
@@ -5290,27 +5270,27 @@ class MassSpectrometryProtein(Protein):
         return '<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="%s" height="%s" viewport="0 0 %s %s"><style>%s%s%s</style><g class="chr">%s</g><g class="features">%s</g></svg>' % (
             W, H, W, H, style, chrStyle, featureStyle, chro, features.getvalue())
 
-    def get_as_html_ambiguous_proteins(self, species, is_user_anonymous):
+    def get_as_html_ambiguous_proteins(self, is_user_anonymous):
         results = []
 
         for ambiguous_protein in self.ambiguous.all():
             try:
-                res = Protein.objects.for_species(species).get(
+                res = Protein.objects.for_species(self.species).get(
                     parent=MassSpectrometryJob.objects.all()[0], wid__startswith=ambiguous_protein.value + "_")
-                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(), res.wid))
             except ObjectDoesNotExist:
                 results.append(ambiguous_protein.value)
 
         return format_list_html(results, comma_separated=True)
 
-    def get_as_html_sub_proteins(self, species, is_user_anonymous):
+    def get_as_html_sub_proteins(self,  is_user_anonymous):
         results = []
 
         for sub_protein in self.sub.all():
             try:
-                res = Protein.objects.for_species(species).get(
+                res = Protein.objects.for_species(self.species).get(
                     parent=MassSpectrometryJob.objects.all()[0], wid__startswith=sub_protein.value + "_")
-                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(species), res.wid))
+                results.append('<a href="%s">%s</a>' % (res.get_absolute_url(), res.wid))
             except ObjectDoesNotExist:
                 results.append(sub_protein.value)
 
@@ -5569,7 +5549,7 @@ def sub_rate_law(species):
             return '<i>K</i><sub>m%s</sub>' % match.group(0)[2:]
         try:
             obj = SpeciesComponent.objects.for_species(species).for_wid(match.group(0))
-            return '[<a href="%s">%s</a>]' % (obj.get_absolute_url(species), obj.wid)
+            return '[<a href="%s">%s</a>]' % (obj.get_absolute_url(), obj.wid)
         except:
             return match.group(0)
     return inner_method

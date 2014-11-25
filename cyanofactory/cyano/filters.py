@@ -1,104 +1,33 @@
-from django.core.exceptions import ObjectDoesNotExist
-from rest_framework import serializers
+import django_filters
+
 import cyano.models as cmodels
 
-# via https://gist.github.com/dbrgn/4e6fc1fe5922598592d6
-class DynamicFieldsMixin(object):
-    """
-    A serializer mixin that takes an additional `fields` argument that controls
-    which fields should be displayed.
-
-    Usage::
-
-        class MySerializer(DynamicFieldsMixin, serializers.HyperlinkedModelSerializer):
-            class Meta:
-                model = MyModel
-
-    """
-    def __init__(self, *args, **kwargs):
-        super(DynamicFieldsMixin, self).__init__(*args, **kwargs)
-
-        if 'request' in self.context:
-            fields = self.context['request'].QUERY_PARAMS.get('fields')
-            if fields:
-                fields = fields.split(',')
-                # Drop any fields that are not specified in the `fields` argument.
-                allowed = set(fields)
-                existing = set(self.fields.keys())
-                for field_name in existing - allowed:
-                    self.fields.pop(field_name)
-
-
-class WidField(serializers.SlugRelatedField):
-    class WidOnlyObject(object):
-        def __init__(self, wid):
-            self.pk = 0
-            self.wid = wid
-
-    def __init__(self, *args, **kwargs):
-        kwargs['slug_field'] = 'wid'
-        super(WidField, self).__init__(*args, **kwargs)
-
-    def get_attribute(self, instance):
-
-        obj = instance.__class__.objects.filter\
-            (pk=instance.pk).values_list("%s__wid" % self.field_name, flat=True)
-
-        if len(obj) == 0:
-            return WidField.WidOnlyObject(None)
-
-        return WidField.WidOnlyObject(obj[0])
-
-
-class WidManyRelatedField(serializers.ManyRelatedField):
-    def to_representation(self, iterable):
-        return list(iterable.values_list("wid", flat=True))
-
-
-class WidFieldMany(serializers.RelatedField):
-    def to_internal_value(self, data):
-        pass
-
-    def to_representation(self, value):
-        pass
-
-    @classmethod
-    def many_init(cls, *args, **kwargs):
-        list_kwargs = {'child_relation': cls(*args, **kwargs)}
-        kwargs.pop("queryset")
-        for key in kwargs.keys():
-            list_kwargs[key] = kwargs[key]
-        return WidManyRelatedField(**list_kwargs)
-
-
-class CyanoSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
+class CyanoFilter(django_filters.FilterSet):
     pass
 
 
-class Entry(CyanoSerializer):
+class Entry(CyanoFilter):
     class Meta:
         model = cmodels.Entry
         fields = cmodels.Entry._meta.field_list
 
-additional_fields = ['species', 'url']
 
-
-class SpeciesComponent(CyanoSerializer):
-    species = WidField(read_only=True)
-    type = WidFieldMany(allow_null=True, many=True, queryset=cmodels.Type.objects.all(), required=False)
-    url = serializers.URLField(source='get_absolute_url')
+class SpeciesComponent(CyanoFilter):
+    species = django_filters.CharFilter(name="species__wid")
+    parent = django_filters.CharFilter(name="parent__wid")
+    type = django_filters.CharFilter(name="type__wid")
+    publication_references = django_filters.CharFilter(name="publication_references__wid")
+    cross_references = django_filters.CharFilter(name="cross_references__wid")
 
     class Meta:
         model = cmodels.SpeciesComponent
-        fields = additional_fields
+        fields = ['species', 'parent']
 
 
 class Genome(SpeciesComponent):
-    gc_content = serializers.ReadOnlyField(source='get_gc_content')
-
     class Meta:
         model = cmodels.Genome
-        fields = cmodels.Genome._meta.field_list + SpeciesComponent.Meta.fields + ['gc_content']
+        fields = cmodels.Genome._meta.field_list + SpeciesComponent.Meta.fields
 
 
 class Chromosome(SpeciesComponent):
@@ -126,10 +55,8 @@ class Compartment(SpeciesComponent):
 
 
 class Gene(SpeciesComponent):
-    chromosome = WidField(read_only=True)
-
-    def get_chromosome(self, gene):
-        return cmodels.Genome.objects.filter(pk=gene.chromosome_id).values_list('wid', flat=True)[0]
+    chromosome = django_filters.CharFilter(name="chromosome__wid")
+    amino_acid = django_filters.CharFilter(name="amino_acid__wid")
 
     class Meta:
         model = cmodels.Gene
@@ -143,6 +70,11 @@ class Metabolite(SpeciesComponent):
 
 
 class Parameter(SpeciesComponent):
+    state = django_filters.CharFilter(name="state__wid")
+    process = django_filters.CharFilter(name="process__wid")
+    reaction = django_filters.CharFilter(name="reactions__wid")
+    molecules = django_filters.CharFilter(name="molecules__wid")
+
     class Meta:
         model = cmodels.Parameter
         fields = cmodels.Parameter._meta.field_list + SpeciesComponent.Meta.fields
@@ -160,19 +92,33 @@ class Process(SpeciesComponent):
         fields = cmodels.Process._meta.field_list + SpeciesComponent.Meta.fields
 
 
+class Protein(SpeciesComponent):
+    class Meta:
+        model = cmodels.Process
+        fields = cmodels.Protein._meta.field_list + SpeciesComponent.Meta.fields
+
+
 class ProteinComplex(SpeciesComponent):
+    formation_process = django_filters.CharFilter(name="formation_process__wid")
+
     class Meta:
         model = cmodels.ProteinComplex
         fields = cmodels.ProteinComplex._meta.field_list + SpeciesComponent.Meta.fields
 
 
 class ProteinMonomer(SpeciesComponent):
+    gene = django_filters.CharFilter(name="gene__wid")
+    signal_sequence = django_filters.CharFilter(name="signal_sequence__wid")
+
     class Meta:
         model = cmodels.ProteinMonomer
         fields = cmodels.ProteinMonomer._meta.field_list + SpeciesComponent.Meta.fields
 
 
 class Reaction(SpeciesComponent):
+    processes = django_filters.CharFilter(name="processes__wid")
+    states = django_filters.CharFilter(name="states__wid")
+
     class Meta:
         model = cmodels.Reaction
         fields = cmodels.Reaction._meta.field_list + SpeciesComponent.Meta.fields
@@ -191,12 +137,17 @@ class Stimulus(SpeciesComponent):
 
 
 class TranscriptionUnit(SpeciesComponent):
+    genes = django_filters.CharFilter(name="genes__wid")
+
     class Meta:
         model = cmodels.TranscriptionUnit
         fields = cmodels.TranscriptionUnit._meta.field_list + SpeciesComponent.Meta.fields
 
 
 class TranscriptionalRegulation(SpeciesComponent):
+    transcription_unit = django_filters.CharFilter(name="transcription_unit__wid")
+    transcription_factor = django_filters.CharFilter(name="transcription_factor__wid")
+
     class Meta:
         model = cmodels.TranscriptionalRegulation
         fields = cmodels.TranscriptionalRegulation._meta.field_list + SpeciesComponent.Meta.fields
