@@ -737,7 +737,7 @@ def detail(request, species, model, item):
             del fieldsets[idx]
             
         #filter out empty fields
-        fieldsets = chelpers.create_detail_fieldset(species, item, fieldsets, request.user.is_anonymous())
+        fieldsets = chelpers.create_detail_fieldset(item, fieldsets, request.user.is_anonymous())
 
     qs = chelpers.objectToQuerySet(item, model=model)
 
@@ -771,7 +771,7 @@ def detail_field(request, species, model, item):
 
     strip = request.GET.get('strip', False)
 
-    output = chelpers.format_field_detail_view(species, item, request.GET.get('name'), request.user.is_anonymous())
+    output = chelpers.format_field_detail_view(item, request.GET.get('name'), request.user.is_anonymous())
 
     if output is None:
         return HttpResponseBadRequest("Unknown field")
@@ -875,7 +875,7 @@ def history_detail(request, species, model, item, detail_id):
                 else:
                     verbose_name = field.verbose_name
                 
-            data = chelpers.format_field_detail_view(species, item, field_name, request.user.is_anonymous(), detail_id)
+            data = chelpers.format_field_detail_view(item, field_name, request.user.is_anonymous(), detail_id)
             if (data is None) or (data == ''):
                 rmfields = [idx2] + rmfields
             

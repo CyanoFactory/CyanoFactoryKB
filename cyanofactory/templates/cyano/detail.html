@@ -168,31 +168,6 @@ $(document).ready(function() {
 	{% endfor %}
 	{% endwith %}
 {% endwith %}
-
-{% with object=queryset.0 %}
-<table id="detail">
-	{% with object=queryset.0 %}
-	{% for fieldset in fieldsets %}
-		{% if not forloop.first %}
-	<tbody class="spacing">
-		<tr><td colspan="2">&nbsp;</td></tr>
-	</tbody>
-		{% endif %}
-	<tbody class="data">
-		<tr>
-			<th colspan="2">{{ fieldset.0 }}</th>
-		</tr>				
-		{% for field in fieldset.1.fields %}
-		<tr>			
-			<th>{{ field.verbose_name }}</th>
-			<td>{{ field.data }}</td>
-		</tr>
-		{% endfor %}
-	</tbody>
-	{% endfor %}
-	{% endwith %}	
-</table>
-{% endwith %}
 {% endautoescape %}
 
 <select id="basket-list" multiple="multiple" style="visibility:hidden">

@@ -94,7 +94,7 @@ class Process(SpeciesComponent):
 
 class Protein(SpeciesComponent):
     class Meta:
-        model = cmodels.Process
+        model = cmodels.Protein
         fields = cmodels.Protein._meta.field_list + SpeciesComponent.Meta.fields
 
 

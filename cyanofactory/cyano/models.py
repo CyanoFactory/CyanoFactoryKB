@@ -1872,9 +1872,9 @@ class Genome(Molecule):
 
     def get_as_html_structure(self, is_user_anonymous, start_coordinate = None, end_coordinate = None, highlight_wid = None, zoom = 0):
         if zoom == 0:
-            return self.get_as_html_structure_global(self.species, is_user_anonymous)
+            return self.get_as_html_structure_global(is_user_anonymous)
         else:
-            return self.get_as_html_structure_local(self.species, is_user_anonymous, start_coordinate = start_coordinate, end_coordinate = end_coordinate, highlight_wid = highlight_wid)
+            return self.get_as_html_structure_local(is_user_anonymous, start_coordinate = start_coordinate, end_coordinate = end_coordinate, highlight_wid = highlight_wid)
 
     def get_as_html_structure_global(self, is_user_anonymous):
         from .helpers import shift, overlaps
@@ -2627,7 +2627,7 @@ class FeaturePosition(EntryData):
 
     #html formatting
     def get_as_html_structure(self, is_user_anonymous):
-        return self.chromosome.get_as_html_structure(self.species, is_user_anonymous,
+        return self.chromosome.get_as_html_structure(is_user_anonymous,
                                                      zoom=1,
                                                      start_coordinate=self.coordinate - 500,
                                                      end_coordinate=self.coordinate + self.length + 500,
@@ -2809,7 +2809,7 @@ class Gene(Molecule):
         return format_list_html(results, force_list=True)
 
     def get_as_html_structure(self, is_user_anonymous):
-        return self.chromosome.get_as_html_structure(self.species, is_user_anonymous,
+        return self.chromosome.get_as_html_structure(is_user_anonymous,
             zoom = 1,
             start_coordinate = self.coordinate - 2500,
             end_coordinate = self.coordinate + self.length + 2500,

@@ -1387,7 +1387,7 @@ def objectToQuerySet(obj, model = None):
 
     return qs
 
-def create_detail_fieldset(species, item, fieldsets, is_anonymous):
+def create_detail_fieldset(item, fieldsets, is_anonymous):
     model = item._meta.concrete_model
 
     rmfieldsets = []
@@ -1409,7 +1409,7 @@ def create_detail_fieldset(species, item, fieldsets, is_anonymous):
                     idx = fieldset_names.index('Type')
                     del sub_fieldsets[idx]
 
-                extra_fields = create_detail_fieldset(species, ifield, sub_fieldsets, is_anonymous)
+                extra_fields = create_detail_fieldset(ifield, sub_fieldsets, is_anonymous)
                 all_inline_fields += extra_fields
 
             fieldsets = fieldsets[:idx] + all_inline_fields + fieldsets[idx:]
@@ -1429,7 +1429,7 @@ def create_detail_fieldset(species, item, fieldsets, is_anonymous):
                 else:
                     verbose_name = field.verbose_name
 
-            data = format_field_detail_view(species, item, field_name, is_anonymous)
+            data = format_field_detail_view(item, field_name, is_anonymous)
             if (data is None) or (data == ''):
                 rmfields = [idx2] + rmfields
 
@@ -1446,7 +1446,7 @@ def create_detail_fieldset(species, item, fieldsets, is_anonymous):
 
     return fieldsets
 
-def format_field_detail_view(species, obj, field_name, is_user_anonymous, history_id = None):
+def format_field_detail_view(obj, field_name, is_user_anonymous, history_id = None):
     if hasattr(obj, 'get_as_html_%s' % field_name):
         val = getattr(obj, 'get_as_html_%s' % field_name)(is_user_anonymous)
         if isinstance(val, float) and val != 0. and val is not None:
