@@ -211,7 +211,12 @@ def simulate(request, pk):
     graph.node_attr.update(style="filled", colorscheme="pastel19")
     outgraph = str(graph.to_string())
 
-    return HttpResponse(outgraph)
+    return HttpResponse(json.dumps(
+        {"graph": outgraph,
+        "fluxes": map(lambda x: [x.name, x.flux], org.reactions)}),
+        content_type="application/json"
+    )
+
 
 @login_required
 def export(request, pk):
@@ -415,7 +420,7 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
     reactions = filter(lambda x: not x.disabled, fluxResults.reactions)
     for reaction in reactions:
         if not reaction.name.endswith("_transp"):
-            changeDic[reaction.name] = reaction.flux
+            changeDic[reaction.name] = float('%.3g' % reaction.flux)
 
     g = json_graph.node_link_graph(jsonGraph)
     vList = changeDic.values()

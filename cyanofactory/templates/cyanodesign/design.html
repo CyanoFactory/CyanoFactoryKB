@@ -43,14 +43,15 @@ Released under the MIT license
     var command_list = [];
     var svg;
     var design_objective_visible_combobox;
+    var flux;
 
     function Filter() {};
 
     Filter.prototype = {
         predicates: [
-            function(s, x) { return s.toLowerCase().contains(x.toLowerCase()) },
-            function(s, x) { return s.toLowerCase().startsWith(x.toLowerCase()) },
-            function(s, x) { return s.toLowerCase().endsWith(x.toLowerCase()) },
+            function(s, x) { return s.toLowerCase().indexOf(x.toLowerCase()) > -1 },
+            function(s, x) { return s.toLowerCase().indexOf(x.toLowerCase()) == 0 },
+            function(s, x) { return s.toLowerCase().lastIndexOf(x.toLowerCase()) == s.length - x.toLowerCase() },
             function(s, x) { return s.toLowerCase() == x.toLowerCase() },
             function(s, x) { return !Filter.prototype.predicates[0](s, x) },
             function(s, x) { return !Filter.prototype.predicates[1](s, x) },
@@ -64,9 +65,15 @@ Released under the MIT license
             function(e) { return e.products.map(function(x) { return x.name } ) }
         ],
         apply: function(enzyme, getter, predicate, search_string) {
-            return Filter.prototype.getters[getter](enzyme).some(function(x) {
-                return Filter.prototype.predicates[predicate](x, search_string)
-            });
+            if (predicate <= 3) {
+                return Filter.prototype.getters[getter](enzyme).some(function(x) {
+                    return Filter.prototype.predicates[predicate](x, search_string)
+                });
+            } else {
+                return Filter.prototype.getters[getter](enzyme).every(function(x) {
+                    return Filter.prototype.predicates[predicate](x, search_string)
+                });
+            }
         },
         getAll: function() {
             return dialog_filter.find("fieldset > div").map(function() {
@@ -309,7 +316,9 @@ Released under the MIT license
                     "auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
                 }
             }).done(function(x) {
-                var graph = Viz(x, "svg", "dot");
+                var graph = Viz(x["graph"], "svg", "dot");
+                flux = x["fluxes"];
+
                 simulation_result.hide();
                 $("#visual").show();
                 $("#visual").val(graph);
@@ -324,6 +333,20 @@ Released under the MIT license
                 $("<pre></pre>").text(x.status + " " + x.statusText + ": " + x.responseText).appendTo(simulation_result);
                 dialog_progressbar.dialog("close");
             });
+        });
+
+        $("#flux-submit").click(function(event) {
+                var csv = "";
+                for (var i = 0; i < flux.length; i++) {
+                        csv += flux[i][0];
+                        csv += "\t";
+                        csv += flux[i][1];
+                        csv += "\r\n";
+                }
+                // trick browser into downloading file
+                var uriContent = "data:application/octet-stream," + encodeURIComponent(csv);
+                var myWindow = window.open(uriContent, "Flux CSV");
+                myWindow.focus();
         });
 
         $("#design-save").click(function(event) {
@@ -512,7 +535,7 @@ Released under the MIT license
             dialog_metabolite_add.data("object", enzyme);
             dialog_metabolite_add.data("substrate", isSubstrate);
             dialog_metabolite_add.dialog("open");
-            $(dialog_metabolite_add.find(".custom-combobox-input")).value("");
+            $(dialog_metabolite_add.find(".custom-combobox-input")).val("");
         }
 
         function saveEnzyme(enzyme) {
