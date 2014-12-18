@@ -4,6 +4,7 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
+from collections import OrderedDict
 
 from Bio import SeqIO
 from django.core.exceptions import ValidationError
@@ -32,6 +33,14 @@ class EasyProt(BioParser):
         self.target_peptides_header = []
         self.decoy_peptides = []
         self.decoy_peptides_header = []
+        self.protein_details = []
+        self.protein_details_header = []
+        self.protein_summary = []
+        self.protein_summary_header = []
+        self.mascat_quant_details_header = OrderedDict()
+        self.mascat_quant_details = {}
+        self.libra_quant_details_header = OrderedDict()
+        self.libra_quant_details = {}
         # PTM: Post Translational Modifications
 
     def parse(self, handle):
@@ -156,57 +165,78 @@ class EasyProt(BioParser):
             self.export_parameters[typ] = value
 
     def _parse_target_peptides(self, sheet_target_peptides):
-        """
-        :type sheet_target_peptides: openpyxl.worksheet.Worksheet
-        """
-        cols = sheet_target_peptides.get_highest_column()
-        self.target_peptides_header = []
-        self.target_peptides = []
-        for i in range(cols):
-            self.target_peptides_header.append(sheet_target_peptides.cell(row=0, column=i).value)
-
-        # header omitted
-        rows = sheet_target_peptides.get_highest_row() - 1
-        for i in range(rows):
-            self.target_peptides.append(map(lambda j: sheet_target_peptides.cell(row=i+1, column=j).value, range(cols)))
+        self._read_table(sheet_target_peptides, self.target_peptides_header, self.target_peptides)
 
     def _parse_decoy_peptides(self, sheet_decoy_peptides):
-        """
-        :type sheet_decoy_peptides: openpyxl.worksheet.Worksheet
-        """
-        cols = sheet_decoy_peptides.get_highest_column()
-        self.decoy_peptides_header = []
-        self.decoy_peptides = []
-        for i in range(cols):
-            self.decoy_peptides_header.append(sheet_decoy_peptides.cell(row=0, column=i).value)
-
-        # header omitted
-        rows = sheet_decoy_peptides.get_highest_row() - 1
-        for i in range(rows):
-            self.decoy_peptides.append(map(lambda j: sheet_decoy_peptides.cell(row=i+1, column=j).value, range(cols)))
+        self._read_table(sheet_decoy_peptides, self.decoy_peptides_header, self.decoy_peptides)
 
     def _parse_protein_details(self, sheet_protein_details):
-        pass
+        self._read_table(sheet_protein_details, self.protein_details_header, self.protein_details)
 
     def _parse_protein_summary(self, sheet_protein_summary):
-        pass
+        self._read_table(sheet_protein_summary, self.protein_summary_header, self.protein_summary)
 
     def _parse_quant_stats_info(self, sheet_quant_stats_info):
+        #self._read_table_with_annotation(sheet_quant_stats_info, self.quant_stats_info_header, self.quant_stats_info)
         pass
 
     def _parse_mascat_quant_details(self, sheet_mascat_quant_details):
-        pass
+        self._read_table_with_annotation(sheet_mascat_quant_details, self.mascat_quant_details_header, self.mascat_quant_details)
 
     def _parse_libra_quant_details(self, sheet_libra_quant_details):
-        pass
+        self._read_table_with_annotation(sheet_libra_quant_details, self.libra_quant_details_header, self.libra_quant_details)
 
     def _parse_protein_expression(self, sheet_protein_expression):
         pass
 
+    def _read_table(self, sheet, header, values):
+        """
+        :type sheet: openpyxl.worksheet.Worksheet
+        :type header: list
+        :type values: list
+        """
+        cols = sheet.get_highest_column()
+
+        for i in range(cols):
+            header.append(sheet.cell(row=0, column=i).value)
+
+        # header omitted
+        rows = sheet.get_highest_row() - 1
+        for i in range(rows):
+            values.append(map(lambda j: sheet.cell(row=i+1, column=j).value, range(cols)))
+
+    def _read_table_with_annotation(self, sheet, header, values):
+        """
+        :type sheet: openpyxl.worksheet.Worksheet
+        :type header: dict
+        :type values: dict
+        """
+        cols = sheet.get_highest_column()
+
+        current_group = "main"
+
+        # Read header and group elements
+        for i in range(cols):
+            current_group = sheet.cell(row=0, column=i).value or current_group
+            if not current_group in header:
+                header[current_group] = []
+            head = sheet.cell(row=1, column=i).value
+            header[current_group].append(head)
+
+        # header omitted, read values
+        rows = sheet.get_highest_row() - 2
+        for i in range(rows):
+            col_offset = 0
+            for head in header:
+                if not head in values:
+                    values[head] = []
+                values[head].append(map(lambda j: sheet.cell(row=i+2, column=j+col_offset).value, range(len(header[head]))))
+                col_offset += len(header[head])
+
     @commit_on_success
     def apply(self):
         self.detail.save()
-        
+
         self.species.save(self.detail)
 
         if hasattr(self, "notify_progress"):
