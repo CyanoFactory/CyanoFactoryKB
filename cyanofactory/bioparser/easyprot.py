@@ -105,11 +105,13 @@ class EasyProt(BioParser):
         """
         row = sheet_export_parameters.get_highest_row()
         parse_jobs = False
+        parse_isotopic = False
         for i in range(row):
             typ = sheet_export_parameters.cell(row=i, column=0).value
             value = sheet_export_parameters.cell(row=i, column=1).value
 
-            typ = typ.lower()
+            if typ is not None:
+                typ = typ.lower()
 
             if parse_jobs:
                 if typ.startswith("job"):
@@ -118,6 +120,15 @@ class EasyProt(BioParser):
                     continue
                 else:
                     parse_jobs = False
+            elif parse_isotopic:
+                if typ:
+                    parse_isotopic = False
+                else:
+                    self.export_parameters["isotopic purity correction"].append(value)
+                    continue
+
+            if typ is None:
+                continue
 
             if typ == "easyprot version":
                 typ = "version"
@@ -127,6 +138,11 @@ class EasyProt(BioParser):
                 continue
             elif typ.startswith("job"):
                 raise ValidationError("Job outside of #Jobs list")
+            elif typ == "isotopic purity correction":
+                parse_isotopic = True
+                self.export_parameters["isotopic purity correction"] = []
+                self.export_parameters["isotopic purity correction"].append(value)
+                continue
 
             self.export_parameters[typ] = value
 
