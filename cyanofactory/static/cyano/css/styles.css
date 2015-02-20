@@ -905,7 +905,7 @@ select.select{
     border: medium dashed;
 }
 
-.table a
+.table td > a
 {
     display:block;
     text-decoration:none;

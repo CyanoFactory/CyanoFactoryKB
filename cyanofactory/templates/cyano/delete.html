@@ -43,13 +43,14 @@ h1, #content{
 <form id="delete" action="{{ request.get_full_path }}" method="post">
 {% csrf_token %}
 <div>
-Are you sure you want to delete {{ model_verbose_name|lower }} "<a href="{{ object|get_absolute_url:species }}">{{ object.wid }}</a>"?
+Are you sure you want to delete {{ model_verbose_name|lower }} "<a href="{{ object.get_absolute_url }}">{{ object.wid }}</a>"?
 </div>
 <div>
 <input class="button" type="submit" value="Yes"/>
 <a href="{{ object.get_absolute_url }}"><input class="button" type="button" value="Cancel"/></a>
 </div>
 </form>
+
 {% endwith %}
 {% endautoescape %}
 {% endblock %}
