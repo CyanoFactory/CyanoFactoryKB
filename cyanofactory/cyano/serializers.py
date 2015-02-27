@@ -83,6 +83,23 @@ class Entry(CyanoSerializer):
 additional_fields = ['species', 'url']
 
 
+class BasketComponent(CyanoSerializer):
+    component = WidField(read_only=True)
+    species = WidField(read_only=True)
+
+    class Meta:
+        model = cmodels.BasketComponent
+        fields = ['component', 'species']
+
+
+class Basket(CyanoSerializer):
+    components = BasketComponent(many=True, read_only=True)
+
+    class Meta:
+        model = cmodels.Basket
+        fields = ['id', 'name', 'components']
+
+
 class SpeciesComponent(CyanoSerializer):
     species = WidField(read_only=True)
     type = WidFieldMany(allow_null=True, many=True, queryset=cmodels.Type.objects.all(), required=False)

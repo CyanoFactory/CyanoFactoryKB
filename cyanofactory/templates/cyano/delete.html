@@ -1,5 +1,3 @@
-{% extends "cyano/base.html" %}
-
 {% comment %}
 Delete confirmation page template
 
@@ -13,44 +11,16 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 {% endcomment %}
 
-{% load static %}
-{% load templatetags %}
-{% load filters %}
+{% load crispy_forms_tags %}
 
-{% block head_title %}{{ block.super }} :: Delete? {{ model_verbose_name }} :: {{ queryset.0.wid }}{% endblock %}
-{% block page_title %}Delete?{% endblock %}
-
-{% block extrastyles %}
-h1, #content{
-	text-align:center;
-}
-{% endblock %}
-
-{% block action_icons_share %}
-{% endblock %}
-
-{% block action_icons_edit %}
-{% if queryset|length > 0 %}
-<li><a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}">View {{ queryset.0.wid }}</a></li>
-<li><a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}">Edit {{ queryset.0.wid }}</a>
-</li>{% endif %}
-{{ block.super }}
-{% endblock %}
-
-{% block content %}
-{% autoescape off %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+</head>
+<body>
 {% with object=queryset.0 %}
-<form id="delete" action="{{ request.get_full_path }}" method="post">
-{% csrf_token %}
-<div>
-Are you sure you want to delete {{ model_verbose_name|lower }} "<a href="{{ object.get_absolute_url }}">{{ object.wid }}</a>"?
-</div>
-<div>
-<input class="button" type="submit" value="Yes"/>
-<a href="{{ object.get_absolute_url }}"><input class="button" type="button" value="Cancel"/></a>
-</div>
-</form>
-
+{% crispy delete_form %}
 {% endwith %}
-{% endautoescape %}
-{% endblock %}
+</body>
+</html>

@@ -18,7 +18,7 @@ Released under the MIT license
 
 {% block action_icons_edit %}
 <li><a href="{% url "cyano.views.edit" species_wid=species.wid %}">Edit {{ species.wid }}</a></li>
-<li><a href="{% url "cyano.views.delete" species_wid=species.wid %}">Delete {{ species.wid }}</a></li>
+<li><a data-toggle="modal" href="{% url 'cyano.views.delete' species_wid=species.wid %}" data-target="#delete-form">Delete {{ species.wid }}</a></li>
 <li><a href="{% url "cyano.views.permission" species_wid=species.wid %}">View permissions of {{ species.wid }}</a></li>
 {{ block.super }}
 {% endblock %}
@@ -93,6 +93,12 @@ Released under the MIT license
 <p><a href="http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi/#SG{{ species.genetic_code }}">{{ species.genetic_code|get_genetic_code_name }} ({{ species.genetic_code }})</a></p>
 
 <h2>Content</h2>
+<div class="row">
+        <div class="col-md-4">.col-md-4</div>
+        <div class="col-md-4">.col-md-4</div>
+        <div class="col-md-4">.col-md-4</div>
+      </div>
+
 <table class="content">
 <thead>
 	<tr>
@@ -141,6 +147,14 @@ Released under the MIT license
 {% endfor %}
 </tbody>
 </table>
+
+<div class="modal fade" id="delete-form" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+        </div>
+    </div>
+</div>
+
 {% comment %}
 <h2>Data sources</h2>
 <script language="javascript" type="text/javascript">

@@ -186,13 +186,14 @@ $(document).ready(function() {
 			{% if form.file.errors|length > 0 %}<div class="errors">{{ form.file.errors|join:" " }}</div>{% endif %}
 		</div>
 	</div>
-	
-	<div class="block">
-		<h1>{{ form.reason.label }}</h1>		
-		<div class="content">
-			{% render_field form.reason class+="text" style+="width:600px" %}
+
+    <div class="panel panel-default">
+        <div class="panel-heading">{{ form.reason.label }}</div>
+            <div class="panel-body">
+			{% render_field form.reason class+="form-control" style+="width:600px" %}
 			{% if form.reason.errors|length > 0 %}<div class="errors">{{ form.reason.errors|join:" " }}</div>{% endif %}
-		</div>
+            </div>
+        </div>
 	</div>
 	
 	<input class="button" type="submit" value="Submit" />

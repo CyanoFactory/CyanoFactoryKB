@@ -14,6 +14,7 @@ from django.shortcuts import redirect
 from django.http.response import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 
+
 class RedirectAllowedHostMiddlware(object):
     """
     Tests if the provided HOST header is the first one in ALLOWED_HOSTS.
@@ -62,7 +63,8 @@ class RedirectAllowedHostMiddlware(object):
 
 # via http://stackoverflow.com/questions/2093593/
 
-class PasswordChangeMiddleware:
+
+class PasswordChangeMiddleware(object):
     def process_request(self, request):
         if request.user.is_authenticated() and \
             not re.match(r'^' + reverse("password_change_required"), request.path) and \
@@ -72,3 +74,8 @@ class PasswordChangeMiddleware:
             profile = request.user.profile
             if profile.force_password_change:
                 return HttpResponseRedirect(reverse("password_change_required"))
+
+
+class ProcessFileUploadMiddleware(object):
+    def process_request(self, request):
+        pass

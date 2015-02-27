@@ -319,7 +319,8 @@ Released under the MIT license
                 var graph = Viz(x["graph"], "svg", "dot");
                 flux = x["fluxes"];
 
-                simulation_result.hide();
+                simulation_result.text("");
+                $("<pre></pre>").text("The solution is " + x["solution"]).appendTo(simulation_result);
                 $("#visual").show();
                 $("#visual").val(graph);
                 document.getElementById("visual").innerHTML = graph;
@@ -328,7 +329,6 @@ Released under the MIT license
                 //command_list = [];
             }).error(function(x) {
                 $("#visual").hide();
-                simulation_result.show();
                 simulation_result.text("");
                 $("<pre></pre>").text(x.status + " " + x.statusText + ": " + x.responseText).appendTo(simulation_result);
                 dialog_progressbar.dialog("close");
@@ -370,7 +370,6 @@ Released under the MIT license
                 command_list = [];
             }).error(function(x) {
                 $("#visual").hide();
-                simulation_result.show();
                 simulation_result.text("");
                 $("<pre></pre>").text(x.status + " " + x.statusText + ": " + x.responseText).appendTo(simulation_result);
                 dialog_progressbar.dialog("close");

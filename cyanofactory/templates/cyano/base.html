@@ -138,14 +138,12 @@ Released under the MIT license
                             <li class="dropdown-header">Actions</li>
                                 {% block action_icons_edit %}
                                 {% endblock %}
-                            </li>
                             <li class="divider"></li>
                             <li class="dropdown-header">Export</li>
                                 {% block action_icons_export %}
                                 <li><a href="?{% makeurl queryargs 'format' 'pdf' %}" title="Convert to PDF">Convert to PDF</a></li>
                                 <li><a href="javascript:window.print()" title="Print this page">Print this page</a></li>
                                 {% endblock %}
-                            </li>
                             <li class="divider"></li>
                             <li class="dropdown-header">Share</li>
                                 {% block action_icons_share %}

@@ -10,11 +10,14 @@ from collections import OrderedDict
 import json
 import os
 import tempfile
+from crispy_forms.utils import render_crispy_form
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect
+from django.template.context import RequestContext
 from django.views.decorators.csrf import ensure_csrf_cookie
+from jsonview.decorators import json_view
 from networkx.algorithms.shortest_paths.generic import has_path, shortest_path, all_shortest_paths
 from networkx.exception import NetworkXNoPath
 from cyano.decorators import ajax_required
@@ -33,13 +36,15 @@ import json
 
 @login_required
 def index(request):
+    upload_form = UploadModelForm(None)
+
     models = DesignModel.objects.filter(user=request.user.profile)
 
     return render_queryset_to_response(
         request,
         template="cyanodesign/list.html",
         queryset=models,
-        data={}
+        data={'upload_form': upload_form}
     )
 
 
@@ -213,10 +218,11 @@ def simulate(request, pk):
 
     return HttpResponse(json.dumps(
         {"graph": outgraph,
-        "fluxes": map(lambda x: [x.name, x.flux], org.reactions)}),
+        "fluxes": map(lambda x: [x.name, x.flux], org.reactions),
+        "solution": org.solution
+        }),
         content_type="application/json"
     )
-
 
 @login_required
 def export(request, pk):
@@ -293,6 +299,7 @@ def save(request, pk):
 
 
 @login_required
+@json_view
 def upload(request):
     data = {}
 
@@ -328,9 +335,13 @@ def upload(request):
                 content=ss.getvalue()
             )
 
-            return redirect("cyano-design-index")
+            return {'success': True}
+        else:
+            form_html = render_crispy_form(form, context=RequestContext(request))
+            return {'success': False, 'form_html': form_html}
 
     return HttpResponseBadRequest()
+
 
 @login_required
 @ajax_required

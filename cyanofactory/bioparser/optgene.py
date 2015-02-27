@@ -82,6 +82,7 @@ class OptGeneParser:
         self.unknown_sections = OrderedDict()
         self._objective = None
         self._design_objective = None
+        self.solution = None
 
         self.parse()
 
@@ -554,6 +555,9 @@ class OptGeneParser:
                 stoic.append((mi, i, prod_stoic))
 
         import glpk
+        from scipy.optimize import linprog
+
+
 
         lp = glpk.LPX()
         lp.name = " FBA SOLUTION "
@@ -582,6 +586,22 @@ class OptGeneParser:
             if self.objective is reac:
                 lista[i] = 1.0
 
+        lstoic = map(lambda x: [0]*len(fba_reactions), [[]]*len(metabolites))
+
+        for i, reac in enumerate(fba_reactions):
+            for j, substrate in enumerate(zip(reac.reactants, reac.reactants_stoic)):
+                subst, subst_stoic = substrate
+                mi = metabolites.index(subst)
+                lstoic[mi][i] = -subst_stoic
+
+            for j, product in enumerate(zip(reac.products, reac.products_stoic)):
+                prod, prod_stoic = product
+                mi = metabolites.index(prod)
+                lstoic[mi][i] = prod_stoic
+
+        res = linprog(c=lista, A_ub=lstoic, bounds=[reac.constraint for reac in fba_reactions], options={"disp": True})
+        print res
+
         lp.obj[:] = lista[:]
         lp.obj.maximize = True
         ###### Matrix
@@ -592,3 +612,17 @@ class OptGeneParser:
             flux = flux.value
 
             reac.flux = round(flux, 9)
+
+        if lp.status == "opt":
+            self.solution = "Optimal"
+        elif lp.status == "undef":
+            self.solution = "Undefined"
+        elif lp.status == "feas":
+            self.solution = "Maybe not optimal"
+        elif lp.status == "infeas" or lp.status == "nofeas":
+            self.solution = "Unfeasible"
+        elif lp.status == "unbnd":
+            self.solution = "Unbound (check constraints)"
+        else:
+            self.solution = "Unknown Error"
+

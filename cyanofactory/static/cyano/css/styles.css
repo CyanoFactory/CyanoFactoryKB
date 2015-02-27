@@ -407,8 +407,8 @@ select.select{
 }
 #list thead th{
 	background:#3d80b3;
-	border-top:1px solid #3d80b3;	
-	border-bottom:1px solid #3d80b3;	
+	border-top:1px solid #3d80b3;
+	border-bottom:1px solid #3d80b3;
 	color:white;
 	border-right:1px solid white;
 }
@@ -905,7 +905,7 @@ select.select{
     border: medium dashed;
 }
 
-.table td > a
+.table#new_list td > a
 {
     display:block;
     text-decoration:none;

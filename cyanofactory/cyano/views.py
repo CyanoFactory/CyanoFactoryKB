@@ -15,11 +15,13 @@ from __future__ import absolute_import
 import json
 
 import os
+from crispy_forms.utils import render_crispy_form
 from django.contrib.contenttypes.models import ContentType
-from django.template.context import Context
+from django.template.context import Context, RequestContext
 from django.views.decorators.csrf import ensure_csrf_cookie
 from djcelery.db import get_queryset
 from haystack.inputs import AutoQuery
+from jsonview.decorators import json_view
 import settings
 import tempfile
 from copy import deepcopy
@@ -38,7 +40,8 @@ from django.utils.text import capfirst
 
 from haystack.query import SearchQuerySet
 
-from cyano.forms import ExportDataForm, ImportDataForm, ImportSpeciesForm
+from cyano.forms import ExportDataForm, ImportDataForm, ImportSpeciesForm, DeleteForm, CreateBasketForm, \
+    RenameBasketForm
 import cyano.helpers as chelpers
 import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
@@ -555,10 +558,7 @@ def listing(request, species, model):
                 kwargs = {field_full_name: val}
             objects = objects.filter(**kwargs)
 
-    if request.is_ajax():
-        template = "cyano/list_page.html"
-    else:
-        template = "cyano/list.html"
+    template = "cyano/list.html"
 
     groups = None
 
@@ -608,14 +608,14 @@ def listing(request, species, model):
 from rest_framework import generics, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from cyano.serializers import Entry as EntrySerializer
+import cyano.serializers as cserializers
 
 class EntryList(generics.GenericAPIView):
     filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter,)
     search_fields = ('wid', 'name', 'synonyms')
     filter_fields = ('id', 'wid', 'name')
     filter_class = None
-    serializer_class = EntrySerializer
+    serializer_class = cserializers.Entry
 
     def get_species(self, species_wid):
         species = cmodels.Species.objects.for_wid(species_wid, get=False)
@@ -662,7 +662,7 @@ class EntryList(generics.GenericAPIView):
 
 
 class EntryDetail(APIView):
-    serializer_class = EntrySerializer
+    serializer_class = cserializers.Entry
 
     def get_species(self, species_wid):
         species = cmodels.Species.objects.for_wid(species_wid, get=False)
@@ -724,6 +724,46 @@ class EntryDetail(APIView):
     def delete(self, request, *args, **kwargs):
         return self.destroy(request, *args, **kwargs)
 
+
+class BasketList(generics.GenericAPIView):
+    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter,)
+    search_fields = ('name',)
+    serializer_class = cserializers.Basket
+
+    def get(self, request):
+        objects = cmodels.Basket.objects.filter(user=request.user.profile)
+        objects = self.filter_queryset(objects)
+
+        serializer = self.serializer_class(
+            objects,
+            many=True,
+            context={'request': request})
+
+        return Response(serializer.data)
+
+    def post(self, request):
+        raise Http404
+
+
+class BasketDetail(generics.GenericAPIView):
+    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter,)
+    serializer_class = cserializers.BasketComponent
+
+    def get(self, request, basket_id):
+        objects = cmodels.BasketComponent.objects.filter(basket__pk=basket_id, basket__user=request.user.profile)
+        objects = self.filter_queryset(objects)
+
+        serializer = self.serializer_class(
+            objects,
+            many=True,
+            context={'request': request})
+
+        return Response(serializer.data)
+
+    def post(self, request, basket_id):
+        raise Http404
+
+
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def detail(request, species, model, item):
@@ -755,7 +795,7 @@ def detail(request, species, model, item):
         data={
             'fieldsets': fieldsets,
             'message': request.GET.get('message', ''),
-            'baskets': baskets,
+            'baskets': baskets
         }
     )
 
@@ -1024,7 +1064,7 @@ def edit(request, species, model = None, item = None, action='edit'):
 @login_required
 @resolve_to_objects 
 @permission_required(perm.WRITE_DELETE)
-def delete(request, species, model = None, item = None):
+def delete(request, species, model=None, item=None):
     #retrieve object
     if item is None:
         obj = species
@@ -1034,22 +1074,45 @@ def delete(request, species, model = None, item = None):
     if model is None:
         model = obj.__class__
     
-    qs = chelpers.objectToQuerySet(obj, model = model)
-    
+    qs = chelpers.objectToQuerySet(obj, model=model)
+
     #delete
     if request.method == 'POST':
         # Todo: Should be revisioned with custom message
-        rev_detail = cmodels.RevisionDetail(user=request.user.profile, reason="Delete "+item.wid)
+        rev_detail = cmodels.RevisionDetail(user=request.user.profile, reason="Delete "+obj.wid)
         obj.delete(species, rev_detail)
-        return HttpResponseRedirect(reverse('cyano.views.listing', kwargs={'species_wid':species.wid, 'model_type': model.__name__}))
-        
+
+        if item is None:
+            # Delete species
+            target_url = reverse('cyano.views.index')
+        else:
+            target_url = reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': model.__name__})
+
+        return HttpResponseRedirect(target_url)
+
+    if item is None:
+        # Delete species
+        target_url = reverse('cyano.views.delete', kwargs={'species_wid': species.wid})
+    else:
+        target_url = reverse('cyano.views.delete',
+                             kwargs={
+                                 'species_wid': species.wid,
+                                 'model_type': model.__name__,
+                                 'wid': item.wid
+                             }
+        )
+
+    delete_form = DeleteForm(None)
+    delete_form.helper.form_action = target_url
+
     #confirmation message
     return chelpers.render_queryset_to_response(
-        species = species,
-        request = request, 
-        models = [model],
-        queryset = qs,
-        template = 'cyano/delete.html', 
+        species=species,
+        request=request,
+        models=[model],
+        queryset=qs,
+        template='cyano/delete.html',
+        data={'delete_form': delete_form}
         )
 
 @resolve_to_objects
@@ -1189,8 +1252,11 @@ def importSpeciesData(request, species=None):
             new_perm, _ = cmodels.UserPermission.objects.get_or_create(entry = species, user = request.user.profile)
             new_perm.allow.add(*cmodels.Permission.objects.all())
 
-            data['success'] = 'success'
+            data['success'] = True
             data['message'] = "New %s %s created" % ("mutant" if mutant else "species", species.name)
+        else:
+            data['success'] = False
+            data['message'] = "An error occured. Please check the fields for errors."
 
     else:
         form = ImportSpeciesForm(None)
@@ -1552,6 +1618,9 @@ def sbgn(request):
 @ensure_csrf_cookie
 @resolve_to_objects
 def basket(request, species=None, basket_id=0):
+    create_form = CreateBasketForm(None)
+    rename_form = RenameBasketForm(None)
+
     if basket_id == 0:
         bask = None
         template = "cyano/basket.html"
@@ -1577,7 +1646,7 @@ def basket(request, species=None, basket_id=0):
         request=request,
         queryset=queryset,
         template=template,
-        data={'basket': bask})
+        data={'basket': bask, 'create_form': create_form, 'rename_form': rename_form})
 
 @ajax_required
 @login_required
@@ -1685,3 +1754,47 @@ def basket_op(request, species=None):
         new_op = "add"
 
     return HttpResponse(json.dumps({"new_op": new_op}))
+
+
+@login_required
+@json_view
+def basket_create(request):
+    if request.method == 'POST':
+        form = CreateBasketForm(request.POST)
+
+        if form.is_valid():
+            name = form.cleaned_data.get('name')
+
+            cmodels.Basket.objects.create(user=request.user.profile, name=name)
+
+            return {'success': True}
+        else:
+            form_html = render_crispy_form(form, context=RequestContext(request))
+            return {'success': False, 'form_html': form_html}
+
+    return HttpResponseBadRequest()
+
+
+@login_required
+@json_view
+def basket_rename(request, basket_id):
+    if request.method == 'POST':
+        form = RenameBasketForm(request.POST)
+
+        if form.is_valid():
+            name = form.cleaned_data.get('name')
+
+            try:
+                basket = cmodels.Basket.objects.get(user=request.user.profile, pk=basket_id)
+            except ObjectDoesNotExist:
+                return HttpResponseBadRequest()
+
+            basket.name = name;
+            basket.save()
+
+            return {'success': True}
+        else:
+            form_html = render_crispy_form(form, context=RequestContext(request))
+            return {'success': False, 'form_html': form_html}
+
+    return HttpResponseBadRequest()

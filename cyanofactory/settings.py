@@ -111,6 +111,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'cyano.middleware.PasswordChangeMiddleware',
+    'cyano.middleware.ProcessFileUploadMiddleware',
     #'django.contrib.messages.middleware.MessageMiddleware',
 )
 
@@ -166,6 +167,7 @@ INSTALLED_APPS = (
     'endless_pagination',
     'rest_framework',
     'south',
+    'crispy_forms',
     #'debug_toolbar'
 )
 
@@ -264,3 +266,5 @@ REST_FRAMEWORK = {
       ),
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
 }
+
+CRISPY_TEMPLATE_PACK = 'bootstrap3'

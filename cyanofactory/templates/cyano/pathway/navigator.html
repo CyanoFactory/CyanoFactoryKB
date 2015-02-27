@@ -5,20 +5,20 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 {% endcomment %}
 
-<select id="selectionField" width="100%" class="select">
-  <option id="0">(Select an item)</option>
-  <optgroup label="Enzymes">
-  {% for enzyme in enzymes %}
-  {% with object=enzyme %}
-  <option id="e{{ forloop.counter }}">{{ object.title }}</option>
-  {% endwith %}
-  {% endfor %}
-  <optgroup label="Metabolites">
-  {% for metabolite in metabolites %}
-  {% with object=metabolite %}
-  <option id="m{{ forloop.counter }}">{{ object.title }}</option>
-  {% endwith %}
-  {% endfor %}
+<select id="selectionField" class="input-large form-control combobox">
+    <option id="0" value="">Select an item</option>
+    <optgroup label="Enzymes">
+      {% for enzyme in enzymes %}
+      {% with object=enzyme.0 %}
+      <option id="e{{ forloop.counter }}">{{ object.title }}</option>
+      {% endwith %}
+      {% endfor %}
+      <optgroup label="Metabolites">
+      {% for metabolite in metabolites %}
+      {% with object=metabolite.0 %}
+      <option id="m{{ forloop.counter }}">{{ object.title }}</option>
+      {% endwith %}
+      {% endfor %}
 </select>
 
 <script type="text/javascript">

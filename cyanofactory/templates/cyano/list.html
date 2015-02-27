@@ -62,7 +62,14 @@ $(document).ready(function() {
                 "data": function (rowData, type, set, meta) {
                     var tag = "<a class='btn btn-default btn-xs'></a>";
                     var edit = $(tag).attr("href", rowData["url"] + "/edit").text("Edit");
-                    var del = $(tag).attr("href", rowData["url"] + "/delete").text("Delete");
+                    var del = $(tag)
+                            .attr("href", rowData["url"] + "/delete")
+                            .attr("data-toggle", "modal")
+                            .attr("data-target", "#delete-form")
+                            .data("toggle", "modal")
+                            .data("target", "#delete-form")
+                            .text("Delete");
+
                     var basket = $($("#basket_list").text());
 
                     var item = $("<div></div>").addClass("btn-group").attr("role", "group").append(basket).append(edit).append(del);
@@ -141,6 +148,11 @@ $(document).ready(function() {
     });
 
     updateTable();
+
+    // destroy delete-form when closed
+    $("#delete-form").on('hidden.bs.modal', function () {
+        $(this).data('bs.modal', null);
+    });
 });
 
 var updateTable = function() {
@@ -191,7 +203,7 @@ var updateTable = function() {
 </script>
 
 <script id="basket_list" type="text/plain">
-<select class="card-add-button" multiple="multiple">
+<select multiple="multiple">
 {% for basket in baskets %}
 <option value="basket{{ basket.pk }}" data-pk="{{ basket.pk }}">{{ basket.name }}</option>
 {% endfor %}
@@ -258,4 +270,10 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 </tbody>
 </table>
 
+<div class="modal fade" id="delete-form" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+        </div>
+    </div>
+</div>
 {% endblock %}

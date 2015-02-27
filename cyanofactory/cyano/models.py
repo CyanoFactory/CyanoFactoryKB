@@ -1565,7 +1565,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
         results = {}
         for r in self.get_all_references():
             key = r.authors + ' ' + r.editors
-            results[key] = r.get_citation(self.species, cross_references=True)
+            results[key] = r.get_citation(cross_references=True)
 
         keys = results.keys()
         keys.sort()
@@ -1906,7 +1906,7 @@ class Genome(Molecule):
         promoters = [[] for x in range(num_segments)]
         tf_sites = [[] for x in range(num_segments)]
 
-        GeneTuple = namedtuple("GeneTuple", "name wid coordinate direction length transcription_units transcription_units__wid transcription_units__name")
+        GeneTuple = namedtuple("GeneTuple", "name wid coordinate direction length species transcription_units transcription_units__wid transcription_units__name")
 
         # TUs
         num_transcription_units = 0
@@ -1914,7 +1914,7 @@ class Genome(Molecule):
         transcription_units = []
 
         genes_list = map(GeneTuple._make, self.genes.values_list(
-            "name", "wid", "coordinate", "direction", "length",
+            "name", "wid", "coordinate", "direction", "length", "species",
             "transcription_units", "transcription_units__wid", "transcription_units__name").all())
 
         all_feature_type_pks = [None] + list(self.features.prefetch_related("chromosome_feature").values_list("chromosome_feature__type", flat=True).distinct())
@@ -1939,6 +1939,7 @@ class Genome(Molecule):
             #tip_text = 'Transcription unit: %s' % (tu or "(None)")
 
             fake_gene.wid = gene.wid
+            fake_gene.species = Species.objects.get(pk=gene.species)
             url = fake_gene.get_absolute_url()
 
             title = (gene.name or gene.wid).replace("'", "\'")
@@ -2126,7 +2127,7 @@ class Genome(Molecule):
         #features
 
         feature_values = self.features.all().order_by("coordinate").\
-            values("coordinate", "length",
+            values("coordinate", "length", "chromosome_feature__species",
                    "chromosome_feature__name", "chromosome_feature__wid",
                    "chromosome_feature__type", "chromosome_feature__type__name", "chromosome_feature__type__wid")
 
@@ -2142,6 +2143,7 @@ class Genome(Molecule):
             else:
                 typ = None
             fake_cf.wid = feature["chromosome_feature__wid"]
+            fake_cf.species = Species.objects.get(pk=feature["chromosome_feature__species"])
             url = fake_cf.get_absolute_url()
 
             add_segment(fake_cf.wid, coordinate, length, typ, url)
@@ -2642,15 +2644,15 @@ class FeaturePosition(EntryData):
             self.chromosome.model_type.model_name,
             self.chromosome.get_absolute_url(), self.chromosome.wid,
             self.coordinate, self.length, direction,
-            format_sequence_as_html(self.species, self.get_sequence(), seq_offset=self.coordinate))
+            format_sequence_as_html(self.chromosome.species, self.get_sequence(), seq_offset=self.coordinate))
 
     def get_as_html_genes(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.get_genes(), self.species)
+        return format_list_html_url(self.get_genes(), self.chromosome.species)
 
     def get_as_html_transcription_units(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.get_transcription_units(), self.species)
+        return format_list_html_url(self.get_transcription_units(), self.chromosome.species)
 
     def get_as_fasta(self):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
@@ -3208,7 +3210,7 @@ class Pathway(SpeciesComponent):
         if self.wid != "Boehringer":
             return ""
 
-        enzymes, metabolites = self.get_boehringer_hits(self.species)
+        enzymes, metabolites = self.get_boehringer_hits()
 
         template = loader.get_template("cyano/pathway/navigator.html")
 
@@ -3219,14 +3221,14 @@ class Pathway(SpeciesComponent):
 
     #html formatting
     def get_as_html_reaction_map(self, is_user_anonymous):
-        W = 731
+        #W = 731
         H = 600
 
         if self.wid == "Boehringer":
             enzymes, metabolites = self.get_boehringer_hits()
             template = loader.get_template("cyano/pathway/reaction_map_boehringer.html")
             c = Context({'enzymes': enzymes, 'metabolites': metabolites,
-                         'width': W, 'height': H})
+                         'width': '100%', 'height': H})
             return template.render(c)
 
         # Wordaround broken PIL installation
@@ -3255,9 +3257,9 @@ class Pathway(SpeciesComponent):
             root.tag = "svg"
             root.set("xmlns", "http://www.w3.org/2000/svg")
             root.set("xmlns:xlink", "http://www.w3.org/1999/xlink")
-            root.set("width", str(W))
+            root.set("width", str("100%"))
             root.set("height", str(min(iheight,H)))
-            root.set("viewport", "0 0 {} {}".format(str(W), str(min(iheight,H))))
+            root.set("viewport", "0 0 {} {}".format("100%", str(min(iheight,H))))
 
             script = Element("script")
             script.set("xlink:href", "{}kegg/js/SVGPan.js".format(settings.STATIC_URL))
@@ -5391,7 +5393,7 @@ class BasketComponent(Model):
     basket = ForeignKey(Basket, related_name = "components", verbose_name = "In basket")
     component = ForeignKey(SpeciesComponent, related_name = "+", verbose_name = "component")
     species = ForeignKey(Species, related_name = "+", verbose_name = "Species component belongs to")
-    
+
     def __unicode__(self):
         return str(self.component)
 

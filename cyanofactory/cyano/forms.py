@@ -13,7 +13,11 @@ Released under the MIT license
 
 from django import forms
 import cyano.helpers as chelpers
+from cyano.layout import Panel, Modal, ModalBody, ModalFooter, ModalHeader, CancelButton
 import cyano.models as cmodels
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Fieldset, ButtonHolder, Submit, Div, Button, HTML
+
 
 class SearchForm(forms.Form):
     q = forms.CharField(
@@ -23,6 +27,7 @@ class SearchForm(forms.Form):
         help_text = 'Enter search term(s)',
         initial = ''
         )
+
 
 class ExportDataForm(forms.Form):
     FORMAT_CHOICES = (
@@ -79,6 +84,7 @@ class ExportDataForm(forms.Form):
             choices.append((model_type, models[model_type]._meta.verbose_name_plural, ))
         self.fields['model_type'].choices = choices
         self.fields['model_type'].initial = model_types
+
 
 class ImportDataForm(forms.Form):
     species = forms.ChoiceField(
@@ -150,26 +156,45 @@ class ImportDataForm(forms.Form):
         
         return cleaned_data
 
+
 class ImportSpeciesForm(forms.Form):
     new_species = forms.CharField(
-        required = True,
-        widget = forms.TextInput,
-        label = "species",
-        help_text = "Provide a new name"
+        required=True,
+        widget=forms.TextInput,
+        label="Species name",
+        help_text="Provide a new name"
         )
     new_wid = forms.SlugField(
-        required = True,
-        widget = forms.TextInput,
-        label = "And a new unique identifier"
+        required=True,
+        widget=forms.TextInput,
+        label="Unique identifier",
+        help_text="Identifiers are visible in the URL and may only contain alphanumeric, - and _"
     )
     reason = forms.CharField(
-        required = True,
-        widget = forms.TextInput,
-        label = "Enter a short summary"
+        required=True,
+        widget=forms.TextInput,
+        label="Summary",
+        help_text="Sum up what you did in a few words"
     )
         
     def __init__(self, *args, **kwargs):
         super(ImportSpeciesForm, self).__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Panel(
+                'Species',
+                'new_species',
+                'new_wid'
+            ),
+            Panel(
+                'Summary',
+                'reason'
+            ),
+            ButtonHolder(
+                Submit('submit', 'Submit')
+            )
+        )
     
     def clean(self):
         cleaned_data = super(ImportSpeciesForm, self).clean()
@@ -182,3 +207,96 @@ class ImportSpeciesForm(forms.Form):
                 del cleaned_data["new_wid"]
 
         return cleaned_data
+
+
+class DeleteForm(forms.Form):
+    reason = forms.CharField(
+        required=False,
+        widget=forms.TextInput,
+        label="Summary",
+        help_text="Explain why you deleted this entry"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super(DeleteForm, self).__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            ModalHeader(
+                'Delete {{ object.wid }}',
+            ),
+            ModalBody(
+                HTML("Are you sure you want to delete {{ model_verbose_name|lower }} {{ object.wid }}?"),
+                Fieldset(
+                    None,
+                    'reason'
+                ),
+            ),
+            ModalFooter(
+                ButtonHolder(
+                    Submit('delete-submit', 'Delete', css_class='btn btn-danger'),
+                    CancelButton('delete-cancel', 'Cancel')
+                )
+            ),
+        )
+
+    def clean(self):
+        cleaned_data = super(DeleteForm, self).clean()
+
+        return cleaned_data
+
+
+class CreateBasketForm(forms.Form):
+    name = forms.CharField(
+        required=True,
+        widget=forms.TextInput,
+        label="Name",
+        help_text="Provide a name for the new basket"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super(CreateBasketForm, self).__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            ModalHeader(
+                'Create New Basket',
+            ),
+            ModalBody(
+                'name'
+            ),
+            ModalFooter(
+                ButtonHolder(
+                    Button('basket-create-submit', 'Create Basket', css_class='btn-primary'),
+                    CancelButton('delete-cancel', 'Cancel')
+                )
+            ),
+        )
+
+
+class RenameBasketForm(forms.Form):
+    name = forms.CharField(
+        required=True,
+        widget=forms.TextInput,
+        label="Name",
+        help_text="Provide a new name for the basket"
+    )
+
+    def __init__(self, *args, **kwargs):
+        super(RenameBasketForm, self).__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            ModalHeader(
+                'Rename Basket',
+            ),
+            ModalBody(
+                'name'
+            ),
+            ModalFooter(
+                ButtonHolder(
+                    Button('basket-create-submit', 'Rename Basket', css_class='btn-primary'),
+                    CancelButton('delete-cancel', 'Cancel')
+                )
+            ),
+        )
