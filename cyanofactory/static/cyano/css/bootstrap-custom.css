@@ -154,3 +154,6 @@ form .dropdown-menu {
     background: #66a9bd;
 }
 
+.tooltip-inner {
+    max-width: 350px;
+}

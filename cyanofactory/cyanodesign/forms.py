@@ -52,6 +52,6 @@ class UploadModelForm(forms.Form):
 
         o = OptGeneParser(f)
 
-        if len(o.errors) > 0:
-            raise ValidationError(", ".join(o.errors))
+        #if len(o.errors) > 0:
+        #    raise ValidationError(", ".join(o.errors))
 
