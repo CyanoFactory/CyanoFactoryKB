@@ -27,7 +27,7 @@ import tempfile
 from copy import deepcopy
 from itertools import chain
 
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db import transaction
@@ -45,11 +45,11 @@ from cyano.forms import ExportDataForm, ImportDataForm, ImportSpeciesForm, Delet
 import cyano.helpers as chelpers
 import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
-from cyano.decorators import resolve_to_objects, permission_required,\
-    ajax_required
+from cyano.decorators import resolve_to_objects, ajax_required
 from django.db.transaction import atomic
 from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse, Http404
 from django.http.response import HttpResponse
+from guardian.decorators import permission_required
 
 
 def index(request):
@@ -1608,6 +1608,8 @@ def jobs(request, species = None):
                     'finished': finished,
                     'running': running})
 
+
+@permission_required("cyano.access_sbgn")
 def sbgn(request):
     return chelpers.render_queryset_to_response(
         request,
@@ -1789,7 +1791,7 @@ def basket_rename(request, basket_id):
             except ObjectDoesNotExist:
                 return HttpResponseBadRequest()
 
-            basket.name = name;
+            basket.name = name
             basket.save()
 
             return {'success': True}
@@ -1798,3 +1800,69 @@ def basket_rename(request, basket_id):
             return {'success': False, 'form_html': form_html}
 
     return HttpResponseBadRequest()
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def global_permission(request):
+    from django.contrib.auth.models import User, Group, Permission
+
+    u = User.objects.all()
+    g = Group.objects.all()
+
+    perms = [
+        "access_kegg",
+        "access_boehringer",
+        "access_cyanodesign",
+        "access_sbgn",
+        "access_species",
+        "create_mutant"
+    ]
+
+    permissions = Permission.objects.filter(codename__in=perms)
+
+    if request.method == 'POST':
+        for r in request.POST:
+            if r[:1] == "u":
+                try:
+                    uid = int(r[1:])
+                    usr = u.get(pk=uid)
+                    usr.user_permissions.remove(*permissions)
+                    new_perms = map(lambda x: int(x), request.POST[r].strip().split(" "))
+                    usr.user_permissions.add(*new_perms)
+                except ValueError:
+                    continue
+            elif r[:1] == "g":
+                try:
+                    gid = int(r[1:])
+                    grp = g.get(pk=gid)
+                    grp.permissions.remove(*permissions)
+                    new_perms = map(lambda x: int(x), request.POST[r].strip().split(" "))
+                    grp.permissions.add(*new_perms)
+                except ValueError:
+                    continue
+
+    u = User.objects.prefetch_related("user_permissions")
+    g = Group.objects.prefetch_related("permissions")
+    ul = []
+    gl = []
+
+    for usr in u:
+        ul.append(
+            {"pk": usr.pk,
+             "username": usr.username,
+             "name": usr.first_name + " " + usr.last_name,
+             "permissions": usr.user_permissions.values_list("pk", flat=True)})
+
+    for grp in g:
+        gl.append({
+            "pk": grp.pk,
+            "name": grp.name,
+            "permissions": grp.permissions.values_list("pk", flat=True)
+        })
+
+    data = {"users": ul, "groups": gl, "permissions": permissions}
+
+    return chelpers.render_queryset_to_response(
+        request,
+        template="cyano/global_permission.html",
+        data=data)

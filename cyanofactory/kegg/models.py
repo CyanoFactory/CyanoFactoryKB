@@ -10,6 +10,13 @@ from django.db.models.fields.related import ManyToManyField
 from cyano.models import UserProfile
 
 
+class GlobalPermission(models.Model):
+    class Meta:
+        permissions = (
+            ("access_kegg", "Can access Kegg maps"),
+        )
+
+
 class EcNumber(models.Model):
     name = models.CharField(max_length=255, blank=False, null=False)
 

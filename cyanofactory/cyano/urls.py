@@ -95,6 +95,8 @@ urlpatterns += patterns('cyano.views',
     url(r'^sitemap_toplevel\.xml$', 'sitemap_toplevel'),
     url(r'^sitemap/' + _species_wid + '\.xml$', 'sitemap_species'),
 
+    url(r'^permission/$', 'global_permission'),
+
     url(r'^' + _species_wid + r'/$', 'species'),
 
     url(r'^' + _species_wid + r'/history/$', 'history'),

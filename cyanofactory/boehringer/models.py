@@ -9,6 +9,13 @@ from django.db.models import Model, CharField, IntegerField, ForeignKey, TextFie
 from cyano.models import UserProfile
 
 
+class GlobalPermission(Model):
+    class Meta:
+        permissions = (
+            ("access_boehringer", "Can access Boehringer map"),
+        )
+
+
 class Color(Model):
     name = CharField(max_length=255, blank=True, default='', verbose_name='color')
 

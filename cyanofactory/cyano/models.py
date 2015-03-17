@@ -408,6 +408,16 @@ def parse_regulatory_rule(equation, all_obj_data, species_wid):
 
 ''' END: validators '''
 
+
+class GlobalPermission(Model):
+    class Meta:
+        permissions = (
+            ("access_sbgn", "Can access SBGN map"),
+            ("access_species", "Can access any species"),
+            ("create_mutant", "Can create mutants"),
+        )
+
+
 class Permission(Model):
     name = CharField(max_length=255, blank=False, default='', verbose_name = "Permission name")
     description = CharField(max_length=255, blank=False, default='', verbose_name = "Permission description")
@@ -459,40 +469,6 @@ class Permission(Model):
 
     def __unicode__(self):
         return self.name
-
-class UserPermission(Model):
-    entry = ForeignKey("Entry", related_name = "user_permissions", auto_created = True)
-    user = ForeignKey("UserProfile", related_name = 'permissions')
-    allow = ManyToManyField(Permission, verbose_name = 'Allowed Permissions', related_name = 'user_permission_allow')
-    deny = ManyToManyField(Permission, verbose_name = 'Denied Permissions', related_name = 'user_permission_deny')
-
-    def __unicode__(self):
-        perm_allow = [str(1) if Permission.get_by_pk(x) in self.allow.all() else str(0) for x in range(1, 9)]
-        perm_deny = [str(1) if Permission.get_by_pk(x) in self.deny.all() else str(0) for x in range(1, 9)]
-
-        return "[{}, {}]".format(
-            "".join(perm_allow), "".join(perm_deny)
-        )
-
-    class Meta:
-        unique_together = ('entry', 'user')
-
-class GroupPermission(Model):
-    entry = ForeignKey("Entry", related_name = "group_permissions", auto_created = True)
-    group = ForeignKey("GroupProfile", related_name = 'permissions')
-    allow = ManyToManyField(Permission, verbose_name = 'Allowed Permissions', related_name = 'group_permission_allow')
-    deny = ManyToManyField(Permission, verbose_name = 'Denied Permissions', related_name = 'group_permission_deny')
-
-    def __unicode__(self):
-        perm_allow = [str(1) if Permission.get_by_pk(x) in self.allow.all() else str(0) for x in range(1, 9)]
-        perm_deny = [str(1) if Permission.get_by_pk(x) in self.deny.all() else str(0) for x in range(1, 9)]
-
-        return "[{}, {}]".format(
-            "".join(perm_allow), "".join(perm_deny)
-        )
-
-    class Meta:
-        unique_together = ('entry', 'group')
 
 class ProfileBase(Model):
     def has_full_access(self, entry):
@@ -1510,6 +1486,15 @@ class Entry(AbstractEntry):
         verbose_name = 'Entry'
         verbose_name_plural = 'Entries'
         wid_unique = False
+
+        permissions = (
+            ('view_normal', 'View entry'),
+            ('view_delete', 'View deleted revisions of entry'),
+            ('view_permission', 'View permissions of entry'),
+            ('view_history', 'View older (not deleted) revisions of entry'),
+            ('edit_permission', 'Allow modifying of permissions'),
+        )
+
 
 class AbstractSpeciesComponent(Entry):
     objects = PassThroughManager.for_queryset_class(SpeciesComponentQuerySet)()
