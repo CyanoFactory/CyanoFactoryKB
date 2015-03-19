@@ -54,6 +54,9 @@ from model_utils.managers import PassThroughManager
 
 from django.db import models
 
+from guardian.models import UserObjectPermissionBase
+from guardian.models import GroupObjectPermissionBase
+
 from south.modelsinspector import add_introspection_rules
 add_introspection_rules([], ["^cyano\.history\.HistoryForeignKey"])
 add_introspection_rules([], ["^cyano\.history\.HistoryManyToManyField"])
@@ -412,9 +415,9 @@ def parse_regulatory_rule(equation, all_obj_data, species_wid):
 class GlobalPermission(Model):
     class Meta:
         permissions = (
-            ("access_sbgn", "Can access SBGN map"),
             ("access_species", "Can access any species"),
             ("create_mutant", "Can create mutants"),
+            ("access_sbgn", "Can access SBGN map"),
         )
 
 
@@ -470,153 +473,23 @@ class Permission(Model):
     def __unicode__(self):
         return self.name
 
-class ProfileBase(Model):
-    def has_full_access(self, entry):
-        return self.has_permission(entry, PermissionEnum.FULL_ACCESS)
 
-    def can_read(self, entry):
-        return self.has_permission(entry, PermissionEnum.READ_NORMAL)
-
-    def can_read_delete(self, species, entry):
-        return self.has_permission(entry, PermissionEnum.READ_DELETE)
-
-    def can_read_permission(self, species, entry):
-        return self.has_permission(entry, PermissionEnum.READ_PERMISSION)
-
-    def can_read_history(self, species, entry):
-        return self.has_permission(entry, PermissionEnum.READ_HISTORY)
-
-    def can_write(self, species, entry):
-        return self.has_permission(entry, PermissionEnum.WRITE_NORMAL)
-
-    def can_delete(self, species, entry):
-        return self.has_permission(entry, PermissionEnum.WRITE_DELETE)
-
-    def can_write_permission(self, species, entry):
-        return self.has_permission(entry, PermissionEnum.WRITE_PERMISSION)
-
-    def add_allow_permission(self, entry, permission):
-        self._update_permission(entry, permission, allow=True, add=True)
-
-    def delete_allow_permission(self, entry, permission):
-        self._update_permission(entry, permission, allow=True, delete=True)
-
-    def add_deny_permission(self, entry, permission):
-        self._update_permission(entry, permission, deny=True, add=True)
-
-    def delete_deny_permission(self, entry, permission):
-        self._update_permission(entry, permission, deny=True, delete=True)
-
-    def _handle_permission_list(self, entry, perm_list, allow):
-        """
-        Internal Api used by permission view
-        """
-        for i, perm in enumerate(perm_list):
-            if allow:
-                if perm == 0:
-                    self.delete_allow_permission(entry, i + 1)
-                else:
-                    self.add_allow_permission(entry, i + 1)
-            else:
-                if perm == 0:
-                    self.delete_deny_permission(entry, i + 1)
-                else:
-                    self.add_deny_permission(entry, i + 1)
-
-    def _update_permission(self, permission, perm_get, allow=False, deny=False, add=False, delete=False):
-        permission = Permission.get_instance(permission)
-
-        if allow ^ deny or add ^ delete:
-            ValueError("Invalid args")
-
-        if add:
-            op = "add"
-            perm = perm_get()
-        else:
-            op = "remove"
-            try:
-                perm = perm_get()
-            except ObjectDoesNotExist:
-                return
-
-        if allow:
-            field = perm.allow
-        else:
-            field = perm.deny
-
-        getattr(field, op)(permission)
-
-        # Test if both fields are empty now, in that case the permission can be deleted
-        if op == "remove" and perm.allow.count() + perm.deny.count() == 0:
-            perm.delete()
-
-    class Meta:
-        abstract = True
-
-class GroupProfile(ProfileBase):
+class GroupProfile(Model):
     """
     Additional information for groups
     """
     group = OneToOneField(Group, related_name = "profile")
     description = CharField(max_length=255, blank=True, default='', verbose_name = "Group description")
 
-    def get_permissions(self, entry):
-        """
-        Returns the allow/deny list for an entry
-        
-        :param entry: Entry to get permissions from
-        :type entry: Entry
-        
-        :returns: Tuple (allow, deny). (None, None) if no permission object
-         was found.
-        """
-        try:
-            group_perm = entry.group_permissions.get(group = self)
-            return group_perm.allow.all(), group_perm.deny.all()
-        except ObjectDoesNotExist:
-            return None, None
-
-    def _update_permission(self, entry, permission, allow=False, deny=False, add=False, delete=False):
-        if allow ^ deny or add ^ delete:
-            ValueError("Invalid args")
-
-        if add:
-            perm_get = lambda: GroupPermission.objects.get_or_create(entry = entry, group = self)[0]
-        else:
-            perm_get = lambda: GroupPermission.objects.get(entry = entry, group = self)
-
-        super(GroupProfile, self)._update_permission(permission, perm_get, allow, deny, add, delete)
-
-    def has_permission(self, entry, permissions):
-        """
-        Checks if the group has allow or deny permissions set for a list
-        specified.
-        
-        :param entry: Entry to check permissions against
-        :type entry: Entry
-        
-        :param permissions: List containing the permissions to check
-        :type permissions: PermissionEnum
-        
-        :return: Tuple (allow, deny). allow is True if the group has allow
-         permission for the list specified (same for deny). (None, None)
-         if no permission object was found
-        """
-        allow, deny = self.get_permissions(entry)
-        if allow is None:
-            return None, None
-        allow = all(perm in permissions for perm in allow)
-        deny = all(perm in permissions for perm in deny)
-        return allow, deny
-
     def __unicode__(self):
         return self.group.name
 
-class UserProfile(ProfileBase):
+
+class UserProfile(Model):
     """
     Additional information for users
     """
-    user = OneToOneField(User, related_name = "profile")
+    user = OneToOneField(User, related_name="profile")
     affiliation = CharField(max_length=255, blank=True, default='', verbose_name='Affiliation')
     website = URLField(max_length=255, blank=True, default='', verbose_name='Website')
     phone = CharField(max_length=255, blank=True, default='', verbose_name='Phone')
@@ -643,100 +516,12 @@ class UserProfile(ProfileBase):
         :returns: GroupProfile List
         """
         groups = self.user.groups.all()
-        profiles = map(lambda g: GroupProfile.objects.get(group = g), groups)
+        profiles = map(lambda g: GroupProfile.objects.get(group=g), groups)
         if self.user.username != "guest":
-            profiles += [GroupProfile.objects.get(group__name = "Registred")]
+            profiles += [GroupProfile.objects.get(group__name="Registred")]
 
-        profiles += [GroupProfile.objects.get(group__name = "Everybody")]
+        profiles += [GroupProfile.objects.get(group__name="Everybody")]
         return profiles
-
-    def get_permissions(self, entry):
-        """
-        Calculates the complete allow and deny list for an entry.
-        This includes the permissions for groups the user is in including
-        group "Everybody" and (except user guest) "Registred"
-        
-        :param entry: Entry to get permissions from
-        :type entry: Entry
-        
-        :returns: Tuple (allow, deny). (None, None) if no permission object
-         was found.
-        """
-        # Use None here so it's possible to distinguish between 0 permission
-        # and no permission at all
-        allow = None
-        deny = None
-        try:
-            user_perm = entry.user_permissions.get(user = self)
-            allow = list(user_perm.allow.all())
-            deny = list(user_perm.deny.all())
-        except ObjectDoesNotExist:
-            pass
-
-        groups = self.get_groups()
-        for g in groups:
-            try:
-                group_perm = entry.group_permissions.get(group = g)
-                if allow == None:
-                    allow = []
-                    deny = []
-                allow += list(group_perm.allow.all())
-                deny += list(group_perm.deny.all())
-            except ObjectDoesNotExist:
-                pass
-
-        return allow, deny
-
-    def _update_permission(self, entry, permission, allow=False, deny=False, add=False, delete=False):
-        if allow ^ deny or add ^ delete:
-            ValueError("Invalid args")
-
-        if add:
-            perm_get = lambda: UserPermission.objects.get_or_create(entry = entry, user = self)[0]
-        else:
-            perm_get = lambda: UserPermission.objects.get(entry = entry, user = self)
-
-        super(UserProfile, self)._update_permission(permission, perm_get, allow, deny, add, delete)
-
-    def has_permission(self, entry, permissions):
-        """
-        Checks if the user has allow or deny permissions set for a list
-        specified. This includes the permissions for groups the user is in
-        including group "Everybody" and (except user guest) "Registred".
-        Deny usually has a higher priority then Allow. If Deny is set 
-        permission should be denied by the implementation.
-        
-        :param entry: Entry to check permissions against
-        :type entry: Entry
-        
-        :param permissions: List containing the permissions to check
-        :type permissions: PermissionEnum
-        
-        :return: Tuple (allow, deny). allow is True if the user has allow
-         permission for the bitmask specified (same for deny). (None, None)
-         if no permission object was found.
-        """
-        if isinstance(entry, Entry):
-            allow, deny = self.get_permissions(entry)
-            if allow == None:
-                return None, None
-
-            allow = permissions in allow
-            deny = permissions in deny
-
-            return allow, deny
-        elif isinstance(entry, list):
-            # Mass permission check
-            return 0
-
-        return 0, 0
-
-    def is_admin(self):
-        """
-        Checks if the user is in the administrator group
-        """
-        admin = Group.objects.get(name = "Administrator")
-        return self.user.groups.filter(pk = admin.pk).exists()
 
     def __unicode__(self):
         return self.user.username
@@ -1496,11 +1281,20 @@ class Entry(AbstractEntry):
         )
 
 
+class EntryUserObjectPermission(UserObjectPermissionBase):
+    content_object = models.ForeignKey(Entry)
+
+
+class EntryGroupObjectPermission(GroupObjectPermissionBase):
+    content_object = models.ForeignKey(Entry)
+
+
 class AbstractSpeciesComponent(Entry):
     objects = PassThroughManager.for_queryset_class(SpeciesComponentQuerySet)()
 
     class Meta:
         abstract = True
+
 
 class SpeciesComponent(AbstractSpeciesComponent):
     '''
