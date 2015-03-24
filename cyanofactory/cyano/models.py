@@ -48,7 +48,6 @@ from .history import HistoryManyToManyField as ManyToManyField
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from copy import deepcopy
 from django.conf import settings
-from rest_framework import serializers
 
 from model_utils.managers import PassThroughManager
 
@@ -56,23 +55,27 @@ from django.db import models
 
 from guardian.models import UserObjectPermissionBase
 from guardian.models import GroupObjectPermissionBase
+from guardian.core import ObjectPermissionChecker
 
 from south.modelsinspector import add_introspection_rules
 add_introspection_rules([], ["^cyano\.history\.HistoryForeignKey"])
 add_introspection_rules([], ["^cyano\.history\.HistoryManyToManyField"])
 
+
 def enum(**enums):
     return type(str('Enum'), (), enums)
 
 PermissionEnum = enum(
-    FULL_ACCESS = "Full",
-    READ_NORMAL = "Read Normal",
-    READ_DELETE = "Read Delete",
-    READ_PERMISSION = "Read Permission",
-    READ_HISTORY = "Read History",
-    WRITE_NORMAL = "Write Normal",
-    WRITE_DELETE = "Write Delete",
-    WRITE_PERMISSION = "Write Permission"
+    READ_NORMAL="view_normal",
+    READ_DELETE="view_delete",
+    READ_PERMISSION="view_permission",
+    READ_HISTORY="view_history",
+    WRITE_NORMAL="change_entry",
+    WRITE_DELETE="delete_entry",
+    WRITE_PERMISSION="edit_permission",
+    ACCESS_SPECIES="access_species",
+    CREATE_MUTANT="create_mutant",
+    ACCESS_SBGN="access_sbgn"
 )
 
 ''' BEGIN: choices '''
@@ -421,65 +424,45 @@ class GlobalPermission(Model):
         )
 
 
-class Permission(Model):
-    name = CharField(max_length=255, blank=False, default='', verbose_name = "Permission name")
-    description = CharField(max_length=255, blank=False, default='', verbose_name = "Permission description")
-
-    permission_mapping = None
-    permission_types = ["FULL_ACCESS",
-                        "READ_NORMAL",
-                        "READ_DELETE",
-                        "READ_PERMISSION",
-                        "READ_HISTORY",
-                        "WRITE_NORMAL",
-                        "WRITE_DELETE",
-                        "WRITE_PERMISSION"]
-
-    @staticmethod
-    def get_instance(permission):
-        if isinstance(permission, basestring):
-            permission = Permission.get_by_name(permission)
-        elif isinstance(permission, int):
-            permission = Permission.get_by_pk(permission)
-        elif isinstance(permission, Permission):
-            permission = permission
-        else:
-            raise ValueError("Must be string, int or Permission type")
-
-        if not isinstance(permission, Permission):
-            raise ValueError("Invalid permission argument")
-
-        return permission
-
-    @staticmethod
-    def get_by_name(name):
-        if Permission.permission_mapping == None:
-            Permission.permission_mapping = {}
-            permissions = Permission.objects.all()
-            for i, t in enumerate(Permission.permission_types, 1):
-                Permission.permission_mapping[t] = permissions.get(pk = i)
-
-        if not name in Permission.permission_mapping:
-            return None
-        return Permission.permission_mapping[name]
-
-    @staticmethod
-    def get_by_pk(pk):
-        if pk < 1 or pk > len(Permission.permission_types):
-            return None
-
-        return Permission.get_by_name(Permission.permission_types[pk - 1])
-
-    def __unicode__(self):
-        return self.name
-
-
 class GroupProfile(Model):
     """
     Additional information for groups
     """
-    group = OneToOneField(Group, related_name = "profile")
-    description = CharField(max_length=255, blank=True, default='', verbose_name = "Group description")
+    group = OneToOneField(Group, related_name="profile")
+    description = CharField(max_length=255, blank=True, default='', verbose_name="Group description")
+
+    def has_perm(self, permission, obj=None):
+        """
+        Improved perm check respecting all groups
+        """
+        if obj is None:
+            return self.group.permissions.filter(codename=permission).exists()
+        else:
+            checker = ObjectPermissionChecker(self.group)
+            return checker.has_perm(permission, obj)
+
+    def has_perms(self, permission, objs):
+        """
+        Mass perm check on objs.
+        Returns objects group has perms on.
+        Only works for entrys
+        """
+        if len(objs) == 0:
+            return []
+
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        ct = ContentType.objects.get_for_model(Entry)
+        try:
+            perm = Permission.objects.get(content_type=ct, codename=permission)
+        except ObjectDoesNotExist:
+            return []
+
+        obj_ids = objs.values_list("pk", flat=True)
+        all_perms = EntryGroupObjectPermission.objects.filter(permission=perm, group=self.group, content_object_id__in=obj_ids).values_list("content_object_id", flat=True)
+
+        return objs.model.objects.filter(pk__in=all_perms)
 
     def __unicode__(self):
         return self.group.name
@@ -508,6 +491,15 @@ class UserProfile(Model):
             return "http://" + self.website
         return self.website
 
+    def get_global_perms(self):
+        from django.contrib.auth.models import Permission
+
+        if self.user.is_superuser:
+            return Permission.objects.all()
+
+        return self.user.user_permissions.all() |\
+               Permission.objects.filter(pk__in=self.get_groups().values_list("group__permissions", flat=True))
+
     def get_groups(self):
         """
         Returns all groups where the user is in, including "Everybody" and
@@ -515,13 +507,60 @@ class UserProfile(Model):
         
         :returns: GroupProfile List
         """
-        groups = self.user.groups.all()
-        profiles = map(lambda g: GroupProfile.objects.get(group=g), groups)
-        if self.user.username != "guest":
-            profiles += [GroupProfile.objects.get(group__name="Registred")]
+        groups = self.user.groups.values_list("pk", flat=True)
+        profiles = GroupProfile.objects.filter(pk__in=groups)
 
-        profiles += [GroupProfile.objects.get(group__name="Everybody")]
+        if self.user.username != "guest":
+            profiles |= GroupProfile.objects.filter(group__name="Registred")
+
+        profiles |= GroupProfile.objects.filter(group__name="Everybody")
+
         return profiles
+
+    def has_perm(self, permission, obj=None):
+        """
+        Improved perm check respecting all groups
+        """
+        from django.contrib.auth.models import Group
+
+        if obj is None:
+            if self.user.is_superuser:
+                return True
+            return self.get_global_perms().filter(codename=permission).exists()
+        else:
+            return self.has_perms(permission, Entry.objects.filter(pk=obj.pk)).count() == 1
+
+    def has_perms(self, permission, objs):
+        """
+        Mass perm check on objs.
+        Returns objects user has perms on.
+        Only works for entrys
+        """
+        if len(objs) == 0:
+            return []
+
+        if self.user.is_superuser:
+            return objs
+
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
+        ct = ContentType.objects.get_for_model(Entry)
+        try:
+            perm = Permission.objects.get(content_type=ct, codename=permission)
+        except ObjectDoesNotExist:
+            return []
+
+        obj_ids = objs.values_list("pk", flat=True)
+        all_user_perms = EntryUserObjectPermission.objects.filter(permission=perm, user=self.user, content_object_id__in=obj_ids).values_list("content_object_id", flat=True)
+        obj_with_user_perms = objs.model.objects.filter(pk__in=all_user_perms)
+
+        groups = self.get_groups().values_list("pk", flat=True)
+
+        all_group_perms = EntryGroupObjectPermission.objects.filter(group__in=groups, permission=perm, content_object_id__in=obj_ids)
+        obj_with_group_perms = objs.model.objects.filter(pk__in=all_group_perms)
+
+        return obj_with_user_perms | obj_with_group_perms
 
     def __unicode__(self):
         return self.user.username
@@ -1059,12 +1098,8 @@ def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs)
             revision.new_data = json.dumps(new_data)
             revision.save()
 
+
 class EntryQuerySet(QuerySet):
-    def with_permission(self, permission):
-        perm = Permission.get_by_name(permission)
-
-        # Todo
-
     def for_wid(self, wid, get=True, create=False, creation_status=False):
         if get:
             try:
@@ -1086,15 +1121,24 @@ class EntryQuerySet(QuerySet):
 
         return self.filter(wid=wid)
 
+    def for_permission(self, permission, user):
+        return self.filter(pk__in=user.has_perms(permission, self).values_list("pk", flat=True))
+
+
 class SpeciesComponentQuerySet(EntryQuerySet):
     def for_species(self, species):
         return self.filter(species=species.pk)
+
+    def for_permission(self, permission, user):
+        return self.filter(pk__in=user.has_perms(permission, self).values_list("pk", flat=True))
+
 
 class AbstractEntry(Model):
     objects = PassThroughManager.for_queryset_class(EntryQuerySet)()
 
     class Meta:
         abstract = True
+
 
 class Entry(AbstractEntry):
     """Base class for all knowledge base objects.
@@ -2654,7 +2698,7 @@ class Gene(Molecule):
 
     def get_as_html_tooltip(self, is_user_anonymous):
         from cyano.helpers import format_field_detail_view
-        return "Transcription unit: %s" % (format_field_detail_view(self.species, self, "transcription_units", is_user_anonymous))
+        return "Transcription unit: %s" % (format_field_detail_view(self, "transcription_units", is_user_anonymous))
 
     #meta information
     class Meta:

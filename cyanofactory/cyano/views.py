@@ -22,6 +22,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from djcelery.db import get_queryset
 from haystack.inputs import AutoQuery
 from jsonview.decorators import json_view
+from rest_framework.permissions import IsAuthenticated
 import settings
 import tempfile
 from copy import deepcopy
@@ -45,19 +46,25 @@ from cyano.forms import ExportDataForm, ImportDataForm, ImportSpeciesForm, Delet
 import cyano.helpers as chelpers
 import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
-from cyano.decorators import resolve_to_objects, ajax_required
+from cyano.decorators import resolve_to_objects, ajax_required, permission_required
 from django.db.transaction import atomic
 from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse, Http404
 from django.http.response import HttpResponse
-from guardian.decorators import permission_required
+from rest_framework import generics, filters, permissions
+from rest_framework.response import Response
+from rest_framework.views import APIView
+import cyano.serializers as cserializers
 
 
 def index(request):
     return chelpers.render_queryset_to_response(
         request,
-        template = "cyano/index.html",
+        template="cyano/index.html",
         )
 
+
+# Global permissions must be before object resolution
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def species(request, species):
@@ -403,6 +410,7 @@ def user(request, username, species = None):
         queryset = queryset,
         template = 'cyano/user.html')    
 
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 def search(request, species = None):
     query = request.GET.get('q', '')
@@ -485,6 +493,7 @@ def search_google(request, species, query):
             'engine': 'google',
             })
 
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def listing(request, species, model):
@@ -605,10 +614,24 @@ def listing(request, species, model):
     )
 
 
-from rest_framework import generics, filters
-from rest_framework.response import Response
-from rest_framework.views import APIView
-import cyano.serializers as cserializers
+class EntryPermission(permissions.BasePermission):
+    """
+    Global permission check for blacklisted IPs.
+    """
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated():
+            # Special handling for guests
+            user = cmodels.UserProfile.objects.get(user__username="guest")
+        else:
+            user = request.user.profile
+
+        if not user.has_perm(perm.ACCESS_SPECIES):
+            return False
+
+        species = view.get_species(view.kwargs["species_wid"])
+        return user.has_perms(perm.READ_NORMAL, species)
+
 
 class EntryList(generics.GenericAPIView):
     filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter,)
@@ -616,6 +639,7 @@ class EntryList(generics.GenericAPIView):
     filter_fields = ('id', 'wid', 'name')
     filter_class = None
     serializer_class = cserializers.Entry
+    permission_classes = (EntryPermission,)
 
     def get_species(self, species_wid):
         species = cmodels.Species.objects.for_wid(species_wid, get=False)
@@ -663,6 +687,8 @@ class EntryList(generics.GenericAPIView):
 
 class EntryDetail(APIView):
     serializer_class = cserializers.Entry
+    permission_classes = (EntryPermission,)
+
 
     def get_species(self, species_wid):
         species = cmodels.Species.objects.for_wid(species_wid, get=False)
@@ -729,6 +755,7 @@ class BasketList(generics.GenericAPIView):
     filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter,)
     search_fields = ('name',)
     serializer_class = cserializers.Basket
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request):
         objects = cmodels.Basket.objects.filter(user=request.user.profile)
@@ -748,6 +775,7 @@ class BasketList(generics.GenericAPIView):
 class BasketDetail(generics.GenericAPIView):
     filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter,)
     serializer_class = cserializers.BasketComponent
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request, basket_id):
         objects = cmodels.BasketComponent.objects.filter(basket__pk=basket_id, basket__user=request.user.profile)
@@ -764,6 +792,7 @@ class BasketDetail(generics.GenericAPIView):
         raise Http404
 
 
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def detail(request, species, model, item):
@@ -800,6 +829,7 @@ def detail(request, species, model, item):
     )
 
 
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def detail_field(request, species, model, item):
@@ -827,7 +857,7 @@ def detail_field(request, species, model, item):
     return HttpResponse(rendered)
 
 
-
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_HISTORY)
 def history(request, species, model=None, item=None):
@@ -886,6 +916,8 @@ def history(request, species, model=None, item=None):
             'revisions': revisions
             })
 
+
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_HISTORY)
 def history_detail(request, species, model, item, detail_id):
@@ -959,14 +991,16 @@ def history_detail(request, species, model, item, detail_id):
         }
     )
 
-@login_required
+
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
 def add(request, species=None, model=None):
     return edit(request, species=species, model=model, action='add')
 
-@login_required
-@resolve_to_objects 
+
+@permission_required(perm.ACCESS_SPECIES)
+@resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
 def edit(request, species, model = None, item = None, action='edit'):
     from collections import defaultdict
@@ -1061,7 +1095,8 @@ def edit(request, species, model = None, item = None, action='edit'):
             }
         )
 
-@login_required
+
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects 
 @permission_required(perm.WRITE_DELETE)
 def delete(request, species, model=None, item=None):
@@ -1115,6 +1150,8 @@ def delete(request, species, model=None, item=None):
         data={'delete_form': delete_form}
         )
 
+
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def exportData(request, species):
@@ -1153,7 +1190,8 @@ def exportData(request, species):
             template = 'cyano/exportDataResult.html', 
             models = models)
 
-@login_required
+
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
 def importData(request, species=None):
@@ -1212,7 +1250,8 @@ def importData(request, species=None):
         data = data
         )
 
-@login_required
+
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
 @atomic
@@ -1301,20 +1340,25 @@ def password_change_required(request, species=None):
                            extra_context = context)
 
 @resolve_to_objects
-def login(request, species=None):
+def login(request, species=None, message=None, error=200, force_next=None):
     from django.contrib.auth.views import login as djlogin
-    from urllib import unquote
-
-    msg = request.GET.get("message", "")
 
     context = chelpers.get_extra_context(
         species=species,
         request=request,
     )
 
-    context['message'] = unquote(msg)[:50]
+    context['message'] = message
 
-    return djlogin(request, extra_context = context)
+    if force_next:
+        context['next'] = force_next
+
+    response = djlogin(request, extra_context=context)
+
+    if response.status_code != 302:
+        response.status_code = error
+
+    return response
 
 @resolve_to_objects
 def logout(request, species=None):
@@ -1345,7 +1389,10 @@ def sitemap_toplevel(request):
         }
     )
 
+
+@permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
+@permission_required(perm.READ_NORMAL)
 def sitemap_species(request, species):
     return chelpers.render_queryset_to_response(
         species = species,
@@ -1358,7 +1405,7 @@ def sitemap_species(request, species):
     )
 
 @resolve_to_objects
-#@permission_required(perm.READ_PERMISSION)
+@permission_required(perm.READ_PERMISSION)
 def permission(request, species, model=None, item=None, edit=False):
     from django.contrib.auth.models import User, Group, Permission
     from guardian.shortcuts import get_users_with_perms, get_groups_with_perms, assign_perm, remove_perm
@@ -1484,7 +1531,7 @@ def jobs(request, species = None):
         message_debug = str(e)
 
     # Admins see all jobs
-    is_admin = request.user.profile.is_admin()
+    is_admin = request.user.is_superuser
 
     if not res:
         return chelpers.render_queryset_to_response_error(
@@ -1520,7 +1567,7 @@ def jobs(request, species = None):
                     'running': running})
 
 
-@permission_required("cyano.access_sbgn")
+@permission_required("access_sbgn")
 def sbgn(request):
     return chelpers.render_queryset_to_response(
         request,
@@ -1713,7 +1760,7 @@ def basket_rename(request, basket_id):
     return HttpResponseBadRequest()
 
 
-@user_passes_test(lambda u: u.is_superuser)
+#@user_passes_test(lambda u: u.is_superuser)
 def global_permission(request):
     from django.contrib.auth.models import User, Group, Permission
 

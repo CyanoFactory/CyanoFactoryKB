@@ -20,7 +20,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from jsonview.decorators import json_view
 from networkx.algorithms.shortest_paths.generic import has_path, shortest_path, all_shortest_paths
 from networkx.exception import NetworkXNoPath
-from cyano.decorators import ajax_required
+from cyano.decorators import ajax_required, permission_required
 from PyNetMet.metabolism import *
 from PyNetMet.fba import *
 from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error
@@ -34,7 +34,8 @@ import math
 import pygraphviz
 import json
 
-@login_required
+
+@permission_required("access_cyanodesign")
 def index(request):
     upload_form = UploadModelForm(None)
 
@@ -48,8 +49,8 @@ def index(request):
     )
 
 
-@login_required
 @ensure_csrf_cookie
+@permission_required("access_cyanodesign")
 def design(request, pk):
     try:
         item = DesignModel.objects.get(user=request.user.profile, pk=pk)
@@ -61,8 +62,8 @@ def design(request, pk):
     return render_queryset_to_response(request, template="cyanodesign/design.html", data=data)
 
 
-@login_required
 @ajax_required
+@permission_required("access_cyanodesign")
 def get_reactions(request, pk):
     #model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model.txt")
 
@@ -101,8 +102,9 @@ def get_reactions(request, pk):
         "objective": org.objective.name if org.objective else None,
         "graph": outgraph}), content_type="application/json")
 
-@login_required
+
 @ajax_required
+@permission_required("access_cyanodesign")
 def simulate(request, pk):
     if not all(x in request.POST for x in ["commands", "disabled", "objective", "display", "auto_flux"]):
         return HttpResponseBadRequest("Request incomplete")
@@ -224,7 +226,8 @@ def simulate(request, pk):
         content_type="application/json"
     )
 
-@login_required
+
+@permission_required("access_cyanodesign")
 def export(request, pk):
     try:
         model = DesignModel.objects.get(user=request.user.profile, pk=pk)
@@ -242,8 +245,8 @@ def export(request, pk):
     return response
 
 
-@login_required
 @ajax_required
+@permission_required("access_cyanodesign")
 def save(request, pk):
     if not all(x in request.POST for x in ["commands", "disabled", "objective"]):
         return HttpResponseBadRequest("Request incomplete")
@@ -298,7 +301,7 @@ def save(request, pk):
     return HttpResponse("OK")
 
 
-@login_required
+@permission_required("access_cyanodesign")
 @json_view
 def upload(request):
     data = {}
@@ -343,7 +346,7 @@ def upload(request):
     return HttpResponseBadRequest()
 
 
-@login_required
+@permission_required("access_cyanodesign")
 @ajax_required
 def delete(request):
     pk = request.POST.get("id", 0)

@@ -7,7 +7,7 @@ Released under the MIT license
 
 import kegg.models as models
 from kegg.helpers import get_reaction_map, request_extract, items_to_quoted_string
-from cyano.decorators import ajax_required
+from cyano.decorators import ajax_required, permission_required
 from cyano.helpers import render_queryset_to_response
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
@@ -15,7 +15,7 @@ from django.contrib.auth.decorators import login_required
 from django.db.models.query_utils import Q
 
 
-@login_required
+@permission_required("access_kegg")
 def index(request):
     from itertools import groupby
     from collections import OrderedDict
@@ -57,7 +57,7 @@ def index(request):
     )
 
 
-@login_required
+@permission_required("access_kegg")
 def map_view(request, map_id):
     items, enzymes, metabolites = request_extract(request)
     map_data = get_reaction_map(map_id, enzymes, metabolites, items)
@@ -78,7 +78,7 @@ def map_view(request, map_id):
 
 
 @ajax_required
-@login_required
+@permission_required("access_kegg")
 def index_ajax(request):
     import json
 

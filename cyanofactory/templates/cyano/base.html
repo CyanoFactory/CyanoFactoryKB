@@ -26,8 +26,19 @@ Released under the MIT license
 
     <script type="text/javascript">
     $(document).ready(function() {
+        ["Actions", "Export", "Share"].forEach(function(arg) {
+            var page_actions = $("#page_actions");
+
+            var cat = page_actions.find(".dropdown-header:contains(" + arg + ")");
+            var n = cat.next()
+            if (n.hasClass("divider") || n.length == 0) {
+                cat.remove();
+                n.remove();
+            }
+        });
+
         if ($("#action_icons_edit ul").children().length == 0) {
-            $("#action_icons_edit").remove();
+            $("#action_icons_edit").next().remove();
         }
         if ($("#action_icons_share ul").children().length == 0) {
             $("#action_icons_share").remove();
@@ -61,7 +72,7 @@ Released under the MIT license
             // Append at the end
             page_actions.append(callback());
         } else {
-            // Append before devider
+            // Append before divider
             $(divider[0]).before(callback());
         }
     }
@@ -87,40 +98,64 @@ Released under the MIT license
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Species <span class="caret"></span></a>
                         <ul class="dropdown-menu" role="menu">
+                        {% if species_list and "access_species" in global_permissions %}
                             {% for species in species_list %}
                             <li><a href="{{ species.get_absolute_url }}"><i>{{ species.name }}</i></a></li>
                             {% endfor %}
+                        {% else %}
+                            <li class="disabled">
+                                <a href="#">No species available</a>
+                            </li>
+                        {% endif %}
                         </ul>
                     </li>
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Browse <span class="caret"></span></a>
                         <ul class="dropdown-menu" role="menu">
-                        {% for key1 in modelnames %}
+                            {% if species %}
+                            {% for key1 in modelnames %}
                             {% for key2, modelmetadata in modelmetadatas.iteritems %}
-                                {% if key1 == key2 %}
-                                    {% if species %}
+                            {% if key1 == key2 %}
                             <li>
                                 <a href="{% url "cyano.views.listing" species_wid=species.wid model_type=key2 %}">{{ modelmetadata.verbose_name_plural }}</a>
                             </li>
-                                    {% else %}
-                            <li class="disabled">
-                                <a href="#">{{ modelmetadata.verbose_name_plural }}</a>
-                            </li>
-                                    {% endif %}
-                                {% endif %}
+                            {% endif %}
                             {% endfor %}
-                        {% endfor %}
+                            {% endfor %}
+                            {% else %}
+                            <li class="disabled">
+                                <a href="#">No species selected</a>
+                            </li>
+                            {% endif %}
                         </ul>
                     </li>
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Tools <span class="caret"></span></a>
                         <ul class="dropdown-menu" role="menu">
+                            {% if global_permissions.any_of_tools %}
+                            {% if global_permissions.any_of_cyanomaps %}
                             <li class="dropdown-header">CyanoMaps</li>
+                            {% if "access_boehringer" in global_permissions %}
                             <li><a href="{% url "boehringer.views.index" %}" title="Biochemical Pathways">Biochemical Pathways</a></li>
+                            {% endif %}
+                            {% if "access_kegg" in global_permissions %}
                             <li><a href="{% url "kegg.views.index" %}" title="KEGG Pathways">KEGG Pathways</a></li>
+                            {% endif %}
+                            {% if "access_sbgn" in global_permissions %}
                             <li><a href="{% url "cyano.views.sbgn" %}" title="SBGN of Synechocystis">SBGN of Synechocystis</a></li>
+                            {% endif %}
+                            {% if "access_cyanodesign" in global_permissions %}
                             <li class="divider"></li>
+                            {% endif %}
+                            {% endif %}
+                            {% if "access_cyanodesign" in global_permissions %}
                             <li><a href="{% url "cyanodesign.views.index" %}" title="CyanoDesign">CyanoDesign</a></li>
+                            {% endif %}
+                            {% else %}
+                            <li class="disabled">
+                                <a href="#">No Tools available</a>
+                            </li>
+                            {% endif %}
                         </ul>
                     </li>
                     <li class="dropdown">
