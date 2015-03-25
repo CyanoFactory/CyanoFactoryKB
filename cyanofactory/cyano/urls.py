@@ -95,6 +95,8 @@ urlpatterns += patterns('cyano.views',
     url(r'^sitemap_toplevel\.xml$', 'sitemap_toplevel'),
     url(r'^sitemap/' + _species_wid + '\.xml$', 'sitemap_species'),
 
+    url(r'^permission/$', 'global_permission'),
+
     url(r'^' + _species_wid + r'/$', 'species'),
 
     url(r'^' + _species_wid + r'/history/$', 'history'),
@@ -108,10 +110,6 @@ urlpatterns += patterns('cyano.views',
     url(r'^' + _species_wid + r'/permission/$', 'permission'),
     #url(r'^' + _species_wid_model_type + r'/permission/$', 'permission'),
     url(r'^' + _species_wid_model_type_wid + r'/permission/$', 'permission'),
-
-    url(r'^' + _species_wid + r'/permission/edit/$', 'permission_edit'),
-    #url(r'^' + _species_wid_model_type + r'/permission/edit/$', 'permission_edit'),
-    url(r'^' + _species_wid_model_type_wid + r'/permission/edit/$', 'permission_edit'),
 
     url(r'^' + _species_wid_model_type + r'/$', 'listing'),
     url(r'^' + _species_wid_model_type_wid + r'/$', 'detail'),

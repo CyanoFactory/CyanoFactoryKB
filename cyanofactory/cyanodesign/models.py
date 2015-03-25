@@ -11,6 +11,13 @@ from django.db import models
 from cyano.models import UserProfile
 
 
+class GlobalPermission(models.Model):
+    class Meta:
+        permissions = (
+            ("access_cyanodesign", "Can access CyanoDesign"),
+        )
+
+
 class DesignModel(models.Model):
     user = models.ForeignKey(UserProfile, verbose_name="Saved by", related_name='+', editable=False)
     name = models.CharField(max_length=255, null=False, blank=False, verbose_name="Name")

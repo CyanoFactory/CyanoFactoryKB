@@ -168,9 +168,16 @@ INSTALLED_APPS = (
     'rest_framework',
     'south',
     'crispy_forms',
-    #'debug_toolbar'
+    #'debug_toolbar',
+    'guardian'
 )
 
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'guardian.backends.ObjectPermissionBackend',
+)
+
+ANONYMOUS_USER_ID = 3
 
 if UNIT_TEST_RUNNING:
     INSTALLED_APPS += ('django_nose',)

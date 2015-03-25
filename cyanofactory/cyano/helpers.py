@@ -2528,3 +2528,11 @@ def overlaps(first, second, tolerance=0):
     return first[0] - tolerance < second[0] < first[1] + tolerance or\
            first[0] - tolerance < second[1] < first[1] + tolerance or\
            (first[0] + tolerance > second[0] and first[1] - tolerance < second[1])
+
+def get_global_permissions():
+    from cyano.models import GlobalPermission as cg
+    from cyanodesign.models import GlobalPermission as cdg
+    from boehringer.models import GlobalPermission as bg
+    from kegg.models import GlobalPermission as kg
+
+    return cg._meta.permissions + cdg._meta.permissions + bg._meta.permissions + kg._meta.permissions

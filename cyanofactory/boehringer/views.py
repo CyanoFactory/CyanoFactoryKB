@@ -9,7 +9,7 @@ from django.template import loader
 
 import boehringer.models as models
 from boehringer.helpers import format_output
-from cyano.decorators import ajax_required
+from cyano.decorators import ajax_required, permission_required
 from cyano.helpers import render_queryset_to_response
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
@@ -22,7 +22,7 @@ def legacy(request):
     return index(request, True)
 
 
-@login_required
+@permission_required("access_boehringer")
 def index(request, legacy=None):
     """
     """
@@ -49,7 +49,7 @@ def index(request, legacy=None):
 
 
 @ajax_required
-@login_required
+@permission_required("access_boehringer")
 def index_ajax(request):
     import json
 
