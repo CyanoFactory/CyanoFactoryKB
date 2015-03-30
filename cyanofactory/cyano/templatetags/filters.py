@@ -36,3 +36,4 @@ def getattribute(value, arg):
     else:
         from django.conf import settings
         return settings.TEMPLATE_STRING_IF_INVALID
+

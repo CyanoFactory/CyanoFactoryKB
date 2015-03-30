@@ -12,6 +12,7 @@ Released under the MIT license
 '''
 
 from __future__ import unicode_literals
+from collections import OrderedDict
 
 import datetime
 import inspect
@@ -252,7 +253,7 @@ class Colors(HashableObject):
 
 def getModels(superclass=cmodels.Entry):
     tmp = get_models(get_app('cyano'))
-    tmp2 = {}
+    tmp2 = OrderedDict()
     for model in tmp:
         if issubclass(model, superclass) and model._meta.concrete_entry_model:
             tmp2[model.__name__] = model
@@ -290,7 +291,8 @@ def is_model_referenced(model, referenced_model, checked_models=[]):
 
 def getModelsMetadata(superclass=cmodels.Entry):
     tmp = get_models(get_app('cyano'))
-    tmp2 = {}
+    tmp = sorted(tmp, key=lambda x: x.__name__)
+    tmp2 = OrderedDict()
     for model in tmp:
         if issubclass(model, superclass) and model._meta.concrete_entry_model:
             tmp2[model.__name__] = model._meta
@@ -459,8 +461,6 @@ def get_extra_context(request = [], queryset = None, models = [], template = '',
     if outformat == 'html':
         data['is_pdf'] = False
         data['pdfstyles'] = ''
-        data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
-        data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
         if queryset and len(queryset) > 0 and isinstance(queryset[0], cmodels.Entry):
             entry = cmodels.Revision.objects.filter(
                 object_id__in=queryset,
@@ -1638,7 +1638,7 @@ def format_field_detail_view_diff(species, old_obj, new_obj, field_name, is_user
 def format_list_html_url(iterable, history_id=None):
     from cyano.models import format_list_html
     return format_list_html(
-        map(lambda x: '<a href="%s" title="%s">%s</a>' % (x.get_absolute_url(history_id), x.name, x.wid), iterable),
+        map(lambda x: '<a href="%s" title="%s">%s</a>' % (x.get_absolute_url(history_id), x.get_name_or_wid(), x.get_name_or_wid()), iterable),
         comma_separated=True)
 
 def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = []):

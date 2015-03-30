@@ -115,8 +115,8 @@ MIDDLEWARE_CLASSES = (
     #'django.contrib.messages.middleware.MessageMiddleware',
 )
 
-#if DEBUG:
-#    MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
+if DEBUG:
+    MIDDLEWARE_CLASSES += ('debug_toolbar.middleware.DebugToolbarMiddleware',)
 
 ROOT_URLCONF = 'urls'
 
@@ -168,7 +168,7 @@ INSTALLED_APPS = (
     'rest_framework',
     'south',
     'crispy_forms',
-    #'debug_toolbar',
+    'debug_toolbar',
     'guardian'
 )
 

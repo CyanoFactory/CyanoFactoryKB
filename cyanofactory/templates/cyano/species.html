@@ -94,10 +94,31 @@ Released under the MIT license
 
 <h2>Content</h2>
 <div class="row">
-        <div class="col-md-4">.col-md-4</div>
-        <div class="col-md-4">.col-md-4</div>
-        <div class="col-md-4">.col-md-4</div>
-      </div>
+    <div class="col-md-4">.col-md-4</div>
+    <div class="col-md-4">.col-md-4</div>
+    <div class="col-md-4">.col-md-4</div>
+</div>
+
+
+{% for tmp in contentRows %}
+	<div class="col-md-4">
+		{% for tmp2 in content %}
+		{% if tmp2|length > forloop.parentloop.counter0 %}
+			{% with val=tmp2|getattribute:forloop.parentloop.counter0 %}
+			<span style="{% if val.1 == 0 %}font-weight:bold;{% else %}padding-left:{{ val.1|multiply:12 }}px;{% endif %}">{% if val.5 %}
+				<a href="{{ val.5 }}">{% autoescape off %}{{ val.2 }}{% endautoescape %}</a>
+				{% else %}
+				{% autoescape off %}{{ val.2 }}{% endautoescape %}
+				{% endif %}
+			</span>
+			<span>{{ val.3|default_if_none:'&nbsp;' }}</span>
+			<span>{{ val.4|default_if_none:'&nbsp;' }}</span>
+			<span>&nbsp;</span>
+			{% endwith %}
+		{% endif %}
+		{% endfor %}
+	</div>
+{% endfor %}
 
 <table class="content">
 <thead>

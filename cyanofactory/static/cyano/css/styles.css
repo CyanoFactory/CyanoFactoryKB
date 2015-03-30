@@ -380,10 +380,6 @@ select.select{
 	padding:0px;
 }
 
-#content ul{
-    margin: 0px;
-    padding-left:16px;
-}
 #content table{
 }
 #content table th, #content table td{
@@ -909,4 +905,124 @@ select.select{
 {
     display:block;
     text-decoration:none;
+}
+
+.color-0 {
+    fill:#1f77b4;
+    stroke:#1f77b4;
+    background:#1f77b4;
+}
+
+.color-1 {
+    fill:#aec7e8;
+    stroke:#aec7e8;
+    background:#aec7e8;
+}
+
+.color-2 {
+    fill:#ff7f0e;
+    stroke:#ff7f0e;
+    background:#ff7f0e;
+}
+
+.color-3 {
+    fill:#ffbb78;
+    stroke:#ffbb78;
+    background:#ffbb78;
+}
+
+.color-4 {
+    fill:#2ca02c;
+    stroke:#2ca02c;
+    background:#2ca02c;
+}
+
+.color-5 {
+    fill:#98df8a;
+    stroke:#98df8a;
+    background:#98df8a;
+}
+
+.color-6 {
+    fill:#d62728;
+    stroke:#d62728;
+    background:#d62728;
+}
+
+.color-7 {
+    fill:#ff9896;
+    stroke:#ff9896;
+    background:#ff9896;
+}
+
+.color-8 {
+    fill:#9467bd;
+    stroke:#9467bd;
+    background:#9467bd;
+}
+
+.color-9 {
+    fill:#c5b0d5;
+    stroke:#c5b0d5;
+    background:#c5b0d5;
+}
+
+.color-10 {
+    fill:#8c564b;
+    stroke:#8c564b;
+    background:#8c564b;
+}
+
+.color-11 {
+    fill:#c49c94;
+    stroke:#c49c94;
+    background:#c49c94;
+}
+
+.color-12 {
+    fill:#e377c2;
+    stroke:#e377c2;
+    background:#e377c2;
+}
+
+.color-13 {
+    fill:#f7b6d2;
+    stroke:#f7b6d2;
+    background:#f7b6d2;
+}
+
+.color-14 {
+    fill:#7f7f7f;
+    stroke:#7f7f7f;
+    background:#7f7f7f;
+}
+
+.color-15 {
+    fill:#c7c7c7;
+    stroke:#c7c7c7;
+    background:#c7c7c7;
+}
+
+.color-16 {
+    fill:#bcbd22;
+    stroke:#bcbd22;
+    background:#bcbd22;
+}
+
+.color-17 {
+    fill:#dbdb8d;
+    stroke:#dbdb8d;
+    background:#dbdb8d;
+}
+
+.color-18 {
+    fill:#17becf;
+    stroke:#17becf;
+    background:#17becf;
+}
+
+.color-19 {
+    fill:#9edae5;
+    stroke:#9edae5;
+    background:#9edae5;
 }

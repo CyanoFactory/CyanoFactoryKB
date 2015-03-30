@@ -157,3 +157,7 @@ form .dropdown-menu {
 .tooltip-inner {
     max-width: 350px;
 }
+
+div.btn-group label.checkbox input {
+    opacity: 100;
+}

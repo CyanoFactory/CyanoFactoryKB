@@ -14,7 +14,7 @@ Released under the MIT license
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin, GroupAdmin
 from django.contrib.auth.models import User, Group
-import cyano.models as models
+from cyano import models
 
 ''' User profile admin '''
 class UserProfileInline(admin.StackedInline):
@@ -26,6 +26,7 @@ class UserProfileAdmin(UserAdmin):
 
 
 class GroupProfileInline(admin.StackedInline):
+    import cyano.models as models
     model = models.GroupProfile
 
 

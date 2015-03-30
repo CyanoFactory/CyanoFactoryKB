@@ -95,7 +95,7 @@ Released under the MIT license
                 element.addClass("cyano-reaction-disabled");
             }
             element.append(this.substrates.map(reac(this.stoichiometric_substrates)).join(" + "));
-            element.append(this.reversible ? " <-> " : " -> ");
+            element.append(this.reversible ? " &harr; " : " &rarr; ");
             element.append(this.products.map(reac(this.stoichiometric_products)).join(" + "));
 
             element.append("</div>");
@@ -1276,10 +1276,10 @@ span.cyano-external-metabolite { color: green }
 
 <div role="tabpanel">
 <ul class="nav nav-tabs" role="tablist">
-    <li role="presentation" class="active"><a href="#reaction-tab" aria-controls="home" role="tab" data-toggle="tab">Reactions</a></li>
-    <li role="presentation"><a href="#metabolite-tab" aria-controls="profile" role="tab" data-toggle="tab">Metabolites</a></li>
-    <li role="presentation"><a href="#settings-tab" aria-controls="profile" role="tab" data-toggle="tab">Settings</a></li>
-    <li role="presentation"><button type="button" class="btn btn-primary" aria-controls="profile" role="tab" data-toggle="tab">Simulate</button></li>
+    <li role="presentation" class="active"><a href="#reaction-tab" role="tab" data-toggle="tab">Reactions</a></li>
+    <li role="presentation"><a href="#metabolite-tab" role="tab" data-toggle="tab">Metabolites</a></li>
+    <li role="presentation"><a href="#settings-tab" role="tab" data-toggle="tab">Settings</a></li>
+    <li role="presentation"><a href="#simulation-tab" role="tab" data-toggle="tab">Simulation</a></li>
 </ul>
 
 <div class="tab-content">
@@ -1324,7 +1324,7 @@ span.cyano-external-metabolite { color: green }
     </div>
 
     <div role="tabpanel" class="tab-pane" id="simulation-tab">
-        <input type="submit" id="design-submit" value="Simulate">
+        <button type="button" id="design-submit" class="btn btn-primary">Run simulation</button>
     </div>
 </div>
 </div>

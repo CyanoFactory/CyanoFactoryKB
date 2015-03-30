@@ -1361,13 +1361,27 @@ class SpeciesComponent(AbstractSpeciesComponent):
 
     #@permalink
     def get_absolute_url(self, history_id=None):
+        species_key = "species/%s" % self.species_id
+        species = Cache.try_get(species_key, lambda: self.species, 60)
+
         if history_id is None:
-            return "%s/%s/%s/%s" % (settings.ROOT_URL, self.species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid)
+            return "%s/%s/%s/%s" % (settings.ROOT_URL, species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid)
         else:
-            return "%s/%s/%s/%s/history/%s" % (settings.ROOT_URL, self.species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid, history_id)
+            return "%s/%s/%s/%s/history/%s" % (settings.ROOT_URL, species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid, history_id)
+
+    @classmethod
+    def get_model_url(cls, species):
+        return "%s/%s/%s" % (settings.ROOT_URL, species.wid, cls._meta.object_name)
 
     def get_all_references(self):
         return self.publication_references.all() | PublicationReference.objects.filter(evidence__species_component__id = self.id)
+
+    @classmethod
+    def get_statistics(cls, species):
+        # API:
+        # [[0, "<a href="Chromosome">, 123],
+
+        return [[0, "AAA", 123, "bbb"]]
 
     #html formatting
     def get_as_html_parameters(self, is_user_anonymous):
@@ -1437,9 +1451,11 @@ class Molecule(SpeciesComponent):
 
     #html formatting        
     def get_as_html_empirical_formula(self, is_user_anonymous):
+        return ""
         return self.get_empirical_formula().get_as_html()
 
     def get_as_html_molecular_weight(self, is_user_anonymous):
+        return ""
         return self.get_molecular_weight()
 
     def get_as_html_extinction_coefficient(self, is_user_anonymous):
@@ -1740,8 +1756,7 @@ class Genome(Molecule):
             "name", "wid", "coordinate", "direction", "length", "species",
             "transcription_units", "transcription_units__wid", "transcription_units__name").all())
 
-        all_feature_type_pks = [None] + list(self.features.prefetch_related("chromosome_feature").values_list("chromosome_feature__type", flat=True).distinct())
-
+        all_feature_type_pks = [None] + list(Type.objects.filter(pk__in=self.features.values_list("chromosome_feature__type", flat=True)).distinct().order_by("parent").values_list("pk", flat=True))
         all_features_types_count = dict(map(lambda x: [x, 0], all_feature_type_pks))
 
         types = []
@@ -1762,7 +1777,7 @@ class Genome(Molecule):
             #tip_text = 'Transcription unit: %s' % (tu or "(None)")
 
             fake_gene.wid = gene.wid
-            fake_gene.species = Species.objects.get(pk=gene.species)
+            fake_gene.species_id = pk=gene.species
             url = fake_gene.get_absolute_url()
 
             title = (gene.name or gene.wid).replace("'", "\'")
@@ -1966,7 +1981,7 @@ class Genome(Molecule):
             else:
                 typ = None
             fake_cf.wid = feature["chromosome_feature__wid"]
-            fake_cf.species = Species.objects.get(pk=feature["chromosome_feature__species"])
+            fake_cf.species_id = feature["chromosome_feature__species"]
             url = fake_cf.get_absolute_url()
 
             add_segment(fake_cf.wid, coordinate, length, typ, url)
@@ -2019,12 +2034,14 @@ class Genome(Molecule):
             'features': [item for sublist in features for item in sublist],
             'promoters': [item for sublist in promoters for item in sublist],
             'tf_sites': [item for sublist in tf_sites for item in sublist],
-            'types': types,
-            'highlight_all': True
+            'types': types
         })
 
+        from time import time
+        start = time()
         template = loader.get_template("cyano/fields/structure.html")
         rendered = template.render(c)
+        print time() - start
 
         return rendered
 
@@ -2070,8 +2087,8 @@ class Genome(Molecule):
         ).prefetch_related('transcription_units', 'transcription_units__transcriptional_regulations').all()
 
         all_feature_type_pks = [None] + list(
-            self.features.prefetch_related("chromosome_feature")
-            .values_list("chromosome_feature__type", flat=True).distinct()
+            Type.objects.filter(pk__in=self.features.values_list("chromosome_feature__type", flat=True)).distinct()
+            .order_by("parent").values_list("pk", flat=True)
         )
 
         all_features_types_count = dict(map(lambda x: [x, 0], all_feature_type_pks))
@@ -2208,7 +2225,7 @@ class Genome(Molecule):
 
                     tf_sites.append(draw_segment(transcription_unit.wid, tr.binding_site.coordinate, tr.binding_site.length, tip_title, 'Transcription factor binding site', url))
 
-        feature_values = self.features.filter(coordinate__lte=chr_attrib.end, coordinate__gte=chr_attrib.start + 1 - F("length")).prefetch_related('chromosome_feature', 'chromosome_feature__type').all()
+        feature_values = self.features.filter(coordinate__lte=chr_attrib.end, coordinate__gte=chr_attrib.start + 1 - F("length")).prefetch_related('chromosome_feature', 'chromosome_feature__type').distinct()
 
         for feature in feature_values:
             if feature.coordinate > chr_attrib.end or feature.coordinate + feature.length - 1 < chr_attrib.start:
@@ -2217,7 +2234,7 @@ class Genome(Molecule):
             tip_title = feature.chromosome_feature.name or feature.chromosome_feature.wid
             url = feature.chromosome_feature.get_absolute_url()
 
-            if feature.chromosome_feature.type.all().count() > 0:
+            if feature.chromosome_feature.type.count() > 0:
                 type_ = feature.chromosome_feature.type.all()[0]
             else:
                 type_ = None
@@ -2253,6 +2270,32 @@ class Genome(Molecule):
         features = self.features.all().values_list("chromosome_feature__pk", flat=True)
         
         return format_list_html_url(ChromosomeFeature.objects.for_species(self.species).filter(pk__in=features).distinct())
+
+    def get_as_html_structure_filter(self, is_user_anonymous, start_coordinate=None, end_coordinate=None, zoom=0):
+        from itertools import groupby
+
+        if zoom == 0:
+            types = Type.objects.filter(pk__in=self.features.values_list("chromosome_feature__type", flat=True)).distinct().order_by("parent")
+        else:
+            types = Type.objects.filter(pk__in=self.features.filter(coordinate__lte=end_coordinate, coordinate__gte=start_coordinate + 1 - F("length")).values_list("chromosome_feature__type", flat=True)).distinct().order_by("parent")
+
+        if types.count() == 0:
+            return ""
+
+        # group by feature parent
+        groups = {}
+        i = 1
+        for k, g in groupby(types, lambda x: x.parent):
+            groups[k] = []
+            for e in g:
+                groups[k].append([i, e])
+                i = (i+1)%20
+
+        template = loader.get_template("cyano/fields/structure_filter.html")
+        c = Context({'groups': groups})
+        rendered = template.render(c)
+
+        return rendered
 
     def get_as_fasta(self):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence()) + "\r\n"
@@ -2295,6 +2338,7 @@ class Genome(Molecule):
             ('Name', {'fields': ['wid', 'name', 'synonyms', 'cross_references']}),
             ('Classification', {'fields': ['type']}),
             ('Sequence', {'fields': [
+                {'verbose_name': 'Structure Filter', 'name': 'structure_filter'},
                 {'verbose_name': 'Structure', 'name': 'structure'},
                 {'verbose_name': 'Extinction coefficient <br/>(260 nm, 25C, pH 7.0)', 'name': 'extinction_coefficient'},
                 {'verbose_name': 'pI', 'name': 'pi'},
@@ -2469,9 +2513,15 @@ class FeaturePosition(EntryData):
             self.coordinate, self.length, direction,
             format_sequence_as_html(self.chromosome.species, self.get_sequence(), seq_offset=self.coordinate))
 
+    def get_as_html_structure_filter(self, is_user_anonymous):
+        return self.chromosome.get_as_html_structure_filter(is_user_anonymous,
+                                                            zoom=1,
+                                                            start_coordinate=self.coordinate - 500,
+                                                            end_coordinate=self.coordinate + self.length + 500)
+
     def get_as_html_genes(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.get_genes(), self.chromosome.species)
+        return format_list_html_url(self.get_genes())
 
     def get_as_html_transcription_units(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
@@ -2486,6 +2536,7 @@ class FeaturePosition(EntryData):
         fieldsets = [
             ('Structure', {'fields': [
                 {'verbose_name': 'Structure', 'name': 'structure'},
+                {'verbose_name': 'Structure Filter', 'name': 'structure_filter'},
                 {'verbose_name': 'Sequence', 'name': 'sequence'},
                 {'verbose_name': 'Genes', 'name': 'genes'},
                 {'verbose_name': 'Transcription units', 'name': 'transcription_units'},
@@ -2652,6 +2703,13 @@ class Gene(Molecule):
             self.get_gc_content() * 100,
             format_sequence_as_html(self.species, self.get_sequence(), seq_offset=self.coordinate, show_protein_seq=True))
 
+    def get_as_html_structure_filter(self, is_user_anonymous):
+        return self.chromosome.get_as_html_structure_filter(is_user_anonymous,
+            zoom = 1,
+            start_coordinate = self.coordinate - 2500,
+            end_coordinate = self.coordinate + self.length + 2500,
+            )
+
     def get_as_fasta(self):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
     
@@ -2709,6 +2767,7 @@ class Gene(Molecule):
             ('Classification', {'fields': ['type']}),
             ('Structure', {'fields': [
                 {'verbose_name': 'Structure', 'name': 'structure'},
+                {'verbose_name': 'Structure Filter', 'name': 'structure_filter'},
                 {'verbose_name': 'Sequence', 'name': 'sequence'},
                 {'verbose_name': 'Transcription unit', 'name': 'transcription_units'},
                 {'verbose_name': 'Empirical formula (pH 7.5)', 'name': 'empirical_formula'},
@@ -3085,7 +3144,7 @@ class Pathway(SpeciesComponent):
             root.set("viewport", "0 0 {} {}".format("100%", str(min(iheight,H))))
 
             script = Element("script")
-            script.set("xlink:href", "{}kegg/js/SVGPan.js".format(settings.STATIC_URL))
+            script.set("xlink:href", "{}boehringer/js/svg-pan-zoom.js".format(settings.STATIC_URL))
             root.append(script)
 
             graphics = Element("g")
@@ -3157,7 +3216,7 @@ class Pathway(SpeciesComponent):
                         fill_opacity = "0.2"
                         fill_color = "blue"
                     except ObjectDoesNotExist:
-                        elem.set("xlink:href", url)
+                        elem.set("xlink:href", reverse("kegg.views.map_view", kwargs={"map_id": pathway_name}))
                         elem.set("target", "_blank")
                 else:
                     elem.set("xlink:href", url)
@@ -3205,9 +3264,9 @@ class Pathway(SpeciesComponent):
             out = StringIO.StringIO()
             out.write(template.render(Context()))
 
-            out.write('<script type="text/javascript" src="' + settings.STATIC_URL + 'kegg/js/jquery-svgpan.js"></script>')
+            out.write('<script type="text/javascript" src="' + settings.STATIC_URL + 'boehringer/js/svg-pan-zoom.js"></script>')
             tree.write(out)
-            out.write('<script type="text/javascript">$("svg").svgPan("viewport");</script>')
+            out.write('<script type="text/javascript">var svgPan = svgPanZoom("svg", {minZoom: 0.1});</script>')
 
             return out.getvalue()
 
@@ -3799,6 +3858,7 @@ class ProteinMonomer(Protein):
         return self.get_gravy()
 
     def get_as_html_interactions(self, is_user_anonymous):
+        return "" # FIXME
         from cyanointeraction.models import ProteinsNames as IproteinsNames
 
         prot_name = IproteinsNames.objects.filter(protein_name=self.gene.wid).first()
@@ -4384,6 +4444,12 @@ class TranscriptionUnit(Molecule):
             self.get_coordinate(), self.get_length(), direction,
             format_sequence_as_html(self.species, self.get_sequence()))
 
+    def get_as_html_structure_filter(self, is_user_anonymous):
+        return self.get_chromosome().get_as_html_structure_filter(is_user_anonymous,
+            zoom = 1,
+            start_coordinate = self.get_coordinate() - 500,
+            end_coordinate = self.get_coordinate() + self.get_length() + 500)
+
     def get_as_html_transcriptional_regulations(self, is_user_anonymous):
         results = []
         for r in self.transcriptional_regulations.all():
@@ -4402,6 +4468,7 @@ class TranscriptionUnit(Molecule):
             ('Classification', {'fields': ['type']}),
             ('Structure (Hayflick media, 37C)', {'fields': [
                 {'verbose_name': 'Structure', 'name': 'structure'},
+                {'verbose_name': 'Structure Filter', 'name': 'structure_filter'},
                 'genes',
                 'promoter_35_coordinate',
                 'promoter_35_length',
@@ -4581,7 +4648,7 @@ class Type(SpeciesComponent):
     #getters
     def get_all_members(self):
         members = []
-        for m in self.members:
+        for m in self.members.all():
             members.append(m)
 
         children_pks = self.children.values_list("pk", flat=True)
@@ -4600,7 +4667,7 @@ class Type(SpeciesComponent):
 
     def get_as_html_children(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url
-        return format_list_html_url(self.children)
+        return format_list_html_url(self.children.all())
 
     def get_as_html_members(self, is_user_anonymous):
         from cyano.helpers import format_list_html_url

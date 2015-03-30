@@ -30,23 +30,18 @@ Released under the MIT license
             var page_actions = $("#page_actions");
 
             var cat = page_actions.find(".dropdown-header:contains(" + arg + ")");
-            var n = cat.next()
+            var n = cat.next();
             if (n.hasClass("divider") || n.length == 0) {
                 cat.remove();
                 n.remove();
             }
         });
 
-        if ($("#action_icons_edit ul").children().length == 0) {
-            $("#action_icons_edit").next().remove();
+        var last_elem = $("#page_actions").children().last();
+        if (last_elem.hasClass("divider")) {
+            last_elem.remove();
         }
-        if ($("#action_icons_share ul").children().length == 0) {
-            $("#action_icons_share").remove();
-        }
-        if ($("#action_icons_export ul").children().length == 0) {
-            $("#action_icons_export").remove();
-        }
-    });
+    })
 
     register_action = function(category, callback) {
         var page_actions = $("#page_actions");
@@ -113,14 +108,10 @@ Released under the MIT license
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Browse <span class="caret"></span></a>
                         <ul class="dropdown-menu" role="menu">
                             {% if species %}
-                            {% for key1 in modelnames %}
-                            {% for key2, modelmetadata in modelmetadatas.iteritems %}
-                            {% if key1 == key2 %}
+                            {% for key, modelmetadata in modelmetadatas.items %}
                             <li>
-                                <a href="{% url "cyano.views.listing" species_wid=species.wid model_type=key2 %}">{{ modelmetadata.verbose_name_plural }}</a>
+                                <a href="{% url "cyano.views.listing" species_wid=species.wid model_type=key %}">{{ modelmetadata.verbose_name_plural }}</a>
                             </li>
-                            {% endif %}
-                            {% endfor %}
                             {% endfor %}
                             {% else %}
                             <li class="disabled">

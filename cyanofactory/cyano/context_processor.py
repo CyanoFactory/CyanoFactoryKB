@@ -5,6 +5,7 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 from django.contrib.auth.models import User
+from cyano.helpers import getModelsMetadata
 
 import cyano.models as cmodels
 from django.contrib.auth.models import Permission
@@ -15,7 +16,8 @@ def process(request):
 
     data = {
         'request': request,
-        'email': "wuenschi@hs-mittweida.de"
+        'email': "wuenschi@hs-mittweida.de",
+        'modelmetadatas': getModelsMetadata(cmodels.SpeciesComponent)
     }
 
     if not request.user.is_authenticated():
