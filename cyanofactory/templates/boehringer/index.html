@@ -10,14 +10,13 @@ Released under the MIT license
 
 {% load static %}
 
-
 {% block head_title %}{{ block.super }} :: Biochemical Pathways{% endblock %}
 {% block page_title %}Biochemical Pathways - Annotated Map{% endblock %}
 
 {% block head %}
 {{ block.super }}
 <script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-1.8.0.min.js"></script>
-<script type="text/javascript" src="{% get_static_prefix %}boehringer/jquery-svgpan.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
 
 <script type="text/javascript">
 $(document).ready(function() {
@@ -30,6 +29,7 @@ $(document).ready(function() {
         $.ajax({
             url: "{% url "boehringer.views.index_ajax" %}",
             context: document.body,
+            method: "POST",
             data: {
                 "op": "save",
                 "name": $("form#save_form input#save_input").val(),
@@ -45,10 +45,11 @@ $(document).ready(function() {
     });
 
 
-    $("form#load_form input#load_button").click(function(e) {
+    $("form#load_form #load_button").click(function(e) {
         $.ajax({
             url: "{% url "boehringer.views.index_ajax" %}",
             context: document.body,
+            method: "POST",
             data: {"op": "load", "pk": $("form#load_form select").children(":selected").attr("name")}
         }).done(function(result) {
             var json = jQuery.parseJSON(result);
@@ -58,10 +59,11 @@ $(document).ready(function() {
         });
     });
 
-    $("form#load_form input#delete_button").click(function(e) {
+    $("form#load_form #delete_button").click(function(e) {
         $.ajax({
             url: "{% url "boehringer.views.index_ajax" %}",
             context: document.body,
+            method: "POST",
             data: {"op": "delete", "pk": $("form#load_form select").children(":selected").attr("name")}
         }).done(function(result) {
             $("form#load_form select").children(":selected").remove();
@@ -76,28 +78,14 @@ $(document).ready(function() {
 	width: 100%;
 	height: 100%;
 	}
-#sidebar {
-	position:absolute;
-	right: -200px;
-	width: 200px;
-	margin: 0px -30px;
-	padding: 10px 10px;
-	border: 5px;
-	border:1px solid #3d80b3;
-	border-radius: 8px;
-}
 #map_box {
 	overflow:scroll;
 	height:500px;
 }
-#search_box {
-	width: 100%;
-	border:1px solid #3d80b3;
-	border-radius:6px;
-}
 {% endblock %}
 
 {% block content %}
+<div class="col-sm-9">
 <div class="panel panel-primary">
 <table class="table table-striped">
     <thead>
@@ -160,59 +148,70 @@ $(document).ready(function() {
 	<tbody>
 		<tr>
 			<td colspan="2" id="map_box">
-			<div id="sidebar">
-			<form id="search_form" method="post">
-			{% csrf_token %}
-			  <p><b>Search:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using #.<br><br>
-			  <textarea id="search_box" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
-			  <br>
-			  <input name="submit_button" class="button" type="submit" value="Search" />
-              <input name="export_button" class="button" type="submit" value="Export" />
-			  </p>
-			</form>
-            <form id="load_form" method="get">
-                <p><b>Load</b> existing query:<br/>
-                <select name="load" class="input-large form-control combobox">
-                    {% for query in queries %}
-                    <option name="{{ query.pk }}">{{ query.name }}</option>
-                    {% endfor %}
-                </select><br/>
-                <input id="load_button" class="button" type="submit" value="Load" />
-                <input id="delete_button" class="button" type="submit" value="Delete" />
-                </p>
-            </form>
-            <form id="save_form" method="get">
-                <p><b>Save</b> query:<br/>
-                <input id="save_input" class="text" type="text" style="width:100%"/><br/>
-                <input id="save_button" class="button" type="submit" value="Save" />
-                </p>
-            </form>
 
-			</div>
-			
 			<div id="map">
 			{% include "boehringer/boehringer_svg.html" %}
 
 			<script type="text/javascript">
-				$('svg').svgPan('viewport'); 
-			$(document.body).delegate("select", "change", function(){
-				i = $('#selectionField option:selected').attr("id");
-				if (i == "0") {
-					// (Select item) element
-					return;
-				}
-				item = $("rect#" + i);
-				new_x = ($("#map").width() / 2) - $(item).attr("x");
-				new_y = ($("#map").height() / 2) - $(item).attr("y");
+				var svgPan = svgPanZoom('#boehringer', {minZoom: 0.1});
+			    $(document.body).delegate("select", "change", function(){
+                    var i = $('#selectionField option:selected').attr("id");
+                    if (i == "0") {
+                        // (Select item) element
+                        return;
+                    }
+                    var item = $("rect#" + i);
+                    var new_x = ($("#map").width() / 2) - $(item).attr("x");
+                    var new_y = ($("#map").height() / 2) - $(item).attr("y");
 
-				$("svg").find("g").attr("transform", "translate(" + new_x + "," + new_y +")");
-			});
+                    svgPan.zoom(1);
+                    svgPan.pan({x: new_x, y: new_y});
+			    });
 			</script>
 			</div>
 			</td>
 		</tr>
 	</tbody>
 </table>
+</div>
+</div>
+
+<div class="col-sm-3">
+<div class="panel panel-primary">
+    <div class="panel-heading">
+    <h3 class="panel-title">Search</h3>
+    </div>
+    <div class="panel-body">
+        <form id="search_form" method="post">
+            {% csrf_token %}
+            <p>Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using # (e.g. 1.2.3.4#red).<br><br>
+            <textarea id="search_box" class="form-control" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
+            <br>
+            <input class="btn btn-primary" type="submit" value="Submit" />
+            <input name="export_button" class="btn btn-primary" type="submit" value="Export" />
+            </p>
+        </form>
+        <form id="load_form" method="post">
+            <div class="form-group">
+                <label for="load_query">Load existing query</label>
+                <select id="load_query" class="form-control">
+                {% for query in queries %}
+                <option name="{{ query.pk }}">{{ query.name }}</option>
+                {% endfor %}
+                </select>
+            </div>
+            <button id="load_button" class="btn btn-primary">Load</button>
+            <button id="delete_button" class="btn btn-danger">Delete</button>
+        </form>
+        <form id="save_form" method="post">
+            <div class="form-group">
+                <label for="save_input">Save query</label>
+                <input id="save_input" class="form-control" type="text"/>
+            </div>
+            <button id="save_button" class="btn btn-primary">Save</button>
+        </form>
+    </div>
+</div>
 </div>
 
 {% endblock %}

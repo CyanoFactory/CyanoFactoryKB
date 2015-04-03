@@ -67,16 +67,15 @@ def format_output(request):
     else:
         encoded_string = ""
 
-    data = {}
-    data['image'] = "data:image/png;base64," + encoded_string
-    data['export'] = export
-    data['items'] = items
-    data['metabolites'] = metabolites
-    data['enzymes'] = enzymes
-    data['metabolites_hits'] = metabolites_hits
-    data['enzymes_hits'] = enzymes_hits
-    data['metabolites_no_hits'] = len(metabolite_items) - metabolites_hits
-    data['enzymes_no_hits'] = len(enzyme_items) - enzymes_hits
-    data['queries'] = models.Query.objects.filter(user=request.user.profile)
+    data = {'image': "data:image/png;base64," + encoded_string,
+            'export': export,
+            'items': items,
+            'metabolites': metabolites,
+            'enzymes': enzymes,
+            'metabolites_hits': metabolites_hits,
+            'enzymes_hits': enzymes_hits,
+            'metabolites_no_hits': len(metabolite_items) - metabolites_hits,
+            'enzymes_no_hits': len(enzyme_items) - enzymes_hits,
+            'queries': models.Query.objects.filter(user=request.user.profile)}
 
     return data

@@ -1,11 +1,4 @@
 $(document).ready(function() {
-    $("form#search_form").submit(function(e) {
-        var search_box = $("form textarea#search_box")
-        var text = search_box.val()
-        text = text.replaceAll("#", "%23")
-        search_box.val(text)
-    });
-
     $("form#load_form").submit(function(e) {
         e.preventDefault();
     });
@@ -13,8 +6,9 @@ $(document).ready(function() {
     $("form#save_form").submit(function(e) {
         e.preventDefault();
         $.ajax({
-            url: "{% url "kegg.views.index_ajax" %}",
+            url: '{% url "kegg.views.index_ajax" %}',
             context: document.body,
+            method: "POST",
             data: {
                 "op": "save",
                 "name": $("form#save_form input#save_input").val(),
@@ -29,10 +23,11 @@ $(document).ready(function() {
         });
     });
 
-    $("form#load_form input#load_button").click(function(e) {
+    $("form#load_form #load_button").click(function(e) {
         $.ajax({
-            url: "{% url "kegg.views.index_ajax" %}",
+            url: '{% url "kegg.views.index_ajax" %}',
             context: document.body,
+            method: "POST",
             data: {"op": "load", "pk": $("form#load_form select").children(":selected").attr("name")}
         }).done(function(result) {
             var json = jQuery.parseJSON(result);
@@ -42,13 +37,37 @@ $(document).ready(function() {
         });
     });
 
-    $("form#load_form input#delete_button").click(function(e) {
+    $("form#load_form #delete_button").click(function(e) {
         $.ajax({
-            url: "{% url "kegg.views.index_ajax" %}",
+            url: '{% url "kegg.views.index_ajax" %}',
             context: document.body,
             data: {"op": "delete", "pk": $("form#load_form select").children(":selected").attr("name")}
         }).done(function(result) {
             $("form#load_form select").children(":selected").remove();
         });
+    });
+
+    $("#content").on("click", "a", function(event) {
+        var href = undefined;
+
+        if (typeof $(this).attr("href") !== "undefined") {
+            href = $(this).attr("href");
+        }
+        else if (typeof($(this).attr("xlink:href") !== "undefined")) {
+            href = $(this).attr("xlink:href");
+        }
+
+        if (href === undefined) {
+            return;
+        }
+
+        if (href.indexOf('{% url "kegg.views.index" %}') == 0) {
+            event.preventDefault();
+
+            // redirect search form post target
+            var search_form = $("form#search_form");
+            search_form.attr("action", href);
+            search_form.submit();
+        }
     });
 });

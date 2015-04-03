@@ -92,7 +92,7 @@ Released under the MIT license
 </div>
 <div id="map">
 <svg id="boehringer" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" pointer-events="visible"> 
-<script xlink:href="{% get_static_prefix %}boehringer/SVGPan.js"/>
+<script xlink:href="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"/>
 <g id="viewport">
 <image x="0" y="0" width="6871" height="4804" xlink:href="{% get_static_prefix %}boehringer/pathways.png" />
 {% for enzyme in enzymes %}
@@ -116,19 +116,20 @@ Released under the MIT license
 </svg>
 
 <script type="text/javascript">
-	$('svg').svgPan('viewport'); 
-$(document.body).delegate("select", "change", function(){
-	i = $('#selectionField option:selected').attr("id");
-	if (i == "0") {
-		// (Select item) element
-		return;
-	}
-	item = $("rect#" + i);
-	new_x = ($("#map").width() / 2) - $(item).attr("x");
-	new_y = ($("#map").height() / 2) - $(item).attr("y");
+	var svgPan = svgPanZoom('svg', {minZoom: 0.1});
+    $(document.body).delegate("select", "change", function(){
+        var i = $('#selectionField option:selected').attr("id");
+        if (i == "0") {
+            // (Select item) element
+            return;
+        }
+        var item = $("rect#" + i);
+        var new_x = ($("#map").width() / 2) - $(item).attr("x");
+        var new_y = ($("#map").height() / 2) - $(item).attr("y");
 
-	$("svg").find("g").attr("transform", "translate(" + new_x + "," + new_y +")");
-});
+        svgPan.zoom(1);
+        svgPan.pan({x: new_x, y: new_y});
+    });
 </script>
 </div>
 

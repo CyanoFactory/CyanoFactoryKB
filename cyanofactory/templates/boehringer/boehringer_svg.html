@@ -1,9 +1,9 @@
 {% load static %}
 
 <svg id="boehringer" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" pointer-events="visible">
-    <script xlink:href="{% get_static_prefix %}boehringer/SVGPan.js"></script>
+    <script xlink:href="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
     <g id="viewport">
-    <image x="0" y="0" width="6871" height="4804" xlink:href="{% if export %}{{ image }}{% else %}{% get_static_prefix %}boehringer/pathways.png" %}{% endif %}>"</image>
+    <image x="0" y="0" width="6871" height="4804" xlink:href="{% if export %}{{ image }}{% else %}{% get_static_prefix %}boehringer/pathways.png"{% endif %}>"</image>
     {% for enzyme in enzymes %}
     {% with object=enzyme.0 %}
     {% with color=enzyme.1 %}

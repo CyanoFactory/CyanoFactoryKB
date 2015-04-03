@@ -555,9 +555,7 @@ class OptGeneParser:
                 stoic.append((mi, i, prod_stoic))
 
         import glpk
-        from scipy.optimize import linprog
-
-
+        #from scipy.optimize import linprog
 
         lp = glpk.LPX()
         lp.name = " FBA SOLUTION "
@@ -599,8 +597,8 @@ class OptGeneParser:
                 mi = metabolites.index(prod)
                 lstoic[mi][i] = prod_stoic
 
-        res = linprog(c=lista, A_ub=lstoic, bounds=[reac.constraint for reac in fba_reactions], options={"disp": True})
-        print res
+        #res = linprog(c=lista, A_ub=lstoic, bounds=[reac.constraint for reac in fba_reactions], options={"disp": True})
+        #print res
 
         lp.obj[:] = lista[:]
         lp.obj.maximize = True

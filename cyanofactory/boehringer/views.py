@@ -32,7 +32,7 @@ def index(request, legacy=None):
         t = loader.get_template('boehringer/boehringer_svg.html')
         c = RequestContext(request, data)
         response = HttpResponse(t.render(c), content_type='image/svg+xml')
-        response['Content-Disposition'] = 'attachment; filename=map.svg'
+        response['Content-Disposition'] = 'attachment; filename=boehringer.svg'
         return response
 
     if legacy:
@@ -53,15 +53,15 @@ def index(request, legacy=None):
 def index_ajax(request):
     import json
 
-    pk = request.GET.get("pk", 0)
-    op = request.GET.get("op", "")
+    pk = request.POST.get("pk", 0)
+    op = request.POST.get("op", "")
 
     if not op in ["load", "delete", "save"]:
         return HttpResponseBadRequest("Invalid op")
 
     if op == "save":
-        name = request.GET.get("name", "")
-        query = request.GET.get("query", "")
+        name = request.POST.get("name", "")
+        query = request.POST.get("query", "")
 
         if all(len(x) == 0 for x in [name, query]):
             return HttpResponseBadRequest("Invalid name or query")

@@ -15,11 +15,11 @@ Released under the MIT license
 
 {% block head %}
 {{ block.super }}
-<script type="text/javascript" src="{% static "boehringer/jquery-svgpan.js" %}"></script>
+<script type="text/javascript" src="{% static "boehringer/js/svg-pan-zoom.js" %}"></script>
 
 <script>
 $(function() {
-	$('svg').svgPan('viewport');
+	svgPanZoom('svg', {minZoom: 0.1});
 });
 </script>
 {% endblock %}
