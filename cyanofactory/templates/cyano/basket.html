@@ -67,10 +67,10 @@ $(document).ready(function() {
                     }
                 },
                 beforeSend: function() {
-                    waitIndicator.show($("#dialog-create"));
+                    waitIndicator.show($("#dialog-create").find(".modal-content"));
                 },
                 complete: function() {
-                    waitIndicator.hide($("#dialog-create"));
+                    waitIndicator.hide($("#dialog-create").find(".modal-content"));
                 }
             });
         });

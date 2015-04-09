@@ -57,10 +57,10 @@ $(document).ready(function() {
                 }
             },
             beforeSend: function() {
-                waitIndicator.show($("#dialog-rename"));
+                waitIndicator.show($("#dialog-rename").find(".modal-content"));
             },
             complete: function() {
-                waitIndicator.hide($("#dialog-rename"));
+                waitIndicator.hide($("#dialog-rename").find(".modal-content"));
             }
         });
     });

@@ -161,3 +161,33 @@ form .dropdown-menu {
 div.btn-group label.checkbox input {
     opacity: 100;
 }
+
+.table > thead > tr > td.cyano-grey1,
+.table > tbody > tr > td.cyano-grey1,
+.table > tfoot > tr > td.cyano-grey1,
+.table > thead > tr > th.cyano-grey1,
+.table > tbody > tr > th.cyano-grey1,
+.table > tfoot > tr > th.cyano-grey1,
+.table > thead > tr.cyano-grey1 > td,
+.table > tbody > tr.cyano-grey1 > td,
+.table > tfoot > tr.cyano-grey1 > td,
+.table > thead > tr.cyano-grey1 > th,
+.table > tbody > tr.cyano-grey1 > th,
+.table > tfoot > tr.cyano-grey1 > th {
+  background-color: #DDD;
+}
+
+.table > thead > tr > td.cyano-grey2,
+.table > tbody > tr > td.cyano-grey2,
+.table > tfoot > tr > td.cyano-grey2,
+.table > thead > tr > th.cyano-grey2,
+.table > tbody > tr > th.cyano-grey2,
+.table > tfoot > tr > th.cyano-grey2,
+.table > thead > tr.cyano-grey2 > td,
+.table > tbody > tr.cyano-grey2 > td,
+.table > tfoot > tr.cyano-grey2 > td,
+.table > thead > tr.cyano-grey2 > th,
+.table > tbody > tr.cyano-grey2 > th,
+.table > tfoot > tr.cyano-grey2 > th {
+  background-color: #CCC;
+}

@@ -37,14 +37,17 @@ Last updated: 2012-07-17
 </div>
 {% endif %}
 
+<div class="col-md-6">
 {{ form|crispy }}
 
 <input type="hidden" name="next" value="{{ next }}" />
 <div class="control-group pull-right">
- <div class="controls controls-row">
-     <a class="btn-link" href="{% url 'password_reset' %}">Forgot your password?</a>
- </div>
+    <div class="controls controls-row">
+        <a class="btn-link" href="{% url 'password_reset' %}">Forgot your password?</a>
+    </div>
 </div>
-    <button type="submit" value=" Send" class="btn btn-primary" id="submit">Login</button>
+
+<button type="submit" value=" Send" class="btn btn-primary" id="submit">Login</button>
+</div>
 </form>
 {% endblock %}
