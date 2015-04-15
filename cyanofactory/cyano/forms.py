@@ -87,15 +87,9 @@ class ExportDataForm(forms.Form):
 
 
 class ImportDataForm(forms.Form):
-    species = forms.ChoiceField(
-        required = False,
-        widget = forms.Select, 
-        label = "species",
-        help_text = "Select species to export"
-        )
     data_type = forms.ChoiceField(
-        required = True,
-        choices = [
+        required=True,
+        choices=[
                 #("fasta", "FASTA"),
                 #("fastagene", "FASTA (Gene list)"),
                 ("genbank", "GenBank"),
@@ -103,38 +97,64 @@ class ImportDataForm(forms.Form):
                 ("sbml", "System Biology Markup Language (SBML)"),
                 ("proopdb", "ProOpDB Operon Prediction")
                 ],
-        widget = forms.RadioSelect,
-        label = 'file format'
+        widget=forms.RadioSelect,
+        label='File format',
+        help_text='Select the format of your file from the list'
         )
     file = forms.FileField(
-        required = True,
-        widget = forms.ClearableFileInput, 
-        label = 'a file to import'
+        required=True,
+        widget=forms.ClearableFileInput,
+        label='File',
+        help_text='Please provide a file in your selected format'
         )
     reason = forms.CharField(
-        required = True,
-        widget = forms.TextInput,
-        label = "Enter a short summary")
+        required=True,
+        widget=forms.TextInput,
+        label="Summary",
+        help_text="Sum up what you did in a few words"
+    )
     
     # GenBank specific
     chromosome = forms.CharField(
-        required = False,
-        widget = forms.TextInput,
-        label = "Enter name of chromosome/plasmid")
-
+        required=False,
+        widget=forms.TextInput,
+        label="Chromosome/Plasmid name",
+        help_text="Provide a new name"
+    )
     chromosome_wid = forms.SlugField(
-        required = False,
-        widget = forms.TextInput,
-        label = "And a new identifier")
+        required=False,
+        widget=forms.TextInput,
+        label="Unique identifier",
+        help_text="Identifiers are visible in the URL and may only contain alphanumeric, - and _"
+    )
 
     def __init__(self, *args, **kwargs):
         super(ImportDataForm, self).__init__(*args, **kwargs)
         
-        choices = []
-        for species in cmodels.Species.objects.values('wid', 'name').all():
-            choices.append((species['wid'], species['name'], ))
-        self.fields['species'].choices = choices
-        #self.fields['data_type'].choices = ImportDataForm.data_type.choices
+        self.helper = FormHelper()
+        self.helper.layout = Layout(
+            Panel(
+                'Select file format',
+                'data_type',
+            ),
+            Panel(
+                'Provide additional information for GenBank',
+                'chromosome',
+                'chromosome_wid',
+                css_id="genbank"
+            ),
+            Panel(
+                'Select a file to import',
+                'file'
+            ),
+            Panel(
+                'Summary',
+                'reason'
+            ),
+            ButtonHolder(
+                Submit('submit', 'Submit')
+            )
+        )
     
     def clean(self):
         cleaned_data = super(ImportDataForm, self).clean()
