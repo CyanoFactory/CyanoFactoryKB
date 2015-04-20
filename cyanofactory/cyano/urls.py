@@ -83,7 +83,6 @@ urlpatterns += patterns('cyano.views',
 
     url(r'^' + _species_wid + '/export/$', 'exportData'),
 
-    url(r'^import/data/$', 'importData'),
     url(r'^' + _species_wid + '/import/data/$', 'importData'),
 
     url(r'^import/species/$', 'importSpeciesData'),

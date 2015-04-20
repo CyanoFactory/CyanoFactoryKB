@@ -19,6 +19,7 @@ import math
 import re
 from django.contrib.contenttypes.generic import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
+from django.db.models.aggregates import Count
 from django.db.models.fields import NullBooleanField
 import subprocess
 import sys
@@ -1381,7 +1382,21 @@ class SpeciesComponent(AbstractSpeciesComponent):
         # API:
         # [[0, "<a href="Chromosome">, 123],
 
-        return [[0, "AAA", 123, "bbb"]]
+        amount = cls.objects.for_species(species).count()
+        url = cls.get_model_url(species)
+        types = Type.objects.filter(members__in=cls.objects.for_species(species)).order_by("wid").values("wid").annotate(count=Count("wid"))
+
+        if amount == 0:
+            return None
+
+        idx = 0
+
+        lst = [[idx, cls._meta.verbose_name_plural, amount, None, url]]
+
+        for typ in types:
+            lst.append([idx+1, typ["wid"], typ["count"], None, "{}?type={}".format(url, typ["wid"])])
+
+        return lst
 
     #html formatting
     def get_as_html_parameters(self, is_user_anonymous):
@@ -1639,6 +1654,38 @@ class Genome(Molecule):
     #additional fields
     sequence = TextField(blank=True, default='', verbose_name='Sequence', validators=[validate_dna_sequence])
     length = PositiveIntegerField(verbose_name='Length (nt)')
+
+    @classmethod
+    def get_statistics(cls, species):
+        amount = cls.objects.for_species(species).count()
+        url = cls.get_model_url(species)
+
+        if amount == 0:
+            return None
+
+        lst = [[0, cls._meta.verbose_name_plural, amount, None, url]]
+
+        amount = Chromosome.objects.for_species(species).count()
+        url = Chromosome.get_model_url(species)
+        chromosomes = Chromosome.objects.for_species(species)
+
+        if amount > 0:
+            lst.append([1, Chromosome._meta.verbose_name_plural, amount, None, url])
+            chr_sum = sum(c.length for c in chromosomes)
+            lst.append([2, "Length", chr_sum, "nt"])
+            lst.append([2, "GC-content", round((sum(c.get_gc_content() for c in chromosomes) / amount) * 100, 1), "%"])
+
+        amount = Plasmid.objects.for_species(species).count()
+        url = Plasmid.get_model_url(species)
+        chromosomes = Plasmid.objects.for_species(species)
+
+        if amount > 0:
+            lst.append([1, Plasmid._meta.verbose_name_plural, amount, None, url])
+            chr_sum = sum(c.length for c in chromosomes)
+            lst.append([2, "Length", chr_sum, "nt"])
+            lst.append([2, "GC-content", round((sum(c.get_gc_content() for c in chromosomes) / amount) * 100, 1), "%"])
+
+        return lst
 
     #getters
     def get_sequence(self):
@@ -2369,6 +2416,11 @@ class Chromosome(Genome):
     #parent pointer
     parent_ptr_genome = OneToOneField(Genome, related_name='child_ptr_chromosome', parent_link=True, verbose_name='Genome')
 
+    @classmethod
+    def get_statistics(cls, species):
+        # Done in Genome
+        return None
+
     #meta information
     class Meta:
         fieldsets = Genome._meta.fieldsets
@@ -2383,6 +2435,11 @@ class Chromosome(Genome):
 class Plasmid(Genome):
     #parent pointer
     parent_ptr_genome = OneToOneField(Genome, related_name='child_ptr_plasmid', parent_link=True, verbose_name='Genome')
+
+    @classmethod
+    def get_statistics(cls, species):
+        # Done in Genome
+        return None
 
     #meta information
     class Meta:
@@ -2399,6 +2456,17 @@ class ChromosomeFeature(SpeciesComponent):
     #parent pointer
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_chromosome_feature',
                                                  parent_link=True, verbose_name='Species component')
+
+    @classmethod
+    def get_statistics(cls, species):
+        url = cls.get_model_url(species)
+        amount = cls.objects.for_species(species).count()
+
+        if amount == 0:
+            return None
+
+        lst = [[0, cls._meta.verbose_name_plural, amount, None, url]]
+        return lst
 
     #additional fields
     #positions = reverse relation
@@ -4644,6 +4712,27 @@ class TranscriptionalRegulation(SpeciesComponent):
 class Type(SpeciesComponent):
     #parent pointer
     parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_type', parent_link=True, verbose_name='Species component')
+
+    @classmethod
+    def get_statistics(cls, species):
+        # API:
+        # [[0, "<a href="Chromosome">, 123],
+
+        amount = cls.objects.for_species(species).count()
+        url = cls.get_model_url(species)
+        types = cls.objects.for_species(species).values("wid").annotate(count=Count("children")).filter(count__gt=0)
+
+        if amount == 0:
+            return None
+
+        idx = 0
+
+        lst = [[idx, cls._meta.verbose_name_plural, amount, None, url]]
+
+        for typ in types:
+            lst.append([idx+1, typ["wid"], typ["count"], None, "{}?type={}".format(url, typ["wid"])])
+
+        return lst
 
     #getters
     def get_all_members(self):

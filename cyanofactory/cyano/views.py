@@ -14,12 +14,12 @@ Released under the MIT license
 from __future__ import absolute_import
 import json
 
+import math
 import os
 from crispy_forms.utils import render_crispy_form
 from django.contrib.contenttypes.models import ContentType
 from django.template.context import Context, RequestContext
 from django.views.decorators.csrf import ensure_csrf_cookie
-from djcelery.db import get_queryset
 from haystack.inputs import AutoQuery
 from jsonview.decorators import json_view
 from rest_framework.permissions import IsAuthenticated
@@ -32,10 +32,10 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db import transaction
-from django.db.models import Count, Sum
+from django.db.models import Count
 from django.db.models.fields import BooleanField, NullBooleanField, AutoField, BigIntegerField, DecimalField, FloatField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField
 from django.db.models.fields.related import RelatedObject, ManyToManyField, ForeignKey
-from django.db.models.query import EmptyQuerySet, QuerySet
+from django.db.models.query import EmptyQuerySet
 from django.shortcuts import get_object_or_404
 from django.utils.text import capfirst
 
@@ -48,7 +48,7 @@ import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
 from cyano.decorators import resolve_to_objects, ajax_required, permission_required
 from django.db.transaction import atomic
-from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse, Http404
+from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, Http404
 from django.http.response import HttpResponse
 from rest_framework import generics, filters, permissions
 from rest_framework.response import Response
@@ -68,300 +68,34 @@ def index(request):
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def species(request, species):
-    contentCol1 = []
-    contentCol2 = []
-    contentCol3 = []
+    contentcol = []
 
-    if species is not None:
-        contentCol1.append([
-            [0, 'Compartments', cmodels.Compartment.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Compartment'})],
-        ])
-        
-        chrs = cmodels.Chromosome.objects.for_species(species).values_list("length", "sequence")
-        chrcontent = sum(chro[0] for chro in chrs)
-        chr_gc_content = 0 if len(chrs) == 0 else sum([cmodels.Chromosome(sequence = chro[1]).get_gc_content() * chro[0] for chro in chrs]) / chrcontent
+    for model in chelpers.getModels(cmodels.SpeciesComponent).values():
+        contentcol.append(model.get_statistics(species))
 
-        plasmids = cmodels.Plasmid.objects.for_species(species).values_list("length", "sequence")
-        plasmid_content = sum(plasmid[0] for plasmid in plasmids)
-        plasmid_gc_content = 0 if len(plasmids) == 0 else sum([cmodels.Plasmid(sequence = plasmid[1]).get_gc_content() * plasmid[0] for plasmid in plasmids]) / plasmid_content
+    contentcol = filter(lambda x: x is not None, contentcol)
 
-        contentCol1.append([
-            [0, 'Genome', len(chrs) + len(plasmids), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Genome'})],
-            [1, 'Chromosomes', len(chrs), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Chromosome'})],
-            [2, 'Length', chrcontent, 'nt'],
-            [2, 'GC-content', ('%0.1f' % (chr_gc_content * 100)), '%'],
-            [1, 'Plasmids', len(plasmids), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Plasmid'})],
-            [2, 'Length', plasmid_content, 'nt'],
-            [2, 'GC-content', ('%0.1f' % (plasmid_gc_content * 100)), '%'],
-        ])
-                
-        tus = cmodels.TranscriptionUnit.objects.for_species(species).annotate(num_genes = Count('genes'))
-        nPolys = tus.filter(num_genes__gt = 1).count()
-        contentCol1.append([
-            [0, 'Transcription units', tus.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionUnit'})],            
-            [1, 'Monocistrons', tus.count() - nPolys],
-            [1, 'Polycistrons', nPolys],
-        ])
-        
-        genes = cmodels.Gene.objects.for_species(species).values_list("type__wid", "expression", "half_life")
-        
-        contentCol1.append([
-            [0, 'Genes', len(genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'})],
-            [1, 'mRNA', sum((lambda x: x[0] == "mRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=mRNA'],
-            [1, 'rRNA', sum((lambda x: x[0] == "rRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=rRNA'],
-            [1, 'sRNA', sum((lambda x: x[0] == "sRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=sRNA'],
-            [1, 'tRNA', sum((lambda x: x[0] == "tRNA")(x) for x in genes), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Gene'}) + '?type=tRNA'],
-        ])
-        
-        chromosome_features = cmodels.ChromosomeFeature.objects.for_species(species).values_list("type__parent__wid", flat = True)
-        chromosome_features_length = len(chromosome_features)
-        chromosome_features_dnaa_box = sum((lambda x: x == "ChromosomeFeature-DnaA_box")(x) for x in chromosome_features)
-        chromosome_features_str = sum((lambda x: x == "ChromosomeFeature-Short_Tandem_Repeat")(x) for x in chromosome_features)
-
-        #contentCol1.append([
-        #    [0, 'Chromosome features',
-        #        chromosome_features_length,
-        #        None,
-        #        reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ChromosomeFeature'}),
-        #        ],
-        #    [1, 'DnaA boxes',
-        #        chromosome_features_dnaa_box,
-        #        ],
-        #    [1, 'Short tandem repeats',
-        #        chromosome_features_str,
-        #        ],
-        #    [1, 'Other',
-        #        chromosome_features_length - chromosome_features_dnaa_box - chromosome_features_str],
-        #])
-        
-        metabolites = cmodels.Metabolite.objects.for_species(species).values_list("type__wid", "type__parent__wid", "type__parent__parent__wid", "biomass_composition", "media_composition")
-        
-        metabolites_aa_list = ["amino_acid", "modified_amino_acid", "non-standard_amino_acid", "vitamin_non-standard_amino_acid"]
-        
-        contentCol1.append([
-            [0, 'Metabolites', len(metabolites), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Metabolite'})],
-            [1, 'Amino acids', 
-                sum((lambda x: x in metabolites_aa_list)(x) for x in metabolites)
-                ],
-            [1, 'Antibiotic',
-                sum((lambda x: x[0] == "antibiotic")(x) for x in metabolites) +
-                sum((lambda x: x[1] == "antibiotic")(x) for x in metabolites)
-                ],
-            [1, 'Gases', 
-                sum((lambda x: x[0] == "gas")(x) for x in metabolites) +
-                sum((lambda x: x[1] == "gas")(x) for x in metabolites)
-                ],
-            [1, 'Ions', 
-                sum((lambda x: x[0] == "ion")(x) for x in metabolites) +
-                sum((lambda x: x[1] == "ion")(x) for x in metabolites)
-                ],
-            [1, 'Lipids', 
-                sum((lambda x: x[0] == "lipid")(x) for x in metabolites) +
-                sum((lambda x: x[1] == "lipid")(x) for x in metabolites) +
-                sum((lambda x: x[2] == "lipid")(x) for x in metabolites)
-                ],
-            [1, 'Vitamins',
-                sum((lambda x: x[0] == "vitamin")(x) for x in metabolites) +
-                sum((lambda x: x[1] == "vitamin")(x) for x in metabolites)
-                ],
-        ])
-
-        mons = cmodels.ProteinMonomer.objects.for_species(species)
-        mons_list = mons.values_list("localization__wid", "signal_sequence__type")
-        mons_list_count = len(mons_list)
-        monTermOrg_list = ["tc", "tm"]
-        
-        monDNABind = mons.filter(dna_footprint__length__gt=0).count()
-        
-        monLipo = sum((lambda x: x[1] == "lipoprotein")(x) for x in mons_list)
-        monSecreted = sum((lambda x: x[1] == "secretory")(x) for x in mons_list)
-        monTermOrg = sum((lambda x: x[0] in monTermOrg_list)(x) for x in mons_list)
-        
-        monIntMem = sum((lambda x: x[0] == "m" and x[1] != "lipoprotein")(x) for x in mons_list) +\
-                    sum((lambda x: x[0] == "tm" and x[1] != "lipoprotein")(x) for x in mons_list)
-
-        cpxs = cmodels.ProteinComplex.objects.for_species(species)
-        cpxDNABind = cpxs.filter(dna_footprint__length__gt=0).count()
-        cpxCount = cpxs.count()
-        
-        contentCol2.append([
-            [0, 'Proteins', mons_list_count + cpxCount],
-                [1, 'Monomers', mons_list_count, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'})],            
-                    [2, 'DNA-binding', monDNABind],
-                    [2, 'Integral membrane', monIntMem],
-                    [2, 'Lipoprotein', monLipo, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'}) + '?signal_sequence__type=lipoprotein'],            
-                    [2, 'Secreted', monSecreted, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinMonomer'}) + '?signal_sequence__type=secretory'],
-                    [2, 'Terminal organelle', monTermOrg],                    
-                [1, 'Complexes', cpxCount, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'ProteinComplex'})],
-                    [2, 'DNA-binding', cpxDNABind],
-        ])
-
-        rxns = cmodels.Reaction.objects.for_species(species).values_list("processes__wid", flat = True)
-        rxns_count = [
-            len(rxns),
-            sum((lambda x: x == "Process_DNADamage")(x) for x in rxns),
-            sum((lambda x: x == "Process_DNARepair")(x) for x in rxns),
-            sum((lambda x: x == "Process_Metabolism")(x) for x in rxns),
-            sum((lambda x: x == "Process_ProteinDecay")(x) for x in rxns),
-            sum((lambda x: x == "Process_ProteinModification")(x) for x in rxns),
-            sum((lambda x: x == "Process_ReplicationInitiation")(x) for x in rxns),
-            sum((lambda x: x == "Process_RNADecay")(x) for x in rxns),
-            sum((lambda x: x == "Process_RNAModification")(x) for x in rxns),
-            sum((lambda x: x == "Process_RNAProcessing")(x) for x in rxns),
-            sum((lambda x: x == "Process_Transcription")(x) for x in rxns),
-            sum((lambda x: x == "Process_Translation")(x) for x in rxns),
-            sum((lambda x: x == "Process_tRNAAminoacylation")(x) for x in rxns)
-        ]
-        
-        contentCol2.append([
-            [0, 'Reactions', rxns_count[0], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'})],
-            [1, 'DNA damage', rxns_count[1], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNADamage'],
-            [1, 'DNA repair', rxns_count[2], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_DNARepair'],
-            [1, 'Metabolic', rxns_count[3], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Metabolism'],            
-            [1, 'Protein decay', rxns_count[4], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ProteinDecay'],
-            [1, 'Protein modification', rxns_count[5], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ProteinModification'],            
-            [1, 'Replication Initiation', rxns_count[6], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_ReplicationInitiation'],
-            [1, 'RNA decay', rxns_count[7], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNADecay'],
-            [1, 'RNA modification', rxns_count[8], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNAModification'],            
-            [1, 'RNA processing', rxns_count[9], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_RNAProcessing'],            
-            [1, 'Transcription', rxns_count[10], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Transcription'],            
-            [1, 'Translation', rxns_count[11], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_Translation'],            
-            [1, 'tRNA aminoacylation', rxns_count[12], None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Reaction'}) + '?processes=Process_tRNAAminoacylation'],
-            [1, 'Other', rxns_count[0] - sum(rxns_count[1:])],
-        ])        
-        
-        tr = cmodels.TranscriptionalRegulation.objects.for_species(species).values_list("transcription_unit", "transcription_factor", "affinity", "activity")
-        nTus = len(set([x[0] for x in tr]))
-        nTfs = len(set([x[1] for x in tr]))
-        contentCol3.append([
-            [0, 'Transcriptional regulation'],
-            [1, 'Interactions', tr.count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'TranscriptionalRegulation'})],
-            [1, 'Transcriptional regulators', nTfs],
-            [1, 'Regulated promoters', nTus],
-        ])
-
-        contentCol3.append([
-            [0, 'Pathways', cmodels.Pathway.objects.filter(species__id = species.id).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Pathway'})],
-        ])
-        
-        stimuli = cmodels.Stimulus.objects.for_species(species).values_list("value", flat=True)
-        nStimuli = sum((lambda x: x[3] is not None)(x) for x in stimuli)
-
-        contentCol3.append([
-            [0, 'Stimuli', len(stimuli), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Stimulus'})],
-        ])
-        
-        nCellComp = sum((lambda x: x[3] is not None)(x) for x in metabolites)
-        nMediaComp = sum((lambda x: x[4] is not None)(x) for x in metabolites)
-        
-        reactions = cmodels.Reaction.objects.for_species(species).\
-            values_list("keq", "kinetics_forward__km", "kinetics_backward__km", "kinetics_forward__vmax", "kinetics_backward__vmax")
-       
-        nKineticsKeq = sum((lambda x: x[0] is not None)(x) for x in reactions)
-        nKineticsKm = sum((lambda x: x[1] is not None)(x) for x in reactions) +\
-                        sum((lambda x: x[2] is not None)(x) for x in reactions)
-        nKineticsVmax = sum((lambda x: x[3] is not None)(x) for x in reactions) +\
-                        sum((lambda x: x[4] is not None)(x) for x in reactions)
-
-        nRnaExp = sum((lambda x: x[1] is not None)(x) for x in genes)
-        nRnaHl = sum((lambda x: x[2] is not None)(x) for x in genes)
-
-        nTrAffinity = sum((lambda x: x[2] is not None)(x) for x in tr)
-        nTrActivity = sum((lambda x: x[3] is not None)(x) for x in tr)
-       
-        nOther = cmodels.Parameter.objects.for_species(species).count()
-        nTotParameters = nCellComp + nMediaComp + nKineticsVmax + nRnaExp + nRnaHl + nStimuli + nTrAffinity + nTrActivity + nOther
-
-        contentCol3.append([
-            [0, 'Quantitative parameters', nTotParameters],
-            [1, 'Cell composition', nCellComp],
-            [1, 'Media composition', nMediaComp],            
-            [1, 'Reaction K<sub>eq</sub>', nKineticsKeq],
-            [1, 'Reaction K<sub>m</sub>', nKineticsKm],
-            [1, 'Reaction V<sub>max</sub>', nKineticsVmax],
-            [1, 'RNA expression', nRnaExp],
-            [1, 'RNA half-lives', nRnaHl],
-            [1, 'Stimulus values', nStimuli],   
-            [1, 'Transcr. reg. activity', nTrAffinity],
-            [1, 'Transcr. reg. affinity', nTrActivity],
-            [1, 'Other', nOther, None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Parameter'})],            
-        ])
-        
-        contentCol3.append([
-            [0, 'Processes', cmodels.Process.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'Process'})],
-        ])
-        
-        contentCol3.append([
-            [0, 'States', cmodels.State.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'State'})],
-        ])
-
-        contentCol3.append([
-            [0, "Mass Spectrometry Data", cmodels.MassSpectrometryJob.objects.for_species(species).count(), None, reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': 'MassSpectrometryJob'})],
-        ])
-
-    sources = {
-        'total': 0,
-        'types': [],
-        'dates': [],
-        'evidence_parameters': [],
-        'evidence_species': [],
-        'evidence_media': [],
-        'evidence_pH': [],
-        'evidence_temperature': [],
-    }
-    #if species is not None:
-        #refs = cmodels.PublicationReference.objects.filter.for_species(species)
-        #sources['total'] = refs.count()
-        #sources['types'] = [
-        #        {'type': 'Articles', 'count': refs.filter(type__wid='article').count()},
-        #        {'type': 'Books', 'count': refs.filter(type__wid='book').count()},
-        #        {'type': 'Thesis', 'count': refs.filter(type__wid='thesis').count()},
-        #        {'type': 'Other', 'count': refs.filter(type__wid='misc').count()},
-        #    ]
-        #sources['dates'] = refs.filter(year__isnull=False).order_by('year').values('year').annotate(count=Count('year'))
-        
-            
-        #nEstimated = cmodels.Parameter.objects.for_species(species).filter(value__evidence__is_experimentally_constrained=False).count()
-        #nExpConstrained = nTotParameters - nEstimated
-        #sources['evidence_parameters'] = [
-        #     {'type': 'Experimentally constrained', 'count': nExpConstrained},
-        #     {'type': 'Computationally estimated', 'count': nEstimated},
-        #     ]
-        
-        # sources['evidence_species'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('species').annotate(count = Count('id'))
-        # sources['evidence_media'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('media').annotate(count = Count('id'))
-        # sources['evidence_pH'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('pH').annotate(count = Count('id'))
-        # sources['evidence_temperature'] = cmodels.Evidence.objects.filter(species_component__species__id = species.id).values('temperature').annotate(count = Count('id'))
-
-    printCol1 = []
-    printCol2 = []
-    printCol3 = []
-
-    i = 0
-    for x in contentCol1:
-        i += 1
+    printcol = []
+    for i, x in enumerate(contentcol, start=1):
         for y in x:
-            printCol1.append([i] + y)
-    i = 0
-    for x in contentCol2:
-        i += 1
-        for y in x:
-            printCol2.append([i] + y)
-    i = 0
-    for x in contentCol3:
-        i += 1
-        for y in x:
-            printCol3.append([i] + y)
+            printcol.append([i] + y)
+
+    def chunks(l, n):
+        """ Yield successive n-sized chunks from l.
+        """
+        for i in xrange(0, len(l), n):
+            yield l[i:i+n]
+
+    outcol = list(chunks(printcol, int(math.ceil(len(printcol) / 3.0))))
 
     return chelpers.render_queryset_to_response(
-        species = species,
-        data = {
-            'content': [printCol1, printCol2, printCol3],
-            'contentRows': range(max(len(printCol1), len(printCol2), len(printCol3))),
-            'sources': sources,    
+        species=species,
+        data={
+            'content': outcol,
+            'contentRows': range(max(len(p) for p in outcol)),
             },
-        request = request, 
-        template = 'cyano/species.html')
+        request=request,
+        template='cyano/species.html')
 
 @resolve_to_objects
 def about(request, species=None):
@@ -676,7 +410,9 @@ class EntryList(generics.GenericAPIView):
             many=True,
             context={'request': request, 'species': self.get_species(species_wid)})
 
-        return Response(serializer.data)
+        data = serializer.data
+
+        return Response(data)
 
     def post(self, request, species, model, format=None):
         #serializer = EntrySerializer(data=request.DATA)
@@ -1194,7 +930,7 @@ def exportData(request, species):
 @permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
-def importData(request, species=None):
+def importData(request, species):
     data = {}
     
     if request.method == 'POST':
@@ -1243,12 +979,13 @@ def importData(request, species=None):
         form = ImportDataForm(None)
 
     data["form"] = form
+
     return chelpers.render_queryset_to_response(
-        species = species,
-        request = request, 
-        template = 'cyano/importDataForm.html', 
-        data = data
-        )
+        species=species,
+        request=request,
+        template='cyano/importDataForm.html',
+        data=data
+    )
 
 
 @permission_required(perm.ACCESS_SPECIES)
@@ -1760,7 +1497,7 @@ def basket_rename(request, basket_id):
     return HttpResponseBadRequest()
 
 
-#@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: u.is_superuser)
 def global_permission(request):
     from django.contrib.auth.models import User, Group, Permission
 
