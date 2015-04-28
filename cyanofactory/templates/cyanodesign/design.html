@@ -21,26 +21,23 @@ Released under the MIT license
 {{ block.super }}
 <script src="{% get_static_prefix %}cyanointeraction/d3/d3.v3.min.js"></script>
 <script src="{% get_static_prefix %}cyano/js/viz.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
 <script type="text/javascript">
     "use strict";
     var enzymes = [];
     var metabolites = [];
     var enzymes_design = [];
-    var design_objective;
+    var design_objective = undefined;
     var dialog_metabolite_edit;
     var dialog_enzyme;
     var dialog_metabolite_add;
-    var dialog_progressbar;
     var cyano_design_objective_select;
+    var design_objective_visible_combobox;
     var constraints_div;
     var simulation_result;
-    var add_button;
-    var delete_button;
     var create_new_enzyme = false;
-    var metabolite_combobox;
     var command_list = [];
     var svg;
-    var design_objective_visible_combobox;
     var flux;
     var table_enzymes;
     var datatable_enzymes;
@@ -54,7 +51,7 @@ Released under the MIT license
         function(e) { return !e.isConstrained() },
         function(e) { return e.reversible },
         function(e) { return !e.reversible }
-    ]
+    ];
 
     function Enzyme(name) {
         this.name = name;
@@ -152,12 +149,12 @@ Released under the MIT license
             metabolites.forEach(function(metabolite) {
                 var index = metabolite.consumed.indexOf(that);
                 if (index > -1) {
-                    metabolite.consumed = metabolite.consumed.splice(index, 1);
+                    metabolite.consumed.splice(index, 1);
                 }
 
                 index = metabolite.produced.indexOf(that);
                 if (index > -1) {
-                    metabolite.produced = metabolite.produced.splice(index, 1);
+                    metabolite.produced.splice(index, 1);
                 }
             });
 
@@ -179,6 +176,15 @@ Released under the MIT license
             });
 
             datatable_enzymes.row(enzymes.indexOf(this)).invalidate();
+
+            var old_design_objective = design_objective;
+            cyano_design_objective_select[0].selectize.clearOptions();
+            cyano_design_objective_select[0].selectize.load(function(callback) {
+                callback(enzymes);
+            });
+            if (old_design_objective !== undefined) {
+                cyano_design_objective_select[0].selectize.setValue(old_design_objective.name, false);
+            }
         }
     }
 
@@ -289,14 +295,10 @@ Released under the MIT license
         dialog_metabolite_edit = $("#dialog-edit-metabolite");
         dialog_enzyme = $("#dialog-reaction");
         dialog_metabolite_add = $("#dialog-add-metabolite");
-        dialog_progressbar = $("#dialog-progressbar");
         cyano_design_objective_select = $("#cyano-design-objective-select");
+        design_objective_visible_combobox = $("#design-objective-visible-combobox");
         constraints_div = $("#constraints-min-max");
         simulation_result = $("#simulation-result");
-        add_button = $("#add-button");
-        delete_button = $("#delete-button");
-        metabolite_combobox = $("#metabolite-combobox");
-        design_objective_visible_combobox = $("#design-objective-visible-combobox");
         table_enzymes = $('#cyano-enzyme-list');
         table_metabolites = $('#cyano-metabolite-list');
 
@@ -496,8 +498,7 @@ Released under the MIT license
                 "<'row'<'col-sm-6'i><'col-sm-6'p>>"
         });
 
-        add_button.hide();
-        delete_button.hide();
+        simulation_result.hide();
 
         $( ".check" ).button();
 
@@ -511,43 +512,68 @@ Released under the MIT license
                     return $("<div>").addClass("option").text(item.id).wrap("<p>").parent().html();
                 },
                 item: function(item, escape) {
+                    if (typeof item.item === "undefined") {
+                        // workaround firefox remembering old input
+                        return "<div></div>";
+                    }
                     var amount = item.item.amount;
                     return $("<div>").addClass("item").attr("data-type", "text").attr("data-item", item.id).text(amount + " " + item.id).wrap("<p>").parent().html();
                 }
-            },
-            onItemAdd: function(value, item) {
-                item.data("dialog", dialog_enzyme.find("#reaction-substrates")[0]);
-                item.data("value", dialog_enzyme.find("#reaction-substrates")[0].selectize.options[value].item.amount);
-                item.editable({
-                    type: "text",
-                    container: dialog_enzyme[0],
-                    title: "Enter amount",
-                    unsavedclass: null,
-                    display: function(value, sourceData) {
-                    //    $(this).html(dialog_enzyme.find("#reaction-substrates")[0].selectize.options[value].item.amount);
-                    },
-                    success: function(response, newValue) {
-                        var sel;
-                        if ($(this).parent().parent().siblings("#reaction-substrates")) {
-                            sel = dialog_enzyme.find("#reaction-substrates")[0].selectize;
-                        } else {
-                            sel = dialog_enzyme.find("#reaction-products")[0].selectize;
-                        }
-                        sel.options[$(this).data("item")].item.amount = newValue;
-                        // no this doesn't rerender selected items only flushes render cache...
-                        sel.clearCache("item");
-                        // readd items
-                        // braindead api returns delimited string in get but expects array in set m(
-                        sel.setValue(sel.getValue().split('\x00').map(function(a) { return a; }));
-                        return {"newValue": newValue};
-                    }
-                });
             }
         };
 
         dialog_enzyme.find("#reaction-substrates").text("");
+        selectize_options["onItemAdd"] = function(value, item) {
+            item.data("dialog", dialog_enzyme.find("#reaction-substrates")[0]);
+            item.data("value", dialog_enzyme.find("#reaction-substrates")[0].selectize.options[value].item.amount);
+            item.editable({
+                type: "text",
+                container: dialog_enzyme[0],
+                title: "Enter amount",
+                unsavedclass: null,
+                success: function (response, newValue) {
+                    if (!isFinite(newValue)) {
+                        return "Not a number";
+                    }
+
+                    var sel;
+                    sel = dialog_enzyme.find("#reaction-substrates")[0].selectize;
+                    sel.options[$(this).data("item")].item.amount = newValue;
+                    // no this doesn't rerender selected items only flushes render cache...
+                    sel.clearCache("item");
+                    // readd items
+                    // braindead api returns delimited string in get but expects array in set m(
+                    sel.setValue(sel.getValue().split('\x00').map(function (a) {
+                        return a;
+                    }));
+                    return {"newValue": newValue};
+                }
+            });
+        };
         dialog_enzyme.find("#reaction-substrates").selectize(selectize_options);
         dialog_enzyme.find("#reaction-products").text("");
+        selectize_options["onItemAdd"] = function(value, item) {
+            item.data("dialog", dialog_enzyme.find("#reaction-products")[0]);
+            item.data("value", dialog_enzyme.find("#reaction-products")[0].selectize.options[value].item.amount);
+            item.editable({
+                type: "text",
+                container: dialog_enzyme[0],
+                title: "Enter amount",
+                unsavedclass: null,
+                success: function(response, newValue) {
+                    if (!isFinite(newValue)) {
+                        return "Not a number";
+                    }
+
+                    var sel;
+                    sel = dialog_enzyme.find("#reaction-products")[0].selectize;
+                    sel.options[$(this).data("item")].item.amount = newValue;
+                    sel.clearCache("item");
+                    sel.setValue(sel.getValue().split('\x00').map(function(a) { return a; }));
+                    return {"newValue": newValue};
+                }
+            });
+        };
         dialog_enzyme.find("#reaction-products").selectize(selectize_options);
 
         dialog_enzyme.find("#reaction-substrates").editable();
@@ -570,7 +596,7 @@ Released under the MIT license
             });
 
         $("#design-submit").click(function(event) {
-            dialog_progressbar.dialog("open");
+            waitIndicator.show($("#content"));
 
             $.ajax({
                 url: "{% url "cyano-design-simulate" pk=pk %}",
@@ -584,26 +610,30 @@ Released under the MIT license
                             map(function(value) { return value.name })
                     ),
                     "objective": JSON.stringify(cyano_design_objective_select.val()),
-                    "display": JSON.stringify(enzymes_design.map(function(obj) { return obj.name; })),
+                    "display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
                     "auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
                 }
             }).done(function(x) {
                 var graph = Viz(x["graph"], "svg", "dot");
                 flux = x["fluxes"];
 
-                simulation_result.text("");
-                $("<pre></pre>").text("The solution is " + x["solution"]).appendTo(simulation_result);
+                simulation_result.show();
+                simulation_result.find(".sim-text").text("The solution is " + x["solution"]);
+
                 $("#visual").show();
-                $("#visual").val(graph);
                 document.getElementById("visual").innerHTML = graph;
-                dialog_progressbar.dialog("close");
+
+                $("svg").attr("width", "100%").attr("height", "400px");
+                svgPanZoom('svg', {minZoom: 0.1});
+
+                waitIndicator.hide($("#content"));
 
                 //command_list = [];
             }).error(function(x) {
                 $("#visual").hide();
-                simulation_result.text("");
-                $("<pre></pre>").text(x.status + " " + x.statusText + ": " + x.responseText).appendTo(simulation_result);
-                dialog_progressbar.dialog("close");
+                simulation_result.show();
+                simulation_result.find(".sim-text").text(x.status + " " + x.statusText + ": " + x.responseText);
+                waitIndicator.hide($("#content"));
             });
         });
 
@@ -622,7 +652,7 @@ Released under the MIT license
         });
 
         $("#design-save").click(function(event) {
-            dialog_progressbar.dialog("open");
+            waitIndicator.show($("#content"));
             $.ajax({
                 url: "{% url "cyano-design-save" pk=pk %}",
                 type: "POST",
@@ -637,14 +667,14 @@ Released under the MIT license
                     "objective": JSON.stringify(cyano_design_objective_select.val()),
                 }
             }).done(function(x) {
-                dialog_progressbar.dialog("close");
+                waitIndicator.hide($("#content"));
 
                 command_list = [];
             }).error(function(x) {
                 $("#visual").hide();
-                simulation_result.text("");
-                $("<pre></pre>").text(x.status + " " + x.statusText + ": " + x.responseText).appendTo(simulation_result);
-                dialog_progressbar.dialog("close");
+                simulation_result.show();
+                simulation_result.find(".sim-text").text(x.status + " " + x.statusText + ": " + x.responseText);
+                waitIndicator.hide($("#content"));
             });
         });
 
@@ -696,13 +726,18 @@ Released under the MIT license
             datatable_enzymes.rows.add(enzymes);
             datatable_enzymes.draw();
 
-            for (var i = 0; i < enzymes.length; ++i) {
-                var enzyme = enzymes[i];
-                if (typeof enzyme.backup != 'undefined') {
-                    enzymes[i] = enzyme.backup;
-                    enzyme = enzymes[i];
-                }
+            var old_design_objective = design_objective;
+            cyano_design_objective_select[0].selectize.clear();
+            cyano_design_objective_select[0].selectize.clearOptions();
+            cyano_design_objective_select[0].selectize.load(function(callback) {
+                callback(enzymes);
+            });
+            if (old_design_objective !== undefined) {
+                cyano_design_objective_select[0].selectize.setValue(old_design_objective.name, false);
             }
+            design_objective_visible_combobox[0].selectize.load(function(callback) {
+                callback(enzymes);
+            });
         }
 
         function updateMetabolitesList() {
@@ -829,6 +864,11 @@ Released under the MIT license
             enzyme.invalidate();
         }
 
+        dialog_enzyme.on('shown.bs.modal', function() {
+            dialog_enzyme.find("#reaction-substrates")[0].selectize.close();
+            dialog_enzyme.find("#reaction-products")[0].selectize.close();
+        });
+
         dialog_enzyme.find(".btn-primary").click(function() {
             var name = dialog_enzyme.find("#enzyme-name");
             var constrained = dialog_enzyme.find("#constrained");
@@ -905,8 +945,10 @@ Released under the MIT license
                     datatable_enzymes.draw();
 
                     command_list.push(["reaction", "add", old_name, reaction.toString(), reaction.constraints[0], reaction.constraints[1]]);
+                    console.log(command_list[command_list.length - 1]);
                 } else {
                     command_list.push(["reaction", "edit", old_name, reaction.toString(), reaction.constraints[0], reaction.constraints[1]]);
+                    console.log(command_list[command_list.length - 1]);
                 }
 
                 dialog_enzyme.modal("hide");
@@ -926,9 +968,10 @@ Released under the MIT license
             }
 
             if (valid) {
-                var metabolite = new Metabolite(name.val(), external.val());
+                var metabolite = new Metabolite(name.val(), external.prop("checked"));
                 metabolites.push(metabolite);
                 command_list.push(["metabolite", "add", name.val(), metabolite.name, metabolite.external]);
+                console.log(command_list[command_list.length - 1]);
 
                 datatable_metabolites.row.add(metabolite);
                 datatable_metabolites.sort();
@@ -952,12 +995,14 @@ Released under the MIT license
 
             if (valid) {
                 var metabolite = dialog_metabolite_edit.data("object");
+                var old_name = metabolite.name;
                 metabolite.updateName(name.val());
                 var old_external = metabolite.external;
                 metabolite.external = external.prop("checked");
 
-                if (name.val() != metabolite.name || old_external != metabolite.external) {
-                    command_list.push(["metabolite", "edit", name.val(), metabolite.name, metabolite.external]);
+                if (old_name != metabolite.name || old_external != metabolite.external) {
+                    command_list.push(["metabolite", "edit", old_name, metabolite.name, metabolite.external]);
+                    console.log(command_list[command_list.length - 1]);
                 }
 
                 metabolite.invalidate();
@@ -1003,6 +1048,8 @@ Released under the MIT license
 
             row.data().external = $(this).is(":checked");
 
+            command_list.push(["metabolite", "edit", row.data().name, row.data().name, row.data().external]);
+
             row.data().invalidate();
         });
 
@@ -1032,10 +1079,10 @@ Released under the MIT license
             mouseleave: function () {
             }
         }, ".cyano-enzyme");
-        $("#create-enzyme-button").click(function (event) {
+        $(".create-enzyme-button").click(function (event) {
             showAddEnzymeDialog();
         });
-        $("#create-metabolite-button").click(function (event) {
+        $(".create-metabolite-button").click(function (event) {
             showAddMetaboliteDialog();
         });
 
@@ -1071,123 +1118,34 @@ Released under the MIT license
         $("#manual_flux").change(function() {
             $(".cyano-design-reaction-filter").show();
         });
-        dialog_progressbar.dialog({
-            autoOpen: false,
-            height: 'auto',
-            width: 350,
-            modal: true,
-            closeOnEscape: false,
-            dialogClass: "no-close"
-        });
-        var pbar = dialog_progressbar.find("#progressbar");
-        pbar.progressbar();
-        pbar.progressbar( "option", "value", false );
 
-        var metabolite_source = function(request, response) {
-            var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
-            var ret_val = metabolites.filter(function (value) {
-                    var text = value.name;
-                    return !request.term || matcher.test(text);
-                }).map(function (value) {
-                    return {
-                        label: value.name,
-                        value: value.name,
-                        option: this
-                    };
-                });
-            return response(ret_val);
-        };
-
-        metabolite_combobox.combobox({
-            source: metabolite_source,
-            change: function(event, ui) {
-                var creation = dialog_metabolite_add.find(".creationState");
-                creation.text("");
-
-                // Selected from dropdown, nothing to do
-                if (ui.item) {
-                    return;
+        cyano_design_objective_select.selectize({
+            delimiter: ',',
+            persist: false,
+            labelField: "name",
+            valueField: "name",
+            onChange: function(value) {
+                var idx = indexOfEnzyme(value);
+                if (idx >= 0) {
+                    design_objective = enzymes[idx];
+                } else {
+                    design_objective = undefined;
                 }
-
-                // Search for a match (case-insensitive)
-                var value = event.currentTarget.value;
-                var valueLowerCase = value.toLowerCase();
-
-                if (metabolite_source({term:value}, function(arg) {
-                    return arg.filter(
-                        function(val) {
-                            return val.value.toLowerCase() == valueLowerCase;
-                        });
-                }).length == 1) {
-                    // Found a match, nothing to do
-                    return false;
-                }
-
-                creation.text("A new metabolite will be created");
             }
         });
 
-        var reac_filter_source = function(request, response) {
-            var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
-            var ret_val = enzymes.filter(function (value) {
-                var text = value.name;
-
-                // Reaction already selected?
-                var reac_in = enzymes_design.some(function(obj) {
-                    return obj.name.toLowerCase() == text.toLowerCase();
-                });
-
-                return !reac_in && (!request.term || matcher.test(text));
-            }).map(function (value) {
-                return {
-                    label: value.name,
-                    value: value.name,
-                    option: this
-                };
-            });
-            return response(ret_val);
-        };
-
-        var reac_source = function(request, response) {
-            var matcher = new RegExp($.ui.autocomplete.escapeRegex(request.term), "i");
-            var ret_val = enzymes.filter(function (value) {
-                var text = value.name;
-
-                return !request.term || matcher.test(text);
-            }).map(function (value) {
-                return {
-                    label: value.name,
-                    value: value.name,
-                    option: this
-                };
-            });
-            return response(ret_val);
-        };
-
-        design_objective_visible_combobox.combobox({
-            source: reac_filter_source,
-            select: function(event, ui) {
-                enzymes_design.push(getEnzymeByName(ui.item.value));
-                enzymes_design.sort(function(a,b) {
-                    return a.name.localeCompare(b.name);
-                });
-                updateEnzymeDesignList();
-            }
-        });
-
-        cyano_design_objective_select.combobox({
-            source: reac_source
-        });
-
-        $("#toggle").click(function () {
-            metabolite_combobox.toggle();
+        design_objective_visible_combobox.selectize({
+            delimiter: '\x00',
+            persist: false,
+            labelField: "name",
+            valueField: "name"
         });
 
         $.ajax({
             url: "{% url "cyano-design-get-reactions" pk=pk %}",
             context: document.body,
             beforeSend: function() {
-                dialog_progressbar.dialog("open");
+                waitIndicator.show($("#content"));
             }
         }).done(function(x) {
             x["enzymes"].forEach(function(value) {
@@ -1207,12 +1165,12 @@ Released under the MIT license
             updateMetabolitesList();
 
             if (x.objective) {
-                cyano_design_objective_select.val(x.objective)
+                cyano_design_objective_select[0].selectize.setValue(x.objective)
             }
             //var graph = Viz(x["graph"], "svg", "dot");
             //document.getElementById("visual").innerHTML = graph;
             //visualize();
-            dialog_progressbar.dialog("close");
+            waitIndicator.hide($("#content"));
         });
     });
 </script>
@@ -1271,9 +1229,6 @@ span.cyano-external-metabolite { color: green }
 
 {% block content %}
 
-<img src="{% static "public/img/delete.png" %}" id="delete-button" class="delete-button" alt="Delete"/>
-<img src="{% static "public/img/add.png" %}" id="add-button" class="add-button" alt="Add"/>
-
 <div role="tabpanel">
 <ul class="nav nav-tabs" role="tablist">
     <li role="presentation" class="active"><a href="#reaction-tab" role="tab" data-toggle="tab">Reactions</a></li>
@@ -1294,6 +1249,13 @@ span.cyano-external-metabolite { color: green }
                 </tr>
             </thead>
         </table>
+
+        <button type="button" class="btn btn-primary create-enzyme-button">
+        Create new reaction
+        </button>
+        <button type="button" class="btn btn-primary create-metabolite-button">
+        Create new metabolite
+        </button>
     </div>
     <div role="tabpanel" class="tab-pane" id="metabolite-tab">
         <table id="cyano-metabolite-list" class="table table-striped table-hover">
@@ -1306,35 +1268,62 @@ span.cyano-external-metabolite { color: green }
                 </tr>
             </thead>
         </table>
+
+        <button type="button" class="btn btn-primary create-enzyme-button">
+        Create new reaction
+        </button>
+        <button type="button" class="btn btn-primary create-metabolite-button">
+        Create new metabolite
+        </button>
     </div>
 
     <div role="tabpanel" class="tab-pane" id="settings-tab">
+        <div class="cyano-design-objective">
+            <fieldset>
+                <div class="form-group">
+                    <label class="control-label" for="cyano-design-objective-select">Design objective</label>
+                    <select id="cyano-design-objective-select" placeholder="Select a design objective"></select>
+                </div>
+            </fieldset>
+        </div>
+
         <div>
-            <input id="auto_flux" type="radio" name="flux" value="auto_flux" selected> Display reactions with highest flux<br>
-            <input id="manual_flux" type="radio" name="flux" value="manual_flux"> Display selected reactions<br>
+            <div class="radio">
+                <input id="auto_flux" type="radio" name="flux" value="auto_flux">
+                <label for="auto_flux">Display reactions with highest flux</label>
+            </div>
+            <div class="radio">
+                <input id="manual_flux" type="radio" name="flux" value="manual_flux">
+                <label for="manual_flux">Display selected reactions</label>
+            </div>
         </div>
 
         <div class="cyano-design-reaction-filter">
-            <h1 class="ui-widget-header">Select visible reactions</h1>
-            <input id="design-objective-visible-combobox">
-            </input>
-            <div class="cyano-design-reactions">
-            </div>
+            <fieldset>
+                <div class="form-group">
+                    <label class="control-label" for="design-objective-visible-combobox">Select visible reactions</label>
+                    <input id="design-objective-visible-combobox">
+                </div>
+            </fieldset>
         </div>
     </div>
 
     <div role="tabpanel" class="tab-pane" id="simulation-tab">
         <button type="button" id="design-submit" class="btn btn-primary">Run simulation</button>
+
+        <div id="simulation-result">
+        <div class="alert alert-info" role="alert">
+            <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+            <span class="sr-only">Info:</span>
+            <span class="sim-text"></span>
+        </div>
+        </div>
+        <div id="visual">
+
+        </div>
     </div>
 </div>
 </div>
-
-<button type="button" class="btn btn-primary" id="create-enzyme-button">
-Create new reaction
-</button>
-<button type="button" class="btn btn-primary" id="create-metabolite-button">
-Create new metabolite
-</button>
 
 <!-- Modal -->
 <div class="modal fade" id="dialog-reaction" tabindex="-1" role="dialog" aria-labelledby="dialog-reaction-label"
@@ -1460,28 +1449,6 @@ Create new metabolite
 <div id="progressbar"></div>
 </div>
 
-<img src="{% static "public/img/add.png" %}" id="add-enzyme-button" class="hoverable" alt="Add"/>
-
-<div class="cyano-design-objective">
-    Design objective: <input id="cyano-design-objective-select"></select>
-</div>
-
-<input type="submit" id="design-save" value="Save">
-
-
-<div class="cyano-design-submit">
-<h1 class="ui-widget-header">Start simulation</h1>
-<input type="submit" id="design-submit" value="Simulate">
-</div>
-
-<h1 class="ui-widget-header">Results</h1>
-
-<div id="simulation-result">
-
-</div>
-<div id="visual">
-
-</div>
-</div>
+<input type="submit" id="design-save" class="btn btn-primary" value="Save">
 
 {% endblock %}

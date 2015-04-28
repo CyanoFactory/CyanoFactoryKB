@@ -8,7 +8,7 @@ from collections import OrderedDict
 
 import re
 
-class OptGeneParser:
+class OptGeneParser(object):
     """
     Parses the specified OptGene file.
     
@@ -95,6 +95,7 @@ class OptGeneParser:
         for reac in self.reactions:
             if reac is value:
                 self._objective = value
+                return
 
         raise ValueError("Objective not in model: " + value.name)
 
