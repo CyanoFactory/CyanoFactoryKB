@@ -13,12 +13,15 @@ Last updated: 2012-07-17
 {% block page_title %}Logout{% endblock %}
 {% block action_icons %}{% endblock %}
 
-{% block extrastyles %}
-h1, #content{
-	text-align:center;
-}
+
+{% block head %}
+{{ block.super }}
+<meta http-equiv="refresh" content="1; URL={% url "cyano.views.index" %}">
+
 {% endblock %}
 
 {% block content %}
+<div class="col-md-6">
 You have successfully logged out.
+</div>
 {% endblock %}

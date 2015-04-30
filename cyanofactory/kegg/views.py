@@ -7,7 +7,7 @@ Released under the MIT license
 
 import kegg.models as models
 from kegg.helpers import get_reaction_map, request_extract, items_to_quoted_string
-from cyano.decorators import ajax_required
+from cyano.decorators import ajax_required, permission_required
 from cyano.helpers import render_queryset_to_response
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
@@ -15,11 +15,8 @@ from django.contrib.auth.decorators import login_required
 from django.db.models.query_utils import Q
 
 
-@login_required
+@permission_required("access_kegg")
 def index(request):
-    from itertools import groupby
-    from collections import OrderedDict
-
     items, enzymes, metabolites = request_extract(request)
 
     ecs = map(lambda x: x[0], enzymes)
@@ -39,17 +36,19 @@ def index(request):
             query |= Q(ec_numbers__name__in=ecs)
 
     if query is not None:
-        kegg_maps = models.Map.objects.filter(query).order_by("-overview", "name").distinct()
+        kegg_maps = models.Map.objects.filter(query).distinct()
     else:
-        kegg_maps = models.Map.objects.all().order_by("-overview", "name")
+        kegg_maps = models.Map.objects.all()
 
-    groups = OrderedDict((k, list(v)) for k, v in groupby(kegg_maps, lambda x: x.overview))
+    overview = filter(lambda x: x.overview, kegg_maps)
+    other = filter(lambda x: not x.overview, kegg_maps)
 
     return render_queryset_to_response(
         request=request,
         template="kegg/index.html",
         data={
-            'groups': groups,
+            'overview_maps': overview,
+            'other_maps': other,
             'quote': items_to_quoted_string(items),
             'items': items,
             'queries': models.Query.objects.filter(user=request.user.profile),
@@ -57,10 +56,17 @@ def index(request):
     )
 
 
-@login_required
+@permission_required("access_kegg")
 def map_view(request, map_id):
+    export = "export_button" in request.POST
+
     items, enzymes, metabolites = request_extract(request)
-    map_data = get_reaction_map(map_id, enzymes, metabolites, items)
+    map_data = get_reaction_map(map_id, enzymes, metabolites, export)
+
+    if export:
+        response = HttpResponse(map_data, content_type='image/svg+xml')
+        response['Content-Disposition'] = 'attachment; filename={}.svg'.format(map_id)
+        return response
 
     return render_queryset_to_response(
         request=request,
@@ -78,19 +84,19 @@ def map_view(request, map_id):
 
 
 @ajax_required
-@login_required
+@permission_required("access_kegg")
 def index_ajax(request):
     import json
 
-    pk = request.GET.get("pk", 0)
-    op = request.GET.get("op", "")
+    pk = request.POST.get("pk", 0)
+    op = request.POST.get("op", "")
 
     if not op in ["load", "delete", "save"]:
         return HttpResponseBadRequest("Invalid op")
 
     if op == "save":
-        name = request.GET.get("name", "")
-        query = request.GET.get("query", "")
+        name = request.POST.get("name", "")
+        query = request.POST.get("query", "")
 
         if all(len(x) == 0 for x in [name, query]):
             return HttpResponseBadRequest("Invalid name or query")

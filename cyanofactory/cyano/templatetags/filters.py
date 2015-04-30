@@ -37,6 +37,3 @@ def getattribute(value, arg):
         from django.conf import settings
         return settings.TEMPLATE_STRING_IF_INVALID
 
-@register.filter(name='get_absolute_url')
-def getabsoluteurlwithspecies(value, species):
-    return value.get_absolute_url(species)

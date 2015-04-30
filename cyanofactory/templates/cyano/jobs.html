@@ -29,20 +29,27 @@ Released under the MIT license
 {% endblock %}
 
 {% block content %}
-<table id="detail">
 
 {% if running|length > 0 %}
-<tbody class="data">
-	<tr>
-		<th colspan="3">Running jobs</th>
-	</tr>
+<div class="panel panel-default">
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th colspan="3">Running jobs</th>
+        </tr>
+    </thead>
+	<tbody>
 {% endif %}
 
 {% for object in running %}
 <tr>
-	<th colspan="2"><progress max="{{ object.total }}" value="{{ object.current }}" style="width:99%;">
-				<strong>Progress: {{ object.current }} of {{ object.total }} done.</strong>
-		</progress>
+	<th colspan="2">
+        <div class="progress">
+          <div class="progress-bar" role="progressbar" aria-valuenow="{{ object.current }}"
+          aria-valuemin="0" aria-valuemax="{{ object.total }}"  style="width: {% widthratio object.current object.total 100 %}%;">
+            {% widthratio object.current object.total 100 %} %
+          </div>
+        </div>
 	</th>
 	<td>{{ object.message }}</td>
 </tr>
@@ -50,16 +57,19 @@ Released under the MIT license
 
 {% if running|length > 0 %}
 </tbody>
-<tbody class="spacing">
-	<tr><td colspan="3">&nbsp;</td></tr>
-</tbody>
+</table>
+</div>
 {% endif %}
 
 {% if pending|length > 0 %}
-<tbody class="data">
-	<tr>
-		<th colspan="3">Pending jobs</th>
-	</tr>
+<div class="panel panel-default">
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th colspan="3">Pending jobs</th>
+        </tr>
+    </thead>
+	<tbody>
 {% endif %}
 
 {% for object in pending %}
@@ -70,21 +80,24 @@ Released under the MIT license
 
 {% if pending|length > 0 %}
 </tbody>
-<tbody class="spacing">
-	<tr><td colspan="3">&nbsp;</td></tr>
-</tbody>
+</table>
+</div>
 {% endif %}
 
 {% if finished|length > 0 %}
-<tbody class="data">
-	<tr>
-		<th colspan="3">Finished jobs</th>
-	</tr>
+<div class="panel panel-default">
+<table class="table">
+    <thead>
+        <tr>
+            <th colspan="3">Finished jobs</th>
+        </tr>
+    </thead>
+	<tbody>
 {% endif %}
 
 {% for object in finished %}
-	<tr>
-		<th>{{ object.status|title }}</td>
+	<tr class="{% if object.status == "FAILURE" %}danger{% else %}success{% endif %}">
+		<th>{{ object.status|title }}</th>
 		<td>{{ object.date_done }}</td>
 		<td>{{ object.result.message }}{% if object.status == "FAILURE" %} ({{ object.result.result }}){% endif %}</td>
 	</tr>
@@ -92,8 +105,9 @@ Released under the MIT license
 
 {% if finished|length > 0 %}
 </tbody>
-{% endif %}
 </table>
+</div>
+{% endif %}
 
-<div style="clear:both;"></div>
 {% endblock %}
+

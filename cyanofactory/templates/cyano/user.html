@@ -29,11 +29,15 @@ Released under the MIT license
 
 {% block content %}
 {% with user=queryset.0.user profile=queryset.0 %}
-<table id="detail">
-	<tbody class="data">
-		<tr>
-			<th colspan="2">Bio</th>
-		</tr>
+
+<div class="panel panel-default">
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th colspan="2">Bio</th>
+        </tr>
+    </thead>
+	<tbody>
 		<tr>
 			<th>Name</th>
 			<td>{{ user.first_name }} {{ user.last_name }}</td>
@@ -43,13 +47,17 @@ Released under the MIT license
 			<td>{{ profile.affiliation }}</td>
 		</tr>
 	</tbody>
-	<tbody class="spacing">
-		<tr><td colspan="2">&nbsp;</td></tr>
-	</tbody>
-	<tbody class="data">
-		<tr>
-			<th colspan="2">Contact info</th>
-		</tr>
+</table>
+</div>
+
+<div class="panel panel-default">
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th colspan="2">Contact info</th>
+        </tr>
+    </thead>
+	<tbody>
 		<tr>
 			<th>Website</th>
 			<td><a href="{{ profile.get_website }}">{{ profile.website }}</a></td>
@@ -66,14 +74,18 @@ Released under the MIT license
 			<th>Address</th>
 			<td>{{ profile.address }}, {{ profile.city }} {{ profile.state }} {{ profile.zip }} {{ profile.country }}</td>
 		</tr>
-	</tbody>	
-	<tbody class="spacing">
-		<tr><td colspan="2">&nbsp;</td></tr>
 	</tbody>
-	<tbody class="data">
-		<tr>
-			<th colspan="2">Account</th>
-		</tr>
+</table>
+</div>
+
+<div class="panel panel-default">
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th colspan="2">Account</th>
+        </tr>
+    </thead>
+	<tbody>
 		<tr>
 			<th>User</th>
 			<td>{{ user.username }}</td>
@@ -83,14 +95,18 @@ Released under the MIT license
 			<td>{{ user.date_joined|date:"Y-m-d" }}</td>
 		</tr>
 	</tbody>
-	{% if request.user == user or request.user.profile.is_admin %}
-	<tbody class="spacing">
-		<tr><td colspan="2">&nbsp;</td></tr>
-	</tbody>
-	<tbody class="data">
-		<tr>
-			<th colspan="2">Group Membership</th>
-		</tr>
+</table>
+</div>
+
+{% if request.user == user or request.user.profile.is_admin %}
+<div class="panel panel-default">
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th colspan="2">Group Membership</th>
+        </tr>
+    </thead>
+	<tbody>
 		{% for group_profile in profile.get_groups %}
 		{% with group=group_profile.group %}
 		<tr>
@@ -100,7 +116,9 @@ Released under the MIT license
 		{% endwith %}
 		{% endfor %}
 	</tbody>
-	{% endif %}
 </table>
+</div>
+{% endif %}
+
 {% endwith %}
 {% endblock %}

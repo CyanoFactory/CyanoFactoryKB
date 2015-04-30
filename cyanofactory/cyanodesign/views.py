@@ -10,14 +10,17 @@ from collections import OrderedDict
 import json
 import os
 import tempfile
+from crispy_forms.utils import render_crispy_form
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import redirect
+from django.template.context import RequestContext
 from django.views.decorators.csrf import ensure_csrf_cookie
+from jsonview.decorators import json_view
 from networkx.algorithms.shortest_paths.generic import has_path, shortest_path, all_shortest_paths
 from networkx.exception import NetworkXNoPath
-from cyano.decorators import ajax_required
+from cyano.decorators import ajax_required, permission_required
 from PyNetMet.metabolism import *
 from PyNetMet.fba import *
 from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error
@@ -31,20 +34,23 @@ import math
 import pygraphviz
 import json
 
-@login_required
+
+@permission_required("access_cyanodesign")
 def index(request):
+    upload_form = UploadModelForm(None)
+
     models = DesignModel.objects.filter(user=request.user.profile)
 
     return render_queryset_to_response(
         request,
         template="cyanodesign/list.html",
         queryset=models,
-        data={}
+        data={'upload_form': upload_form}
     )
 
 
-@login_required
 @ensure_csrf_cookie
+@permission_required("access_cyanodesign")
 def design(request, pk):
     try:
         item = DesignModel.objects.get(user=request.user.profile, pk=pk)
@@ -56,8 +62,8 @@ def design(request, pk):
     return render_queryset_to_response(request, template="cyanodesign/design.html", data=data)
 
 
-@login_required
 @ajax_required
+@permission_required("access_cyanodesign")
 def get_reactions(request, pk):
     #model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model.txt")
 
@@ -96,8 +102,9 @@ def get_reactions(request, pk):
         "objective": org.objective.name if org.objective else None,
         "graph": outgraph}), content_type="application/json")
 
-@login_required
+
 @ajax_required
+@permission_required("access_cyanodesign")
 def simulate(request, pk):
     if not all(x in request.POST for x in ["commands", "disabled", "objective", "display", "auto_flux"]):
         return HttpResponseBadRequest("Request incomplete")
@@ -211,9 +218,16 @@ def simulate(request, pk):
     graph.node_attr.update(style="filled", colorscheme="pastel19")
     outgraph = str(graph.to_string())
 
-    return HttpResponse(outgraph)
+    return HttpResponse(json.dumps(
+        {"graph": outgraph,
+        "fluxes": map(lambda x: [x.name, x.flux], org.reactions),
+        "solution": org.solution
+        }),
+        content_type="application/json"
+    )
 
-@login_required
+
+@permission_required("access_cyanodesign")
 def export(request, pk):
     try:
         model = DesignModel.objects.get(user=request.user.profile, pk=pk)
@@ -231,8 +245,8 @@ def export(request, pk):
     return response
 
 
-@login_required
 @ajax_required
+@permission_required("access_cyanodesign")
 def save(request, pk):
     if not all(x in request.POST for x in ["commands", "disabled", "objective"]):
         return HttpResponseBadRequest("Request incomplete")
@@ -287,7 +301,8 @@ def save(request, pk):
     return HttpResponse("OK")
 
 
-@login_required
+@permission_required("access_cyanodesign")
+@json_view
 def upload(request):
     data = {}
 
@@ -323,11 +338,15 @@ def upload(request):
                 content=ss.getvalue()
             )
 
-            return redirect("cyano-design-index")
+            return {'success': True}
+        else:
+            form_html = render_crispy_form(form, context=RequestContext(request))
+            return {'success': False, 'form_html': form_html}
 
     return HttpResponseBadRequest()
 
-@login_required
+
+@permission_required("access_cyanodesign")
 @ajax_required
 def delete(request):
     pk = request.POST.get("id", 0)
@@ -415,12 +434,10 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
     reactions = filter(lambda x: not x.disabled, fluxResults.reactions)
     for reaction in reactions:
         if not reaction.name.endswith("_transp"):
-            changeDic[reaction.name] = reaction.flux
+            changeDic[reaction.name] = float('%.3g' % reaction.flux)
 
     g = json_graph.node_link_graph(jsonGraph)
     vList = changeDic.values()
-    while 0 in vList:
-        vList.remove(0)
 
     for i in xrange(len(vList)):
         vList[i] = math.sqrt(math.pow(vList[i], 2))
@@ -460,4 +477,3 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
             g.edge[aEdge[0]][aEdge[1]]["label"] = value
 
     return g
-

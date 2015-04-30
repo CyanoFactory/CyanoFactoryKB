@@ -14,7 +14,7 @@ Released under the MIT license
 {% endcomment %}
 
 {% load templatetags %}
-{% load widget_tweaks %}
+{% load crispy_forms_tags %}
 
 {% block head_title %}{{ block.super }} :: Import{% endblock %}
 {% block page_title %}Import data{% endblock %}
@@ -65,75 +65,5 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block content %}
-<form id="form" name="importData" action="{% if species %}{% url "cyano.views.importData" species_wid=species.wid %}{% else %}{% url "cyano.views.importData" %}{% endif %}" method="post" enctype="multipart/form-data">
-	{% csrf_token %}
-	
-	{% if success %}
-	<div class="block" id="{{ success|yesno }}" style="position:relative;">
-		<div class="close_box">X</div>
-		<h1>{{ success|yesno:"Success,Error,Maybe"}}</h1>
-		<div class="content" style="width:340px;">
-		{{ message }}
-		</div>
-	</div>
-	{% endif %}
-	
-	<noscript>
-	<div class="block">
-	<h1>Enable javascript</h1>
-	<div class="errors">
-	For a better experience enabling javascript is recommended
-	</div>
-	</div>
-	</noscript>
-	
-	<div class="block">
-		<h1>Select {{ form.species.label }}</h1>
-		<div class="content" style="width:340px;">
-		{% if species %}
-		<b>{{ species.name }}</b> <a href="{% url "cyano.views.importData" %}" title="Change species">(change)</a>
-		{% else %}
-		{% render_field form.species class+="select" style+="width:300px" %}
-		{% if form.species.errors|length > 0 %}<div class="errors">{{ form.species.errors|join:" " }}</div>{% endif %}
-		<br/>
-		{% endif %}
-		</div>
-	</div>
-	
-	<div class="block">
-		<h1>Select {{ form.data_type.label }}</h1>
-		<div class="content">
-			{% render_field form.data_type %}
-			{% if form.data_type.errors|length > 0 %}<div class="errors">{{ form.data_type.errors|join:" " }}</div>{% endif %}
-		</div>
-	</div>
-	
-	<div class="block" id="genbank">
-		<h1>Provide additional information for GenBank</h1>
-		<div class="content" style="width:340px;">
-			{{ form.chromosome.label_tag }}{% render_field form.chromosome class+="text" style+="width:300px" %}<br/>
-			{% if form.chromosome.errors|length > 0 %}<div class="errors">{{ form.chromosome.errors|join:" " }}</div>{% endif %}
-			{{ form.chromosome_wid.label_tag }}{% render_field form.chromosome_wid class+="text" style+="width:300px" %}
-			{% if form.chromosome_wid.errors|length > 0 %}<div class="errors">{{ form.chromosome_wid.errors|join:" " }}</div>{% endif %}
-		</div>
-	</div>
-	
-	<div class="block">
-		<h1>Select {{ form.file.label }}</h1>
-		<div class="content">
-			{% render_field form.file class+="file" %}
-			{% if form.file.errors|length > 0 %}<div class="errors">{{ form.file.errors|join:" " }}</div>{% endif %}
-		</div>
-	</div>
-	
-	<div class="block">
-		<h1>{{ form.reason.label }}</h1>		
-		<div class="content">
-			{% render_field form.reason class+="text" style+="width:600px" %}
-			{% if form.reason.errors|length > 0 %}<div class="errors">{{ form.reason.errors|join:" " }}</div>{% endif %}
-		</div>
-	</div>
-	
-	<input class="button" type="submit" value="Submit" />
-</form>
+{% crispy form %}
 {% endblock %}

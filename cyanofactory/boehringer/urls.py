@@ -9,5 +9,5 @@ from django.conf.urls import patterns, url
 urlpatterns = patterns('boehringer.views',
     url(r'^$', 'index'),
     url(r'^ajax/$', 'index_ajax'),
-    url(r'^legacy/$', 'legacy')
+    url(r'^legacy/$', 'legacy'),
 )

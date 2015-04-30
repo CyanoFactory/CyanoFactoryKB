@@ -12,6 +12,7 @@ Released under the MIT license
 {% load static %}
 {% load templatetags %}
 {% load filters %}
+{% load crispy_forms_tags %}
 
 {% block head_title %}{{ block.super }} :: {{ basket.name }}{% endblock %}
 {% block page_title %}Basket &ndash; <span class="inline-edit">{{ basket.name }}</span>{% endblock %}
@@ -19,30 +20,52 @@ Released under the MIT license
 {% block head %}
 {{ block.super }}
 
-<script src="{% static "cyano" %}/js/jquery.jeditable.js"></script>
 <script>
 $(document).ready(function() {
-     var basket = "{{ basket.pk }}";
+    var dialog_rename = $("#dialog-rename");
 
-     $('.inline-edit').editable('{% url "cyano-basket-op" %}', {
-         submit : 'OK',
-         cancel : 'Cancel',
-         name: 'wid',
-         width: 200,
-         submitdata : function(value, settings) {
-             return {id: basket, op: "rename"}
-         }
+    var table = $('#new_list').DataTable({
+        columnDefs: [
+            {
+                "targets": [0, 1],
+                "createdCell": function (td, cellData, rowData, row, col) {
+                    $(td).wrapInner($("<a></a>").attr("href", $($(td).parent()).data("url")));
+                }
+            },
+            {
+                "targets": 2,
+                "searchable": false,
+                "orderable": false,
+            }]
     });
 
-    $('.inline-edit').hover(function() {
-        if ($(this).children().length == 0) {
-            $(this).addClass("highlight-border");
-        }
-    }, function() {
-        $(this).removeClass("highlight-border");
+    dialog_rename.on("click", ".btn-primary", function () {
+        var form = $("#dialog-rename").find("form");
+
+        $.ajax({
+            url: "{% url 'cyano-basket-rename-save-form' basket_id=basket.pk %}",
+            type: "POST",
+            data: new FormData(form[0]),
+            processData: false,
+            contentType: false,
+            success: function(data) {
+                if (!(data['success'])) {
+                    form.replaceWith(data['form_html']);
+                }
+                else {
+                    location.reload();
+                }
+            },
+            beforeSend: function() {
+                waitIndicator.show($("#dialog-rename").find(".modal-content"));
+            },
+            complete: function() {
+                waitIndicator.hide($("#dialog-rename").find(".modal-content"));
+            }
+        });
     });
 
-	$("table#list").on("click", ".delete-button", function (event) {
+	$("table#new_list").on("click", ".delete-button", function (event) {
         event.preventDefault();
 
         var target = $(event.target);
@@ -50,74 +73,30 @@ $(document).ready(function() {
 
         $.ajax({
             type: "POST",
-            url: parent.data("url"),
+            url: parent.data("op-url"),
             context: document.body,
-            data: { "id": basket, "wid": parent.data("pk"), "op": "remove" }
+            data: { "id": {{ basket.pk }}, "wid": parent.data("pk"), "op": "remove" }
         });
 
-        parent.fadeOut(200, function() { $(this).remove(); });
+        parent.fadeOut(200, function() { table.row(parent).remove().draw(); });
+    });
+
+    $("#button-rename").click(function() {
+        $("#dialog-rename").find("#id_name").val("{{ basket.name }}");
     });
 });
 </script>
 {% endblock %}
 
 {% block action_icons_export %}
-<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download {{ basket.name }} in Excel format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download {{ basket.name }} in JSON format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download {{ basket.name }} in XML format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}">Download {{ basket.name }} in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}">Download {{ basket.name }} in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}">Download {{ basket.name }} in XML format</a></li>
 {{ block.super }}
 {% endblock %}
 
-{% block extrastyles %}
-#list{
-	width:100%;
-    position: relative;
-}
-#detail tbody.data tr td:nth-child(1){
-	width:3%;
-}
-#detail tbody.data tr td:nth-child(2n){
-	width:15%;
-}
-#detail tbody.data tr td:nth-child(3){
-	width:60%;
-}
-
-#detail a {
-	color: rgb(34, 34, 34);
-}
-
-#listfilter .nofilters{
-	font-style:italic;
-	text-align:center;
-}
-
-#listfilter{
-	display:none;
-}
-
-#sidebar {
-	position:absolute;
-	right: -200px;
-	width: 200px;
-	margin: 0px -30px;
-	padding: 10px 10px;
-	border: 5px;
-	border:1px solid #3d80b3;
-	border-radius: 8px;
-    color: black;
-    font-weight: normal;
-}
-#search_box {
-	width: 100%;
-	border:1px solid #3d80b3;
-	border-radius:6px;
-}
-{% endblock %}
-
 {% block content %}
-<table id="list">
-<thead>
+<table id="new_list" class="table table-striped table-hover"><thead>
 	<tr>
 		<th>
             WID
@@ -131,12 +110,13 @@ $(document).ready(function() {
 {% with object=component.component %}
 {% with species_wid=component.species.wid %}
 {% with model_type=object.get_model.model_name %}
-<tr data-pk="{{ object.pk }}" data-url="{% url "cyano-basket-op" species_wid=species_wid %}">
-	<th><a href="{% url "cyano.views.detail" species_wid=species_wid model_type=model_type wid=object.wid %}">{{ object.wid }}</a></th>
-	<td><a href="{% url "cyano.views.detail" species_wid=species_wid model_type=model_type wid=object.wid %}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
+{% url "cyano.views.detail" species_wid=species_wid model_type=model_type wid=object.wid as detail_url %}
+<tr data-pk="{{ object.pk }}" data-op-url="{% url "cyano-basket-op" species_wid=species_wid %}" data-url="{{ detail_url }}">
+	<th>{{ object.wid }}</th>
+	<td>{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</td>
 	<td>
 		{% comment %}<a href="{% url "cyano.views.edit" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}" title="Edit entry"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>{% endcomment %}
-		<a href="#" class="delete-button" title="Delete from cart"><img src="{% get_static_prefix %}public/img/delete.png"/></a>
+        <div class="btn-group" role="group"><a class='btn btn-default btn-xs delete-button'>Delete</a></div>
 	</td>
 </tr>
 {% endwith %}
@@ -145,5 +125,18 @@ $(document).ready(function() {
 {% endfor %}
 </tbody>
 </table>
+
+<button id="button-rename" type="button" class="btn btn-primary" data-toggle="modal" data-target="#dialog-rename">
+Rename basket
+</button>
+
+<!-- Modal -->
+<div class="modal fade" id="dialog-rename" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            {% crispy rename_form %}
+        </div>
+    </div>
+</div>
 
 {% endblock %}

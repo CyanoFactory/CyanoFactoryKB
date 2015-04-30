@@ -17,9 +17,9 @@ Released under the MIT license
 {% load templatetags %}
 
 {% block action_icons_edit %}
-<li><a href="{% url "cyano.views.edit" species_wid=species.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" />Edit {{ species.wid }}</a></li>
-<li><a href="{% url "cyano.views.delete" species_wid=species.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" />Delete {{ species.wid }}</a></li>
-<li><a href="{% url "cyano.views.permission" species_wid=species.wid %}"><img src="{% get_static_prefix %}public/img/lock.png" title="View permissions" alt="View permissions" />View permissions of {{ species.wid }}</a></li>
+<li><a href="{% url "cyano.views.edit" species_wid=species.wid %}">Edit {{ species.wid }}</a></li>
+<li><a data-toggle="modal" href="{% url 'cyano.views.delete' species_wid=species.wid %}" data-target="#delete-form">Delete {{ species.wid }}</a></li>
+<li><a href="{% url "cyano.views.permission" species_wid=species.wid %}">View permissions of {{ species.wid }}</a></li>
 {{ block.super }}
 {% endblock %}
 
@@ -93,351 +93,40 @@ Released under the MIT license
 <p><a href="http://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi/#SG{{ species.genetic_code }}">{{ species.genetic_code|get_genetic_code_name }} ({{ species.genetic_code }})</a></p>
 
 <h2>Content</h2>
-<table class="content">
-<thead>
-	<tr>
-	{% for tmp in content %}
-		<th>Content</th>
+
+{% for item in content %}
+	<div style="overflow:hidden" class="col-xs-6 col-sm-4 col-md-4 col-lg-3">
+        <table class="table">
+        <thead>
+        	<tr>
+        		<th>Content</th>
 		<th>Value</th>
-		<th>Units</th>
-		<th>&nbsp;</th>
-	{% endfor %}
-	</tr>
-</thead>
-<tbody>
-{% for tmp in contentRows %}
-	<tr>
-		{% for tmp2 in content %}
-		{% if tmp2|length > forloop.parentloop.counter0 %}		
-			{% with val=tmp2|getattribute:forloop.parentloop.counter0 %}
-			<td class="
-				{% if forloop.parentloop.counter0 < tmp2|length and val.0|divisibleby:2 %}even {% endif %}
-				{% if forloop.parentloop.counter0 == tmp2|length|add:-1 %}last-row {% endif %}
-				" 
-				style="{% if val.1 == 0 %}font-weight:bold;{% else %}padding-left:{{ val.1|multiply:12 }}px;{% endif %}">{% if val.5 %}
+        </tr>
+        </thead>
+        <tbody>
+		{% for val in item %}
+            <tr class="cyano-grey{% if val.0|divisibleby:2 %}2{% else %}1{% endif %}">
+			<td style="{% if val.1 == 0 %}font-weight:bold;{% else %}padding-left:{{ val.1|multiply:12 }}px;{% endif %}">{% if val.5 %}
 				<a href="{{ val.5 }}">{% autoescape off %}{{ val.2 }}{% endautoescape %}</a>
 				{% else %}
 				{% autoescape off %}{{ val.2 }}{% endautoescape %}
 				{% endif %}
 			</td>
-			<td class="
-				{% if forloop.parentloop.counter0 < tmp2|length and val.0|divisibleby:2 %}even {% endif %}
-				{% if forloop.parentloop.counter0 == tmp2|length|add:-1 %}last-row {% endif %}
-				">{{ val.3|default_if_none:'&nbsp;' }}</td>
-			<td class="
-				{% if forloop.parentloop.counter0 < tmp2|length and val.0|divisibleby:2 %}even {% endif %}
-				{% if forloop.parentloop.counter0 == tmp2|length|add:-1 %}last-row {% endif %}"
-				>{{ val.4|default_if_none:'&nbsp;' }}</td>
-			<td>&nbsp;</td>
-			{% endwith %}
-		{% else %}
-			<td class="after-last-row">&nbsp;</td>
-			<td class="after-last-row">&nbsp;</td>
-			<td class="after-last-row">&nbsp;</td>
-			<td class="after-last-row">&nbsp;</td>
-		{% endif %}		
+			<td>{{ val.3|default_if_none:'&nbsp;' }} {{ val.4|default_if_none:'' }}</td>
+            </tr>
 		{% endfor %}
-	</tr>	
+        </tbody>
+        </table>
+	</div>
 {% endfor %}
-</tbody>
-</table>
-{% comment %}
-<h2>Data sources</h2>
-<script language="javascript" type="text/javascript">
-$(document).ready(function (){		
-	//type
-	var sources_types = [
-		{% for type in sources.types %}
-			{label: '{{ type.type }}', data: {{ type.count }}},
-		{% endfor %}
-	];	
-	$.plot($('#sources_types').find('div'), sources_types, {
-		series: {
-            pie: { 
-                show: true,
-				radius: 1,
-				startAngle: 2,
-                label: {
-					show: true,
-					radius: 2/3,
-					formatter: function(label, series){
-						return '<div class="tickLabel" style="text-align:center; width:90px;">'+label+'<div style="margin-top:4px;">('+series.data[0][1]+', '+series.percent.toFixed(1)+'%)</div></div>';
-					},
-                },
-				stroke:{
-					width:1e-6,
-				},
-				offset: {
-					top: 0,
-					left: 0,
-				},
-				combine: {
-					threshold: 0.05,
-				},
-            }
-        },
-		legend: {
-			show: false,
-		},
-	});
-	
-	//parameter evidence	
-	var sources_evidence_parameters = [
-		{% for type in sources.evidence_parameters %}
-			{label: '{{ type.type }}', data: {{ type.count }}},
-		{% endfor %}
-	];
-	sources_evidence_parameters.reverse();
-	$.plot($('#sources_evidence_parameters').find('div'), sources_evidence_parameters, {
-		series: {
-            pie: { 
-                show: true,
-				radius: 1,
-				startAngle: 2,
-                label: {
-					show: true,
-					radius: 2/3,
-					formatter: function(label, series){
-						return '<div class="tickLabel" style="text-align:center; width:90px;">'+label+'<div style="margin-top:4px;">('+series.percent.toFixed(1)+'%)</div></div>';
-					},
-                },
-				stroke:{
-					width:1e-6,
-				},
-				offset: {
-					top: 0,
-					left: 0,
-				},
-				combine: {
-					threshold: 0.05,
-				},
-            }
-        },
-		legend: {
-			show: false,
-		},
-	});
-	
-	//evidence, by species
-	var sources_evidence_species = [
-		{% for species in sources.evidence_species %}
-			{label: '{{ species.species|default_if_none:"N/A" }}', data: {{ species.count }}},
-		{% endfor %}
-	];
-	sources_evidence_species.reverse();
-	$.plot($('#sources_evidence_species').find('div'), sources_evidence_species, {
-		series: {
-            pie: { 
-                show: true,
-				radius: 1,
-				startAngle: 2,
-                label: {
-					show: true,
-					radius: 2/3,
-					formatter: function(label, series){
-						return '<div class="tickLabel" style="text-align:center; width:90px;"><i>'+label+'</i><div style="margin-top:4px;">('+series.percent.toFixed(1)+'%)</div></div>';
-					},
-                },
-				stroke:{
-					width:1e-6,
-				},
-				offset: {
-					top: 0,
-					left: 0,
-				},
-				combine: {
-					threshold: 0.05,
-				},
-            }
-        },
-		legend: {
-			show: false,
-		},
-	});
-	
-	//evidence, by media
-	var sources_evidence_media = [
-		{% for media in sources.evidence_media %}
-			{label: '{{ media.media|default_if_none:"N/A" }}', data: {{ media.count }}},
-		{% endfor %}
-	];
-	sources_evidence_media.reverse();
-	$.plot($('#sources_evidence_media').find('div'), sources_evidence_media, {
-		series: {
-            pie: { 
-                show: true,
-				radius: 1,
-				startAngle: 2,
-                label: {
-					show: true,
-					radius: 2/3,
-					formatter: function(label, series){
-						return '<div class="tickLabel" style="text-align:center; width:90px;">'+label+'<div style="margin-top:4px;">('+series.percent.toFixed(1)+'%)</div></div>';
-					},
-                },
-				stroke:{
-					width:1e-6,
-				},
-				offset: {
-					top: 0,
-					left: 0,
-				},
-				combine: {
-					threshold: 0.05,
-				},
-            }
-        },
-		legend: {
-			show: false,
-		},
-	});
-	
-	//evidence, by pH
-	var sources_evidence_pH = [
-		{% for pH in sources.evidence_pH %}
-			{label: '{{ pH.pH|default_if_none:"N/A" }}', data: {{ pH.count }}},
-		{% endfor %}
-	];
-	sources_evidence_pH.reverse();
-	$.plot($('#sources_evidence_pH').find('div'), sources_evidence_pH, {
-		series: {
-            pie: { 
-                show: true,
-				radius: 1,
-				startAngle: 2,
-                label: {
-					show: true,
-					radius: 2/3,
-					formatter: function(label, series){
-						return '<div class="tickLabel" style="text-align:center; width:90px;">'+label+'<div style="margin-top:4px;">('+series.percent.toFixed(1)+'%)</div></div>';
-					},
-                },
-				stroke:{
-					width:1e-6,
-				},
-				offset: {
-					top: 0,
-					left: 0,
-				},
-				combine: {
-					threshold: 0.05,
-				},
-            }
-        },
-		legend: {
-			show: false,
-		},
-	});
-	
-	//evidence, by temperature
-	var sources_evidence_temperature = [
-		{% for temperature in sources.evidence_temperature %}
-			{label: '{{ temperature.temperature|default_if_none:"N/A" }}', data: {{ temperature.count }}},
-		{% endfor %}
-	];
-	sources_evidence_temperature.reverse();
-	$.plot($('#sources_evidence_temperature').find('div'), sources_evidence_temperature, {
-		series: {
-            pie: { 
-                show: true,
-				radius: 1,
-				startAngle: 2,
-                label: {
-					show: true,
-					radius: 2/3,
-					formatter: function(label, series){
-						return '<div class="tickLabel" style="text-align:center; width:90px;">'+label+'<div style="margin-top:4px;">('+series.percent.toFixed(1)+'%)</div></div>';
-					},
-                },
-				stroke:{
-					width:1e-6,
-				},
-				offset: {
-					top: 0,
-					left: 0,
-				},
-				combine: {
-					threshold: 0.05,
-				},
-            }
-        },
-		legend: {
-			show: false,
-		},
-	});
-	
-	//date	
-	var sources_dates = [{
-		label: 'dates',
-		data: [{% for date in sources.dates %}[{{ date.year }}, {{ date.count }}]{% if not forloop.last %},{% endif %}{% endfor %}],	
-	}];
-	$.plot($('#sources_dates'), sources_dates, {	
-		series: {
-			lines: {
-				show:true,
-				lineWidth: 2,
-			},
-		},
-		xaxis:{
-			tickLength: 3,
-			labelHeight: 4,	
-			autoscaleMargin: 0.01,
-			axisLabel: 'Year',
-			axisLabelUseCanvas: false,
-			axisLabelPadding: 8,
-			color: '#222',
-			tickColor: '#222',
-		},
-		yaxis:{
-			tickLength: 3,			
-			axisLabel: 'No. references',
-			axisLabelUseCanvas: false,
-			axisLabelPadding: 2,
-			color: '#222',
-			tickColor: '#222',
-		},
-		grid: {
-			show: true,
-			labelMargin: 0,
-		},
-		legend: {
-			show: false,
-		},
-	});
-})
-</script>
-<div>
-	<div id="sources_types" style="float:left; width:253px; margin:10px 20px 10px 0px; text-align:center;">
-		<div style="width:253px; height:250px; margin-bottom:5px;"></div>
-		<label class="axisLabels">Sources, by type</label>
-	</div>
-	<div id="sources_evidence_species" style="float:left; width:253px; margin:10px 20px 10px 0px; text-align:center;">
-		<div style="width:253px; height:250px; margin-bottom:5px;"></div>
-		<label class="axisLabels">Evidence, by species</label>
-	</div>
-	<div id="sources_evidence_media" style="float:left; width:253px; margin:10px 0px 10px 0px; text-align:center;">
-		<div style="width:253px; height:250px; margin-bottom:5px;"></div>
-		<label class="axisLabels">Evidence, by media</label>
-	</div>
-	<div style="clear: both;"></div>
-	
-	<div id="sources_evidence_parameters" style="float:left; width:253px; margin:10px 20px 10px 0px; text-align:center;">
-		<div style="width:253px; height:250px; margin-bottom:5px;"></div>
-		<label class="axisLabels">Parameter evidence</label>
-	</div>
-	<div id="sources_evidence_pH" style="float:left; width:253px; margin:10px 20px 10px 0px; text-align:center;">
-		<div style="width:253px; height:250px; margin-bottom:5px;"></div>
-		<label class="axisLabels">Evidence, by pH</label>
-	</div>
-	<div id="sources_evidence_temperature" style="float:left; width:253px; margin:10px 0px 10px 0px; text-align:center;">
-		<div style="width:253px; height:250px; margin-bottom:5px;"></div>
-		<label class="axisLabels">Evidence, by temperature</label>
-	</div>
-	<div style="clear: both;"></div>
-	
-	<div id="sources_dates" style="float:left; width:100%; height:250px; margin:10px 0px 10px 0px;"></div>
+
+<div class="modal fade" id="delete-form" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+        </div>
+    </div>
 </div>
-{% endcomment %}
+
 </div>
 {% endif %}
 {% endblock %}

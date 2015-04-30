@@ -5,10 +5,11 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
+from django.template import loader
 
-import re
 import boehringer.models as models
-from cyano.decorators import ajax_required
+from boehringer.helpers import format_output
+from cyano.decorators import ajax_required, permission_required
 from cyano.helpers import render_queryset_to_response
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
@@ -21,102 +22,46 @@ def legacy(request):
     return index(request, True)
 
 
-@login_required
+@permission_required("access_boehringer")
 def index(request, legacy=None):
     """
     """
-    if not "items" in request.POST:
-        items = [["1.1.1.1", None],
-                 ["2.2.2.2", None],
-                 ["4.1.2.20", "green"],
-                 ["1.1.1.20", None],
-                 ["1.2.1.3", None],
-                 ["ascorbate", "red"]]
-    else:
-        items = []
-        for item in re.split("\s+", request.POST["items"]):
-            if len(item) == 0:
-                continue
+    data = format_output(request)
 
-            if "#" in item:
-                item = item.split("#", 2)
-                if len(item[0]) == 0:
-                    continue
-                items.append([item[0], item[1]])
-            else:
-                items.append([item, None])
-    
-    metabolite_items = []
-    enzyme_items = []
-    
-    for item in items:
-        maybe_enzyme = item[0].split(".")
-        if len(maybe_enzyme) == 4:
-            try:
-                map(lambda x: int(x), maybe_enzyme)
-                enzyme_items.append(item)
-                continue
-            except ValueError:
-                # not a valid EC number, maybe a metabolite
-                pass
-
-        metabolite_items.append(item)
-    
-    metabolites = []
-    enzymes = []
-    metabolites_hits = 0
-    for metabolite in metabolite_items:
-        hits = models.Metabolite.objects.filter(title__icontains = metabolite[0]).prefetch_related("color")
-        if hits.count() > 0:
-            metabolites_hits += 1
-            for x in hits:
-                metabolites.append([x, metabolite[1]])
-    
-    enzymes_hits = 0
-    for enzyme in enzyme_items:
-        hits = models.Enzyme.objects.filter(ec = enzyme[0]).prefetch_related("color")
-        if hits.count() > 0:
-            enzymes_hits += 1
-            for x in hits:
-                enzymes.append([x, enzyme[1]])
-
-    data = {}
-    data['items'] = items
-    data['metabolites'] = metabolites
-    data['enzymes'] = enzymes
-    data['metabolites_hits'] = metabolites_hits
-    data['enzymes_hits'] = enzymes_hits
-    data['metabolites_no_hits'] = len(metabolite_items) - metabolites_hits
-    data['enzymes_no_hits'] = len(enzyme_items) - enzymes_hits
-    data['queries'] = models.Query.objects.filter(user=request.user.profile)
+    if "export_button" in request.POST:
+        t = loader.get_template('boehringer/boehringer_svg.html')
+        c = RequestContext(request, data)
+        response = HttpResponse(t.render(c), content_type='image/svg+xml')
+        response['Content-Disposition'] = 'attachment; filename=boehringer.svg'
+        return response
 
     if legacy:
         return render_to_response(
             "boehringer/legacy.html",
             data,
-            context_instance = RequestContext(request))
+            context_instance=RequestContext(request))
     else:
         return render_queryset_to_response(
             request,
-            data = data,
-            template = "boehringer/index.html"
+            data=data,
+            template="boehringer/index.html"
         )
 
 
 @ajax_required
-@login_required
+@permission_required("access_boehringer")
 def index_ajax(request):
     import json
 
-    pk = request.GET.get("pk", 0)
-    op = request.GET.get("op", "")
+    pk = request.POST.get("pk", 0)
+    op = request.POST.get("op", "")
 
     if not op in ["load", "delete", "save"]:
         return HttpResponseBadRequest("Invalid op")
 
     if op == "save":
-        name = request.GET.get("name", "")
-        query = request.GET.get("query", "")
+        name = request.POST.get("name", "")
+        query = request.POST.get("query", "")
 
         if all(len(x) == 0 for x in [name, query]):
             return HttpResponseBadRequest("Invalid name or query")
@@ -151,4 +96,3 @@ def index_ajax(request):
     elif op == "delete":
         query.delete()
         return HttpResponse("ok")
-

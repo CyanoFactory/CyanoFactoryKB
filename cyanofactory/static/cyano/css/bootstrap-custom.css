@@ -1,0 +1,193 @@
+.navbar-custom {
+  background-color: #bbbbbb;
+  border-color: #aaaaaa;
+  background-image: -webkit-gradient(linear, left 0%, left 100%, from(#d4d4d4), to(#bbbbbb));
+  background-image: -webkit-linear-gradient(top, #d4d4d4, 0%, #bbbbbb, 100%);
+  background-image: -moz-linear-gradient(top, #d4d4d4 0%, #bbbbbb 100%);
+  background-image: linear-gradient(to bottom, #d4d4d4 0%, #bbbbbb 100%);
+  background-repeat: repeat-x;
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffd4d4d4', endColorstr='#ffbbbbbb', GradientType=0);
+}
+.navbar-custom .navbar-brand {
+  color: #3d80b3;
+}
+.navbar-custom .navbar-brand:hover,
+.navbar-custom .navbar-brand:focus {
+  color: #30658d;
+  background-color: transparent;
+}
+.navbar-custom .navbar-text {
+  color: #3d80b3;
+}
+.navbar-custom .navbar-nav > li:last-child > a {
+  border-right: 1px solid #aaaaaa;
+}
+.navbar-custom .navbar-nav > li > a {
+  color: #3d80b3;
+  border-left: 1px solid #aaaaaa;
+}
+.navbar-custom .navbar-nav > li > a:hover,
+.navbar-custom .navbar-nav > li > a:focus {
+  color: #5126cc;
+  background-color: transparent;
+}
+.navbar-custom .navbar-nav > .active > a,
+.navbar-custom .navbar-nav > .active > a:hover,
+.navbar-custom .navbar-nav > .active > a:focus {
+  color: #5126cc;
+  background-color: #aaaaaa;
+  background-image: -webkit-gradient(linear, left 0%, left 100%, from(#aaaaaa), to(#c4c4c4));
+  background-image: -webkit-linear-gradient(top, #aaaaaa, 0%, #c4c4c4, 100%);
+  background-image: -moz-linear-gradient(top, #aaaaaa 0%, #c4c4c4 100%);
+  background-image: linear-gradient(to bottom, #aaaaaa 0%, #c4c4c4 100%);
+  background-repeat: repeat-x;
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#ffaaaaaa', endColorstr='#ffc4c4c4', GradientType=0);
+}
+.navbar-custom .navbar-nav > .disabled > a,
+.navbar-custom .navbar-nav > .disabled > a:hover,
+.navbar-custom .navbar-nav > .disabled > a:focus {
+  color: #cccccc;
+  background-color: transparent;
+}
+.navbar-custom .navbar-toggle {
+  border-color: #dddddd;
+}
+.navbar-custom .navbar-toggle:hover,
+.navbar-custom .navbar-toggle:focus {
+  background-color: #dddddd;
+}
+.navbar-custom .navbar-toggle .icon-bar {
+  background-color: #ffffff;
+}
+.navbar-custom .navbar-collapse,
+.navbar-custom .navbar-form {
+  border-color: #a9a9a9;
+}
+.navbar-custom .navbar-nav > .dropdown > a:hover .caret,
+.navbar-custom .navbar-nav > .dropdown > a:focus .caret {
+  border-top-color: #5126cc;
+  border-bottom-color: #5126cc;
+}
+.navbar-custom .navbar-nav > .open > a,
+.navbar-custom .navbar-nav > .open > a:hover,
+.navbar-custom .navbar-nav > .open > a:focus {
+  background-color: #aaaaaa;
+  color: #5126cc;
+}
+.navbar-custom .navbar-nav > .open > a .caret,
+.navbar-custom .navbar-nav > .open > a:hover .caret,
+.navbar-custom .navbar-nav > .open > a:focus .caret {
+  border-top-color: #5126cc;
+  border-bottom-color: #5126cc;
+}
+.navbar-custom .navbar-nav > .dropdown > a .caret {
+  border-top-color: #3d80b3;
+  border-bottom-color: #3d80b3;
+}
+@media (max-width: 767) {
+  .navbar-custom .navbar-nav .open .dropdown-menu > li > a {
+    color: #3d80b3;
+  }
+  .navbar-custom .navbar-nav .open .dropdown-menu > li > a:hover,
+  .navbar-custom .navbar-nav .open .dropdown-menu > li > a:focus {
+    color: #5126cc;
+    background-color: transparent;
+  }
+  .navbar-custom .navbar-nav .open .dropdown-menu > .active > a,
+  .navbar-custom .navbar-nav .open .dropdown-menu > .active > a:hover,
+  .navbar-custom .navbar-nav .open .dropdown-menu > .active > a:focus {
+    color: #5126cc;
+    background-color: #aaaaaa;
+  }
+  .navbar-custom .navbar-nav .open .dropdown-menu > .disabled > a,
+  .navbar-custom .navbar-nav .open .dropdown-menu > .disabled > a:hover,
+  .navbar-custom .navbar-nav .open .dropdown-menu > .disabled > a:focus {
+    color: #cccccc;
+    background-color: transparent;
+  }
+}
+.navbar-custom .navbar-link {
+  color: #3d80b3;
+}
+.navbar-custom .navbar-link:hover {
+  color: #5126cc;
+}
+
+.table-striped>tbody>tr:nth-child(odd)>td,
+.table-striped>tbody>tr:nth-child(odd)>th {
+   background-color: #DDD;
+ }
+
+.table-striped>tbody>tr:nth-child(even)>td,
+.table-striped>tbody>tr:nth-child(even)>th {
+   background-color: #CCC;
+ }
+
+.table-hover tbody tr:hover td, .table-hover tbody tr:hover th {
+  background-color: #FFFFFF;
+}
+
+.table thead th {
+    background-color: #3d80b3 !important ;
+    color: white;
+}
+
+.table-striped tbody th {
+    width: 15%;
+}
+
+.panel-default {
+    border-color: #3d80b3;
+}
+
+.panel-default > .panel-heading {
+    color: white;
+    background: #3d80b3 none;
+}
+
+form .dropdown-menu {
+  width: 100%;
+}
+
+.dataTable thead th {
+    text-align: center;
+    background: #66a9bd;
+}
+
+.tooltip-inner {
+    max-width: 350px;
+}
+
+div.btn-group label.checkbox input {
+    opacity: 100;
+}
+
+.table > thead > tr > td.cyano-grey1,
+.table > tbody > tr > td.cyano-grey1,
+.table > tfoot > tr > td.cyano-grey1,
+.table > thead > tr > th.cyano-grey1,
+.table > tbody > tr > th.cyano-grey1,
+.table > tfoot > tr > th.cyano-grey1,
+.table > thead > tr.cyano-grey1 > td,
+.table > tbody > tr.cyano-grey1 > td,
+.table > tfoot > tr.cyano-grey1 > td,
+.table > thead > tr.cyano-grey1 > th,
+.table > tbody > tr.cyano-grey1 > th,
+.table > tfoot > tr.cyano-grey1 > th {
+  background-color: #DDD;
+}
+
+.table > thead > tr > td.cyano-grey2,
+.table > tbody > tr > td.cyano-grey2,
+.table > tfoot > tr > td.cyano-grey2,
+.table > thead > tr > th.cyano-grey2,
+.table > tbody > tr > th.cyano-grey2,
+.table > tfoot > tr > th.cyano-grey2,
+.table > thead > tr.cyano-grey2 > td,
+.table > tbody > tr.cyano-grey2 > td,
+.table > tfoot > tr.cyano-grey2 > td,
+.table > thead > tr.cyano-grey2 > th,
+.table > tbody > tr.cyano-grey2 > th,
+.table > tfoot > tr.cyano-grey2 > th {
+  background-color: #CCC;
+}

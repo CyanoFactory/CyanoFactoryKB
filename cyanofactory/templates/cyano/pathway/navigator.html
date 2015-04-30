@@ -5,33 +5,34 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 {% endcomment %}
 
-<select id="selectionField" width="100%" class="select">
-  <option id="0">(Select an item)</option>
-  <optgroup label="Enzymes">
-  {% for enzyme in enzymes %}
-  {% with object=enzyme %}
-  <option id="e{{ forloop.counter }}">{{ object.title }}</option>
-  {% endwith %}
-  {% endfor %}
-  <optgroup label="Metabolites">
-  {% for metabolite in metabolites %}
-  {% with object=metabolite %}
-  <option id="m{{ forloop.counter }}">{{ object.title }}</option>
-  {% endwith %}
-  {% endfor %}
+<select id="selectionField" class="input-large form-control combobox">
+    <option id="0" value="">Select an item</option>
+    <optgroup label="Enzymes">
+      {% for enzyme in enzymes %}
+      {% with object=enzyme.0 %}
+      <option id="e{{ forloop.counter }}">{{ object.title }}</option>
+      {% endwith %}
+      {% endfor %}
+      <optgroup label="Metabolites">
+      {% for metabolite in metabolites %}
+      {% with object=metabolite.0 %}
+      <option id="m{{ forloop.counter }}">{{ object.title }}</option>
+      {% endwith %}
+      {% endfor %}
 </select>
 
 <script type="text/javascript">
 $(document.body).delegate("select", "change", function(){
-	i = $('#selectionField option:selected').attr("id");
+	var i = $('#selectionField option:selected').attr("id");
 	if (i == "0") {
 		// (Select item) element
 		return;
 	}
-	item = $("rect#" + i);
-	new_x = ($("#map").width() / 2) - $(item).attr("x");
-	new_y = ($("#map").height() / 2) - $(item).attr("y");
+	var item = $("rect#" + i);
+	var new_x = ($("#map").width() / 2) - $(item).attr("x");
+	var new_y = ($("#map").height() / 2) - $(item).attr("y");
 
-	$("svg").find("g").attr("transform", "translate(" + new_x + "," + new_y +")");
+    svgPan.zoom(1);
+    svgPan.pan({x: new_x, y: new_y});
 });
 </script>

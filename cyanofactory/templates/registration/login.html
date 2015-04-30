@@ -1,5 +1,7 @@
 {% extends "cyano/base.html" %}
 
+{% load crispy_forms_tags %}
+
 {% comment %}
 Login template
 
@@ -13,12 +15,6 @@ Last updated: 2012-07-17
 {% block action_icons %}{% endblock %}
 
 {% block extrastyles %}
-#main{
-	width:230px;
-}
-h1{
-	text-align:center;
-}
 
 #login tr:last-child td{
 	padding-top:12px;
@@ -34,36 +30,24 @@ h1{
 {% csrf_token %}
 
 {% if message %}
-<div class="block" id="no" style="position:relative;">
-    <h1>Login required</h1>
-    <div class="content">
+<div class="alert alert-danger" role="alert">
+    <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>
+    <span class="sr-only">Error:</span>
     {{ message }}
-    </div>
 </div>
 {% endif %}
 
-{% if form.errors %}
-	<div class="block" id="no" style="position:relative;">
-		<h1>Login error</h1>
-		<div class="content">
-		Your username and password didn't match. Please try again.
-		</div>
-	</div>
-{% endif %}
+<div class="col-md-6">
+{{ form|crispy }}
 
-	<table>
-	<tr>
-		<td>{{ form.username.label_tag }}</td>
-		<td><input class="text" id="id_username" type="text" name="username" maxlength="30" /></td>
-	</tr>
-	<tr>
-		<td>{{ form.password.label_tag }}</td>
-		<td><input class="text" type="password" name="password" id="id_password" /></td>
-	</tr>
-	<tr>
-		<td colspan="2"><span class="leftfloat"><a href="{% url 'password_reset' %}">Forgot your password?</a></span><input class="button" type="submit" value="login" /></td>
-	</tr>
-	</table>
-	<input type="hidden" name="next" value="{{ next }}" />
+<input type="hidden" name="next" value="{{ next }}" />
+<div class="control-group pull-right">
+    <div class="controls controls-row">
+        <a class="btn-link" href="{% url 'password_reset' %}">Forgot your password?</a>
+    </div>
+</div>
+
+<button type="submit" value=" Send" class="btn btn-primary" id="submit">Login</button>
+</div>
 </form>
 {% endblock %}

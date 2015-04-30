@@ -2,12 +2,10 @@
 <!-- meta data -->
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta http-equiv="Content-Language" content="en-us" />
-<meta http-equiv="Cache-Control" content="NO-CACHE" />
-<meta http-equiv="Pragma" content="NO-CACHE" />
 <meta name="description" content="Knowledge base embracing all data produced by and relevant to the CyanoFactory project partners." />
 <meta name="keywords" content="cyano, factory, cell, systems, biology, computational, database, modeling, mittweida" />
 <meta name="author" content="Experimental &amp; Computational Biology, University of Applied Sciences Mittweida" />
-<meta name="revised" content="2014" />
+<meta name="revised" content="2015" />
 <meta name="copyright" content="&copy; Experimental & Computational Biology, University of Applied Sciences Mittweida 2014. Original work: &copy; Covert Lab, Stanford University 2008-2012" />
 
 {% if species %}
@@ -23,6 +21,26 @@
 <link rel="stylesheet" href="{% get_static_prefix %}cyano/css/jquery.multiselect.css">
 <link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/styles.css" />
 <link rel="stylesheet" type="text/css" media="print" href="{% get_static_prefix %}public/css/styles.print.css" />
+
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/bootstrap.css" />
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/bootstrap-custom.css" />
+
+<!--<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/jquery.dataTables.css">-->
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/dataTables.bootstrap.css">
+
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/bootstrap-multiselect.css" />
+
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/awesome-bootstrap-checkbox.css" />
+
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/bootstrap-spinedit.css" />
+
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/selectize.css" />
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/selectize.bootstrap3.css" />
+
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/bootstrap-editable.css" />
+
+<link rel="stylesheet" type="text/css" media="all" href="{% get_static_prefix %}cyano/css/font-awesome.css" />
+
 <style type="text/css" media="print">
 {{ pdfstyles }}
 </style>
@@ -43,4 +61,30 @@
 <script type="text/javascript" src="{% get_static_prefix %}cyano/js/tooltip.js"></script>
 
 <script type="text/javascript" src="{% get_static_prefix %}cyano/js/csrf.js"></script>
-<script src="{% get_static_prefix %}cyano/js/jquery.multiselect.js"></script>
+
+<script type="text/javascript" src="{% get_static_prefix %}cyano/js/bootstrap.js"></script>
+
+<script type="text/javascript" charset="utf8" src="{% get_static_prefix %}cyano/js/jquery.dataTables.js"></script>
+<script type="text/javascript" charset="utf8" src="{% get_static_prefix %}cyano/js/dataTables.bootstrap.js"></script>
+
+<script type="text/javascript" charset="utf8" src="{% get_static_prefix %}cyano/js/bootbox.js"></script>
+<script type="text/javascript" charset="utf8" src="{% get_static_prefix %}cyano/js/bootstrap-multiselect.js"></script>
+
+<script type="text/javascript" src="{% get_static_prefix %}cyano/js/spin.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}cyano/js/wait_indicator.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}cyano/js/bootstrap-spinedit.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}cyano/js/selectize.js"></script>
+
+<script type="text/javascript" src="{% get_static_prefix %}cyano/js/bootstrap-editable.js"></script>
+
+<script type="text/javascript" charset="utf8">
+$(document).ready(function() {
+    /*var cbox = $('.combobox').combobox();
+
+    cbox.combobox();
+
+    cbox.click(function(){
+        $(this).siblings('.dropdown-toggle').click();
+    });*/
+});
+</script>

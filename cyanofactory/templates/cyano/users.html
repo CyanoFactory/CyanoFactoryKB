@@ -25,24 +25,27 @@ Released under the MIT license
 
 {% block content %}
 {{ queryset.length }}
-<table id="list">
-<thead>
-	<tr>
-		<th>Name</th>
-		<th>Affiliation</th>
-	</tr>
-</thead>
-<tbody>
-	{% for object in queryset %}
-	{% with user=object.user profile=object%}
-	<tr>
-		<th><a href="{% if species %}{% url "cyano.views.user" species_wid=species.wid username=user.username %}{% else %}{% url "cyano.views.user" username=user.username %}{% endif %}">{{ user.first_name }}&nbsp;{{ user.last_name }}</a></th>
-		<td><a href="{% if species %}{% url "cyano.views.user" species_wid=species.wid username=user.username %}{% else %}{% url "cyano.views.user" username=user.username %}{% endif %}">{{ profile.affiliation|truncatechars:80 }}</a></td>
-	</tr>
-	{% endwith %}
-	{% endfor %}
-</tbody>
-</table>
+<div class="panel panel-default">
+    <table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Affiliation</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for object in queryset %}
+        {% with user=object.user profile=object%}
+        <tr>
+            <th><a href="{% if species %}{% url "cyano.views.user" species_wid=species.wid username=user.username %}{% else %}{% url "cyano.views.user" username=user.username %}{% endif %}">{{ user.first_name }}&nbsp;{{ user.last_name }}</a></th>
+            <td><a href="{% if species %}{% url "cyano.views.user" species_wid=species.wid username=user.username %}{% else %}{% url "cyano.views.user" username=user.username %}{% endif %}">{{ profile.affiliation|truncatechars:80 }}</a></td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+    </tbody>
+    </table>
+</div>
 
 <div style="clear:both;"></div>
 {% endblock %}
+

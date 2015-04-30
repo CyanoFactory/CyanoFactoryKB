@@ -12,6 +12,7 @@ Released under the MIT license
 '''
 
 from __future__ import unicode_literals
+from collections import OrderedDict
 
 import datetime
 import inspect
@@ -252,7 +253,7 @@ class Colors(HashableObject):
 
 def getModels(superclass=cmodels.Entry):
     tmp = get_models(get_app('cyano'))
-    tmp2 = {}
+    tmp2 = OrderedDict()
     for model in tmp:
         if issubclass(model, superclass) and model._meta.concrete_entry_model:
             tmp2[model.__name__] = model
@@ -290,7 +291,8 @@ def is_model_referenced(model, referenced_model, checked_models=[]):
 
 def getModelsMetadata(superclass=cmodels.Entry):
     tmp = get_models(get_app('cyano'))
-    tmp2 = {}
+    tmp = sorted(tmp, key=lambda x: x.__name__)
+    tmp2 = OrderedDict()
     for model in tmp:
         if issubclass(model, superclass) and model._meta.concrete_entry_model:
             tmp2[model.__name__] = model._meta
@@ -362,6 +364,23 @@ def getModelDataFieldNames(model):
         if not (field.name == 'model_type' or (isinstance(field, OneToOneField) and field.rel.parent_link)):
             fields.append(field.name)
     return fields
+
+def getSerializer(s):
+    import cyano.serializers
+
+    try:
+        return getattr(cyano.serializers, s)
+    except AttributeError:
+        return None
+
+def getFilter(s):
+    import cyano.filters
+
+    try:
+        return getattr(cyano.filters, s)
+    except AttributeError:
+        return None
+
 
 def is_entrydata_model(cls):
     return inspect.isclass(cls) and issubclass(cls, cmodels.EntryData)
@@ -442,8 +461,6 @@ def get_extra_context(request = [], queryset = None, models = [], template = '',
     if outformat == 'html':
         data['is_pdf'] = False
         data['pdfstyles'] = ''
-        data['modelmetadatas'] = getModelsMetadata(cmodels.SpeciesComponent)
-        data['modelnames'] = getObjectTypes(cmodels.SpeciesComponent)
         if queryset and len(queryset) > 0 and isinstance(queryset[0], cmodels.Entry):
             entry = cmodels.Revision.objects.filter(
                 object_id__in=queryset,
@@ -1365,10 +1382,12 @@ def objectToQuerySet(obj, model = None):
     if model is None:
         model = obj.__class__
     qs = model.objects.filter(pk = obj.pk)
+
     #qs._result_cache.append(obj)
+
     return qs
 
-def create_detail_fieldset(species, item, fieldsets, is_anonymous):
+def create_detail_fieldset(item, fieldsets, is_anonymous):
     model = item._meta.concrete_model
 
     rmfieldsets = []
@@ -1390,7 +1409,7 @@ def create_detail_fieldset(species, item, fieldsets, is_anonymous):
                     idx = fieldset_names.index('Type')
                     del sub_fieldsets[idx]
 
-                extra_fields = create_detail_fieldset(species, ifield, sub_fieldsets, is_anonymous)
+                extra_fields = create_detail_fieldset(ifield, sub_fieldsets, is_anonymous)
                 all_inline_fields += extra_fields
 
             fieldsets = fieldsets[:idx] + all_inline_fields + fieldsets[idx:]
@@ -1410,7 +1429,7 @@ def create_detail_fieldset(species, item, fieldsets, is_anonymous):
                 else:
                     verbose_name = field.verbose_name
 
-            data = format_field_detail_view(species, item, field_name, is_anonymous)
+            data = format_field_detail_view(item, field_name, is_anonymous)
             if (data is None) or (data == ''):
                 rmfields = [idx2] + rmfields
 
@@ -1427,9 +1446,9 @@ def create_detail_fieldset(species, item, fieldsets, is_anonymous):
 
     return fieldsets
 
-def format_field_detail_view(species, obj, field_name, is_user_anonymous, history_id = None):
+def format_field_detail_view(obj, field_name, is_user_anonymous, history_id = None):
     if hasattr(obj, 'get_as_html_%s' % field_name):
-        val = getattr(obj, 'get_as_html_%s' % field_name)(species, is_user_anonymous)
+        val = getattr(obj, 'get_as_html_%s' % field_name)(is_user_anonymous)
         if isinstance(val, float) and val != 0. and val is not None:
             return ('%.' + str(int(math.ceil(max(0, -math.log10(abs(val)))+2))) + 'f') % val
         return val
@@ -1453,7 +1472,7 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
         if issubclass(field_model, cmodels.Entry):
             results = []
             for subvalue in value:
-                results.append('<a href="%s" title="%s">%s</a>' % (subvalue.get_absolute_url(species, history_id), subvalue.name, subvalue.wid))
+                results.append('<a href="%s" title="%s">%s</a>' % (subvalue.get_absolute_url(history_id), subvalue.name, subvalue.wid))
             return cmodels.format_list_html(results)        
             
         results = []
@@ -1487,7 +1506,7 @@ def format_field_detail_view(species, obj, field_name, is_user_anonymous, histor
     elif isinstance(field, ForeignKey):
         if issubclass(field_model, cmodels.Entry):
             if value is not None:
-                return format_list_html_url([value], species, history_id)
+                return format_list_html_url([value], history_id)
             else:
                 return ''
         
@@ -1616,10 +1635,10 @@ def format_field_detail_view_diff(species, old_obj, new_obj, field_name, is_user
         return diffgen(d.diff_main(old_item, new_item))
 
 
-def format_list_html_url(iterable, species, history_id=None):
+def format_list_html_url(iterable, history_id=None):
     from cyano.models import format_list_html
     return format_list_html(
-        map(lambda x: '<a href="%s" title="%s">%s</a>' % (x.get_absolute_url(species, history_id), x.name, x.wid), iterable),
+        map(lambda x: '<a href="%s" title="%s">%s</a>' % (x.get_absolute_url(history_id), x.get_name_or_wid(), x.get_name_or_wid()), iterable),
         comma_separated=True)
 
 def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = []):
@@ -2092,7 +2111,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
             obj.save()
             
         if isinstance(obj, cmodels.SpeciesComponent):
-            obj.species.add(cmodels.Species.objects.for_wid(species.wid))
+            obj.species = cmodels.Species.objects.for_wid(species.wid)
     
     #many-to-many fields
     for field in fields:
@@ -2509,3 +2528,11 @@ def overlaps(first, second, tolerance=0):
     return first[0] - tolerance < second[0] < first[1] + tolerance or\
            first[0] - tolerance < second[1] < first[1] + tolerance or\
            (first[0] + tolerance > second[0] and first[1] - tolerance < second[1])
+
+def get_global_permissions():
+    from cyano.models import GlobalPermission as cg
+    from cyanodesign.models import GlobalPermission as cdg
+    from boehringer.models import GlobalPermission as bg
+    from kegg.models import GlobalPermission as kg
+
+    return cg._meta.permissions + cdg._meta.permissions + bg._meta.permissions + kg._meta.permissions

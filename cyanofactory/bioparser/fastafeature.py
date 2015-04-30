@@ -87,8 +87,8 @@ class FastaFeature(BioParser):
 
         typ = cmodels.Type.objects.for_wid(self.feature_type, create=True)
         typ.name = "SNP"
+        typ.species = self.species
         typ.save(self.detail)
-        typ.species.add(self.species)
 
         for i, item in enumerate(self.data):
             wid = item["wid"]
@@ -111,8 +111,8 @@ class FastaFeature(BioParser):
                         subst_text += " and ".join(subst_items)
                         snp_type.name = subst_text
                         snp_type.parent = typ
+                        snp_type.species = self.species
                         snp_type.save(self.detail)
-                        snp_type.species.add(self.species)
 
             direction = "f" if start < end else "r"
             length = abs(end - start)
@@ -120,9 +120,9 @@ class FastaFeature(BioParser):
 
             cf = cmodels.ChromosomeFeature.objects.for_species(self.species).for_wid(wid, create=True)
             cf.comments = description
+            cf.species = self.species
             cf.save(self.detail)
             cf.type.add(snp_type or typ)
-            cf.species.add(self.species)
 
             cmodels.FeaturePosition.objects.get_or_create_with_revision(self.detail,
                                                                         chromosome_feature=cf,

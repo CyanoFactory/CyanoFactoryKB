@@ -10,6 +10,8 @@ Released under the MIT license
 """
 
 from django.conf.urls import patterns, url
+from rest_framework.urlpatterns import format_suffix_patterns
+from cyano import views
 
 _species_wid = r'(?P<species_wid>[a-zA-Z0-9_\-]+)'
 _wid = r'(?P<wid>[a-zA-Z0-9_\-]+)'
@@ -17,7 +19,16 @@ _wid = r'(?P<wid>[a-zA-Z0-9_\-]+)'
 _species_wid_model_type = _species_wid + r'/(?P<model_type>[a-zA-Z0-9_\-]+)'
 _species_wid_model_type_wid = _species_wid + r'/(?P<model_type>[a-zA-Z0-9_\-]+)/' + _wid
 
-urlpatterns = patterns('cyano.views',
+urlpatterns = patterns('',
+    url(r'^api/basket/$', views.BasketList.as_view()),
+    url(r'^api/basket/(?P<basket_id>[0-9]+)/$', views.BasketDetail.as_view()),
+    url(r'^api/' + _species_wid_model_type + '/$', views.EntryList.as_view(), name="cyano-api-list"),
+    url(r'^api/' + _species_wid_model_type_wid + '/$', views.EntryDetail.as_view(), name="cyano-api-detail")
+)
+
+urlpatterns = format_suffix_patterns(urlpatterns, allowed=['json', 'xml', 'html'])
+
+urlpatterns += patterns('cyano.views',
     url(r'^login/$', 'login', name="login"),
     url(r'^' + _species_wid + r'/login/$', 'login', name="login"),
 
@@ -37,6 +48,8 @@ urlpatterns = patterns('cyano.views',
     url(r'^' + _species_wid + r'/basket/(?P<basket_id>[0-9]+)/$', 'basket', name="cyano-basket"),
     url(r'^basket/(?P<basket_id>[0-9]+)/$', 'basket', name="cyano-basket"),
 
+    url(r'^basket/create/$', 'basket_create', name="cyano-basket-create-save-form"),
+    url(r'^basket/rename/(?P<basket_id>[0-9]+)/$', 'basket_rename', name="cyano-basket-rename-save-form"),
     url(r'^basket/op/$', 'basket_op', name="cyano-basket-op"),
     url(r'^' + _species_wid + r'/basket/op/$', 'basket_op', name="cyano-basket-op"),
     #url(r'^' + _species_wid_model_type + r'/basket/op/$', 'basket_op', name="cyano-basket-op"),
@@ -70,7 +83,6 @@ urlpatterns = patterns('cyano.views',
 
     url(r'^' + _species_wid + '/export/$', 'exportData'),
 
-    url(r'^import/data/$', 'importData'),
     url(r'^' + _species_wid + '/import/data/$', 'importData'),
 
     url(r'^import/species/$', 'importSpeciesData'),
@@ -81,6 +93,8 @@ urlpatterns = patterns('cyano.views',
     url(r'^sitemap\.xml$', 'sitemap'),
     url(r'^sitemap_toplevel\.xml$', 'sitemap_toplevel'),
     url(r'^sitemap/' + _species_wid + '\.xml$', 'sitemap_species'),
+
+    url(r'^permission/$', 'global_permission'),
 
     url(r'^' + _species_wid + r'/$', 'species'),
 
@@ -95,10 +109,6 @@ urlpatterns = patterns('cyano.views',
     url(r'^' + _species_wid + r'/permission/$', 'permission'),
     #url(r'^' + _species_wid_model_type + r'/permission/$', 'permission'),
     url(r'^' + _species_wid_model_type_wid + r'/permission/$', 'permission'),
-
-    url(r'^' + _species_wid + r'/permission/edit/$', 'permission_edit'),
-    #url(r'^' + _species_wid_model_type + r'/permission/edit/$', 'permission_edit'),
-    url(r'^' + _species_wid_model_type_wid + r'/permission/edit/$', 'permission_edit'),
 
     url(r'^' + _species_wid_model_type + r'/$', 'listing'),
     url(r'^' + _species_wid_model_type_wid + r'/$', 'detail'),

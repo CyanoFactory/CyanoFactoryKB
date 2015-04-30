@@ -97,8 +97,8 @@ class ProOpDB(BioParser):
             
             #print tu, genes
             
+            tu.species = self.species
             tu.save(self.detail)
-            tu.species.add(self.species)
 
             for gene in genes:
                 tu.genes.add(gene)

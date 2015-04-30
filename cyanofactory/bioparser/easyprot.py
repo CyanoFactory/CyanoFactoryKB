@@ -423,15 +423,15 @@ class EasyProt(BioParser):
     def _import_jobs_params(self):
         ms_job = cmodels.MassSpectrometryJob.objects.for_species(self.species).for_wid(slugify(self.export_parameters["jobs"][0][0]), create=True)
         ms_job.name = ms_job.wid
+        ms_job.species = self.species
         ms_job.save(self.detail)
-        ms_job.species.add(self.species)
 
         return ms_job
 
     def _import_target_peptides(self, ms_job):
         target_type = cmodels.Type.objects.for_wid("Target-Peptide", create=True)
+        target_type.species = self.species
         target_type.save(self.detail)
-        target_type.species.add(self.species)
 
         for i, item in enumerate(self.target_peptides):
             if hasattr(self, "notify_progress"):
@@ -448,6 +448,7 @@ class EasyProt(BioParser):
             peptide.mass = item["m/z"]
             peptide.zscore = item["zscore"]
             peptide.retention_time = item["RT"]
+            peptide.species = self.species
             peptide.save(self.detail)
             peptide.type.add(target_type)
 
@@ -455,12 +456,11 @@ class EasyProt(BioParser):
                 prot = cmodels.EntryBasicTextData.objects.get_or_create_with_revision(self.detail, value=protein.strip())
                 peptide.proteins.add(prot)
 
-            peptide.species.add(self.species)
 
     def _import_decoy_peptides(self, ms_job):
         decoy_type = cmodels.Type.objects.for_wid("Decoy-Peptide", create=True)
+        decoy_type.species = self.species
         decoy_type.save(self.detail)
-        decoy_type.species.add(self.species)
 
         for i, item in enumerate(self.decoy_peptides):
             if hasattr(self, "notify_progress"):
@@ -477,9 +477,9 @@ class EasyProt(BioParser):
             peptide.mass = item["m/z"]
             peptide.zscore = item["zscore"]
             peptide.retention_time = item["RT"]
+            peptide.species = self.species
             peptide.save(self.detail)
             peptide.type.add(decoy_type)
-            peptide.species.add(self.species)
 
     def _import_protein_details(self, ms_job):
         for row in self.protein_details:
@@ -535,6 +535,7 @@ class EasyProt(BioParser):
             protein.mass = row["Protein Mass (Da)"]
 
             protein.parent = ms_job
+            protein.species = self.species
             protein.save(self.detail)
             protein.cross_references.add(uniprot)
 
@@ -558,4 +559,3 @@ class EasyProt(BioParser):
                     prot = cmodels.EntryBasicTextData.objects.get_or_create_with_revision(self.detail, value=sub_protein.strip())
                     protein.sub.add(prot)
 
-            protein.species.add(self.species)

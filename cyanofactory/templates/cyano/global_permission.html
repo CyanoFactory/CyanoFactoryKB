@@ -1,0 +1,138 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Copyright (c) 2015 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+
+{% block head_title %}{{ block.super }} :: Edit permissions{% endblock %}
+{% block page_title %}Global permissions{% endblock %}
+
+{% block head %}
+{{ block.super }}
+
+<script>
+$(document).ready(function() {
+    $("#permissions").hide();
+    $("#content").find("form").hide();
+
+    var permissions = $("#permissions").find("input");
+
+    permissions.change(function() {
+        var arr = permissions.filter(function () {
+            return this.checked;
+        }).map(function() {
+            return $(this).data("pk");
+        }).get();
+
+        $("#ug_list").find("option:checked").data("perm", arr.join(" "));
+    });
+
+    $("#ug_list").change(function() {
+        $("#permissions").show();
+        var opt = $("option:selected", this);
+
+        var sel = $(opt).data("perm");
+        if (sel === undefined) {
+            sel = "";
+        }
+        sel = sel.split(" ").map(function(val) { return parseInt(val); });
+        permissions.each(function(index, val) {
+            $(val).prop("checked", sel.indexOf($(val).data("pk")) >= 0);
+        });
+        $("#heading_text").text($(opt).text());
+    });
+
+    $("#available").change(function(event) {
+        var opt = $("option:selected", this);
+
+        // skip first
+        if ($(opt).prop("value") === undefined) {
+            return;
+        }
+
+        var optnew = $("<option>").prop("id", opt.prop("value")).text(opt.text());
+        opt.remove();
+        $("#ug_list").append(optnew);
+    });
+
+    $(".btn-primary").click(function() {
+        var form = $("#content").find("form");
+
+        $("#ug_list").find("option").each(function(index, val) {
+            var field = $('<input></input>');
+
+            field.attr("type", "hidden");
+            field.attr("name", $(val).attr("id"));
+            field.attr("value", $(val).data("perm"));
+
+            form.append(field);
+        });
+
+        form.submit();
+    });
+});
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+
+<div class="col-md-6">
+    <div class="form-group">
+        <label for="ug_list">Existing permissions</label>
+        <select id="ug_list" size="10" class="form-control">
+        {% for user in users %}
+        {% if user.permissions %}
+        <option id="u{{ user.pk }}" data-perm="{% for u in user.permissions %}{{ u }} {% endfor %}">User: {{ user.username }} ({{ user.name }})</option>
+        {% endif %}
+        {% endfor %}
+        {% for group in groups %}
+        {% if group.permissions %}
+        <option id="g{{ group.pk }}" data-perm="{% for g in group.permissions %}{{ g }} {% endfor %}">Group: {{ group.name }}</option>
+        {% endif %}
+        {% endfor %}
+        </select>
+    </div>
+</div>
+<div class="col-md-6">
+    <div class="form-group">
+        <label for="available">Add user/group</label>
+        <select id="available" class="form-control">
+        <option value="" selected="selected">Select user/group to add</option>
+        {% for user in users %}
+        {% if not user.permissions %}
+        <option value="u{{ user.pk }}">User: {{ user.username }} ({{ user.name }})</option>
+        {% endif %}
+        {% endfor %}
+        {% for group in groups %}
+        {% if not group.permissions %}
+        <option value="g{{ group.pk }}">Group: {{ group.name }}</option>
+        {% endif %}
+        {% endfor %}
+        </select>
+    </div>
+</div>
+</div>
+<div class="panel panel-default" id="permissions">
+    <div class="panel-heading">Select permissions for <span id="heading_text">(None)</span></div>
+    <div class="panel-body">
+        {% for permission in permissions %}
+        <p>
+            <input id="{{ permission.codename }}" type="checkbox" data-pk="{{ permission.id }}"> <label for="{{ permission.codename }}">{{ permission.name }}</label>
+        </p>
+        {% endfor %}
+    </div>
+</div>
+
+<form method="post">
+{% csrf_token %}
+</form>
+
+<button type="submit" class="btn btn-primary">Submit</button>
+
+{% endblock %}

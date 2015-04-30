@@ -8,8 +8,7 @@ Released under the MIT license
 {% load static %}
 
 <div id="map">
-<svg id="boehringer" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{{ width }}" height="{{ height }}" pointer-events="visible"> 
-<script xlink:href="{% get_static_prefix %}boehringer/SVGPan.js"/>
+<svg id="boehringer" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{{ width }}" height="{{ height }}" pointer-events="visible">
 <g id="viewport">
 <image x="0" y="0" width="6871" height="4804" xlink:href="{% get_static_prefix %}boehringer/pathways.png" />
 {% for enzyme in enzymes %}
@@ -28,8 +27,8 @@ Released under the MIT license
 </g>
 </svg>
 
-<script type="text/javascript" src="{% get_static_prefix %}boehringer/jquery-svgpan.js"></script>
+<script src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
 <script type="text/javascript">
-	$('svg').svgPan('viewport'); 
+var svgPan = svgPanZoom('#boehringer', {minZoom: 0.1});
 </script>
 </div>

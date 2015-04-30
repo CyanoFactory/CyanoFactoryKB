@@ -1,0 +1,27 @@
+<select id="structure-filter" class="form-control combobox" multiple="multiple">
+{% for key, value in groups.items %}
+    <optgroup label="{{ key.get_name_or_wid }}">
+    {% for item in value %}
+        <option data-color="color-{{ item.0 }}" selected="selected" data-type="{{ item.1.pk }}">{{ item.1.get_name_or_wid }}</option>
+    {% endfor %}
+    </optgroup>
+{% endfor %}
+</select>
+
+<script>
+$("#structure-filter").multiselect({
+    optionLabel: function(element) {
+        return "<span style='width:30px;display:inline-block;' class='" + $(element).data("color") + "'>&nbsp;</span> " + $(element).html() + '(' + $(element).val() + ')';
+    },
+    maxHeight: 200,
+    onChange: function(option, checked, select) {
+        var features = $("svg").find("g.features > a").children().filter("[data-type=" + $(option).data("type") + "]");
+
+        if (checked) {
+            features.show();
+        } else {
+            features.hide();
+        }
+    }
+})
+</script>

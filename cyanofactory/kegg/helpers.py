@@ -7,6 +7,7 @@ Released under the MIT license
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
+import base64
 
 
 def uniqify(seq, idfun=None):
@@ -33,10 +34,10 @@ def extract_ecs(text):
     return re.findall(r"[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+", text)
 
 
-def get_reaction_map(map_id, enzymes, metabolites, items):
+def get_reaction_map(map_id, enzymes, metabolites, export):
     import StringIO
 
-    # Wordaround broken PIL installation
+    # Workaround broken PIL installation
     # see: https://code.djangoproject.com/ticket/6054
     try:
         from PIL import Image
@@ -46,6 +47,10 @@ def get_reaction_map(map_id, enzymes, metabolites, items):
     from xml.etree.ElementTree import ElementTree, Element
 
     with open("{}/kegg/img/{}.png".format(settings.STATICFILES_DIRS[0], map_id), "rb") as image:
+        if export:
+            encoded_string = base64.b64encode(image.read())
+            image.seek(0)
+
         im = Image.open(image)
         iwidth = im.size[0]
         iheight = im.size[1]
@@ -63,7 +68,12 @@ def get_reaction_map(map_id, enzymes, metabolites, items):
         image.set("y", "0")
         image.set("width", str(iwidth))
         image.set("height", str(iheight))
-        image.set("xlink:href", "{}kegg/img/{}.png".format(settings.STATIC_URL, map_id))
+
+        if export:
+            href = "data:image/png;base64," + encoded_string
+        else:
+            href = "{}kegg/img/{}.png".format(settings.STATIC_URL, map_id)
+        image.set("xlink:href", href)
         root.append(image)
 
         areas = tree.findall("area")
@@ -126,7 +136,7 @@ def get_reaction_map(map_id, enzymes, metabolites, items):
 
                 ##try:
                 ##    pw_obj = Pathway.objects.for_species(species).for_wid(pathway_name)
-                elem.set("xlink:href", reverse("kegg.views.map_view", kwargs={"map_id": pathway_name}) + "?items=" + items_to_quoted_string(items))
+                elem.set("xlink:href", reverse("kegg.views.map_view", kwargs={"map_id": pathway_name}))
 
                 for metabolite in metabolites:
                     ltitle = title.lower()
@@ -189,8 +199,9 @@ def get_reaction_map(map_id, enzymes, metabolites, items):
 
         out = StringIO.StringIO()
         ##out.write(template.render(Context()))
-
+        out.write("""<svg id="kegg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" pointer-events="visible">""")
         tree.write(out)
+        out.write("</svg>")
 
         # overwrite enzymes and metabolites content
         # Reference preserving list clear
@@ -207,8 +218,8 @@ def request_extract(request):
     import re
 
     items = []
-    if "items" in request.GET:
-        get_items = request.GET["items"].replace("%23", "#")
+    if "items" in request.POST:
+        get_items = request.POST["items"].replace("%23", "#")
         for item in re.split("\s+", get_items):
             if len(item) == 0:
                 continue

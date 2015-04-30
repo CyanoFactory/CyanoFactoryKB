@@ -36,12 +36,8 @@ Released under the MIT license
 <script language="javascript" type="text/javascript" charset="utf-8">
 
 $(document).ready(function() {
-    var dialog_error = $("#dialog-error");
+    var dialog_basket = $("#dialog-basket");
     var basket_list = $("#basket-list");
-    var no_click = false;
-
-    basket_list.multiselect({header: false});
-    basket_list.multiselect("getButton").hide();
 
     basket_list.on("multiselectclick", function(event, ui) {
         if (no_click) {
@@ -60,82 +56,86 @@ $(document).ready(function() {
         });
     });
 
-	$("li#action_icons_edit").on("click", ".cart-add-button", function (event) {
-		event.preventDefault();
-
-        {% if not request.user.is_authenticated %}
-        dialog_error.dialog("open");
-        return;
-        {% endif %}
-
-        //$("#basket-list").clone().multiselect({'element': $(event.target), 'selectedText': ''});
-
-        var target = $(event.target);
-        var parent = target.parents("li");
-
-         $.ajax({
+    $("#cart-button").click(function() {
+        $.ajax({
             type: "POST",
             url: "{% url "cyano-basket-op" species_wid=species.wid %}",
             context: document.body,
             async: false,
             data: {
-                "id": parent.data("pk"),
+                "id": $("#cart-button").data("pk"),
                 "op": "list_item"
             }
         }).done(function(result) {
-			var json = jQuery.parseJSON(result);
+            var json = jQuery.parseJSON(result);
 
-            no_click = true;
-            basket_list.multiselect("widget").find(":input:checked").each(function() {
-                this.click();
+            dialog_basket.find('input[type=checkbox]').prop('checked', false);
+
+            json.baskets.forEach(function(value) {
+                dialog_basket.find('input[data-pk="' + value + '"]').prop('checked', true);
             });
 
-            basket_list.find("option").each(function(index, value) {
-                var val = $(value);
-                if (json.baskets.indexOf(val.data("pk")) >= 0) {
-                    basket_list.multiselect("widget").find(":input:eq(" + (index) + ")").each(function(){
-                        this.click();
+            dialog_basket.data("baskets", json.baskets);
+        });
+
+        dialog_basket.modal('show');
+    });
+
+    dialog_basket.find(".btn-primary").click(function () {
+        var baskets = dialog_basket.data("baskets");
+
+        dialog_basket.find("input[type=checkbox]").each(function(i, obj) {
+            obj = $(obj);
+            if (baskets.indexOf(obj.data("pk")) >= 0) {
+                if (!obj.prop('checked')) {
+                    // Removed
+                    $.ajax({
+                        type: "POST",
+                        url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+                        context: document.body,
+                        data: {
+                            "id": obj.data("pk"),
+                            "wid": $("#cart-button").data("pk"),
+                            "op":"remove"
+                        }
                     });
                 }
-            });
-            no_click = false;
-		});
-
-        basket_list.data("wid", parent.data("pk"));
-        basket_list.multiselect("option", "position", {my: "top left", of: $(event.target)});
-        basket_list.multiselect("refresh");
-        basket_list.multiselect("open");
-	});
-
-    dialog_error.dialog({
-        autoOpen: false,
-        height: 200,
-        width: 350,
-        modal: true,
-        buttons: {
-            "OK": function () {
-                $(this).dialog("close");
+            } else {
+                if (obj.prop('checked')) {
+                    // Added
+                    $.ajax({
+                        type: "POST",
+                        url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+                        context: document.body,
+                        data: {
+                            "id": obj.data("pk"),
+                            "wid": $("#cart-button").data("pk"),
+                            "op":"add"
+                        }
+                    });
+                }
             }
-        }
+        });
+
+        dialog_basket.modal("hide");
     });
 });
-
 </script>
 {% endblock %}
 
 {% block action_icons_edit %}
 {% with object=queryset.0 %}
-<li data-pk="{{ object.pk }}"><a href="#" class="cart-add-button" title="Add to basket"><img src="{% get_static_prefix %}cyano/img/cart/cart.png" />Add to basket</a></li>
-<li><a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" title="Edit" alt="Edit" />Edit {{ object.wid }}</a></li>
-<li><a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" title="Delete" alt="Delete" />Delete {{ object.wid }}</a></li>
-<li><a href="{% url "cyano.views.permission" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/lock.png" title="View permissions" alt="View permissions" />View permissions of {{ object.wid }}</a></li>
+<li><a href="#" id="cart-button" title="Add to basket" data-pk="{{ object.id }}">Add to basket</a></li>
+<li><a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}">Edit {{ object.wid }}</a></li>
+<li><a data-toggle="modal" href="{% url 'cyano.views.delete' species_wid=species.wid model_type=model_type wid=object.wid %}" data-target="#delete-form">Delete {{ object.wid }}</a></li>
+<li><a href="{% url "cyano.views.permission" species_wid=species.wid model_type=model_type wid=object.wid %}">View permissions of {{ object.wid }}</a></li>
 {% endwith %}
 {% endblock %}
 {% block action_icons_export %}
 {% with object=queryset.0 %}
-<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download {{ object.wid }} in Excel format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download {{ object.wid }} in JSON format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download {{ object.wid }} in XML format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}">Download {{ object.wid }} in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}">Download {{ object.wid }} in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}">Download {{ object.wid }} in XML format</a></li>
 <li><a href="?{% makeurl queryargs 'format' 'fasta' %}">Download {{ object.wid }} in FASTA format</a></li>
 <li><a href="?{% makeurl queryargs 'format' 'genbank' %}">Download {{ object.wid }} in GenBank format</a></li>
 {{ block.super }}
@@ -143,40 +143,63 @@ $(document).ready(function() {
 {% endblock %}
 
 {% block content %}
-{% autoescape off %}
 {% with object=queryset.0 %}
-<table id="detail">	
-	{% with object=queryset.0 %}
+{% autoescape off %}
 	{% for fieldset in fieldsets %}
-		{% if not forloop.first %}
-	<tbody class="spacing">
-		<tr><td colspan="2">&nbsp;</td></tr>
-	</tbody>
-		{% endif %}
-	<tbody class="data">
-		<tr>
-			<th colspan="2">{{ fieldset.0 }}</th>
-		</tr>				
+        <div class="panel panel-primary">
+            <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th colspan="2">{{ fieldset.0 }}</th>
+                </tr>
+            </thead>
+            <tbody>
 		{% for field in fieldset.1.fields %}
-		<tr>			
-			<th>{{ field.verbose_name }}</th>
-			<td>{{ field.data }}</td>
-		</tr>
+                <tr>
+                    <th>{{ field.verbose_name }}</th>
+                    <td>{{ field.data }}</td>
+                </tr>
 		{% endfor %}
-	</tbody>
+            </tbody>
+            </table>
+        </div>
 	{% endfor %}
-	{% endwith %}	
-</table>
-{% endwith %}
 {% endautoescape %}
+{% endwith %}
 
-<select id="basket-list" multiple="multiple" style="visibility:hidden">
-{% for basket in baskets %}
-<option value="basket{{ basket.pk }}" data-pk="{{ basket.pk }}">{{ basket.name }}</option>
-{% endfor %}
-</select>
+<div class="modal fade" id="dialog-basket" tabindex="-1" role="dialog" aria-labelledby="dialog-basket-label"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                        aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="dialog-create-label">Add to Basket</h4>
+            </div>
+            <div class="modal-body">
+                <form>
+                    {% csrf_token %}
+                    <div class="form-group">
+                        {% for basket in baskets %}
+                        <div class="checkbox">
+                            <label><input type="checkbox" data-pk="{{ basket.pk }}">{{ basket.name }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
 
-<div id="dialog-error" title="Login required">
-    Please login first.
+<div class="modal fade" id="delete-form" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -31,83 +31,192 @@ Released under the MIT license
 <script language="javascript" type="text/javascript" charset="utf-8">
 
 $(document).ready(function() {
-    var basket_list = $("#basket-list");
-    var no_click = false;
+    // Setup - add a text input to each footer cell
+    $('#new_list tfoot th').each( function () {
+        var title = $('#new_list thead th').eq( $(this).index() ).text();
+        $(this).html( '<input type="text" placeholder="Search '+title+'" />' );
+    } );
 
-    basket_list.multiselect({header: false});
-    basket_list.multiselect("getButton").hide();
+    // DataTable
+    // ajax: "{% url "cyano-api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,url",
 
-    basket_list.on("multiselectclick", function(event, ui) {
-        if (no_click) {
-            return;
-        }
+    var table = $('#new_list').DataTable({
+        columns: [
+            { "data": "wid" },
+            { "data": "name" },
+            {}
+        ],
+        columnDefs: [
+            {
+                "targets": [0, 1],
+                "createdCell": function (td, cellData, rowData, row, col) {
+                    $(td).wrapInner($("<a></a>").attr("href", rowData["url"]));
+                },
+            },
+            {
+                "targets": 2,
+                "searchable": false,
+                "orderable": false,
+                "data": function (rowData, type, set, meta) {
+                    var tag = "<a class='btn btn-default btn-xs'></a>";
+                    var edit = $(tag).attr("href", rowData["url"] + "/edit").text("Edit");
+                    var del = $(tag)
+                            .attr("href", rowData["url"] + "/delete")
+                            .attr("data-toggle", "modal")
+                            .attr("data-target", "#delete-form")
+                            .data("toggle", "modal")
+                            .data("target", "#delete-form")
+                            .text("Delete");
 
-        $.ajax({
-            type: "POST",
-            url: "{% url "cyano-basket-op" species_wid=species.wid %}",
-            context: document.body,
-            data: {
-                "id": ui.value.substring(6),
-                "wid": basket_list.data("wid"),
-                "op": ui.checked ? "add" : "remove"
+                    var basket = $($("#basket_list").text());
+
+                    var item = $("<div></div>").addClass("btn-group").attr("role", "group").append(basket).append(edit).append(del);
+
+                    return $(item).wrap("<div>").parent().html();
+                },
+                "createdCell": function (td, cellData, rowData, row, col) {
+                    var select = $(td).find("select");
+                    select.multiselect({
+                            buttonClass: 'btn btn-default btn-xs',
+                            buttonText: function(options, select) {
+                                return 'Basket';
+                            },
+                            onDropdownShow: function(event) {
+                                this.deselectAll(false);
+                                var multiselect = this;
+
+                                $.ajax({
+                                    type: "POST",
+                                    url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+                                    context: document.body,
+                                    async: false,
+                                    data: {
+                                        "id": this.$select.data("id"),
+                                        "op": "list_item"
+                                    }
+                                }).done(function(result) {
+                                    var json = jQuery.parseJSON(result);
+
+                                    json.baskets.forEach(function(value) {
+                                        multiselect.$select.find('option[data-pk="' + value + '"]').prop('selected', true);
+                                    });
+
+                                    multiselect.refresh();
+                                });
+                            },
+                            onChange: function(option, checked, select) {
+                                $.ajax({
+                                    type: "POST",
+                                    url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+                                    context: document.body,
+                                    data: {
+                                        "id": $(option).data("pk"),
+                                        "wid": $($(option).parent()).data("id"),
+                                        "op": checked ? "add" : "remove"
+                                    }
+                                });
+                            }
+                        }
+                    );
+
+                    select.data("id", rowData["id"]);
+                }
             }
-        });
+        ],
+        deferRender: true,
+        sAjaxDataProp: "",
+        "stripeClasses": [],
+        stateSave: true
     });
 
-	$("table#list").on("click", ".cart-add-button", function (event) {
-		event.preventDefault();
+    // Apply the search
+    table.columns().eq( 0 ).each( function ( colIdx ) {
+        $( 'input', table.column( colIdx ).header() ).on( 'keyup change', function () {
+            table
+                .column( colIdx )
+                .search( this.value )
+                .draw();
+        } );
+    } );
 
-        //$("#basket-list").clone().multiselect({'element': $(event.target), 'selectedText': ''});
+    $($("#filter_row").text()).insertAfter($(".dataTables_wrapper").children()[0]);
 
-        var target = $(event.target);
-        var parent = target.parents("tr");
+    $('select.cyano-filter').on('change', function() {
+        updateTable();
+    });
 
-         $.ajax({
-            type: "POST",
-            url: "{% url "cyano-basket-op" species_wid=species.wid %}",
-            context: document.body,
-            async: false,
-            data: {
-                "id": parent.data("pk"),
-                "op": "list_item"
-            }
-        }).done(function(result) {
-			var json = jQuery.parseJSON(result);
+    updateTable();
 
-            no_click = true;
-            basket_list.multiselect("widget").find(":input:checked").each(function() {
-                this.click();
-            });
-
-            basket_list.find("option").each(function(index, value) {
-                var val = $(value);
-                if (json.baskets.indexOf(val.data("pk")) >= 0) {
-                    basket_list.multiselect("widget").find(":input:eq(" + (index) + ")").each(function(){
-                        this.click();
-                    });
-                }
-            });
-            no_click = false;
-		});
-
-        basket_list.data("wid", parent.data("pk"));
-        basket_list.multiselect("option", "position", {my: "center bottom", of: $(event.target)});
-        basket_list.multiselect("refresh");
-        basket_list.multiselect("open");
-	});
+    // destroy delete-form when closed
+    $("#delete-form").on('hidden.bs.modal', function () {
+        $(this).data('bs.modal', null);
+    });
 });
 
+var updateTable = function() {
+    var filters = [];
+
+    $(".cyano-filter").each(function() {
+        var field = $(this).data("field");
+        var id = $($(this).children(':selected')).data("id");
+
+        if (typeof id != 'undefined') {
+            filters.push(field + "=" + id);
+        }
+    });
+
+    var filterString = filters.join("&");
+
+    $('#new_list').DataTable().ajax.url("{% url "cyano-api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,url&" + filterString).load();
+}
+
+</script>
+
+<script id="filter_row" type="text/plain">
+<div class="row">
+{% for field in facet_fields %}
+	{% with field_name=field.name field_verbose_name=field.verbose_name %}
+
+	<div class="col-sm-3">
+	<label for="{{ field_name }}_id">{{ field_verbose_name }}</label>
+    <select id="{{ field_name }}_id" class="form-control combobox cyano-filter" data-field="{{ field_name }}">
+        <option {% if not queryargs|getattribute:field_name %} selected="selected"{% endif %}>All</option>
+		{% for facet in field.facets %}
+		<option
+				{% if queryargs|getattribute:field_name %}
+					{% if facet.id in queryargs|getattribute:field_name %}
+			selected="selected"
+					{% endif %}
+				{% endif %} data-id="{{ facet.id }}">
+			{{ facet.name }} ({{ facet.count }})</option>
+		{% endfor %}
+    </select>
+
+	</div>
+
+	{% endwith %}
+{% endfor %}
+</div>
+
+</script>
+
+<script id="basket_list" type="text/plain">
+<select multiple="multiple">
+{% for basket in baskets %}
+<option value="basket{{ basket.pk }}" data-pk="{{ basket.pk }}">{{ basket.name }}</option>
+{% endfor %}
+</select>
 </script>
 {% endblock %}
 
 {% block action_icons_edit %}
-<li><a href="{% url "cyano.views.add" species_wid=species.wid model_type=model_type %}"><img src="{% get_static_prefix %}public/img/add.png" title="Add" alt="Add" />Add new {{ model_verbose_name }}</a></li>
+<li><a href="{% url "cyano.views.add" species_wid=species.wid model_type=model_type %}">Add new {{ model_verbose_name }}</a></li>
 {{ block.super }}
 {% endblock %}
 {% block action_icons_export %}
-<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}"><img src="{% get_static_prefix %}public/img/excel.gif" title="Download in Excel format" alt="Download in Excel format" />Download {{ model_verbose_name_plural }} in Excel format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'json' %}"><img src="{% get_static_prefix %}public/img/json.png" title="Download in JSON format" alt="Download in JSON format" />Download {{ model_verbose_name_plural }} in JSON format</a></li>
-<li><a href="?{% makeurl queryargs 'format' 'xml' %}"><img src="{% get_static_prefix %}public/img/xml.gif" title="Download in XML format" alt="Download in XML format" />Download {{ model_verbose_name_plural }} in XML format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xlsx' %}">Download {{ model_verbose_name_plural }} in Excel format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'json' %}">Download {{ model_verbose_name_plural }} in JSON format</a></li>
+<li><a href="?{% makeurl queryargs 'format' 'xml' %}">Download {{ model_verbose_name_plural }} in XML format</a></li>
 <li><a href="?{% makeurl queryargs 'format' 'fasta' %}">Download {{ model_verbose_name_plural }} in FASTA format</a></li>
 {{ block.super }}
 {% endblock %}
@@ -144,10 +253,7 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 {% endblock %}
 
 {% block content %}
-
-{% if groups %}
-<table id="list">
-{% for key, value in groups.items %}
+<table id="new_list" class="table table-striped table-hover">
 <thead>
 	<tr>
 		<th>WID</th>
@@ -158,73 +264,14 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 	</tr>
 </thead>
 <tbody>
-{% for object in value %}
-{% with item=basket_object %}
-<tr data-pk="{{ object.pk }}">
-	<th><a href="{{ object|get_absolute_url:species }}">{{ object.wid }}</a></th>
-	<td><a href="{{ object|get_absolute_url:species }}">{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</a></td>
-	{% if not request.user.is_anonymous %}
-	<td>
-		<a href="#" class="cart-add-button" title="Add to basket"><img src="{% get_static_prefix %}cyano/img/cart/cart.png" /></a>
-		<a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>
-		<a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}"><img src="{% get_static_prefix %}public/img/delete.png" /></a>
-	</td>
-	{% endif %}
-</tr>
-{% endwith %}
-{% endfor %}
-</tbody>
-<tbody class="spacing">
-    <tr><td colspan="2">&nbsp;</td></tr>
-</tbody>
-{% endfor %}
-</table>
-{% else %}
-<table id="list">
-<thead>
-	<tr>
-		<th>WID</th>
-		<th>Name</th>
-		{% if not request.user.is_anonymous %}
-		<th>&nbsp;</th>
-		{% endif %}
-	</tr>
-</thead>
-<tbody>
-{% include "cyano/list_page.html" %}
-</tbody>
-</table>
-{% endif %}
 
-<div id="listfilter">
-<h1>Filter</h1>
-{% for field in facet_fields %}
-	{% with field_name=field.name field_verbose_name=field.verbose_name %}
-	<div class="block">
-	<h2>{% autoescape off %}{{ field_verbose_name }}{% endautoescape %}</h2>
-	<ul>
-		<li{% if not queryargs|getattribute:field_name %} class="selected"{% endif %}><a href="{% url "cyano.views.listing" species_wid=species.wid model_type=model_type %}?{% makeurl queryargs field_name '' %}">All</a></li>
-		{% for facet in field.facets %}
-		<li
-				{% if queryargs|getattribute:field_name %}
-					{% if facet.id in queryargs|getattribute:field_name %}
-			class="selected"
-					{% endif %}
-				{% endif %}>
-			<a href="{% url "cyano.views.listing" species_wid=species.wid model_type=model_type %}?{% makeurl queryargs field_name facet.id %}">{% autoescape off %}{{ facet.name }}{% endautoescape %} ({{ facet.count }})</a></li>
-		{% endfor %}
-	</ul>
-	</div>
-	{% endwith %}
-{% endfor %}
+</tbody>
+</table>
+
+<div class="modal fade" id="delete-form" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+        </div>
+    </div>
 </div>
-
-<div style="clear:both;"></div>
-
-<select id="basket-list" multiple="multiple" style="visibility:hidden">
-{% for basket in baskets %}
-<option value="basket{{ basket.pk }}" data-pk="{{ basket.pk }}">{{ basket.name }}</option>
-{% endfor %}
-</select>
-
 {% endblock %}
