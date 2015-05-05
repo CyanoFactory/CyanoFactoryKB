@@ -448,17 +448,17 @@ class GroupProfile(Model):
         Returns objects group has perms on.
         Only works for entrys
         """
-        if len(objs) == 0:
-            return []
-
         from django.contrib.auth.models import Permission
         from django.contrib.contenttypes.models import ContentType
+
+        if len(objs) == 0:
+            return Permission.objects.none()
 
         ct = ContentType.objects.get_for_model(Entry)
         try:
             perm = Permission.objects.get(content_type=ct, codename=permission)
         except ObjectDoesNotExist:
-            return []
+            return Permission.objects.none()
 
         obj_ids = objs.values_list("pk", flat=True)
         all_perms = EntryGroupObjectPermission.objects.filter(permission=perm, group=self.group, content_object_id__in=obj_ids).values_list("content_object_id", flat=True)
@@ -537,20 +537,20 @@ class UserProfile(Model):
         Returns objects user has perms on.
         Only works for entrys
         """
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
         if len(objs) == 0:
-            return []
+            return Permission.objects.none()
 
         if self.user.is_superuser:
             return objs
-
-        from django.contrib.auth.models import Permission
-        from django.contrib.contenttypes.models import ContentType
 
         ct = ContentType.objects.get_for_model(Entry)
         try:
             perm = Permission.objects.get(content_type=ct, codename=permission)
         except ObjectDoesNotExist:
-            return []
+            return Permission.objects.none()
 
         obj_ids = objs.values_list("pk", flat=True)
         all_user_perms = EntryUserObjectPermission.objects.filter(permission=perm, user=self.user, content_object_id__in=obj_ids).values_list("content_object_id", flat=True)
