@@ -68,7 +68,7 @@ def apply_commandlist(model, commandlist):
                 raise ValueError("Invalid operation " + command[1])
 
         elif command[0] == "metabolite":
-            if command[1] == "edit":
+            if command[1] in ["add", "edit"]:
                 rename_metabolite(model, command[2], command[3])
                 if command[4]:
                     make_metabolite_external(model, command[3])
