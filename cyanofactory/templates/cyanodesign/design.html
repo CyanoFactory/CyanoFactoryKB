@@ -21,6 +21,7 @@ Released under the MIT license
 {{ block.super }}
 <script src="{% get_static_prefix %}cyanointeraction/d3/d3.v3.min.js"></script>
 <script src="{% get_static_prefix %}cyano/js/viz.js"></script>
+<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-ui-1.10.4.custom.min.js"></script>
 <script type="text/javascript" src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
 <script type="text/javascript">
     "use strict";
@@ -34,7 +35,6 @@ Released under the MIT license
     var cyano_design_objective_select;
     var design_objective_visible_combobox;
     var constraints_div;
-    var simulation_result;
     var create_new_enzyme = false;
     var command_list = [];
     var svg;
@@ -291,6 +291,18 @@ Released under the MIT license
         return enzyme;
     }
 
+    function notifyInfo(text) {
+        $("#simulation-result").html('<div class="alert alert-info" role="alert">\
+            <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>\
+            <span class="sr-only">Info:</span>' + text + '</div>');
+    }
+
+    function notifyError(text) {
+        $("#simulation-result").html('<div class="alert alert-danger" role="alert">\
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>\
+            <span class="sr-only">Error:</span>' + text + '</div>');
+    }
+
     $(function () {
         dialog_metabolite_edit = $("#dialog-edit-metabolite");
         dialog_enzyme = $("#dialog-reaction");
@@ -298,7 +310,6 @@ Released under the MIT license
         cyano_design_objective_select = $("#cyano-design-objective-select");
         design_objective_visible_combobox = $("#design-objective-visible-combobox");
         constraints_div = $("#constraints-min-max");
-        simulation_result = $("#simulation-result");
         table_enzymes = $('#cyano-enzyme-list');
         table_metabolites = $('#cyano-metabolite-list');
 
@@ -498,8 +509,6 @@ Released under the MIT license
                 "<'row'<'col-sm-6'i><'col-sm-6'p>>"
         });
 
-        simulation_result.hide();
-
         $( ".check" ).button();
 
         var selectize_options = {
@@ -617,8 +626,7 @@ Released under the MIT license
                 var graph = Viz(x["graph"], "svg", "dot");
                 flux = x["fluxes"];
 
-                simulation_result.show();
-                simulation_result.find(".sim-text").text("The solution is " + x["solution"]);
+                notifyInfo("The solution is " + x["solution"])
 
                 $("#visual").show();
                 document.getElementById("visual").innerHTML = graph;
@@ -631,8 +639,7 @@ Released under the MIT license
                 //command_list = [];
             }).error(function(x) {
                 $("#visual").hide();
-                simulation_result.show();
-                simulation_result.find(".sim-text").text(x.status + " " + x.statusText + ": " + x.responseText);
+                notifyError(x.responseText);
                 waitIndicator.hide($("#content"));
             });
         });
@@ -672,8 +679,7 @@ Released under the MIT license
                 command_list = [];
             }).error(function(x) {
                 $("#visual").hide();
-                simulation_result.show();
-                simulation_result.find(".sim-text").text(x.status + " " + x.statusText + ": " + x.responseText);
+                notifyError(x.responseText);
                 waitIndicator.hide($("#content"));
             });
         });
@@ -776,8 +782,8 @@ Released under the MIT license
             products.clearOptions();
 
             metabolites.forEach(function(obj) {
-                substrates.addOption({"id": obj.name, item: {obj: obj, amount: 0}});
-                products.addOption({"id": obj.name, item: {obj: obj, amount: 0}});
+                substrates.addOption({"id": obj.name, item: {obj: obj, amount: 1}});
+                products.addOption({"id": obj.name, item: {obj: obj, amount: 1}});
             });
             substrates.refreshOptions();
             products.refreshOptions();
@@ -1312,11 +1318,6 @@ span.cyano-external-metabolite { color: green }
         <button type="button" id="design-submit" class="btn btn-primary">Run simulation</button>
 
         <div id="simulation-result">
-        <div class="alert alert-info" role="alert">
-            <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
-            <span class="sr-only">Info:</span>
-            <span class="sim-text"></span>
-        </div>
         </div>
         <div id="visual">
 
