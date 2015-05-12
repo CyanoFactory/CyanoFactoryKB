@@ -138,6 +138,8 @@ def simulate(request, pk):
 
     try:
         org = apply_commandlist(org, commands)
+        if not objective:
+            raise ValueError("No objective specified")
         obj_reac = org.get_reaction(objective)
         if obj_reac is None:
             raise ValueError("Objective not in model: " + objective)
@@ -158,6 +160,8 @@ def simulate(request, pk):
 
     if obj_reac.disabled:
         return HttpResponseBadRequest("Objective disabled: " + objective)
+
+    display = filter(lambda x: not len(x) == 0, display)
 
     for item in display:
         if not org.has_reaction(item):
@@ -274,6 +278,8 @@ def save(request, pk):
 
     try:
         org = apply_commandlist(org, commands)
+        if not objective:
+            raise ValueError("No objective specified")
         obj_reac = org.get_reaction(objective)
         if obj_reac is None:
             raise ValueError("Objective not in model: " + objective)
