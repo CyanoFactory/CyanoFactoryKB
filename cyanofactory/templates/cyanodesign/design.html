@@ -297,6 +297,12 @@ Released under the MIT license
             <span class="sr-only">Info:</span>' + text + '</div>');
     }
 
+    function notifyWarning(text) {
+        $("#simulation-result").html('<div class="alert alert-warning" role="alert">\
+            <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>\
+            <span class="sr-only">Info:</span>' + text + '</div>');
+    }
+
     function notifyError(text) {
         $("#simulation-result").html('<div class="alert alert-danger" role="alert">\
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>\
@@ -626,7 +632,11 @@ Released under the MIT license
                 var graph = Viz(x["graph"], "svg", "dot");
                 flux = x["fluxes"];
 
-                notifyInfo("The solution is " + x["solution"])
+                if (x["solution"] == "Optimal") {
+                    notifyInfo("The solution is " + x["solution"]);
+                } else {
+                    notifyWarning("The solution is " + x["solution"] + ". Check if your constraints are too strict.");
+                }
 
                 $("#visual").show();
                 document.getElementById("visual").innerHTML = graph;
