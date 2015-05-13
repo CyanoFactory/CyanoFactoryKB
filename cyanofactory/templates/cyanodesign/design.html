@@ -844,12 +844,24 @@ Released under the MIT license
             var products = dialog_enzyme.find("#reaction-products")[0].selectize;
 
             var old_design_objective = design_objective;
+
+            var visible_value = undefined;
+            if (design_objective_visible_combobox[0].selectize.getValue().split('\x00').indexOf(enzyme.name) > -1) {
+                visible_value = enzyme;
+            }
             cyano_design_objective_select[0].selectize.removeOption(enzyme.name);
+            design_objective_visible_combobox[0].selectize.removeOption(enzyme.name);
 
             enzyme.name = name.val();
 
             cyano_design_objective_select[0].selectize.addOption(enzyme);
             cyano_design_objective_select[0].selectize.refreshOptions();
+            design_objective_visible_combobox[0].selectize.addOption(enzyme);
+            design_objective_visible_combobox[0].selectize.refreshOptions();
+
+            if (visible_value !== undefined) {
+                design_objective_visible_combobox[0].selectize.addItem(visible_value.name);
+            }
 
             if (old_design_objective !== undefined) {
                 cyano_design_objective_select[0].selectize.setValue(old_design_objective.name, false);
