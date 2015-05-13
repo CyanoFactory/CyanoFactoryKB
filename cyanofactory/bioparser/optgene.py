@@ -92,6 +92,10 @@ class OptGeneParser(object):
 
     @objective.setter
     def objective(self, value):
+        if value is None:
+            self._objective = None
+            return
+
         for reac in self.reactions:
             if reac is value:
                 self._objective = value

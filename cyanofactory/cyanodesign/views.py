@@ -278,12 +278,13 @@ def save(request, pk):
 
     try:
         org = apply_commandlist(org, commands)
-        if not objective:
-            raise ValueError("No objective specified")
-        obj_reac = org.get_reaction(objective)
-        if obj_reac is None:
-            raise ValueError("Objective not in model: " + objective)
-        org.objective = obj_reac
+        if objective:
+            obj_reac = org.get_reaction(objective)
+            if obj_reac is None:
+                raise ValueError("Objective not in model: " + objective)
+            org.objective = obj_reac
+        else:
+            org.objective = None
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + e.message)
 

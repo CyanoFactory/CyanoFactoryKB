@@ -21,7 +21,6 @@ Released under the MIT license
 {{ block.super }}
 <script src="{% get_static_prefix %}cyanointeraction/d3/d3.v3.min.js"></script>
 <script src="{% get_static_prefix %}cyano/js/viz.js"></script>
-<script type="text/javascript" src="{% get_static_prefix %}public/js/jquery-ui-1.10.4.custom.min.js"></script>
 <script type="text/javascript" src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
 <script type="text/javascript">
     "use strict";
@@ -1263,6 +1262,7 @@ span.cyano-external-metabolite { color: green }
 {% block content %}
 
 <div role="tabpanel">
+
 <ul class="nav nav-tabs" role="tablist">
     <li role="presentation" class="active"><a href="#reaction-tab" role="tab" data-toggle="tab">Reactions</a></li>
     <li role="presentation"><a href="#metabolite-tab" role="tab" data-toggle="tab">Metabolites</a></li>
