@@ -176,15 +176,6 @@ Released under the MIT license
             });
 
             datatable_enzymes.row(enzymes.indexOf(this)).invalidate();
-
-            var old_design_objective = design_objective;
-            cyano_design_objective_select[0].selectize.clearOptions();
-            cyano_design_objective_select[0].selectize.load(function(callback) {
-                callback(enzymes);
-            });
-            if (old_design_objective !== undefined) {
-                cyano_design_objective_select[0].selectize.setValue(old_design_objective.name, false);
-            }
         }
     }
 
@@ -681,7 +672,7 @@ Released under the MIT license
                             filter(function(value) { return !value.enabled; }).
                             map(function(value) { return value.name })
                     ),
-                    "objective": JSON.stringify(cyano_design_objective_select.val()),
+                    "objective": JSON.stringify(cyano_design_objective_select.val())
                 }
             }).done(function(x) {
                 waitIndicator.hide($("#content"));
@@ -743,17 +734,17 @@ Released under the MIT license
             datatable_enzymes.draw();
 
             var old_design_objective = design_objective;
-            cyano_design_objective_select[0].selectize.clear();
-            cyano_design_objective_select[0].selectize.clearOptions();
-            cyano_design_objective_select[0].selectize.load(function(callback) {
-                callback(enzymes);
+
+            enzymes.forEach(function(item) {
+                cyano_design_objective_select[0].selectize.addOption(item);
+                design_objective_visible_combobox[0].selectize.addOption(item);
             });
+            cyano_design_objective_select[0].selectize.refreshOptions();
+            design_objective_visible_combobox[0].selectize.refreshOptions();
+
             if (old_design_objective !== undefined) {
                 cyano_design_objective_select[0].selectize.setValue(old_design_objective.name, false);
             }
-            design_objective_visible_combobox[0].selectize.load(function(callback) {
-                callback(enzymes);
-            });
         }
 
         function updateMetabolitesList() {
@@ -852,7 +843,18 @@ Released under the MIT license
             var substrates = dialog_enzyme.find("#reaction-substrates")[0].selectize;
             var products = dialog_enzyme.find("#reaction-products")[0].selectize;
 
+            var old_design_objective = design_objective;
+            cyano_design_objective_select[0].selectize.removeOption(enzyme.name);
+
             enzyme.name = name.val();
+
+            cyano_design_objective_select[0].selectize.addOption(enzyme);
+            cyano_design_objective_select[0].selectize.refreshOptions();
+
+            if (old_design_objective !== undefined) {
+                cyano_design_objective_select[0].selectize.setValue(old_design_objective.name, false);
+            }
+
             enzyme.reversible = reversible.prop("checked");
             if (constrained.prop("checked")) {
                 enzyme.constraints[0] = constrained_min.val();
@@ -1137,9 +1139,10 @@ Released under the MIT license
 
         cyano_design_objective_select.selectize({
             delimiter: ',',
-            persist: false,
             labelField: "name",
             valueField: "name",
+            sortField: "name",
+            searchField: ["name"],
             onChange: function(value) {
                 var idx = indexOfEnzyme(value);
                 if (idx >= 0) {
@@ -1152,9 +1155,10 @@ Released under the MIT license
 
         design_objective_visible_combobox.selectize({
             delimiter: '\x00',
-            persist: false,
             labelField: "name",
-            valueField: "name"
+            valueField: "name",
+            searchField: ["name"],
+            maxItems: 10
         });
 
         $.ajax({
@@ -1189,6 +1193,7 @@ Released under the MIT license
             waitIndicator.hide($("#content"));
         });
     });
+
 </script>
 
 <script id="filter_row" type="text/plain">
@@ -1297,8 +1302,8 @@ span.cyano-external-metabolite { color: green }
         <div class="cyano-design-objective">
             <fieldset>
                 <div class="form-group">
-                    <label class="control-label" for="cyano-design-objective-select">Design objective</label>
-                    <select id="cyano-design-objective-select" placeholder="Select a design objective"></select>
+                    <label class="control-label" for="cyano-design-objective-select">Main objective</label>
+                    <select id="cyano-design-objective-select" placeholder="Select a main objective"></select>
                 </div>
             </fieldset>
         </div>
