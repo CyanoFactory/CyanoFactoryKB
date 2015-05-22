@@ -103,14 +103,17 @@ def get_reactions(request, pk):
         "graph": outgraph}), content_type="application/json")
 
 
-@ajax_required
 @permission_required("access_cyanodesign")
 def simulate(request, pk):
     if not all(x in request.POST for x in ["commands", "disabled", "objective", "display", "auto_flux"]):
         return HttpResponseBadRequest("Request incomplete")
 
+    output_format = request.POST.get("format", "json")
+    dry_run = request.POST.get("dry_run", False)
+
     try:
-        content = DesignModel.objects.get(user=request.user.profile, pk=pk).content
+        model = DesignModel.objects.get(user=request.user.profile, pk=pk)
+        content = model.content
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
 
@@ -172,6 +175,11 @@ def simulate(request, pk):
     except ValueError as e:
         return HttpResponseBadRequest("FBA error: " + e.message)
 
+    if dry_run:
+        return HttpResponse(
+            json.dumps({"solution": org.solution}),
+            content_type="application/json")
+
     graphInfo = drawDesign(org)
     xgraph = graphInfo[0]
     nodeIDs = graphInfo[1]
@@ -185,7 +193,7 @@ def simulate(request, pk):
     if auto_flux:
         flux = filter(lambda x: not x.disabled, org.reactions[:])
         flux = sorted(flux, key=lambda x: -x.flux)
-        display = map(lambda x: x.name, flux[:10])
+        display = map(lambda x: x.name, flux[:20])
 
     g = getSelectedReaction(json_graph.node_link_data(full_g), nodeIDs, display)
 
@@ -221,14 +229,40 @@ def simulate(request, pk):
     graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
     graph.node_attr.update(style="filled", colorscheme="pastel19")
     outgraph = str(graph.to_string())
+    outgraph = pygraphviz.AGraph(outgraph)
+    outgraph = outgraph.draw(format="svg", prog="dot")
 
-    return HttpResponse(json.dumps(
-        {"graph": outgraph,
-        "fluxes": map(lambda x: [x.name, x.flux], org.reactions),
-        "solution": org.solution
-        }),
-        content_type="application/json"
-    )
+    if output_format == "json":
+        return HttpResponse(json.dumps(
+            {"graph": outgraph,
+            "solution": org.solution
+            }),
+            content_type="application/json"
+        )
+    elif output_format == "png":
+        import wand.image
+        with wand.image.Image(blob=outgraph, format="svg") as image:
+            png_image = image.make_blob("png")
+
+        r = HttpResponse(png_image, content_type="image/png")
+        r['Content-Disposition'] = 'attachment; filename={}.png'.format(model.filename)
+        return r
+    elif output_format == "svg":
+        r = HttpResponse(outgraph, content_type="image/svg+xml")
+        r['Content-Disposition'] = 'attachment; filename={}.svg'.format(model.filename)
+        return r
+    elif output_format == "csv":
+        s = StringIO.StringIO()
+        for reac in org.reactions:
+            s.write(reac.name)
+            s.write("\t")
+            s.write(reac.flux)
+            s.write("\r\n")
+        r = HttpResponse(s.getvalue(), content_type="text/csv")
+        r['Content-Disposition'] = 'attachment; filename={}.csv'.format(model.filename)
+        return r
+    else:
+        return HttpResponseBadRequest("Unknown format")
 
 
 @permission_required("access_cyanodesign")

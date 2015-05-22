@@ -37,11 +37,11 @@ Released under the MIT license
     var create_new_enzyme = false;
     var command_list = [];
     var svg;
-    var flux;
     var table_enzymes;
     var datatable_enzymes;
     var table_metabolites;
     var datatable_metabolites;
+    var submit_form;
 
     var reaction_filter = [
         function(e) { return e.enabled },
@@ -308,6 +308,7 @@ Released under the MIT license
         constraints_div = $("#constraints-min-max");
         table_enzymes = $('#cyano-enzyme-list');
         table_metabolites = $('#cyano-metabolite-list');
+        submit_form = $('#submit-form');
 
         datatable_enzymes = table_enzymes.DataTable({
             "deferRender": true,
@@ -600,27 +601,68 @@ Released under the MIT license
                 event.preventDefault();
             });
 
-        $("#design-submit").click(function(event) {
+        var beginRequest = function() {
             waitIndicator.show($("#content"));
+
+            return {
+                "commands": JSON.stringify(command_list),
+                "disabled": JSON.stringify(
+                        enzymes.
+                        filter(function(value) { return !value.enabled; }).
+                        map(function(value) { return value.name })
+                ),
+                "objective": JSON.stringify(cyano_design_objective_select.val()),
+                "display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
+                "auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
+            };
+        };
+
+        var doExport = function(format) {
+            var data = beginRequest();
+            data["dry_run"] = true;
 
             $.ajax({
                 url: "{% url "cyano-design-simulate" pk=pk %}",
                 type: "POST",
-                context: document.body,
-                data: {
-                    "commands": JSON.stringify(command_list),
-                    "disabled": JSON.stringify(
-                            enzymes.
-                            filter(function(value) { return !value.enabled; }).
-                            map(function(value) { return value.name })
-                    ),
-                    "objective": JSON.stringify(cyano_design_objective_select.val()),
-                    "display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
-                    "auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
-                }
+                data: data
             }).done(function(x) {
-                var graph = Viz(x["graph"], "svg", "dot");
-                flux = x["fluxes"];
+                if (x["solution"] == "Optimal") {
+                    notifyInfo("The solution is " + x["solution"] + ". To update the result below press \"Run simulation\".");
+
+                    delete data["dry_run"];
+                    data["format"] = format;
+
+                    for (var d in data) {
+                        submit_form.append($("<input/>", {type:"text", name:d}).val(data[d]))
+                    }
+
+                    submit_form.submit();
+
+                } else {
+                    notifyWarning("The solution is " + x["solution"] + ". Check if your constraints are too strict.");
+                }
+
+                endRequest();
+            }).error(function(x) {
+                $("#visual").hide();
+                notifyError(x.responseText);
+                endRequest();
+            });
+        };
+
+        var endRequest = function() {
+            waitIndicator.hide($("#content"));
+        };
+
+        $("#design-submit").click(function(event) {
+            var data = beginRequest();
+
+            $.ajax({
+                url: "{% url "cyano-design-simulate" pk=pk %}",
+                type: "POST",
+                data: data
+            }).done(function(x) {
+                //var graph = Viz(x["graph"], "svg", "dot");
 
                 if (x["solution"] == "Optimal") {
                     notifyInfo("The solution is " + x["solution"]);
@@ -629,59 +671,44 @@ Released under the MIT license
                 }
 
                 $("#visual").show();
-                document.getElementById("visual").innerHTML = graph;
+                document.getElementById("visual").innerHTML = x["graph"];
 
                 $("svg").attr("width", "100%").attr("height", "400px");
                 svgPanZoom('svg', {minZoom: 0.1});
-
-                waitIndicator.hide($("#content"));
-
-                //command_list = [];
+                endRequest();
             }).error(function(x) {
                 $("#visual").hide();
                 notifyError(x.responseText);
-                waitIndicator.hide($("#content"));
+                endRequest();
             });
         });
 
-        $("#flux-submit").click(function(event) {
-                var csv = "";
-                for (var i = 0; i < flux.length; i++) {
-                        csv += flux[i][0];
-                        csv += "\t";
-                        csv += flux[i][1];
-                        csv += "\r\n";
-                }
-                // trick browser into downloading file
-                var uriContent = "data:application/octet-stream," + encodeURIComponent(csv);
-                var myWindow = window.open(uriContent, "Flux CSV");
-                myWindow.focus();
-        });
-
         $("#design-save").click(function(event) {
-            waitIndicator.show($("#content"));
+            var data = beginRequest();
             $.ajax({
                 url: "{% url "cyano-design-save" pk=pk %}",
                 type: "POST",
-                context: document.body,
-                data: {
-                    "commands": JSON.stringify(command_list),
-                    "disabled": JSON.stringify(
-                            enzymes.
-                            filter(function(value) { return !value.enabled; }).
-                            map(function(value) { return value.name })
-                    ),
-                    "objective": JSON.stringify(cyano_design_objective_select.val())
-                }
+                data: data
             }).done(function(x) {
-                waitIndicator.hide($("#content"));
-
+                endRequest();
                 command_list = [];
             }).error(function(x) {
                 $("#visual").hide();
                 notifyError(x.responseText);
-                waitIndicator.hide($("#content"));
+                endRequest();
             });
+        });
+
+        $("#export-png").click(function(event) {
+            doExport("png");
+        });
+
+        $("#export-svg").click(function(event) {
+            doExport("svg");
+        });
+
+        $("#export-csv").click(function(event) {
+            doExport("csv");
         });
 
         function updateTips(o, t) {
@@ -1257,6 +1284,11 @@ span.cyano-external-metabolite { color: green }
 {
     color: grey;
 }
+
+#submit-form
+{
+    display: none;
+}
 {% endblock %}
 
 {% block content %}
@@ -1343,6 +1375,16 @@ span.cyano-external-metabolite { color: green }
 
     <div role="tabpanel" class="tab-pane" id="simulation-tab">
         <button type="button" id="design-submit" class="btn btn-primary">Run simulation</button>
+        <div id="export-button" class="btn-group">
+            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+            Export <span class="caret"></span>
+            </button>
+            <ul class="dropdown-menu" role="menu">
+            <li><a id="export-csv" href="#">As flux list</a></li>
+            <li><a id="export-png" href="#">As image</a></li>
+            <li><a id="export-svg" href="#">As vector graphic</a></li>
+            </ul>
+        </div>
 
         <div id="simulation-result">
         </div>
@@ -1478,5 +1520,9 @@ span.cyano-external-metabolite { color: green }
 </div>
 
 <input type="submit" id="design-save" class="btn btn-primary" value="Save">
+
+<form method="post" action="{% url "cyano-design-simulate" pk=pk %}" id="submit-form">
+{% csrf_token %}
+</form>
 
 {% endblock %}

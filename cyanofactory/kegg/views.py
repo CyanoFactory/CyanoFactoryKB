@@ -64,8 +64,15 @@ def map_view(request, map_id):
     map_data = get_reaction_map(map_id, enzymes, metabolites, export)
 
     if export:
-        response = HttpResponse(map_data, content_type='image/svg+xml')
-        response['Content-Disposition'] = 'attachment; filename={}.svg'.format(map_id)
+        map_data = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>""" + map_data
+
+        import wand.image
+        with wand.image.Image(blob=map_data, format="svg") as image:
+            png_image = image.make_blob("png")
+
+        response = HttpResponse(png_image, content_type='image/png')
+        response['Content-Disposition'] = 'attachment; filename={}.png'.format(map_id)
+
         return response
 
     return render_queryset_to_response(
