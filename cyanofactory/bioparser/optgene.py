@@ -136,6 +136,40 @@ class OptGeneParser(object):
 
         return None
 
+    def has_reaction(self, name):
+        return self.get_reaction(name) is not None
+
+    def get_metabolite(self, name):
+        from itertools import chain
+
+        for reac in self.reactions:
+            for met in chain(reac.reactants, reac.products):
+                if met.name == name:
+                    return met
+        return None
+
+    def has_metabolite(self, name):
+        from itertools import chain
+
+        for reac in self.reactions:
+            for met in chain(reac.reactants, reac.products):
+                if met.name == name:
+                    return True
+        return False
+
+    def get_metabolites(self):
+        from itertools import chain
+
+        metabolites = {}
+        met_list = []
+
+        for reac in self.reactions:
+            for met in chain(reac.reactants, reac.products):
+                if not met.name in metabolites:
+                    metabolites[met.name] = 1
+                    met_list.append(met)
+        return met_list
+
     def _parse_header(self, line):
         """
         Reads "file header"
@@ -224,6 +258,8 @@ class OptGeneParser(object):
                 # Test if there a multiple operators, all except the last belong to the name...
                 ops, line = OptGeneParser._takewhile(lambda x: x == "+" or x == "->" or x == "<->", line)
                 if len(ops) > 0:
+                    if "->" in ops[:-1] or "<->" in ops[:-1]:
+                        raise ValueError("-> or <-> not allowed in reaction names: " + string)
                     iname += ops[:-1]
                     line.insert(0, ops[-1])
 
@@ -233,7 +269,7 @@ class OptGeneParser(object):
                 if len(iname) == 0:
                     raise ValueError("Invalid reaction: " + string)
 
-                # Must be +, <- or ->
+                # Must be +, <-> or ->
                 if state == 0:
                     target = reactants
                 else:
@@ -305,31 +341,6 @@ class OptGeneParser(object):
                 " + ".join(map(reac_printer, zip(self.reactants_stoic, self.reactants))),
                 "<->" if self.reversible else "->",
                 " + ".join(map(reac_printer, zip(self.products_stoic, self.products))))
-
-    def has_metabolite(self, name):
-        from itertools import chain
-
-        for reac in self.reactions:
-            for met in chain(reac.reactants, reac.products):
-                if met.name == name:
-                    return True
-        return False
-
-    def has_reaction(self, name):
-        return self.get_reaction(name) is not None
-
-    def get_metabolites(self):
-        from itertools import chain
-
-        metabolites = {}
-        met_list = []
-
-        for reac in self.reactions:
-            for met in chain(reac.reactants, reac.products):
-                if not met.name in metabolites:
-                    metabolites[met.name] = 1
-                    met_list.append(met)
-        return met_list
 
     def _parse_reactions(self, line):
         reaction = OptGeneParser.Reaction.from_string(line)
