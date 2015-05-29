@@ -33,8 +33,8 @@ def stats(lista):
     s = (sum(s2)/(N-1.))**.5
     return [xmed, s]
 
-class Network:
 
+class Network:
     def __init__(self, M, names=[]):
         """ This defines a directed network network object, or undirected if M
         is symmetrical.

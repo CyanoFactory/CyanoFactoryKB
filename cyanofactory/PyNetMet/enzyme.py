@@ -1,4 +1,5 @@
 #    Copyright (C) 2012 Daniel Gamermann <daniel.gamermann@ucv.es>
+#    Copyright (C) 2015 Gabriel Kind <gkind@hs-mittweida.de>
 #
 #    This file is part of PyNetMet
 #
@@ -16,9 +17,8 @@
 #    along with PyNetMet.  If not, see <http://www.gnu.org/licenses/>.
 #
 #    
-#    Please, cite us in your reasearch!
+#    Please, cite us in your research!
 #
-
 
 class EnzError(Exception):
     def __init__(self,value):
@@ -27,143 +27,130 @@ class EnzError(Exception):
         return self.value
 
 
+class Enzyme(object):
+    '''
+    This class defines a chemical reaction object. The input should be an
+    string containing a reaction in OptGene format.
+    '''
+    def __init__(self, linea=None, pathway="GP"):
+        from itertools import takewhile
+        import re
 
+        if linea is None:
+            return
 
-class Enzyme:
-    '''This class defines a chemical reaction object. The input should be an   
-       string containing a reaction in OptGene format.
-       '''
+        # Tokenize
+        line = re.split("\s+", linea)
 
-    def __init__(self,linea, pathway="GP"):
-        parts = linea.split(" : ")
-        name = parts[0].replace(" ", "")
-        #print linea
-        self.pathway = pathway
-        self.name = name
-        self.issues = False
+        # Entry name
+        name = list(takewhile(lambda x: not x.endswith(":"), line))
+        line = line[len(name):]
+        # takewhile did not take the item with the colon
+        if len(line) == 0:
+            raise EnzError("Invalid reaction: " + linea)
+        name.append(line[0])
+        line = line[1:]
+        # Remove last char which is the :
+        self.name = " ".join(name)[:-1].strip()
         self.issues_info = []
-        try:
-            reac = parts[1]
-        except IndexError:
-            raise EnzError("Badly written reaction: %s"%linea)
-        reac = reac.replace('\r', '')
-        reac = reac.replace('\n', '')
-        if "<->" in reac and (" <-> " not in reac):
-            reac = reac.replace("<->", " <->")
-        if " <-> " not in reac:
-            reacion = reac.split(" -> ")
-            self.reversible = False
-            sus = reacion[0]
+        self.substrates = []
+        self.products = []
+        self.stoic = [[], []]
+        self.reversible = None
+        self.pathway = pathway
+
+        # 0 reading substrates, 1 reading products
+        state = 0
+
+        while len(line) > 0:
+            value = 1
+            # Parse frac
             try:
-                pro = reacion[1]
-            except IndexError:
-                raise EnzError("Badly written reaction: %s"%linea)
-        else:
-            reacion = reac.split(" <-> ")
-            self.reversible = True
-            sus = reacion[0]
-            try:
-                pro = reacion[1]
-            except IndexError:
-                raise EnzError("Badly written reaction: %s"%linea)
-        suss = sus.split(" + ")
-        pros = pro.split(" + ")
-        substrates = []
-        products = []
-        stoicsust = []
-        stoicprod = []
-        for ele in suss:
-            mets = ele.split(" ")
-            topop = []
-            for i, met in enumerate(mets):
-                if met == "": topop.append(i)
-            topop.sort(reverse=True)
-            for ii in topop:
-                mets.pop(ii)
-            if len(mets) == 0:
-                self.issues = True
-                self.issues_info.append("No substrate")
-            elif len(mets) == 1:
-                stoicsust.append(1.)
-                substrates.append(mets[0])
-            else:
-                try:
-                    stoic = float(mets[0])
-                    na = "".join(mets[1:])
-                    stoicsust.append(stoic)
-                    substrates.append(na)
-                except:
-                    na = "".join(mets)
-                    stoicsust.append(1.)
-                    substrates.append(na)
-        for ele in pros:
-            mets = ele.split(" ")
-            topop = []
-            for i, met in enumerate(mets):
-                if met == "": topop.append(i)
-            topop.sort(reverse=True)
-            for ii in topop:
-                mets.pop(ii)
-            if len(mets) == 0:
-                self.issues = True
-                self.issues_info.append("No product")
-            elif len(mets) == 1:
-                stoicprod.append(1.)
-                products.append(mets[0])
-            else:
-                try:
-                    stoic = float(mets[0])
-                    na = "".join(mets[1:])
-                    stoicprod.append(stoic)
-                    products.append(na)
-                except:
-                    na = "".join(mets)
-                    stoicprod.append(1.)
-                    products.append(na)
-        for su in substrates:
-            for pr in products:
+                if "/" in line[0]:
+                    fl = line[0].split("/")
+                    value = float(fl[0]) / float(fl[1])
+                else:
+                    value = float(line[0])
+                line = line[1:]
+            except ValueError:
+                pass  # identifier
+
+            # Identifier, take until operator is found
+            metabolite = list(takewhile(lambda x: x != "+" and x != "->" and x != "<->", line))
+            line = line[len(metabolite):]
+            # Take all following operators
+            # If it's a + followed by an arrow it belongs to the name
+            ops = list(takewhile(lambda x: x == "+" or x == "->" or x == "<->", line))
+            line = line[len(ops):]
+            if len(ops) > 0:
+                if "->" in ops[:-1] or "<->" in ops[:-1]:
+                    raise EnzError("Lonely -> or <-> not allowed in reaction names: " + " ".join(ops[:-1]))
+                metabolite += ops[:-1]
+                # Push real operator back in
+                line.insert(0, ops[-1])
+
+            metabolite = " ".join(metabolite).strip()
+
+            if len(metabolite) > 0:
+                if state == 0:
+                    target = self.substrates
+                    target_s = self.stoic[0]
+                else:
+                    target = self.products
+                    target_s = self.stoic[1]
+
+                # reference to reactants or products
+                # Check for duplicate metabolites first
+                for i, t in enumerate(target):
+                    if t == metabolite:
+                        target_s[i] += value
+                        if target_s[i] == 0:
+                            self.issues_info.append("Eliminated metabolite: " + t)
+                            target.pop(i)
+                            target_s.pop(i)
+                        break
+                else:
+                    # not found
+                    target.append(metabolite)
+                    target_s.append(value)
+
+            if len(line) == 0:
+                break
+
+            # First line item is now on an operator
+            if line[0] == "->" or line[0] == "<->":
+                if self.reversible is not None:
+                    raise EnzError("More then one reaction arrow: " + linea)
+
+                self.reversible = line[0] == "<->"
+                # Products
+                state = 1
+
+            # Skip the operator
+            line = line[1:]
+
+        if len(self.substrates) == 0:
+            self.issues_info.append("No substrates")
+
+        if len(self.products) == 0:
+            self.issues_info.append("No products")
+
+        for su in self.substrates:
+            for pr in self.products:
                 if su == pr:
-                    self.issues = True
-                    self.issues_info.append("Metabolite " + su + 
-                                            " connected to itself")
-        # checks repeated metabolites
-        if len(substrates) != len(list(set(substrates))):
-            subs = list(set(substrates))
-            stoic_sus = []
-            for ii, su in enumerate(subs):
-                inds = [kk for kk in xrange(len(substrates)) if substrates[kk] == su]
-                coefs = [stoicsust[ele] for ele in inds]
-                ncoef = sum(coefs)
-                stoic_sus.append(ncoef)
-        else:
-            subs = substrates
-            stoic_sus = stoicsust
-        if len(products) != len(list(set(products))):
-            pros = list(set(products))
-            stoic_pro = []
-            for ii, pr in enumerate(pros):
-                inds = [kk for kk in xrange(len(products)) if products[kk] == pr]
-                coefs = [stoicprod[ele] for ele in inds]
-                ncoef = sum(coefs)
-                stoic_pro.append(ncoef)
-        else:
-            pros = products
-            stoic_pro = stoicprod
-        self.substrates = subs
-        self.products = pros
-        self.metabolites = subs + pros
-        nsusu = len(subs)
-        nprod = len(pros)
-        self.Nsubstrates = nsusu
-        self.Nproducts = nprod
-        self.stoic = [stoic_sus,stoic_pro]
-        if self.reversible:
-            if nsusu > nprod:
-                self.tup = (nprod,nsusu)
-            else:
-                self.tup = (nsusu,nprod)
-        else:
-            self.tup = (nsusu,nprod)
+                    self.issues_info.append("Metabolite " + su +
+                                            " is both substrate and product")
+
+        if self.reversible is None:
+            raise EnzError("No reaction arrow found: " + linea)
+
+    @property
+    def metabolites(self):
+        return self.substrates + self.products
+
+    @property
+    def issues(self):
+        return len(self.issues_info) > 0
 
     def __repr__(self):
         """
@@ -175,27 +162,24 @@ class Enzyme:
         """
         Returns the reaction in OptGene format.
         """
-        name = self.name
-        sustr = self.substrates
-        prods = self.products
-        stoic = self.stoic
-        rev = self.reversible
-        stri = name + " : "
-        for i in range(len(sustr)):
-            stri += str(stoic[0][i]) + " " + sustr[i] + " + "
-        if len(sustr) > 0:
-            stri = stri[:len(stri)-2]
-        if rev:
-            stri += " <-> "
-        else:
-            stri += " -> "
-        for i in range(len(prods)):
-            stri += str(stoic[1][i]) + " " + prods[i] + " + "
-        if self.Nproducts > 0:
-            stri = stri[:len(stri)-2]
-        return stri
+        def reac_printer(arg):
+            stoic, metabolite = arg
 
-    def __rmul__(self, num, nname=""):
+            if stoic == 1:
+                return str(metabolite)
+            else:
+                if stoic == int(stoic):
+                    stoic = int(stoic)
+
+                return "%s %s" % (stoic, str(metabolite))
+
+        return "{} : {} {} {}".format(
+            self.name,
+            " + ".join(map(reac_printer, zip(self.stoic[0], self.substrates))),
+            "<->" if self.reversible else "->",
+            " + ".join(map(reac_printer, zip(self.stoic[1], self.products))))
+
+    def __rmul__(self, num, new_name=""):
         """
         Multiplication by number: Multiplies all stoichiometric coefficients 
         by the number.
@@ -208,7 +192,7 @@ class Enzyme:
             nre = -self.copy()
             num = -num
         elif num == 0:
-            raise EnzError("One should not multiply an reaction by zero!")
+            raise ValueError("One should not multiply a reaction by zero!")
         nre.name = nname
         nre.stoic[0] = [num*ele for ele in nre.stoic[0]]
         nre.stoic[1] = [num*ele for ele in nre.stoic[1]]
@@ -274,10 +258,8 @@ class Enzyme:
         stri_reac += " + ".join(to_add)
         enz = Enzyme(stri_reac)
         if len(mets_el):
-            enz.issues = True
             enz.issues_info.append("Possibly eliminated: "+", ".join(mets_el))
         if len(mets_cata):
-            enz.issues = True
             enz.issues_info.append("Possible catalyzers: "+", ".join(mets_cata))
         return enz
     
@@ -298,10 +280,11 @@ class Enzyme:
         Checks if two enzymes do the same reaction.
         (if they connect the same metabolites with the same stoichiometry.)
         """
-        if len(self.metabolites) != len (other.metabolites):
+        if len(self.metabolites) != len(other.metabolites):
             return False
-        if (self.reversible ^ other.reversible):
+        if self.reversible ^ other.reversible:
             return False
+
         mets1 = self.metabolites[:]
         mets2 = other.metabolites[:]
         mets1.sort()
@@ -353,7 +336,6 @@ class Enzyme:
                         blac = blac and (self.stoic_n(pros1[ii]) == \
                                        other.stoic_n(pros2[ii]))
                     return blac
-        raise EnzError(" Comparison went very wrong!")
 
     def has_metabolite(self,metabol):
         ''' Checks if the reaction has the metabolite metabol '''
@@ -397,7 +379,7 @@ class Enzyme:
             return False
 
     def connects(self,mets):
-        ''' Checks if the two metabolites given as a list or tupple in mets are
+        ''' Checks if the two metabolites given as a list or tuple in mets are
             connected by the reaction. '''
         if self.has_metabolite(mets[0]) and self.has_metabolite(mets[1]):
             if self.reversible:
@@ -416,13 +398,17 @@ class Enzyme:
 
     def make_irr(self):
         ''' Returns the irreversible version of the reaction. '''
-        kk=str(self)
-        return Enzyme(kk.replace("<->", "->"))
+        from copy import copy
+        e = copy(self)
+        e.reversible = False
+        return e
 
     def make_rev(self):
         ''' Returns the reversible version of the reaction. '''
-        kk=str(self)
-        return Enzyme(kk.replace("->", "<->"))
+        from copy import copy
+        e = copy(self)
+        e.reversible = True
+        return e
 
     def rev_reac(self, nname=""):
         ''' Returns the reaction in the reversed order. '''
@@ -457,42 +443,28 @@ class Enzyme:
         if met in self.substrates:
             ii = self.substrates.index(met)
             self.substrates.pop(ii)
-            self.metabolites.pop(self.metabolites.index(met))
             self.stoic[0].pop(ii)
-            self.Nsubstrates -= 1
-            nsusu = self.Nsubstrates
-            nprod = self.Nproducts
-            if self.reversible:
-                if nsusu > nprod:
-                    self.tup = (nprod, nsusu)
-                else:
-                    self.tup = (nsusu, nprod)
-            else:
-                self.tup = (nsusu, nprod)
-        elif met in self.products:
+        if met in self.products:
             ii = self.products.index(met)
             self.products.pop(ii)
-            self.metabolites.pop(self.metabolites.index(met))
             self.stoic[1].pop(ii)
-            self.Nproducts-=1
-            nsusu=self.Nsubstrates
-            nprod=self.Nproducts
-            if self.reversible:
-                if nsusu > nprod:
-                    self.tup = (nprod, nsusu)
-                else:
-                    self.tup = (nsusu, nprod)
-            else:
-                self.tup = (nsusu, nprod)
-        if self.Nsubstrates == 0 or self.Nproducts == 0:
-            self.issues = True
+        if len(self.substrates) == 0 or len(self.products) == 0:
             self.issues_info.append("lost all sustrates or products after \
                                       a pop")
 
-    def copy(self):
+    def __copy__(self):
         ''' Returns a copy of the reaction. '''
-        bbb = str(self)
-        return Enzyme(bbb)
+        e = Enzyme()
+        e.name = self.name
+        e.issues_info = self.issues_info
+        e.substrates = self.substrates[:]
+        e.products = self.products[:]
+        e.stoic = [[], []]
+        e.stoic[0] = self.stoic[0][:]
+        e.stoic[1] = self.stoic[1][:]
+        e.reversible = self.reversible
+        e.pathway = self.pathway
+        return e
 
     def stoic_n(self, met):
         ''' Returns the stoichiometric coefficient of the metabolite met. '''
@@ -502,4 +474,3 @@ class Enzyme:
             return self.stoic[1][self.products.index(met)]
         else:
             raise EnzError("Metabolite " + met + " not in the reaction!")
-

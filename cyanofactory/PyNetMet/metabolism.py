@@ -1,4 +1,5 @@
 #    Copyright (C) 2012 Daniel Gamermann <daniel.gamermann@ucv.es>
+#    Copyright (C) 2015 Gabriel Kind <gkind@hs-mittweida.de>
 #
 #    This file is part of PyNetMet
 #
@@ -19,10 +20,11 @@
 #    Please, cite us in your reasearch!
 #
 
-
 from network import *
 from enzyme import *
 from xml.dom.minidom import parseString
+import re
+
 
 class Metabolism:
     """
@@ -48,6 +50,7 @@ class Metabolism:
         enzymes = []
         pathna = ""
         for line in reactions:
+            line = line.strip()
             if "#" in line:
                 parts = line.split("#")
                 comments = parts[1].strip()
@@ -114,19 +117,19 @@ class Metabolism:
         enzinv = {}
         for ii, enzy in enumerate(self.enzymes):
             enzinv[enzy.name] = ii
-            if enzy.issues:
-                if "No product" in enzy.issues_info:
-                    external_out.extend(enzy.metabolites)
-                    if enzy.reversible:
-                        external_in.extend(enzy.metabolites)
-                    transport.append(ii)
-                    self.enzymes[ii].pathway = "_TRANSPORT_"
-                elif "No substrate" in enzy.issues_info:
+            if len(enzy.products) == 0:
+                external_out.extend(enzy.metabolites)
+                if enzy.reversible:
                     external_in.extend(enzy.metabolites)
-                    if enzy.reversible:
-                        external_out.extend(enzy.metabolites)
-                    transport.append(ii)
-                    self.enzymes[ii].pathway = "_TRANSPORT_"
+                transport.append(ii)
+                self.enzymes[ii].pathway = "_TRANSPORT_"
+            elif len(enzy.substrates) == 0:
+                external_in.extend(enzy.metabolites)
+                if enzy.reversible:
+                    external_out.extend(enzy.metabolites)
+                transport.append(ii)
+                self.enzymes[ii].pathway = "_TRANSPORT_"
+
             if enzy.reversible:
                 rev += 1
                 list_rev.append(ii)
@@ -141,16 +144,14 @@ class Metabolism:
             self.pathnames.append("_TRANSPORT_")
             for line in self.external:
                 if line[0] != "#":
-                    if (line.replace(" ", "") not in external_in) and (line.replace(" ", "")
-                    not in external_out) and (line.replace(" ","") in metabol):
+                    if (line not in external_in) and (line not in external_out) and (line in metabol):
                         self.enzymes.append(Enzyme(line + "_transp : <-> " +
                                                    line, "_TRANSPORT_"))
-                        enzinv[line.replace(" ", "") +
-                                            "_transp"]=enzisinv
+                        enzinv[line + "_transp"]=enzisinv
                         list_rev.append(enzisinv)
                         transport.append(enzisinv)
-                        external_in.append(line.replace(" ", ""))
-                        external_out.append(line.replace(" ", ""))
+                        external_in.append(line)
+                        external_out.append(line)
                         enzisinv += 1
                         rev += 1
         # writes reactions in pathways
@@ -173,8 +174,7 @@ class Metabolism:
                     M[subs[su]][subs[pr]] = 1
                     if enzy.reversible:
                         M[subs[pr]][subs[su]] = 1
-        # Creates Network
-        net = Network(M,metabol)
+
         # Constraints
         constr = []
         for enz in self.enzymes:
@@ -193,17 +193,22 @@ class Metabolism:
         for ele in self.constraints:
             if ele[0] != "#":
                 line = ele.strip()
-                parts = line.split(" [")
-                part1 = parts[0].strip()#.replace("\xb7", "*")
-                part1 = part1.replace(" ", "")
-                part2 = parts[1].replace("]", "").split(",")
-                part2 = [float(ele.strip()) for ele in part2]
-                try:
-                    inde = enzinv[part1]
-                    cococo = tuple(part2)
-                    constr[inde] = (float(cococo[0]),float(cococo[1]))
-                except:
-                    pass
+                # rightmost [ defines interval
+                pos = line.rfind("[")
+                name = line[:pos].strip()
+                m = re.match(r"\[\s?(\S+)\s?,\s?(\S+)\s?\]$", line[pos:])
+                if m:
+                    try:
+                        begin = float(m.group(1))
+                        end = float(m.group(2))
+                    except ValueError:
+                        continue
+
+                    try:
+                        inde = enzinv[name]
+                    except IndexError:
+                        continue
+                    constr[inde] = (begin, end)
         # Objective
         objs = []
         for ele in self.objective:
@@ -230,7 +235,6 @@ class Metabolism:
         self.external_in = external_in
         self.external_out = external_out
         self.M = M
-        self.net = net
         self.nmets = len(metabol)
         self.nreacs = len(self.enzymes)
         self.nreac_rev = rev
@@ -239,6 +243,7 @@ class Metabolism:
         self.reac_irr = list_irr    
         self.reac_per_met = reac_per_met
         self.reacs_per_met = reacs_per_met
+        self.net = None
 
     def add_reacs(self, reacs):
         """
@@ -283,10 +288,10 @@ class Metabolism:
         for ii, enzy in enumerate(self.enzymes[nreacs_old:]):
             self.dic_enzs[enzy.name] = ii+nreacs_old
             if enzy.issues:
-                if "No product" in enzy.issues_info:
+                if len(enzy.products) == 0:
                     self.external_out.extend(enzy.metabolites)
                     self.transport.append(ii+nreacs_old)
-                elif "No sustrate" in enzy.issues_info:
+                elif len(enzy.substrates) == 0:
                     self.external_in.extend(enzy.metabolites)
                     self.transport.append(ii+nreacs_old)
         # writes reactions in pathways
@@ -318,7 +323,6 @@ class Metabolism:
         self.nreacs = len(self.enzymes)
         M = self.M_matrix()
         self.M = M
-        self.net = Network(M,self.mets)
 
     def pop(self, iname):
         """
@@ -698,10 +702,12 @@ class Metabolism:
 
     def bad_reacs(self):
         """
-        Filters reactions that are for sure disconected from the giant
+        Filters reactions that are for sure disconnected from the giant
         component or that can not participate in the FBA.
         """
         # Selects biggest connected component
+        if self.net is None:
+            self.net = Network(self.M,self.mets)
         self.net.components()
         self.net.disc_comps.sort(key=lambda x:len(x), reverse=True)
         topop = []
@@ -817,32 +823,32 @@ class Metabolism:
                          reverse=True)
         for ele in con_met[0:nshow+1]:
             print >>probs, "%30s : %5i" % (self.mets[ele], substr[ele])
-        print >> probs, "      "
-        print >> probs, "   METABOLITE-METABOLITE"
-        print >> probs, "      "
-        print >> probs, " Most connected Metabolites: "
-        print >> probs, "      "
-        nlinks = [len(ele) for ele in self.net.neigbs]
-        con_met = sorted(range(self.nmets), key=lambda x:nlinks[x],
-                         reverse=True)
-        for ele in con_met[0:nshow+1]:
-            print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
-        print >> probs, "      "
-        print >> probs, " Most out-connected Metabolites: "
-        print >> probs, "      "
-        nlinks = [len(ele) for ele in self.net.linksout]
-        con_met = sorted(range(self.nmets), key=lambda x:nlinks[x],
-                         reverse=True)
-        for ele in con_met[0:nshow+1]:
-            print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
-        print >> probs, "      "
-        print >> probs, " Most in-connected Metabolites: "
-        print >> probs, "      "
-        nlinks = [len(ele) for ele in self.net.linksin]
-        con_met = sorted(range(self.nmets), key=lambda x:nlinks[x],
-                         reverse=True)
-        for ele in con_met[0:nshow+1]:
-            print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
+        #print >> probs, "      "
+        #print >> probs, "   METABOLITE-METABOLITE"
+        #print >> probs, "      "
+        #print >> probs, " Most connected Metabolites: "
+        #print >> probs, "      "
+        #nlinks = [len(ele) for ele in self.net.neigbs]
+        #con_met = sorted(range(self.nmets), key=lambda x:nlinks[x],
+        #                 reverse=True)
+        #for ele in con_met[0:nshow+1]:
+        #    print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
+        #print >> probs, "      "
+        #print >> probs, " Most out-connected Metabolites: "
+        #print >> probs, "      "
+        #nlinks = [len(ele) for ele in self.net.linksout]
+        #con_met = sorted(range(self.nmets), key=lambda x:nlinks[x],
+        #                 reverse=True)
+        #for ele in con_met[0:nshow+1]:
+        #    print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
+        #print >> probs, "      "
+        #print >> probs, " Most in-connected Metabolites: "
+        #print >> probs, "      "
+        #nlinks = [len(ele) for ele in self.net.linksin]
+        #con_met = sorted(range(self.nmets), key=lambda x:nlinks[x],
+        #                 reverse=True)
+        #for ele in con_met[0:nshow+1]:
+        #    print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
         self.log_file = "logs/Log_" + self.file_name + ".txt"
         print >>probs, " "
         probs.close()

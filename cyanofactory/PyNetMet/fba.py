@@ -1,4 +1,5 @@
 #    Copyright (C) 2012 Daniel Gamermann <daniel.gamermann@ucv.es>
+#    Copyright (C) 2015 Gabriel Kind <gkind@hs-mittweida.de>
 #
 #    This file is part of PyNetMet
 #
@@ -24,9 +25,8 @@ import glpk
 
 class FBA:
     """
-     This class perform FBA analysis for a metabolism object.
+    This class perform FBA analysis for a metabolism object.
     """
-
     def __init__(self, org, eps=1.e-10, maximize = True):
         """
         Prepares the FBA object.
@@ -40,8 +40,6 @@ class FBA:
         mets = org.mets
         reac_names = [ele.name for ele in reacs]
         # Stoichiometric matrix
-        nreacs = len(reac_names)
-        nmets = len(mets)
         # Matrix
         lista = []
         for j, reac in enumerate(reacs):
@@ -86,8 +84,6 @@ class FBA:
         # FBA
         self.ext_in = external_in
         self.ext_out = external_out
-        self.nmets = nmets
-        self.nreacs = nreacs
         self.mets = mets
         self.reac_names = reac_names
         self.reacs = reacs
@@ -98,7 +94,7 @@ class FBA:
 
     def __repr__(self, keyz=lambda x:x[1], rev=False):
         fluxes =[(self.lp.cols[ii].name, self.lp.cols[ii].value) for ii in \
-                                                           xrange(self.nreacs)]
+                                                           range(len(self.reacs))]
         fluxes = sorted(fluxes, key=keyz, reverse=rev)
         stri = ""
         for ele in fluxes:
@@ -165,18 +161,18 @@ class FBA:
         """
         lp = glpk.LPX()
         lp.name = " FBA SOLUTION "
-        lp.rows.add(self.nmets)
-        lp.cols.add(self.nreacs)
+        lp.rows.add(len(self.mets))
+        lp.cols.add(len(self.reacs))
         for ii, ele in enumerate(lp.rows):
             ele.name = self.mets[ii]
         for ii, ele in enumerate(lp.cols):
             ele.name = self.reac_names[ii]
         #constraints
         ii = 0
-        for n in xrange(self.nreacs):
+        for n in range(len(self.reacs)):
             lp.cols[n].bounds = (self.constr[ii][0], self.constr[ii][1])
             ii += 1
-        for n in xrange(self.nmets):
+        for n in range(len(self.mets)):
             lp.rows[n].bounds = (0., 0.)
         ###### Objective
         lista = [0. for ele in self.reac_names]
@@ -188,43 +184,10 @@ class FBA:
         ###### Matrix
         lp.matrix = self.Mstoic[:]
         lp.simplex()
-        flux = [lp.cols[ii].value for ii in xrange(self.nreacs)]
+        flux = [lp.cols[ii].value for ii in range(len(self.reacs))]
         self.lp = lp
         self.flux = flux
         self.Z = lp.obj.value
-
-    def fba2(self):
-        """
-        Simplex algorithm through glpk.
-        """
-        from scipy.optimize import linprog
-        from math import isnan
-
-        ###### Objective
-        lista = [0. for ele in self.reac_names]
-        for obj in self.obj:
-            iobj = self.reac_names.index(obj[0])
-            obj = float(obj[1])
-            if obj != 0:
-                obj = -obj
-            lista[iobj] = float(obj)
-
-        ##### Constraints
-        bounds = []
-        for i, n in enumerate(xrange(self.nreacs)):
-            bounds.append((self.constr[i][0], self.constr[i][1]))
-
-        ###### Matrix
-        lstoic = map(lambda x: [0]*self.nreacs, [[]]*self.nmets)
-        for x,y,val in self.Mstoic:
-            lstoic[x][y] = val
-
-        lp = linprog(c=lista, A_ub=None, b_ub=None, A_eq=lstoic, b_eq=[0]*self.nmets, bounds=bounds, options={'tol':self.eps})
-        #print lp
-
-        self.lp = lp
-        self.flux = [0]*self.nreacs if type(lp.x) == float else lp.x[:]
-        self.Z = lp.fun
 
     def shadow(self, nrea, ele=0.9, relat = True):
         """
@@ -255,7 +218,7 @@ class FBA:
             shdw = "NA"
         self.lp.cols[nrea].bounds = c_old[0], c_old[1]
         self.lp.simplex()
-        self.flux = [self.lp.cols[ii].value for ii in xrange(self.nreacs)]
+        self.flux = [self.lp.cols[ii].value for ii in range(len(self.reacs))]
         self.Z = self.lp.obj.value
         return shdw
 
@@ -274,7 +237,7 @@ class FBA:
         Znew = self.lp.obj.value
         self.lp.cols[nreac].bounds = c_old[0], c_old[1]
         self.lp.simplex()
-        self.flux = [self.lp.cols[ii].value for ii in xrange(self.nreacs)]
+        self.flux = [self.lp.cols[ii].value for ii in range(len(self.reacs))]
         self.Z = self.lp.obj.value
         if abs(Znew) < self.eps:
             return [True, 1.0]
@@ -366,7 +329,7 @@ class FBA:
             ii += 1
         self.reacs_by_met = reacs_by_met
         summ = 0.
-        for ii in xrange(self.nmets):
+        for ii in range(len(self.mets)):
             summ += abs(self.sum_flux_met(ii))
         return summ
 
