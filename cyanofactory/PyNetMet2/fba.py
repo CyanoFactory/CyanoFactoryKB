@@ -80,7 +80,7 @@ class FBA:
             lista.pop(ele)
         MM = lista[:]
         #constraints
-        constr = org.constr
+        constr = map(lambda x: x.constraint, org.enzymes)
         # FBA
         self.ext_in = external_in
         self.ext_out = external_out

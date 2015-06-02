@@ -41,7 +41,6 @@ class Metabolism:
             [reactions, constraints, external, objective] = \
                                                       self.prepare_sbml(filein)
         self.file_name = filein
-        self.reactions = reactions
         self.constraints = constraints
         self.external = external
         self.objective = objective
@@ -72,8 +71,8 @@ class Metabolism:
         """
         Show number of reactions and metabolites in the metabolism.
         """
-        aa = "# Reactions:" + str(self.nreacs) + "\n"
-        aa += "# Metabolites:" + str(self.nmets) + "\n"
+        aa = "# Reactions:" + str(len(self.enzymes)) + "\n"
+        aa += "# Metabolites:" + str(len(self.mets)) + "\n"
         return aa
 
     def calcs(self):
@@ -104,56 +103,41 @@ class Metabolism:
                 else:
                     iprod = metabol.index(prod)
                     reac_per_met[iprod].append(reac.name)
-        nmets = len(metabol)
         reacs_per_met = [len(ele) for ele in reac_per_met]
         # Prepares external mets and M matrix
-        irr = 0
-        rev = 0
         list_rev = []
         list_irr = []
         external_in = []
         external_out = []
         transport = []
+
+        # Throw away transport reactions, they are generated
+        self.enzymes = [item for item in self.enzymes if item.pathway != "_TRANSPORT_"]
+
         enzinv = {}
         for ii, enzy in enumerate(self.enzymes):
             enzinv[enzy.name] = ii
-            if len(enzy.products) == 0:
-                external_out.extend(enzy.metabolites)
-                if enzy.reversible:
-                    external_in.extend(enzy.metabolites)
-                transport.append(ii)
-                self.enzymes[ii].pathway = "_TRANSPORT_"
-            elif len(enzy.substrates) == 0:
-                external_in.extend(enzy.metabolites)
-                if enzy.reversible:
-                    external_out.extend(enzy.metabolites)
-                transport.append(ii)
-                self.enzymes[ii].pathway = "_TRANSPORT_"
 
             if enzy.reversible:
-                rev += 1
                 list_rev.append(ii)
             else:
-                irr += 1
                 list_irr.append(ii)
         self.external = list(set(self.external)|set(external_in))
         self.external = list(set(self.external)|set(external_out))
         # Apends reactions for external mets
-        if "_TRANSPORT_" not in self.pathnames:
-            enzisinv = ii+1
-            self.pathnames.append("_TRANSPORT_")
-            for line in self.external:
-                if line[0] != "#":
-                    if (line not in external_in) and (line not in external_out) and (line in metabol):
-                        self.enzymes.append(Enzyme(line + "_transp : <-> " +
-                                                   line, "_TRANSPORT_"))
-                        enzinv[line + "_transp"]=enzisinv
-                        list_rev.append(enzisinv)
-                        transport.append(enzisinv)
-                        external_in.append(line)
-                        external_out.append(line)
-                        enzisinv += 1
-                        rev += 1
+        enzisinv = ii+1
+        self.pathnames.append("_TRANSPORT_")
+        for line in self.external:
+            if line[0] != "#":
+                if (line not in external_in) and (line not in external_out) and (line in metabol):
+                    self.enzymes.append(Enzyme(line + "_transp : <-> " +
+                                               line, "_TRANSPORT_"))
+                    enzinv[line + "_transp"]=enzisinv
+                    list_rev.append(enzisinv)
+                    transport.append(enzisinv)
+                    external_in.append(line)
+                    external_out.append(line)
+                    enzisinv += 1
         # writes reactions in pathways
         pathways = [[] for ele in self.pathnames]
         for ii in xrange(len(self.enzymes)):
@@ -176,20 +160,6 @@ class Metabolism:
                         M[subs[pr]][subs[su]] = 1
 
         # Constraints
-        constr = []
-        for enz in self.enzymes:
-            if len(enz.substrates) == 0 and enz.reversible:
-                constr.append((None, None))
-            elif len(enz.substrates) == 0 and not enz.reversible:
-                constr.append((0., None))
-            elif len(enz.products) == 0 and enz.reversible:
-                constr.append((None, None))
-            elif len(enz.products) == 0 and not enz.reversible:
-                constr.append((0., None))
-            elif enz.reversible:
-                constr.append((None, None))
-            elif not enz.reversible:
-                constr.append((0., None))
         for ele in self.constraints:
             if ele[0] != "#":
                 line = ele.strip()
@@ -206,9 +176,25 @@ class Metabolism:
 
                     try:
                         inde = enzinv[name]
-                    except IndexError:
+                        if not self.enzymes[inde].constraint:
+                            self.enzymes[inde].constraint = (begin, end)
+                    except KeyError:
                         continue
-                    constr[inde] = (begin, end)
+        for enz in self.enzymes:
+            if len(enz.substrates) == 0 and enz.reversible:
+                enz.constraint = (None, None)
+            elif len(enz.substrates) == 0 and not enz.reversible:
+                enz.constraint = (0., None)
+            elif len(enz.products) == 0 and enz.reversible:
+                enz.constraint = (None, None)
+            elif len(enz.products) == 0 and not enz.reversible:
+                enz.constraint = (0., None)
+            elif enz.reversible:
+                if not enz.constraint:
+                    enz.constraint = (None, None)
+            elif not enz.reversible:
+                if not enz.constraint:
+                    enz.constraint = (0., None)
         # Objective
         objs = []
         for ele in self.objective:
@@ -228,17 +214,12 @@ class Metabolism:
         self.obj = objs
         self.dic_enzs = enzinv
         self.pathways = pathways
-        self.constr = constr
         self.transport = transport
         self.dic_mets = subs
         self.mets = metabol
         self.external_in = external_in
         self.external_out = external_out
         self.M = M
-        self.nmets = len(metabol)
-        self.nreacs = len(self.enzymes)
-        self.nreac_rev = rev
-        self.nreac_irr = irr
         self.reac_rev = list_rev
         self.reac_irr = list_irr    
         self.reac_per_met = reac_per_met
@@ -250,11 +231,16 @@ class Metabolism:
         Adds new reactions to the metabolism.
         """
         # Reads metabolites
+        for reac in reacs:
+            r = Enzyme(reac,"GP")
+            if reac.name in self.dic_enzs:
+                raise ValueError("Reaction with same name already in model: " + r.name)
+
         subs = self.dic_mets
         metabol = self.mets
         reac_per_met = self.reac_per_met
-        ii = self.nmets
-        nreacs_old = self.nreacs
+        ii = len(self.mets)
+        nreacs_old = len(self.enzymes)
         for jj, rea in enumerate(reacs):
             reac = Enzyme(rea,"GP")
             for sus in reac.substrates:
@@ -277,13 +263,9 @@ class Metabolism:
                     reac_per_met[iprod].append(reac.name)
             self.enzymes.append(reac)
             if reac.reversible:
-                self.nreac_rev += 1
                 self.reac_rev.append(jj+nreacs_old)
             else:
-                self.nreac_irr += 1
                 self.reac_irr.append(jj+nreacs_old)
-        nmets = len(metabol)
-        reacs_per_met = [len(ele) for ele in reac_per_met]
         # Prepares external mets and M matrix
         for ii, enzy in enumerate(self.enzymes[nreacs_old:]):
             self.dic_enzs[enzy.name] = ii+nreacs_old
@@ -304,59 +286,120 @@ class Metabolism:
                 ipath = self.pathnames.index(pathway)
                 self.pathways.append([])
             self.pathways[ipath].append(ii+nreacs_old)
-        for enz in self.enzymes[nreacs_old:]:
-            if len(enz.substrates) == 0 and enz.reversible:
-                self.constr.append((None, None))
-            elif len(enz.substrates) == 0 and not enz.reversible:
-                self.constr.append((0., None))
-            elif len(enz.products) == 0 and enz.reversible:
-                self.constr.append((None, None))
-            elif len(enz.products) == 0 and not enz.reversible:
-                self.constr.append((0., None))
-            elif enz.reversible:
-                self.constr.append((None, None))
-            elif not enz.reversible:
-                self.constr.append((0., None))
         self.dic_mets = subs
         self.mets = metabol
-        self.nmets = len(metabol)
-        self.nreacs = len(self.enzymes)
         M = self.M_matrix()
         self.M = M
+        self.calcs()
 
     def pop(self, iname):
         """
         Remove reaction number iname from the metabolism.
         """
-        reac_name = self.enzymes[iname].name
-        pathname = self.enzymes[iname].pathway
-        mets = self.enzymes[iname].metabolites
-        rev = self.enzymes[iname].reversible
-        ipath = self.pathnames.index(pathname)
         self.enzymes.pop(iname)
-        self.pathways[ipath].pop(self.pathways[ipath].index(iname))
-        for ii, pathway in enumerate(self.pathways):
-            for jj, ireac in enumerate(pathway):
-                if ireac > iname:
-                    self.pathways[ii][jj] -= 1
-        del self.dic_enzs[reac_name]
-        self.constr.pop(iname)
-        if iname in self.transport:
-            self.transport.pop(self.transport.index(iname))
-        for ii, ele in enumerate(self.transport):
-            if ele > iname:
-                self.transport[ii] -= 1
-        self.nreacs -= 1
-        if rev:
-            self.nreac_rev -= 1
-            self.reac_rev.pop(self.reac_rev.index(iname))
-        else:
-            self.nreac_irr -= 1
-            self.reac_irr.pop(self.reac_irr.index(iname))
-        for met in mets:
-            imet = self.dic_mets[met]
-            self.reac_per_met[imet].pop(self.reac_per_met[imet].index(reac_name))
-            self.reacs_per_met[imet] -= 1
+        self.calcs()
+
+    def add_reaction(self, reaction):
+        """
+        Add reaction string to model
+        """
+        self.add_reacs([reaction])
+        self.calcs()
+
+    def get_reaction(self, name):
+        """
+        Get reaction with name
+        """
+        idx = self.dic_enzs.get(name)
+        if idx is None:
+            return None
+
+        return self.enzymes[idx]
+
+    def get_reaction_with_pathway(self, pathway_name):
+        return filter(lambda x: x.pathway == pathway_name, self.enzymes)
+
+    def rename_reaction(self, reac_from, reac_to):
+        reac = self.get_reaction(reac_from)
+
+        if reac is None:
+            raise ValueError("Reaction not in model: " + reac_from)
+
+        if self.has_reaction(reac_to):
+            raise ValueError("Reaction already in model: " + reac_to)
+
+        reac.name = reac_to
+        self.calcs()
+
+    def remove_reaction(self, name):
+        """
+        Remove reaction with passed name from model
+        """
+        idx = self.dic_enzs.get(name)
+        if idx is None:
+            raise ValueError("Reaction not in model: " + name)
+
+        self.pop(idx)
+
+    def has_reaction(self, name):
+        return self.get_reaction(name) is not None
+
+    def rename_metabolite(self, met_from, met_to):
+        if re.match(r"^[0-9]", met_to):
+            raise ValueError("Name must not begin with a number")
+
+        if re.match(r"(^<?\-> | <?\-> | <?\->$)", met_to):
+            raise ValueError("Name must not contain lonely <-> or ->")
+
+        if re.match(r"(^\+ | \+ )", met_to):
+            raise ValueError("Lonely + only allowed at end of name")
+
+        if not self.has_metabolite(met_from):
+            raise ValueError("Metabolite not in model: " + met_from)
+
+        if self.has_metabolite(met_to):
+            raise ValueError("Metabolite already in model: " + met_to)
+
+        for reaction in self.enzymes:
+            for i, metabolite in enumerate(reaction.substrates):
+                if metabolite == met_from:
+                    reaction.substrates[i] = met_to
+
+            for i, metabolite in enumerate(reaction.products):
+                if metabolite == met_from:
+                    reaction.products[i] = met_to
+
+            for i, line in enumerate(self.external):
+                if line[0] != "#":
+                    if line == met_from:
+                        self.external[i] = met_to
+
+        self.calcs()
+
+    def has_metabolite(self, name):
+        return name in self.dic_mets
+
+    def make_metabolite_external(self, name):
+        if not self.has_metabolite(name):
+            raise ValueError("Metabolite not in model: " + name)
+
+        for i, line in enumerate(self.external):
+            if line[0] != "#":
+                if line == name:
+                    # Already external
+                    return
+
+        self.external.append(name)
+
+        self.calcs()
+
+    def make_metabolite_internal(self, name):
+        if not self.has_metabolite(name):
+            raise ValueError("Metabolite not in model: " + name)
+
+        self.external = filter(lambda x: x[0] == "#" or x != name, self.external)
+
+        self.calcs()
 
     def prepare_opt(self, infile):
         """
@@ -541,36 +584,31 @@ class Metabolism:
         if filetype == "opt":
             fil = open(fileout,"w")
             print >>fil, "-REACTIONS"
-            print >>fil
-            print >>fil
             for ii, pathname in enumerate(self.pathnames):
+                if pathname == "_TRANSPORT_":
+                    continue
                 print >>fil
                 print >>fil, "# " + pathname
-                print >>fil
                 for reac in self.pathways[ii]:
                     print >>fil, self.enzymes[reac]
             print >>fil
-            print >>fil
             print >>fil, "-CONSTRAINTS"
             print >>fil
-            print >>fil
-            for constr in self.constraints:
-                print >>fil, constr
-            print >>fil
+            for constr in self.enzymes:
+                if constr.constraint[0] == None or constr.constraint[1] == None:
+                    continue
+                print >>fil, constr.name + " [" + str(constr.constraint[0]) + ", " + str(constr.constraint[1]) + "]"
             print >>fil
             print >>fil, "-EXTERNAL METABOLITES"
             print >>fil
-            print >>fil
-            exts = set([ele.replace(" ", "") for ele in self.external]) | \
-                                                          set(self.external_in)
+            exts = set(self.external) | set(self.external_in)
             exts = exts|set(self.external_out)
             exts = list(exts)
+            exts.sort()
             for ext in exts:
                 print >>fil, ext
             print >>fil
-            print >>fil
             print >>fil, "-OBJ"
-            print >>fil
             print >>fil
             for obj in self.objective:
                 print >>fil, obj
@@ -579,7 +617,7 @@ class Metabolism:
             if printgenes:
                 enzs = dic_genes.keys()
             fil = open(fileout, "w")
-            print >>fil, '<?xml version="1.0" encoding="UTF-8"?>'
+            print >>fil, '<?xml version="1.0" encoding="utf-8"?>'
             print >>fil, '<sbml xmlns="http://www.sbml.org/sbml/level2" xmlns:sbml="http://www.sbml.org/sbml/level2" version="1" level="2" xmlns:html = "http://www.w3.org/1999/xhtml">'
             print >>fil, '<model id="%s" name="%s" >' % \
                                                 (self.file_name,self.file_name)
@@ -592,8 +630,7 @@ class Metabolism:
             print >>fil,tab+'<compartment id="Cytosol" outside="Extra_cellular" />'
             print >>fil,"</listOfCompartments>"
             print >>fil,"<listOfSpecies>"
-            exts = set([ele.replace(" ","") for ele in self.external]) | \
-                                                          set(self.external_in)
+            exts = set(self.external) | set(self.external_in)
             exts = exts|set(self.external_out)
             exts = list(exts)
             for met in self.mets:
@@ -629,7 +666,7 @@ class Metabolism:
                 for met in enzy.products:
                     print >> fil, 3*tab+'<speciesReference species="%s" stoichiometry="%s"/>'%(met,str(enzy.stoic_n(met)))
                 print >> fil, 2*tab+"</listOfProducts>"
-                [lb, ub] = self.constr[ii]
+                [lb, ub] = map(lambda x: x.constraint)
                 obj = False
                 if enzy.name in objs:
                     obj = True
@@ -798,7 +835,7 @@ class Metabolism:
         print >> probs, "      "
         print >> probs, " Most connected Metabolites to enzymes: "
         print >> probs, "      "
-        con_met = sorted(range(self.nmets), key=lambda x:self.reacs_per_met[x],
+        con_met = sorted(range(len(self.mets)), key=lambda x:self.reacs_per_met[x],
                          reverse=True)
         for ele in con_met[0:nshow+1]:
             print >>probs, "%30s : %5i" % (self.mets[ele],
@@ -809,7 +846,7 @@ class Metabolism:
         substr = [sum([met in reac.substrates for reac in self.enzymes]+
                   [met in reac.products for reac in self.enzymes if
                   reac.reversible]) for met in self.mets]
-        con_met = sorted(range(self.nmets), key=lambda x:substr[x],
+        con_met = sorted(range(len(self.mets)), key=lambda x:substr[x],
                          reverse=True)
         for ele in con_met[0:nshow+1]:
             print >>probs, "%30s : %5i" % (self.mets[ele], substr[ele])
@@ -819,36 +856,38 @@ class Metabolism:
         substr = [sum([met in reac.products for reac in self.enzymes]+
                   [met in reac.substrates for reac in self.enzymes if 
                   reac.reversible]) for met in self.mets]
-        con_met = sorted(range(self.nmets), key=lambda x:substr[x],
+        con_met = sorted(range(len(self.mets)), key=lambda x:substr[x],
                          reverse=True)
         for ele in con_met[0:nshow+1]:
             print >>probs, "%30s : %5i" % (self.mets[ele], substr[ele])
-        #print >> probs, "      "
-        #print >> probs, "   METABOLITE-METABOLITE"
-        #print >> probs, "      "
-        #print >> probs, " Most connected Metabolites: "
-        #print >> probs, "      "
-        #nlinks = [len(ele) for ele in self.net.neigbs]
-        #con_met = sorted(range(self.nmets), key=lambda x:nlinks[x],
-        #                 reverse=True)
-        #for ele in con_met[0:nshow+1]:
-        #    print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
-        #print >> probs, "      "
-        #print >> probs, " Most out-connected Metabolites: "
-        #print >> probs, "      "
-        #nlinks = [len(ele) for ele in self.net.linksout]
-        #con_met = sorted(range(self.nmets), key=lambda x:nlinks[x],
-        #                 reverse=True)
-        #for ele in con_met[0:nshow+1]:
-        #    print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
-        #print >> probs, "      "
-        #print >> probs, " Most in-connected Metabolites: "
-        #print >> probs, "      "
-        #nlinks = [len(ele) for ele in self.net.linksin]
-        #con_met = sorted(range(self.nmets), key=lambda x:nlinks[x],
-        #                 reverse=True)
-        #for ele in con_met[0:nshow+1]:
-        #    print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
+        if self.net is None:
+            self.net = Network(self.M,self.mets)
+        print >> probs, "      "
+        print >> probs, "   METABOLITE-METABOLITE"
+        print >> probs, "      "
+        print >> probs, " Most connected Metabolites: "
+        print >> probs, "      "
+        nlinks = [len(ele) for ele in self.net.neigbs]
+        con_met = sorted(range(len(self.nmets)), key=lambda x:nlinks[x],
+                         reverse=True)
+        for ele in con_met[0:nshow+1]:
+            print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
+        print >> probs, "      "
+        print >> probs, " Most out-connected Metabolites: "
+        print >> probs, "      "
+        nlinks = [len(ele) for ele in self.net.linksout]
+        con_met = sorted(range(len(self.nmets)), key=lambda x:nlinks[x],
+                         reverse=True)
+        for ele in con_met[0:nshow+1]:
+            print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
+        print >> probs, "      "
+        print >> probs, " Most in-connected Metabolites: "
+        print >> probs, "      "
+        nlinks = [len(ele) for ele in self.net.linksin]
+        con_met = sorted(range(len(self.nmets)), key=lambda x:nlinks[x],
+                         reverse=True)
+        for ele in con_met[0:nshow+1]:
+            print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
         self.log_file = "logs/Log_" + self.file_name + ".txt"
         print >>probs, " "
         probs.close()

@@ -20,13 +20,6 @@
 #    Please, cite us in your research!
 #
 
-class EnzError(Exception):
-    def __init__(self,value):
-        self.value = value
-    def __str__(self):
-        return self.value
-
-
 class Enzyme(object):
     '''
     This class defines a chemical reaction object. The input should be an
@@ -47,7 +40,7 @@ class Enzyme(object):
         line = line[len(name):]
         # takewhile did not take the item with the colon
         if len(line) == 0:
-            raise EnzError("Invalid reaction: " + linea)
+            raise ValueError("Invalid reaction: " + linea)
         name.append(line[0])
         line = line[1:]
         # Remove last char which is the :
@@ -56,6 +49,7 @@ class Enzyme(object):
         self.substrates = []
         self.products = []
         self.stoic = [[], []]
+        self.constraint = []
         self.reversible = None
         self.pathway = pathway
 
@@ -84,7 +78,7 @@ class Enzyme(object):
             line = line[len(ops):]
             if len(ops) > 0:
                 if "->" in ops[:-1] or "<->" in ops[:-1]:
-                    raise EnzError("Lonely -> or <-> not allowed in reaction names: " + " ".join(ops[:-1]))
+                    raise ValueError("Lonely -> or <-> not allowed in reaction names: " + " ".join(ops[:-1]))
                 metabolite += ops[:-1]
                 # Push real operator back in
                 line.insert(0, ops[-1])
@@ -120,7 +114,7 @@ class Enzyme(object):
             # First line item is now on an operator
             if line[0] == "->" or line[0] == "<->":
                 if self.reversible is not None:
-                    raise EnzError("More then one reaction arrow: " + linea)
+                    raise ValueError("More then one reaction arrow: " + linea)
 
                 self.reversible = line[0] == "<->"
                 # Products
@@ -142,7 +136,17 @@ class Enzyme(object):
                                             " is both substrate and product")
 
         if self.reversible is None:
-            raise EnzError("No reaction arrow found: " + linea)
+            raise ValueError("No reaction arrow found: " + linea)
+
+    @property
+    def name(self):
+        return self._name
+
+    @name.setter
+    def name(self, value):
+        if value.strip()[-1] == ":":
+            raise ValueError(": not allowed at end of name")
+        self._name = value
 
     @property
     def metabolites(self):
@@ -473,4 +477,4 @@ class Enzyme(object):
         elif self.has_product(met):
             return self.stoic[1][self.products.index(met)]
         else:
-            raise EnzError("Metabolite " + met + " not in the reaction!")
+            raise ValueError("Metabolite " + met + " not in the reaction!")
