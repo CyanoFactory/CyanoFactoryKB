@@ -81,6 +81,11 @@ Released under the MIT license
         function(e) { return !e.reversible }
     ];
 
+    var metabolite_filter = [
+        function(e) { return !e.external },
+        function(e) { return e.external }
+    ];
+
     function notifyInfo(text) {
         $("#simulation-result").html('<div class="alert alert-info" role="alert">\
             <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>\
@@ -317,6 +322,52 @@ Released under the MIT license
                 "<'row'<'col-sm-12'tr>>" +
                 "<'row'<'col-sm-6'i><'col-sm-6'p>>"
         });
+
+        $($("#filter_row_metabolites").text()).appendTo($("#cyano-metabolite-list_wrapper").children()[1]);
+
+        $("#cyano-metabolite-list-filter-reactions").multiselect({
+            buttonClass: 'btn btn-default btn-xs',
+            onChange: function(option, checked, select) {
+                datatable_metabolites.draw();
+            },
+            buttonText: function(options, select) {
+                if (options.length === 0) {
+                    return 'No option selected';
+                }
+                else if (options.length === 2) {
+                    return 'No filter applied';
+                }
+                else {
+                    var labels = [];
+
+                    options.each(function() {
+                        labels.push($(this).html());
+                    });
+                    return labels.join(' ') + '';
+                }
+            }
+        });
+
+        $.fn.dataTable.ext.search.push(
+            function( settings, data, dataIndex ) {
+                if (settings.nTable == table_metabolites[0]) {
+                    var arr = $("#cyano-metabolite-list-filter-reactions").find("option").map(function () {
+                        return this.selected;
+                    }).get();
+
+                    var d = datatable_metabolites.data()[dataIndex];
+                    var f = metabolite_filter;
+
+                    if (!(arr[0] || arr[1])) {
+                        return false;
+                    }
+
+                    return ((arr[0] ? f[0](d) : !f[0](d)) || (arr[1] ? f[1](d) : !f[1](d)));
+                }
+
+                return true;
+            }
+        );
 
         $( ".check" ).button();
 
@@ -1131,10 +1182,20 @@ Released under the MIT license
     <option selected="selected">Constraint</option>
     <option selected="selected">Unconstraint</option>
     </optgroup>
-    <optgroup label="Reaction type">
+    <optgroup label="Reversible">
     <option selected="selected">Reversible</option>
     <option selected="selected">Irreversible</option>
     </optgroup>
+</select>
+</div>
+</script>
+
+<script id="filter_row_metabolites" type="text/plain">
+<div class="col-sm-12">
+<label for="cyano-metabolite-list-filter-reactions">Filter metabolites</label>
+<select id="cyano-metabolite-list-filter-reactions" class="form-control combobox" multiple="multiple">
+    <option selected="selected">Is internal</option>
+    <option selected="selected">Is external</option>
 </select>
 </div>
 </script>
