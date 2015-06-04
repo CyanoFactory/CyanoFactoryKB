@@ -1,5 +1,4 @@
 #    Copyright (C) 2012 Daniel Gamermann <daniel.gamermann@ucv.es>
-#    Copyright (C) 2015 Gabriel Kind <gkind@hs-mittweida.de>
 #
 #    This file is part of PyNetMet
 #
@@ -36,7 +35,7 @@ class FBA:
         self.eps = eps
         external_in = org.external_in
         external_out = org.external_out
-        reacs = org.enzymes[:]
+        reacs = filter(lambda x: not x.disabled, org.enzymes)
         mets = org.mets
         reac_names = [ele.name for ele in reacs]
         # Stoichiometric matrix
@@ -80,7 +79,7 @@ class FBA:
             lista.pop(ele)
         MM = lista[:]
         #constraints
-        constr = map(lambda x: x.constraint, org.enzymes)
+        constr = map(lambda x: x.constraint, reacs)
         # FBA
         self.ext_in = external_in
         self.ext_out = external_out
@@ -90,6 +89,7 @@ class FBA:
         self.constr = constr
         self.Mstoic = MM
         self.obj = org.obj
+        self.design_obj = org.design_obj
         self.fba()
 
     def __repr__(self, keyz=lambda x:x[1], rev=False):
@@ -105,17 +105,7 @@ class FBA:
         wi_flux = len(fluxes)-no_flux
         stri += "Reactions with flux    (flux>eps)   : %i \n"%wi_flux
         stri += "Reactions without flux (flux<eps)   : %i \n"%no_flux
-        status = self.lp.status
-        if status == "opt":
-            stri += "Solution status: Optimal"
-        if status == "undef":
-            stri += "Solution status: Undefined"
-        if status == "feas":
-            stri += "Solution status: Maybe not optimal"
-        if status == "infeas" or status == "nofeas":
-            stri += "Solution status: Unfeasible"
-        if status == "unbnd":
-            stri += "Solution status: Unbound (check constraints)"
+        stri += "Solution status: " + self.get_status()
         return stri
 
     def __sub__(self, other, keyz=lambda x:x[3], rev=False):
@@ -248,6 +238,53 @@ class FBA:
             red = 0.
         return [ess, red]
 
+    def KO_fba(self):
+        """
+        Tests production of the main objective and the design objective in single Knock-Outs of all the reactions.
+        """
+        # Extract the objective and the design objective
+        obj = self.obj
+        obj_name = obj[0][0]
+        design_obj = self.design_obj
+        design_obj_name = design_obj[0][0]
+        # Start KO test
+        results=[]
+        for i in xrange(len(self.reacs)):
+            reac=self.reacs[i]
+            if '_transp' in reac.name: # if it's a transport reaction -> pass
+                pass
+            else:
+                if reac.name == obj_name: # if it's the objective function -> calculate only the design objective
+                    Z = 0
+                    stat1 = 'main objective deleted'
+                    constraints = self.constr[i]
+                    self.constr[i]=(0, 0)
+                    self.obj = design_obj
+                    self.fba()
+                    des_Z = self.Z
+                    stat2 = self.lp.status
+                else:
+                    constraints = self.constr[i]
+                    self.constr[i]=(0, 0)
+                    self.fba()
+                    Z = self.Z
+                    stat1 = self.lp.status
+                    if reac.name == design_obj_name: # if it's the design objective function -> pass the second part
+                        des_Z = 0
+                        stat2 = 'design objective deleted'
+                    else:
+                        constr = self.constr[self.reac_names.index(obj_name)]
+                        self.obj = design_obj
+                        self.constr[self.reac_names.index(obj_name)] = (Z, Z)
+                        self.fba()
+                        des_Z= self.Z
+                        stat2 = self.lp.status
+                        self.constr[self.reac_names.index(obj_name)] = constr
+                results.append([reac.name, round(Z,9), stat1, round(des_Z,9), stat2])
+                self.constr[i] = constraints
+                self.obj = obj
+        return results
+
     def max_min(self, ii, fixobj=0.5):
         """
         Checks the maximum and minimum flux in each reaction if set as objective
@@ -359,3 +396,16 @@ class FBA:
             summ += cond[jj]*stoic[jj]*self.flux[self.reacs_by_met[ii][jj]]
         return summ
 
+    def get_status(self):
+        if self.lp.status == "opt":
+            return "Optimal"
+        elif self.lp.status == "undef":
+            return "Undefined"
+        elif self.lp.status == "feas":
+            return "Maybe not optimal"
+        elif self.lp.status == "infeas" or self.lp.status == "nofeas":
+            return "Unfeasible"
+        elif self.lp.status == "unbnd":
+            return "Unbound (check constraints)"
+        else:
+            return "Unknown Error"

@@ -7,29 +7,24 @@ Released under the MIT license
 
 import StringIO
 from collections import OrderedDict
-import json
 import os
 import tempfile
 from crispy_forms.utils import render_crispy_form
-from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
-from django.shortcuts import redirect
 from django.template.context import RequestContext
 from django.views.decorators.csrf import ensure_csrf_cookie
 from jsonview.decorators import json_view
-from networkx.algorithms.shortest_paths.generic import has_path, shortest_path, all_shortest_paths
+from networkx.algorithms.shortest_paths.generic import has_path, all_shortest_paths
 from networkx.exception import NetworkXNoPath
 from cyano.decorators import ajax_required, permission_required
-from PyNetMet.metabolism import *
-from PyNetMet.fba import *
+from PyNetMet2.metabolism import Metabolism
 from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error
 from cyanodesign.forms import UploadModelForm
 from cyanodesign.helpers import model_from_string, apply_commandlist
 from .models import DesignModel
 import networkx as nx
 from networkx.readwrite import json_graph
-import re
 import math
 import pygraphviz
 import json
@@ -65,8 +60,6 @@ def design(request, pk):
 @ajax_required
 @permission_required("access_cyanodesign")
 def get_reactions(request, pk):
-    #model = "{}/cyanodesign/models/{}".format(settings.ROOT_DIR, "toy_model.txt")
-
     try:
         item = DesignModel.objects.get(user=request.user.profile, pk=pk).content
     except:
@@ -74,16 +67,19 @@ def get_reactions(request, pk):
 
     org = model_from_string(item)
 
+    if org is None:
+        return HttpResponseBadRequest("Bad Model")
+
     ret = []
 
-    for enzyme in org.reactions:
+    for enzyme in org.enzymes:
         # Filter out auto-created external transport funcs
-        if not enzyme.name.endswith("_ext_transp"):
+        if not enzyme.name.endswith("_transp"):
             ret.append({
                 "name": enzyme.name,
-                "stoichiometric": [enzyme.reactants_stoic] + [enzyme.products_stoic],
-                "substrates": map(lambda m: m.name, enzyme.reactants),
-                "products": map(lambda m: m.name, enzyme.products),
+                "stoichiometric": enzyme.stoic,
+                "substrates": enzyme.substrates,
+                "products": enzyme.products,
                 "reversible": enzyme.reversible,
                 "constraints": enzyme.constraint,
                 "disabled": enzyme.disabled
@@ -97,9 +93,9 @@ def get_reactions(request, pk):
     outgraph = ""
 
     return HttpResponse(json.dumps({
-        "external": map(lambda m: m.name, filter(lambda m: m.external, org.get_metabolites())),
+        "external": filter(lambda x: not x.startswith("#"), org.external),
         "enzymes": ret,
-        "objective": org.objective.name if org.objective else None,
+        "objective": org.obj[0] if org.obj else None,
         "graph": outgraph}), content_type="application/json")
 
 
@@ -146,11 +142,11 @@ def simulate(request, pk):
         obj_reac = org.get_reaction(objective)
         if obj_reac is None:
             raise ValueError("Objective not in model: " + objective)
-        org.objective = obj_reac
+        org.obj = [[obj_reac.name, "1"]]
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + e.message)
 
-    for reaction in org.reactions:
+    for reaction in org.enzymes:
         reaction.disabled = False
 
     for item in disabled:
@@ -171,7 +167,7 @@ def simulate(request, pk):
             return HttpResponseBadRequest("Bad display list: " + item)
 
     try:
-        org.fba()
+        fba = org.fba()
     except ValueError as e:
         return HttpResponseBadRequest("FBA error: " + e.message)
 
@@ -183,7 +179,7 @@ def simulate(request, pk):
     graphInfo = drawDesign(org)
     xgraph = graphInfo[0]
     nodeIDs = graphInfo[1]
-    full_g = calcReactions(xgraph, nodeIDs, org)
+    full_g = calcReactions(xgraph, nodeIDs, fba)
 
     import itertools
 
@@ -191,39 +187,11 @@ def simulate(request, pk):
 
     # Auto filter by FBA
     if auto_flux:
-        flux = filter(lambda x: not x.disabled, org.reactions[:])
-        flux = sorted(flux, key=lambda x: -x.flux)
-        display = map(lambda x: x.name, flux[:20])
+        flux = filter(lambda x: not x[0].endswith("_transp"), zip(map(lambda x: x.name, fba.reacs), fba.flux))
+        flux = sorted(flux, key=lambda x: -x[1])
+        display = map(lambda x: x[0], flux[:20])
 
     g = getSelectedReaction(json_graph.node_link_data(full_g), nodeIDs, display)
-
-    # Add Pseudopaths
-    for reac_pairs in itertools.combinations(display, 2):
-        if not has_path(g, nodeIDs[reac_pairs[0]], nodeIDs[reac_pairs[1]]):
-            # Test for theoretical path
-            try:
-                all_paths = all_shortest_paths(full_g, nodeIDs[reac_pairs[0]], nodeIDs[reac_pairs[1]])
-
-                for path in all_paths:
-                    # Take second to last
-                    #g.add_edge(path[1], path[-2])
-                    #print "Pseudopath from", path[1], "to", path[-2]
-                    pass
-            except NetworkXNoPath:
-                pass
-
-        if not has_path(g, nodeIDs[reac_pairs[1]], nodeIDs[reac_pairs[0]]):
-            # Test for theoretical path
-            try:
-                all_paths = all_shortest_paths(full_g, nodeIDs[reac_pairs[1]], nodeIDs[reac_pairs[0]])
-
-                for path in all_paths:
-                    # Take second to last
-                    #g.add_edge(path[1], path[-2])
-                    #print "Pseudopath from", path[1], "to", path[-2]
-                    pass
-            except NetworkXNoPath:
-                pass
 
     graph = nx.to_agraph(g)
     graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
@@ -235,7 +203,7 @@ def simulate(request, pk):
     if output_format == "json":
         return HttpResponse(json.dumps(
             {"graph": outgraph,
-            "solution": org.solution
+            "solution": fba.get_status()
             }),
             content_type="application/json"
         )
@@ -253,7 +221,7 @@ def simulate(request, pk):
         return r
     elif output_format == "csv":
         s = StringIO.StringIO()
-        for reac in org.reactions:
+        for reac in org.enzymes:
             s.write(reac.name)
             s.write("\t")
             s.write(reac.flux)
@@ -322,7 +290,7 @@ def save(request, pk):
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + e.message)
 
-    for reaction in org.reactions:
+    for reaction in org.enzymes:
         reaction.disabled = False
 
     for item in disabled:
@@ -407,7 +375,7 @@ def drawDesign(org):
     @param org: object organism from PyNetMet
     @return: Dictionary["graph": Graph in JSON-Format, "nodeDic": Dictionary of Node-IDs]
     """
-    enzymes = org.reactions
+    enzymes = org.enzymes
     nodeDic = OrderedDict()
     nodecounter = 0
     graph = nx.DiGraph()
@@ -416,24 +384,28 @@ def drawDesign(org):
             nodecounter += 1
             nodeDic[enzyme.name] = nodecounter
             graph.add_node(nodeDic[enzyme.name], label=enzyme.name, shape="box")
-            for substrate in enzyme.reactants:
-                substrate = substrate.name
+
+            for substrate in enzyme.substrates:
                 nodecounter += 1
-                if not substrate in nodeDic:
+                if substrate not in nodeDic:
                     nodeDic[substrate] = nodecounter
                     graph.add_node(nodeDic[substrate], label=substrate, shape="oval", color=str((nodecounter % 8)+1))
                 graph.add_edge(nodeDic[substrate], nodeDic[enzyme.name])
                 if enzyme.reversible:
                     graph.add_edge(nodeDic[enzyme.name], nodeDic[substrate])
+
             for product in enzyme.products:
-                product = product.name
                 nodecounter += 1
-                if not product in nodeDic:
+                if product not in nodeDic:
                     nodeDic[product] = nodecounter
                     graph.add_node(nodeDic[product], label=product, shape="oval", color=str((nodecounter % 8)+1))
                 graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
                 if enzyme.reversible:
                     graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
+
+            #for substrate in enzyme.substrates:
+            #    for product in enzyme.products:
+            #        graph.add_edge(nodeDic[substrate], nodeDic[product])
 
     graphJson = json_graph.node_link_data(graph)
     data = [graphJson, nodeDic]
@@ -468,14 +440,13 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
     @param jsonGraph: Graph in JSON-Format
     @param nodeDic: Dictionary with keys = Node-Name and value = node_id
     @param fluxResults: Results from PyNetMet FLUX-Analysis Calculation as String
-    @type fluxResults: bioparser.optgene.OptGeneParser
     @return Graph with added Attributes
     """
     changeDic = {}
-    reactions = filter(lambda x: not x.disabled, fluxResults.reactions)
-    for reaction in reactions:
+    reactions = fluxResults.reacs
+    for reaction, flux in zip(reactions, fluxResults.flux):
         if not reaction.name.endswith("_transp"):
-            changeDic[reaction.name] = float('%.3g' % reaction.flux)
+            changeDic[reaction.name] = float('%.3g' % flux)
 
     g = json_graph.node_link_graph(jsonGraph)
     vList = changeDic.values()

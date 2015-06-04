@@ -1,5 +1,4 @@
 #    Copyright (C) 2012 Daniel Gamermann <daniel.gamermann@ucv.es>
-#    Copyright (C) 2015 Gabriel Kind <gkind@hs-mittweida.de>
 #
 #    This file is part of PyNetMet
 #
@@ -20,22 +19,23 @@
 #    Please, cite us in your reasearch!
 #
 
+
 from network import *
 from enzyme import *
 from xml.dom.minidom import parseString
 import re
 
 
-class Metabolism:
+class Metabolism(object):
     """
         This class defines a metabolism object (set of chemical reactions,
         metabolites and a network).
     """
 
-    def __init__(self, filein, filetype="opt", reactions=[], constraints=[],
-                                     external=[], objective=[], fromfile=True):
+    def __init__(self, filein, filetype="opt", reactions=list(), constraints=list(),
+                                     external=list(), objective=list(), design_objective=list(), disable=(), fromfile=True):
         if fromfile and filetype == "opt":
-            [reactions, constraints, external, objective] = \
+            [reactions, constraints, external, objective, design_objective, disable] = \
                                                        self.prepare_opt(filein)
         elif fromfile and filetype == "sbml":
             [reactions, constraints, external, objective] = \
@@ -44,26 +44,89 @@ class Metabolism:
         self.constraints = constraints
         self.external = external
         self.objective = objective
+        self.design_objective = design_objective
+        self.disable = disable
+
         # Get reactions and pathways
         pathnames = []
         enzymes = []
         pathna = ""
         for line in reactions:
-            line = line.strip()
             if "#" in line:
                 parts = line.split("#")
                 comments = parts[1].strip()
                 if parts[0] == "":
                     pathnames.append(comments)
                     pathna = comments
-                elif " : " in parts[0] and "->" in parts[0] and line[0] != "#":
+                elif ":" in parts[0] and "->" in parts[0] and line[0] != "#":
                     enzi = Enzyme(parts[0],pathna)
                     enzymes.append(enzi)
             elif ":" in line and "->" in line:
                 enzi = Enzyme(line,pathna)
                 enzymes.append(enzi)
+
         self.pathnames = pathnames
         self.enzymes = enzymes
+
+        for line in constraints:
+            if not line.startswith("#"):
+                line = line.strip()
+                # rightmost [ defines interval
+                pos = line.rfind("[")
+                name = line[:pos].strip()
+                m = re.match(r"\[\s?(\S+)\s?,\s?(\S+)\s?\]$", line[pos:])
+                if m:
+                    try:
+                        begin = float(m.group(1))
+                        end = float(m.group(2))
+                    except ValueError:
+                        continue
+
+                    for enz in self.enzymes:
+                        if enz.name == name:
+                            enz.constraint = (begin, end)
+
+        # Objective
+        objs = []
+        for ele in self.objective:
+            if ele[0] != "#":
+                if "#" in ele:
+                    bla = ele.split("#")
+                    bla = bla[0]
+                else:
+                    bla = ele
+                line = bla.split()
+                if len(line) == 3:
+                    objs.append([line[0],line[2]])
+                if len(line) == 2:
+                    objs.append([line[0],line[1]])
+                if len(line) == 1:
+                    objs.append([line[0],"1"])
+
+        # Design objective
+        design_objs = []
+        for ele in self.design_objective:
+            if ele[0] != "#":
+                if "#" in ele:
+                    bla = ele.split("#")
+                    bla = bla[0]
+                else:
+                    bla = ele
+                line = bla.split()
+                if len(line) == 3:
+                    design_objs.append([line[0],line[2]])
+                if len(line) == 2:
+                    design_objs.append([line[0],line[1]])
+                if len(line) == 1:
+                    design_objs.append([line[0],"1"])
+
+        for enz in self.enzymes:
+            if enz.name in self.disable:
+                enz.disabled = True
+
+        self.design_obj = design_objs
+        self.obj = objs
+
         # Most attributes calculated in the calcs routine.
         self.calcs()
 
@@ -111,7 +174,7 @@ class Metabolism:
         external_out = []
         transport = []
 
-        # Throw away transport reactions, they are generated
+        # Throw away transport reactions, they are regenerated
         self.enzymes = [item for item in self.enzymes if item.pathway != "_TRANSPORT_"]
 
         enzinv = {}
@@ -124,6 +187,7 @@ class Metabolism:
                 list_irr.append(ii)
         self.external = list(set(self.external)|set(external_in))
         self.external = list(set(self.external)|set(external_out))
+
         # Apends reactions for external mets
         enzisinv = ii+1
         self.pathnames.append("_TRANSPORT_")
@@ -138,6 +202,7 @@ class Metabolism:
                     external_in.append(line)
                     external_out.append(line)
                     enzisinv += 1
+
         # writes reactions in pathways
         pathways = [[] for ele in self.pathnames]
         for ii in xrange(len(self.enzymes)):
@@ -149,69 +214,20 @@ class Metabolism:
                 ipath = self.pathnames.index(pathway)
                 pathways.append([])
             pathways[ipath].append(ii)
+
         # Constructs the M matrix (metabolites connections)
         nsubs = len(subs)
         M = [[0 for iii in xrange(nsubs)] for jjj in xrange(nsubs)]
         for enzy in self.enzymes:
+            if enzy.disabled:
+                continue
+
             for su in enzy.substrates:
                 for pr in enzy.products:
                     M[subs[su]][subs[pr]] = 1
                     if enzy.reversible:
                         M[subs[pr]][subs[su]] = 1
 
-        # Constraints
-        for ele in self.constraints:
-            if ele[0] != "#":
-                line = ele.strip()
-                # rightmost [ defines interval
-                pos = line.rfind("[")
-                name = line[:pos].strip()
-                m = re.match(r"\[\s?(\S+)\s?,\s?(\S+)\s?\]$", line[pos:])
-                if m:
-                    try:
-                        begin = float(m.group(1))
-                        end = float(m.group(2))
-                    except ValueError:
-                        continue
-
-                    try:
-                        inde = enzinv[name]
-                        if not self.enzymes[inde].constraint:
-                            self.enzymes[inde].constraint = (begin, end)
-                    except KeyError:
-                        continue
-        for enz in self.enzymes:
-            if len(enz.substrates) == 0 and enz.reversible:
-                enz.constraint = (None, None)
-            elif len(enz.substrates) == 0 and not enz.reversible:
-                enz.constraint = (0., None)
-            elif len(enz.products) == 0 and enz.reversible:
-                enz.constraint = (None, None)
-            elif len(enz.products) == 0 and not enz.reversible:
-                enz.constraint = (0., None)
-            elif enz.reversible:
-                if not enz.constraint:
-                    enz.constraint = (None, None)
-            elif not enz.reversible:
-                if not enz.constraint:
-                    enz.constraint = (0., None)
-        # Objective
-        objs = []
-        for ele in self.objective:
-            if ele[0] != "#":
-                if "#" in ele:
-                    bla = ele.split("#")
-                    bla = bla[0]
-                else:
-                    bla = ele
-                line = bla.split()
-                if len(line) == 3:
-                    objs.append((line[0],line[2]))
-                if len(line) == 2:
-                    objs.append((line[0],line[1]))
-                if len(line) == 1:
-                    objs.append((line[0],"1"))
-        self.obj = objs
         self.dic_enzs = enzinv
         self.pathways = pathways
         self.transport = transport
@@ -224,7 +240,18 @@ class Metabolism:
         self.reac_irr = list_irr    
         self.reac_per_met = reac_per_met
         self.reacs_per_met = reacs_per_met
-        self.net = None
+        self._net = None
+
+    @property
+    def net(self):
+        if self._net is None:
+            self.net = Network(self.M, self.mets)
+
+        return self._net
+
+    @net.setter
+    def net(self, value):
+        self._net = value
 
     def add_reacs(self, reacs):
         """
@@ -328,6 +355,14 @@ class Metabolism:
         if self.has_reaction(reac_to):
             raise ValueError("Reaction already in model: " + reac_to)
 
+        for obj in self.obj:
+            if obj[0] == reac_from:
+                obj[0] = reac_to
+
+        for obj in self.design_obj:
+            if obj[0] == reac_from:
+                obj[0] = reac_to
+
         reac.name = reac_to
         self.calcs()
 
@@ -338,6 +373,9 @@ class Metabolism:
         idx = self.dic_enzs.get(name)
         if idx is None:
             raise ValueError("Reaction not in model: " + name)
+
+        self.obj = filter(lambda x: x[0] != name, self.obj)
+        self.design_obj = filter(lambda x: x[0] != name, self.obj)
 
         self.pop(idx)
 
@@ -407,59 +445,49 @@ class Metabolism:
         contrains, external metabolites and objective.     
         """
         # reads the file
-        kk = open(infile)
-        data = kk.readlines()
-        kk.close()
-        #Cutting blank lines
-        topop=[]
-        for ii in xrange(len(data)):
-            data[ii] = data[ii].replace('\r', '')
-            data[ii] = data[ii].replace('\n', '')
-            if data[ii] == "":
-                topop.append(ii)
-        topop.sort(reverse=True)
-        for ele in topop:
-            data.pop(ele)
-        # Appending cutted lines
-        nlines = len(data)
-        toappend = []
-        for i in xrange(nlines):
-            if data[i][0] == " ":
-                toappend.append(i)
-        toappend = toappend[::-1]
-        for ele in toappend:
-            data[ele-1] = data[ele-1] + data[ele]
-        ii = 0
-        toappend = toappend[::-1]
-        for ele in toappend:
-            data.pop(ele-ii)
-            ii += 1
-        # Find key positions in the file
-        keyy = ""
-        reactions = []
-        constraints = []
-        external = []
-        objective = []
-        on = True
-        for line in data:
-            if line[0] == "-":
-                keyy = line
-            elif line[0] == "%" and on:
-                on = False
-            elif line[0] == "%" and not on:
-                on = True
-            elif keyy == "-REACTIONS" and line != keyy and on:
-                reactions.append(line)
-            elif keyy == "-CONSTRAINTS" and line != keyy and on:
-                constraints.append(line)
-            elif keyy == "-EXTERNAL METABOLITES" and line != keyy and on:
-                external.append(line)
-            elif keyy == "-OBJ" and line != keyy and on:
-                objective.append(line)
-            else:
-                pass
-        # Return results
-        return [reactions, constraints, external, objective]
+        with open(infile) as f:
+            reactions = []
+            constraints = []
+            external = []
+            objective = []
+            design_objective = []
+            disable = []
+
+            # Find key positions in the file
+            keyy = ""
+            on = True
+
+            for data in f:
+                line = data.strip()
+
+                # Skip empty lines
+                if len(line) == 0:
+                    continue
+
+                if line[0] == "-":
+                    keyy = line
+                elif line[0] == "%" and on:
+                    on = False
+                elif line[0] == "%" and not on:
+                    on = True
+                elif keyy == "-REACTIONS" and line != keyy and on:
+                    reactions.append(line)
+                elif keyy == "-CONSTRAINTS" and line != keyy and on:
+                    constraints.append(line)
+                elif keyy == "-EXTERNAL METABOLITES" and line != keyy and on:
+                    external.append(line)
+                elif keyy == "-OBJ" and line != keyy and on:
+                    objective.append(line)
+                elif keyy == "-DESIGNOBJ" and line != keyy and on:
+                    design_objective.append(line)
+                elif keyy == "-DISABLE" and line != keyy and on:
+                    disable.append(line)
+                else:
+                    pass
+
+            # Return results
+            return [reactions, constraints, external, objective, design_objective, disable]
+
 
     def prepare_sbml(self, filein):
         """
@@ -607,11 +635,29 @@ class Metabolism:
             exts.sort()
             for ext in exts:
                 print >>fil, ext
-            print >>fil
-            print >>fil, "-OBJ"
-            print >>fil
-            for obj in self.objective:
-                print >>fil, obj
+
+            if self.obj:
+                print >>fil
+                print >>fil, "-OBJ"
+                print >>fil
+                for obj in self.obj:
+                    print >>fil, obj[0], "1", obj[1]
+
+            if self.design_obj:
+                print >>fil
+                print >>fil, "-DESIGNOBJ"
+                print >>fil
+                for obj in self.design_obj:
+                    print >>fil, obj[0], "1", obj[1]
+
+            disabled = filter(lambda x: x.disabled, self.enzymes)
+            if disabled:
+                print >>fil
+                print >>fil, "-DISABLE"
+                print >>fil
+                for obj in disabled:
+                    print >>fil, obj.name
+
             fil.close()
         elif filetype == "sbml":
             if printgenes:
@@ -712,6 +758,10 @@ class Metabolism:
                         M[subs[pr]][subs[su]] = 1
         return M
 
+    def fba(self):
+        from .fba import FBA
+        return FBA(self)
+
     def M_matrix_reacs(self,symmetric=False):
         """
         Returns the bipartite adjacent matrix for the reactions and 
@@ -743,8 +793,6 @@ class Metabolism:
         component or that can not participate in the FBA.
         """
         # Selects biggest connected component
-        if self.net is None:
-            self.net = Network(self.M,self.mets)
         self.net.components()
         self.net.disc_comps.sort(key=lambda x:len(x), reverse=True)
         topop = []
@@ -860,8 +908,6 @@ class Metabolism:
                          reverse=True)
         for ele in con_met[0:nshow+1]:
             print >>probs, "%30s : %5i" % (self.mets[ele], substr[ele])
-        if self.net is None:
-            self.net = Network(self.M,self.mets)
         print >> probs, "      "
         print >> probs, "   METABOLITE-METABOLITE"
         print >> probs, "      "

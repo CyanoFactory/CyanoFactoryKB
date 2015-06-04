@@ -4,35 +4,21 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
-from PyNetMet.enzyme import Enzyme, EnzError
-from PyNetMet.metabolism import Metabolism
+from PyNetMet2.enzyme import Enzyme
+from PyNetMet2.metabolism import Metabolism
 from bioparser.optgene import OptGeneParser
 
-
-def validate_bioopt(dic):
-    """
-
-    """
-
-def delete_enzyme(model, name):
-    pass
-
-def rename_metabolite(model, met_from, met_to):
-    OptGeneParser.Metabolite.instance(met_from).name = met_to
-
-def make_metabolite_external(model, metabolite):
-    OptGeneParser.Metabolite.instance(metabolite).external = True
-
-def make_metabolite_internal(model, metabolite):
-    OptGeneParser.Metabolite.instance(metabolite).external = False
-
 def apply_commandlist(model, commandlist):
+
     # Supported commands:
     # reaction, add, name, reaction, min_const, max_const
     # reaction, edit, name, reaction, min_const, max_const
     # (metabolite, add, name)
     # metabolite, edit, name, new_name, is_external
 
+    """
+    :type model: PyNetMet2.metabolism.Metabolism
+    """
     for command in commandlist:
         if len(command) < 3:
             raise ValueError("Bad command " + str(command))
@@ -44,7 +30,7 @@ def apply_commandlist(model, commandlist):
                 if enzyme is not None:
                     raise ValueError("Reaction already in model: " + command[2])
 
-                reaction = OptGeneParser.Reaction.from_string(command[3])
+                reaction = Enzyme(command[3])
                 model.add_reaction(reaction)
                 reaction.constraint = [command[4], command[5]]
 
@@ -52,7 +38,7 @@ def apply_commandlist(model, commandlist):
                 if enzyme is None:
                     raise ValueError("Reaction not in model: " + command[2])
 
-                reaction = OptGeneParser.Reaction.from_string(command[3])
+                reaction = Enzyme(command[3])
                 reaction.constraint = [command[4], command[5]]
 
                 if reaction.name != enzyme.name and model.has_reaction(reaction.name):
@@ -68,25 +54,38 @@ def apply_commandlist(model, commandlist):
                 raise ValueError("Invalid operation " + command[1])
 
         elif command[0] == "metabolite":
-            if command[1] in ["add", "edit"]:
-                rename_metabolite(model, command[2], command[3])
-                if command[4]:
-                    make_metabolite_external(model, command[3])
+            if command[1] in ["add", "edit", "delete"]:
+                model.rename_metabolite(command[2], command[3])
+                if command[4] and command[1] != "delete":
+                    model.make_metabolite_external(command[3])
                 else:
-                    make_metabolite_internal(model, command[3])
+                    # These are deleted when non references them
+                    model.make_metabolite_internal(command[3])
             else:
                 raise ValueError("Invalid operation " + command[1])
         else:
             raise ValueError("Invalid command " + command[0])
 
+    model.calcs()
     return model
-
 
 def model_from_string(model_str):
     from bioparser.optgene import OptGeneParser
     from StringIO import StringIO
+    import os
+    import tempfile
 
-    org = OptGeneParser(StringIO(model_str))
+    with tempfile.NamedTemporaryFile(delete=False) as fid:
+        path = fid.name
+
+        fid.write(model_str)
+
+    try:
+        org = Metabolism(path)
+    except:
+        return None
+    finally:
+        os.remove(path)
 
     return org
 
