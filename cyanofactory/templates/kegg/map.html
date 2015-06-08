@@ -145,12 +145,17 @@ Released under the MIT license
                         return;
                     }
                     var val = $('#selectionField option:selected').val();
-                    var item = $("g a[*|title*=\"" + val + "\"]").children();
-                    var new_x = ($("#map").width() / 2) - $(item).attr("x");
-                    var new_y = ($("#map").height() / 2) - $(item).attr("y");
+                    var item = $("g a[*|title*=\"" + val + "\"]");
+                    item.each(function() {
+                        if ($(this).attr("xlink:href").match(/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/g).indexOf(val) > -1) {
+                            var rect = $(this).children();
+                            var new_x = ($("#map").width() / 2) - $(rect).attr("x");
+                            var new_y = ($("#map").height() / 2) - $(rect).attr("y");
 
-                    svgPan.zoom(1);
-                    svgPan.pan({x: new_x, y: new_y});
+                            svgPan.zoom(1);
+                            svgPan.pan({x: new_x, y: new_y});
+                        }
+                    });
 			    });
 			</script>
 			</div>
