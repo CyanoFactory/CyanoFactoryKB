@@ -6,7 +6,7 @@
         <form id="search_form" method="post">
             {% csrf_token %}
             <p>Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using # (e.g. 1.2.3.4#red).<br><br>
-            <textarea id="search_box" class="form-control" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
+            <textarea id="search_box" class="form-control" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.2 != None %}#{{ item.2 }}{% endif %}&#10;{% endfor %}</textarea>
             <br>
             <input class="btn btn-primary" type="submit" value="Submit" />
             {% if support_export %}

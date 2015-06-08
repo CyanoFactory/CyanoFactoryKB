@@ -49,7 +49,6 @@ def index(request):
         data={
             'overview_maps': overview,
             'other_maps': other,
-            'quote': items_to_quoted_string(items),
             'items': items,
             'queries': models.Query.objects.filter(user=request.user.profile),
         }
@@ -84,7 +83,6 @@ def map_view(request, map_id):
             'enzymes': enzymes,
             'metabolites': metabolites,
             'items': items,
-            'quote': items_to_quoted_string(items),
             'queries': models.Query.objects.filter(user=request.user.profile),
         }
     )

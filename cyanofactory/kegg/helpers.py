@@ -228,9 +228,15 @@ def request_extract(request):
                 item = item.split("#", 2)
                 if len(item[0]) == 0:
                     continue
-                items.append([item[0], item[1]])
+                item.append(item[1])
+                try:
+                    h = (100 - int(item[2])) * 2.4
+                    item[2] = "hsl(" + str(h) + ", 100%, 50%)"
+                except ValueError:
+                    pass
+                items.append([item[0], item[2], item[1]])
             else:
-                items.append([item, None])
+                items.append([item, None, None])
 
     metabolite_items = []
     enzyme_items = []
