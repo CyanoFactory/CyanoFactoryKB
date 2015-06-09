@@ -3281,7 +3281,7 @@ class Pathway(SpeciesComponent):
                     try:
                         pw_obj = Pathway.objects.for_species(self.species).for_wid(pathway_name)
                         elem.set("xlink:href", pw_obj.get_absolute_url())
-                        fill_opacity = "0.2"
+                        fill_opacity = "0.3"
                         fill_color = "blue"
                     except ObjectDoesNotExist:
                         elem.set("xlink:href", reverse("kegg.views.map_view", kwargs={"map_id": pathway_name}))
@@ -3300,7 +3300,7 @@ class Pathway(SpeciesComponent):
                     color_component = "green"
                     for ec in ecs:
                         if ec in species_ecs:
-                            fill_opacity = "0.2"
+                            fill_opacity = "0.3"
 
                 if shape == "circle":
                     pending.append(elem)

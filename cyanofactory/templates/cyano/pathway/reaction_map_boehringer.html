@@ -14,14 +14,14 @@ Released under the MIT license
 {% for enzyme in enzymes %}
 {% with object=enzyme %}
 <a xlink:href="{% url "db_xref.views.dbxref" source="EC" xid=object.ec %}" xlink:title="{{ object.title }}" target="_blank">
-<rect id="e{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:green; fill-opacity:0.2"/>
+<rect id="e{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:green; fill-opacity:0.3"/>
 </a>
 {% endwith %}
 {% endfor %}
 
 {% for metabolite in metabolites %}
 {% with object=metabolite %}
-<rect id="m{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:blue; fill-opacity:0.2"/>
+<rect id="m{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:blue; fill-opacity:0.3"/>
 {% endwith %}
 {% endfor %}
 </g>

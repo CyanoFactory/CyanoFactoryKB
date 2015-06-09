@@ -8,7 +8,7 @@
     {% if not export %}
     <a xlink:href="http://www.brenda-enzymes.org/php/result_flat.php4?ecno={{ object.ec }}" xlink:title="{{ object.title }} target="_blank">
     {% endif %}
-    <rect id="e{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:{% if color %}{{ color }}{% else %}{{object.color.name}}{% endif %}; fill-opacity:0.2"></rect>
+    <rect id="e{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:{% if color %}{{ color }}{% else %}{{object.color.name}}{% endif %}; fill-opacity:0.3"></rect>
     {% if not export %}
     </a>
     {% endif %}
@@ -19,7 +19,7 @@
     {% for metabolite in metabolites %}
     {% with object=metabolite.0 %}
     {% with color=metabolite.1 %}
-    <rect id="m{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:{% if color %}{{ color }}{% else %}{{object.color.name}}{% endif %}; fill-opacity:0.2"></rect>
+    <rect id="m{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:{% if color %}{{ color }}{% else %}{{object.color.name}}{% endif %}; fill-opacity:0.3"></rect>
     {% endwith %}
     {% endwith %}
     {% endfor %}
