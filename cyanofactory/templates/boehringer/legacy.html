@@ -61,7 +61,16 @@ Released under the MIT license
 <br>
 <form method="post" >
 {% csrf_token %}
-  <br><br><p style="margin-left: 3" align="left"><b>ECs:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors with #.<br><br>
+  <br><br><p style="margin-left: 3" align="left"><b>ECs:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors with #.<br>
+    <div style="text-align:center; background-image:linear-gradient(to right,
+        hsla(240, 100%, 50%, 0.5),
+        hsla(180, 100%, 50%, 0.5),
+        hsla(120, 100%, 50%, 0.5),
+        hsla(60, 100%, 50%, 0.5),
+        hsla(0, 100%, 50%, 0.5))">
+    Colors from 0 to 100
+    </div>
+    <br>
   <textarea name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.2 != None %}#{{ item.2 }}{% endif %}&#10;{% endfor %}</textarea>
   <br>
   <input type="submit">

@@ -184,7 +184,16 @@ $(document).ready(function() {
     <div class="panel-body">
         <form id="search_form" method="post">
             {% csrf_token %}
-            <p>Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using # (e.g. 1.2.3.4#red).<br><br>
+            <p>Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using # (e.g. 1.2.3.4#red).<br>
+            <div style="text-align:center; background-image:linear-gradient(to right,
+                hsla(240, 100%, 50%, 0.5),
+                hsla(180, 100%, 50%, 0.5),
+                hsla(120, 100%, 50%, 0.5),
+                hsla(60, 100%, 50%, 0.5),
+                hsla(0, 100%, 50%, 0.5))">
+            Colors from 0 to 100
+            </div>
+            <br>
             <textarea id="search_box" class="form-control" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.2 != None %}#{{ item.2 }}{% endif %}&#10;{% endfor %}</textarea>
             <br>
             <input class="btn btn-primary" type="submit" value="Submit" />
