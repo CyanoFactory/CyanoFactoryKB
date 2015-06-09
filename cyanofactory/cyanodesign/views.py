@@ -85,11 +85,6 @@ def get_reactions(request, pk):
                 "disabled": enzyme.disabled
             })
 
-    #graphInfos = drawDesign(org)
-    #graph = nx.to_agraph(json_graph.node_link_graph(graphInfos[0]))
-    #graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
-    #graph.node_attr.update(style="filled", colorscheme="pastel19")
-    #outgraph = str(graph.to_string())
     outgraph = ""
 
     return HttpResponse(json.dumps({
@@ -176,10 +171,7 @@ def simulate(request, pk):
             json.dumps({"solution": org.solution}),
             content_type="application/json")
 
-    graphInfo = drawDesign(org)
-    xgraph = graphInfo[0]
-    nodeIDs = graphInfo[1]
-    full_g = calcReactions(xgraph, nodeIDs, fba)
+    full_g, nodeIDs = calcReactions(org, fba)
 
     import itertools
 
@@ -191,7 +183,7 @@ def simulate(request, pk):
         flux = sorted(flux, key=lambda x: -x[1])
         display = map(lambda x: x[0], flux[:20])
 
-    g = getSelectedReaction(json_graph.node_link_data(full_g), nodeIDs, display)
+    g = getSelectedReaction(json_graph.node_link_data(full_g), nodeIDs, display, org)
 
     graph = nx.to_agraph(g)
     graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
@@ -367,78 +359,40 @@ def delete(request):
 
     return HttpResponse("ok")
 
-
-def drawDesign(org):
-    """
-    Generating Graph for all Reaction from defined organism.
-    return networkx Graph in JSON-Format and Node-ID - Node-Label Dictionary[Node-Label: Node-ID]
-    @param org: object organism from PyNetMet
-    @return: Dictionary["graph": Graph in JSON-Format, "nodeDic": Dictionary of Node-IDs]
-    """
-    enzymes = org.enzymes
-    nodeDic = OrderedDict()
-    nodecounter = 0
-    graph = nx.DiGraph()
-    for enzyme in enzymes:
-        if not enzyme.name.endswith("_transp"):
-            nodecounter += 1
-            nodeDic[enzyme.name] = nodecounter
-            graph.add_node(nodeDic[enzyme.name], label=enzyme.name, shape="box")
-
-            for substrate in enzyme.substrates:
-                nodecounter += 1
-                if substrate not in nodeDic:
-                    nodeDic[substrate] = nodecounter
-                    graph.add_node(nodeDic[substrate], label=substrate, shape="oval", color=str((nodecounter % 8)+1))
-                graph.add_edge(nodeDic[substrate], nodeDic[enzyme.name])
-                if enzyme.reversible:
-                    graph.add_edge(nodeDic[enzyme.name], nodeDic[substrate])
-
-            for product in enzyme.products:
-                nodecounter += 1
-                if product not in nodeDic:
-                    nodeDic[product] = nodecounter
-                    graph.add_node(nodeDic[product], label=product, shape="oval", color=str((nodecounter % 8)+1))
-                graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
-                if enzyme.reversible:
-                    graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
-
-            #for substrate in enzyme.substrates:
-            #    for product in enzyme.products:
-            #        graph.add_edge(nodeDic[substrate], nodeDic[product])
-
-    graphJson = json_graph.node_link_data(graph)
-    data = [graphJson, nodeDic]
-
-    return data
-
 def flatten(li):
     return [item for sublist in li for item in sublist]
 
-def getSelectedReaction(jsonGraph, nodeDic, reacIDs):
+def getSelectedReaction(jsonGraph, nodeDic, reacIDs, org):
     """
     Filtering selected Reactions and show Results from PyNetMet calculation.
     It returns a subgraph of the Graph from the jsonGraph. The output is a DOT-Language String.
     @param jsonGraph: Graph in JSON-Format
     @param nodeDic: dict mapping names to ids
     @param reacIDs: Name of reactions that contained in the nodeDic
+    @param org: organism
     @return Subgraph
     """
     # Translate reac names to IDs
-    reacIDs = map(lambda x: nodeDic[x], reacIDs)
+    # Get substrates and products of all reacs
+    metabolites = []
+    for reac in reacIDs:
+        metabolites += org.get_reaction(reac).metabolites
+
+    met_ids = map(lambda x: nodeDic[x], metabolites)
     g = json_graph.node_link_graph(jsonGraph)
 
-    # Get products/substrates directly connected to filter
-    reacIDs += flatten(g.in_edges(reacIDs)) + flatten(g.out_edges(reacIDs))
+    g.remove_edges_from(filter(lambda x: g.get_edge_data(*x)["object"].name not in reacIDs, g.edges(met_ids)))
 
-    h = g.subgraph(reacIDs)
+    # Get products/substrates directly connected to filter
+    #reacIDs += flatten(g.in_edges(reacIDs)) + flatten(g.out_edges(reacIDs))
+
+    h = g.subgraph(met_ids)
     return h
 
-def calcReactions(jsonGraph, nodeDic, fluxResults):
+def calcReactions(org, fluxResults):
     """
     Adding Results from FLUX-Analysis
-    @param jsonGraph: Graph in JSON-Format
-    @param nodeDic: Dictionary with keys = Node-Name and value = node_id
+    @param org: organism
     @param fluxResults: Results from PyNetMet FLUX-Analysis Calculation as String
     @return Graph with added Attributes
     """
@@ -448,15 +402,11 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
         if not reaction.name.endswith("_transp"):
             changeDic[reaction.name] = float('%.3g' % flux)
 
-    g = json_graph.node_link_graph(jsonGraph)
     vList = changeDic.values()
 
     for i in xrange(len(vList)):
         vList[i] = math.sqrt(math.pow(vList[i], 2))
     vList = sorted(vList)
-
-    if len(vList) == 0:
-        return g
 
     oldMin = vList[0]
     oldMax = vList[-1]
@@ -465,27 +415,45 @@ def calcReactions(jsonGraph, nodeDic, fluxResults):
     newMax = 10
     newRange = newMax - newMin
 
-    for key in changeDic:
-        node = nodeDic[key]
-        value = changeDic[key]
+    enzymes = org.enzymes
+    nodeDic = OrderedDict()
+    nodecounter = 0
+    graph = nx.DiGraph()
+    for enzyme in enzymes:
+        if not enzyme.name.endswith("_transp"):
+            nodecounter += 1
+            nodeDic[enzyme.name] = nodecounter
 
-        color = "black"
-        if value < 0:
-            color = "red"
-        elif value > 0:
-            color = "green"
+            for substrate in enzyme.substrates:
+                nodecounter += 1
+                if substrate not in nodeDic:
+                    nodeDic[substrate] = nodecounter
+                    graph.add_node(nodeDic[substrate], label=substrate, shape="oval", color=str((nodecounter % 8)+1))
 
-        newValue = 1
-        if value != 0:
-            newValue = (math.sqrt(math.pow(value, 2)) - oldMin) / oldRange * newRange + newMin
+            for product in enzyme.products:
+                nodecounter += 1
+                if product not in nodeDic:
+                    nodeDic[product] = nodecounter
+                    graph.add_node(nodeDic[product], label=product, shape="oval", color=str((nodecounter % 8)+1))
 
-        thikness = newValue
+            for substrate in enzyme.substrates:
+                for product in enzyme.products:
+                    flux = changeDic[enzyme.name]
 
-        edgeList = g.out_edges(node)
-        edgeList.extend(g.in_edges(node))
-        for aEdge in edgeList:
-            g.edge[aEdge[0]][aEdge[1]]["color"] = color
-            g.edge[aEdge[0]][aEdge[1]]["penwidth"] = thikness
-            g.edge[aEdge[0]][aEdge[1]]["label"] = value
+                    color = "black"
+                    if flux < 0:
+                        color = "red"
+                    elif flux > 0:
+                        color = "green"
 
-    return g
+                    value = flux
+                    if value != 0:
+                        value = (math.sqrt(math.pow(value, 2)) - oldMin) / oldRange * newRange + newMin
+
+                    attr = {"color": color, "penwidth": value, "label": "{} ({})".format(enzyme.name, flux), "object": enzyme}
+
+                    graph.add_edge(nodeDic[substrate], nodeDic[product], attr)
+                    if enzyme.reversible:
+                        graph.add_edge(nodeDic[product], nodeDic[substrate], label=enzyme.name, object=enzyme)
+
+    return graph, nodeDic
