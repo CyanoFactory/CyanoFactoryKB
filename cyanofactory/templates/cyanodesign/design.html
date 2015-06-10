@@ -536,7 +536,16 @@ Released under the MIT license
                 document.getElementById("visual").innerHTML = x["graph"];
 
                 $("svg").attr("width", "100%").attr("height", "400px");
-                svgPanZoom('svg', {minZoom: 0.1});
+                var svgPan = svgPanZoom('svg', {minZoom: 0.1});
+                svgPan.zoom(1);
+                /*$("svg").find(".edge text").each(function() {
+                    if ($(this).text().indexOf(cyano_design_objective_select.val() + " ") == 0) {
+                        var new_x = ($("svg").width() / 2) - $(this).attr("x");
+                        var new_y = ($("svg").height() / 2) - $(this).attr("y");
+                        svgPan.pan({x: new_x, y: new_y});
+                    }
+                });*/
+
                 endRequest();
             }).error(function(x) {
                 $("#visual").hide();
@@ -1133,7 +1142,8 @@ Released under the MIT license
             labelField: "name",
             valueField: "name",
             searchField: ["name"],
-            maxItems: 10
+            plugins: ['drag_drop', 'remove_button', 'restore_on_backspace'],
+            maxItems: 20
         });
 
         $.ajax({
@@ -1303,9 +1313,13 @@ span.cyano-external-metabolite { color: green }
         </div>
 
         <div>
+            The main objective is always displayed in the simulation.
+        </div>
+
+        <div>
             <div class="radio">
                 <input id="auto_flux" type="radio" name="flux" value="auto_flux">
-                <label for="auto_flux">Display reactions with highest flux</label>
+                <label for="auto_flux">Display reactions with highest flux connected to the objective</label>
             </div>
             <div class="radio">
                 <input id="manual_flux" type="radio" name="flux" value="manual_flux">

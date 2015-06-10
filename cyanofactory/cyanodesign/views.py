@@ -168,20 +168,33 @@ def simulate(request, pk):
 
     if dry_run:
         return HttpResponse(
-            json.dumps({"solution": org.solution}),
+            json.dumps({"solution": fba.get_status()}),
             content_type="application/json")
 
     full_g, nodeIDs = calcReactions(org, fba)
 
-    import itertools
-
     display = json.loads(request.POST["display"])
+    display = filter(lambda x: len(x) > 0, display)
 
     # Auto filter by FBA
     if auto_flux:
-        flux = filter(lambda x: not x[0].endswith("_transp"), zip(map(lambda x: x.name, fba.reacs), fba.flux))
+        dflux = {}
+        for reac, flux in filter(lambda x: not x[0].endswith("_transp"), zip(map(lambda x: x.name, fba.reacs), fba.flux)):
+            dflux[reac] = flux
+
+        full_eg = nx.ego_graph(full_g.reverse(), nodeIDs[org.obj[0][0]], radius=3, center=False, undirected=False)
+        full_g.remove_edges_from(full_g.in_edges(nodeIDs[org.obj[0][0]]) + full_g.out_edges(nodeIDs[org.obj[0][0]]))
+        all_edges = map(lambda x: full_eg.get_edge_data(*x)["object"].name, full_eg.edges())
+        # Get fluxes of "edges"
+        flux = []
+        for reac in all_edges:
+            flux.append([reac, dflux[reac]])
         flux = sorted(flux, key=lambda x: -x[1])
-        display = map(lambda x: x[0], flux[:20])
+        display = map(lambda x: x[0], flux[:30])
+    else:
+        full_g.remove_edges_from(full_g.in_edges(nodeIDs[org.obj[0][0]]) + full_g.out_edges(nodeIDs[org.obj[0][0]]))
+
+    display.append(org.obj[0][0])
 
     g = getSelectedReaction(json_graph.node_link_data(full_g), nodeIDs, display, org)
 
@@ -419,23 +432,39 @@ def calcReactions(org, fluxResults):
     nodeDic = OrderedDict()
     nodecounter = 0
     graph = nx.DiGraph()
+
+    objective = None
+    if len(org.obj) > 0:
+        objective = org.obj[0][0]
+
     for enzyme in enzymes:
         if not enzyme.name.endswith("_transp"):
             nodecounter += 1
             nodeDic[enzyme.name] = nodecounter
+            if enzyme.name == objective:
+                graph.add_node(nodeDic[enzyme.name])
 
             for substrate in enzyme.substrates:
                 nodecounter += 1
                 if substrate not in nodeDic:
                     nodeDic[substrate] = nodecounter
-                    graph.add_node(nodeDic[substrate], label=substrate, shape="oval", color=str((nodecounter % 8)+1))
+                    attr = {"label": substrate, "shape": "oval", "color": str((nodecounter % 8)+1)}
+                    graph.add_node(nodeDic[substrate], **attr)
+
+                if enzyme.name == objective:
+                    graph.add_nodes_from([(nodeDic[substrate], {"shape":"box"})])
 
             for product in enzyme.products:
                 nodecounter += 1
                 if product not in nodeDic:
                     nodeDic[product] = nodecounter
-                    graph.add_node(nodeDic[product], label=product, shape="oval", color=str((nodecounter % 8)+1))
+                    attr = {"label": product, "shape": "oval", "color": str((nodecounter % 8)+1)}
+                    graph.add_node(nodeDic[product], **attr)
 
+                if enzyme.name == objective:
+                    graph.add_nodes_from([(nodeDic[product], {"shape":"box"})])
+
+            # Check if enzyme is objective
             for substrate in enzyme.substrates:
                 for product in enzyme.products:
                     flux = changeDic[enzyme.name]
@@ -449,10 +478,20 @@ def calcReactions(org, fluxResults):
                     value = flux
                     if value != 0:
                         value = (math.sqrt(math.pow(value, 2)) - oldMin) / oldRange * newRange + newMin
+                    else:
+                        value = 1
 
                     attr = {"color": color, "penwidth": value, "label": "{} ({})".format(enzyme.name, flux), "object": enzyme}
 
+                    if enzyme.name == objective:
+                        attr["style"] = "dashed"
+
                     graph.add_edge(nodeDic[substrate], nodeDic[product], attr)
+
+                    if enzyme.name == objective:
+                        graph.add_edge(nodeDic[substrate], nodeDic[enzyme.name])
+                        graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
+
                     if enzyme.reversible:
                         graph.add_edge(nodeDic[product], nodeDic[substrate], label=enzyme.name, object=enzyme)
 
