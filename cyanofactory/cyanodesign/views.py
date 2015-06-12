@@ -82,6 +82,7 @@ def get_reactions(request, pk):
                 "products": enzyme.products,
                 "reversible": enzyme.reversible,
                 "constraints": enzyme.constraint,
+                "pathway": enzyme.pathway,
                 "disabled": enzyme.disabled
             })
 
@@ -176,13 +177,17 @@ def simulate(request, pk):
     display = json.loads(request.POST["display"])
     display = filter(lambda x: len(x) > 0, display)
 
+    dflux = {}
+    for reac, flux in zip(map(lambda x: x.name, fba.reacs), fba.flux):
+        dflux[reac] = flux
+
     # Auto filter by FBA
     if auto_flux:
-        dflux = {}
-        for reac, flux in filter(lambda x: not x[0].endswith("_transp"), zip(map(lambda x: x.name, fba.reacs), fba.flux)):
-            dflux[reac] = flux
+        if len(full_g.edges()) <= 30:
+            full_eg = full_g
+        else:
+            full_eg = nx.ego_graph(full_g.reverse(), nodeIDs[org.obj[0][0]], radius=3, center=False, undirected=False)
 
-        full_eg = nx.ego_graph(full_g.reverse(), nodeIDs[org.obj[0][0]], radius=3, center=False, undirected=False)
         full_g.remove_edges_from(full_g.in_edges(nodeIDs[org.obj[0][0]]) + full_g.out_edges(nodeIDs[org.obj[0][0]]))
         all_edges = map(lambda x: full_eg.get_edge_data(*x)["object"].name, full_eg.edges())
         # Get fluxes of "edges"
@@ -208,7 +213,8 @@ def simulate(request, pk):
     if output_format == "json":
         return HttpResponse(json.dumps(
             {"graph": outgraph,
-            "solution": fba.get_status()
+            "solution": fba.get_status(),
+            "flux": dflux
             }),
             content_type="application/json"
         )
@@ -306,11 +312,15 @@ def save(request, pk):
 
         reac.disabled = True
 
-    from StringIO import StringIO
-    sio = StringIO()
-    org.write(sio)
-    model.content = sio.getvalue()
-    model.save()
+    with tempfile.NamedTemporaryFile(delete=False) as fid:
+        path = fid.name
+        org.dump(path)
+
+    with open(path) as f:
+        model.content = f.read()
+        model.save()
+
+    os.remove(path)
 
     return HttpResponse("OK")
 
@@ -340,10 +350,10 @@ def upload(request):
 
             try:
                 Metabolism(path)
-                os.remove(path)
             except:
-                os.remove(path)
                 return HttpResponseBadRequest("Bad Model")
+            finally:
+                os.remove(path)
 
             DesignModel.objects.create(
                 user=request.user.profile,

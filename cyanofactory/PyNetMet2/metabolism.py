@@ -242,6 +242,13 @@ class Metabolism(object):
         self.reacs_per_met = reacs_per_met
         self._net = None
 
+        # Check for duplicated enzyme names and rename
+        non_uniq = filter(lambda x: self.has_reaction(x), self.mets)
+        if len(non_uniq) > 0:
+            for x in non_uniq:
+                self.rename_reaction(x, x + "_r", no_update=True)
+            self.calcs()
+
     @property
     def net(self):
         if self._net is None:
@@ -260,7 +267,7 @@ class Metabolism(object):
         # Reads metabolites
         for reac in reacs:
             r = Enzyme(reac,"GP")
-            if reac.name in self.dic_enzs:
+            if r.name in self.dic_enzs:
                 raise ValueError("Reaction with same name already in model: " + r.name)
 
         subs = self.dic_mets
@@ -346,7 +353,7 @@ class Metabolism(object):
     def get_reaction_with_pathway(self, pathway_name):
         return filter(lambda x: x.pathway == pathway_name, self.enzymes)
 
-    def rename_reaction(self, reac_from, reac_to):
+    def rename_reaction(self, reac_from, reac_to, no_update=False):
         reac = self.get_reaction(reac_from)
 
         if reac is None:
@@ -364,7 +371,9 @@ class Metabolism(object):
                 obj[0] = reac_to
 
         reac.name = reac_to
-        self.calcs()
+
+        if not no_update:
+            self.calcs()
 
     def remove_reaction(self, name):
         """

@@ -10,6 +10,7 @@ var Enzyme = (function() {
         this.stoichiometric_products = [];
         this.constraints = [0, null];
         this.enabled = true;
+        this.pathway = "GP";
     }
 
     Enzyme.prototype.isConstrained = function() {
@@ -102,12 +103,14 @@ var Enzyme = (function() {
             if (index > -1) {
                 metabolite.consumed.splice(index, 1);
                 affected_mets.push(metabolite);
+                metabolite.consumed = metabolite.consumed.sort(Metabolite.nameComparator);
             }
 
             index = metabolite.produced.indexOf(that);
             if (index > -1) {
                 metabolite.produced.splice(index, 1);
                 affected_mets.push(metabolite);
+                metabolite.produced = metabolite.produced.sort(Metabolite.nameComparator);
             }
         });
 
@@ -125,11 +128,13 @@ var Enzyme = (function() {
         this.substrates.forEach(function(substrate) {
             substrate.consumed.push(that);
             affected_mets.push(substrate);
+            substrate.consumed = substrate.consumed.sort(Metabolite.nameComparator);
         });
 
         this.products.forEach(function(product) {
             product.produced.push(that);
             affected_mets.push(product);
+            product.produced = product.produced.sort(Metabolite.nameComparator);
         });
 
         return affected_mets;
@@ -184,10 +189,29 @@ Enzyme.fromReaction = function(reaction) {
     enzyme.reversible = reaction.reversible;
     enzyme.constraints = reaction.constraints;
     enzyme.enabled = !reaction.disabled;
+    enzyme.pathway = reaction.pathway;
 
     enzyme.updateMetaboliteReference();
 
     return enzyme;
+};
+
+Enzyme.getPathways = function() {
+    var paths = Enzyme.enzymes.map(function(x) {
+        return x.pathway;
+    });
+
+	var n = {};
+    var r = [];
+	for(var i = 0; i < paths.length; i++)
+	{
+		if (!n[paths[i]])
+		{
+			n[paths[i]] = true;
+			r.push(paths[i]);
+		}
+	}
+	return r.sort();
 };
 
 var Metabolite = (function() {
@@ -282,4 +306,8 @@ Metabolite.getExternalMetabolites = function() {
     return Metabolite.metabolites.filter(function(value) {
         return value.external;
     });
+};
+
+Metabolite.nameComparator = function(a, b) {
+    return a.name.localeCompare(b.name);
 };

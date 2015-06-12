@@ -27,29 +27,38 @@ def apply_commandlist(model, commandlist):
             enzyme = model.get_reaction(command[2])
 
             if command[1] == "add":
+                if len(command) < 7:
+                    raise ValueError("Bad command " + str(command))
+
                 if enzyme is not None:
                     raise ValueError("Reaction already in model: " + command[2])
 
-                reaction = Enzyme(command[3])
-                model.add_reaction(reaction)
+                model.add_reaction(command[3])
+                reaction = model.get_reaction(command[2])
                 reaction.constraint = [command[4], command[5]]
-
+                reaction.pathway = command[6]
+                model.calcs()
             elif command[1] == "edit":
+                if len(command) < 7:
+                    raise ValueError("Bad command " + str(command))
+
                 if enzyme is None:
                     raise ValueError("Reaction not in model: " + command[2])
 
                 reaction = Enzyme(command[3])
                 reaction.constraint = [command[4], command[5]]
+                reaction.pathway = command[6]
 
                 if reaction.name != enzyme.name and model.has_reaction(reaction.name):
                     raise ValueError("Reaction already in model: " + reaction.name)
 
-                enzyme.replace_with(reaction)
+                model.enzymes[model.dic_enzs[reaction.name]] = reaction
+                model.calcs()
             elif command[1] == "delete":
                 if enzyme is None:
                     raise ValueError("Reaction not in model: " + command[2])
 
-                model.remove_reaction(enzyme)
+                model.remove_reaction(enzyme.name)
             else:
                 raise ValueError("Invalid operation " + command[1])
 
