@@ -1177,6 +1177,9 @@ Released under the MIT license
 
             command_list.push(["reaction", "delete", reaction.name]);
 
+            cyano_design_objective_select[0].selectize.removeOption(reaction.name);
+            design_objective_visible_combobox[0].selectize.removeOption(reaction.name);
+
             datatable_metabolites.draw();
 
             dialog_delete.modal("hide");

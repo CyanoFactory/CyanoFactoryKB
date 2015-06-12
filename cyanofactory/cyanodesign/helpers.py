@@ -52,7 +52,7 @@ def apply_commandlist(model, commandlist):
                 if reaction.name != enzyme.name and model.has_reaction(reaction.name):
                     raise ValueError("Reaction already in model: " + reaction.name)
 
-                model.enzymes[model.dic_enzs[reaction.name]] = reaction
+                model.enzymes[model.dic_enzs[command[2]]] = reaction
                 model.calcs()
             elif command[1] == "delete":
                 if enzyme is None:

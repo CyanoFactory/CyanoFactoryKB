@@ -160,7 +160,7 @@ def simulate(request, pk):
 
     for item in display:
         if not org.has_reaction(item):
-            return HttpResponseBadRequest("Bad display list: " + item)
+            return HttpResponseBadRequest("Unknown reaction in display list: " + item)
 
     try:
         fba = org.fba()
