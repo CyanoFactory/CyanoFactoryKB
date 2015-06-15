@@ -232,10 +232,10 @@ def simulate(request, pk):
         return r
     elif output_format == "csv":
         s = StringIO.StringIO()
-        for reac in org.enzymes:
+        for reac, flux in zip(fba.reacs, fba.flux):
             s.write(reac.name)
             s.write("\t")
-            s.write(reac.flux)
+            s.write(flux)
             s.write("\r\n")
         r = HttpResponse(s.getvalue(), content_type="text/csv")
         r['Content-Disposition'] = 'attachment; filename={}.csv'.format(model.filename)
@@ -438,7 +438,7 @@ def calcReactions(org, fluxResults):
     newMax = 10
     newRange = newMax - newMin
 
-    enzymes = org.enzymes
+    enzymes = fluxResults.reacs
     nodeDic = OrderedDict()
     nodecounter = 0
     graph = nx.DiGraph()

@@ -128,6 +128,7 @@ Released under the MIT license
             columnDefs: [
                 {
                     "targets": 0,
+                    "width": "25%",
                     "data": function (rowData, type, set, meta) {
                         return rowData;
                     },
@@ -143,6 +144,7 @@ Released under the MIT license
                 },
                 {
                     "targets": 1,
+                    "width": "45%",
                     "orderable": false,
                     "data": function (rowData, type, set, meta) {
                         return rowData;
@@ -153,6 +155,7 @@ Released under the MIT license
                 },
                 {
                     "targets": 2,
+                    "width": "10%",
                     "orderable": false,
                     "searchable": false,
                     "data": function (rowData, type, set, meta) {
@@ -161,6 +164,7 @@ Released under the MIT license
                 },
                 {
                     "targets": 3,
+                    "width": "12%",
                     "orderable": false,
                     "searchable": false,
                     "data": function (rowData, type, set, meta) {
@@ -175,6 +179,7 @@ Released under the MIT license
                 },
                 {
                     "targets": 4,
+                    "width": "8%",
                     "orderable": false,
                     "searchable": false,
                     "data": function (rowData, type, set, meta) {
@@ -527,7 +532,7 @@ Released under the MIT license
                 data: data
             }).done(function(x) {
                 if (x["solution"] == "Optimal") {
-                    notifyInfo("The solution is " + x["solution"] + ". To update the result below press \"Run simulation\".");
+                    notifyInfo("The solution is " + x["solution"] + ". The download starts in a few seconds. To update the result below press \"Run simulation\".");
 
                     delete data["dry_run"];
                     data["format"] = format;
@@ -708,6 +713,7 @@ Released under the MIT license
 
             var substrates = dialog_enzyme.find("#reaction-substrates")[0].selectize;
             var products = dialog_enzyme.find("#reaction-products")[0].selectize;
+            var enabled = dialog_enzyme.find("#enabled");
             var constrained = dialog_enzyme.find("#constrained");
             var constrained_min = dialog_enzyme.find("#constrained-min");
             var constrained_max = dialog_enzyme.find("#constrained-max");
@@ -748,6 +754,8 @@ Released under the MIT license
             pathway.addItem(enzyme.pathway);
             pathway.refreshItems();
 
+            enabled.prop("checked", enzyme.enabled);
+
             constrained.prop("checked", enzyme.isConstrained());
             constrained_min.val(enzyme.constraints[0]);
             constrained_max.val(enzyme.constraints[1]);
@@ -784,6 +792,7 @@ Released under the MIT license
         function saveEnzyme(enzyme) {
             var name = dialog_enzyme.find("#enzyme-name");
             var reversible = dialog_enzyme.find("#reversible");
+            var enabled = dialog_enzyme.find("#enabled");
             var constrained = dialog_enzyme.find("#constrained");
             var constrained_min = dialog_enzyme.find("#constrained-min");
             var constrained_max = dialog_enzyme.find("#constrained-max");
@@ -822,6 +831,8 @@ Released under the MIT license
             } else {
                 enzyme.makeUnconstrained();
             }
+
+            enzyme.enabled = enabled.prop("checked");
 
             enzyme.substrates = [];
             enzyme.stoichiometric_substrates = [];
@@ -1252,11 +1263,53 @@ Released under the MIT license
 
             waitIndicator.hide($("#content"));
         });
+
+        table_enzymes.css("width", "");
+        table_metabolites.css("width", "");
+
+        var isDragging = false;
+
+        $("#visual").on("click", "g.node", function() {
+            var idx = Metabolite.indexByName($(this).children("text").text());
+            if (!isDragging & idx > -1) {
+                showEditMetaboliteDialog(Metabolite.metabolites[idx]);
+            }
+        });
+
+        $("#visual").on("click", "g.edge text", function() {
+            // remove flux value
+            var idx = Enzyme.indexByName($(this).text().replace(/ \(-?[0-9]+(\.[0-9]+)?\)$/, ""));
+            if (!isDragging & idx > -1) {
+                showEditEnzymeDialog(Enzyme.enzymes[idx], false);
+            }
+        });
+
+        $("#visual").on("mousedown", "g", function(event) {
+            isDragging = false;
+            $(this).data('page', {x: event.pageX, y: event.pageY})
+        });
+        $("#visual").on("mousemove", "g", function(event) {
+            var p = $(this).data('page');
+            if (p !== undefined) {
+                if (Math.abs(p.x - event.pageX) > 4 ||
+                    Math.abs(p.y - event.pageY) > 4) {
+                    isDragging = true;
+                }
+            }
+        });
+
+        $("#enzyme_regex").click(function() {
+            datatable_enzymes.search("", $(this).prop("checked"), true).draw();
+        });
+
+        $("#metabolite_regex").click(function() {
+            datatable_metabolites.search("", $(this).prop("checked"), true).draw();
+        });
     });
 </script>
 
 <script id="filter_row" type="text/plain">
-<div class="col-sm-12">
+<div class="col-sm-6">
 <label for="cyano-enzyme-list-filter-reactions">Filter reactions</label>
 <select id="cyano-enzyme-list-filter-reactions" class="form-control combobox" multiple="multiple">
     <optgroup label="Enabled">
@@ -1273,15 +1326,31 @@ Released under the MIT license
     </optgroup>
 </select>
 </div>
+<div class="col-sm-6">
+    <div class="dataTables_filter">
+    <div class="checkbox">
+    <input id="enzyme_regex" type="checkbox">
+    <label for="enzyme_regex">Search with RegExp</label>
+    </div>
+    </div>
+</div>
 </script>
 
 <script id="filter_row_metabolites" type="text/plain">
-<div class="col-sm-12">
+<div class="col-sm-6">
 <label for="cyano-metabolite-list-filter-reactions">Filter metabolites</label>
 <select id="cyano-metabolite-list-filter-reactions" class="form-control combobox" multiple="multiple">
     <option selected="selected">Is internal</option>
     <option selected="selected">Is external</option>
 </select>
+</div>
+<div class="col-sm-6">
+    <div class="dataTables_filter">
+    <div class="checkbox">
+    <input id="metabolite_regex" type="checkbox">
+    <label for="metabolite_regex">Search with RegExp</label>
+    </div>
+    </div>
 </div>
 </script>
 {% endblock %}
@@ -1298,7 +1367,9 @@ span.cyano-external-metabolite { color: green }
 #cyano-metabolite-list .cyano-enzyme,
 #cyano-metabolite-list tr td:first-child,
 #cyano-enzyme-list tr td:first-child,
-#cyano-enzyme-list .cyano-metabolite
+#cyano-enzyme-list .cyano-metabolite,
+svg g.node,
+svg text
 {
     cursor: pointer;
 }
@@ -1320,6 +1391,12 @@ span.cyano-external-metabolite { color: green }
 #submit-form
 {
     display: none;
+}
+
+.tab-content
+{
+    margin-top: 5px;
+    margin-bottom: 5px;
 }
 {% endblock %}
 
@@ -1463,6 +1540,10 @@ span.cyano-external-metabolite { color: green }
                         <div class="form-group">
                             <label for="reaction-products">Products</label>
                             <input id="reaction-products" type="text">
+                        </div>
+                        <div class="checkbox">
+                            <input type="checkbox" name="enabled" id="enabled">
+                            <label for="enabled">Enabled</label>
                         </div>
                         <div class="checkbox">
                             <input type="checkbox" name="reversible" id="reversible">
