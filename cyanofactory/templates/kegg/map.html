@@ -137,8 +137,8 @@ Released under the MIT license
 
             <script src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
 			<script type="text/javascript">
-	            var svgPan = svgPanZoom('svg', {minZoom: 0.1});
-			    $(document.body).delegate("select", "change", function(){
+	            var svgPan = svgPanZoom('svg', {minZoom: 0.1, fit: false});
+			    $("body").delegate("select", "change", function(){
                     var i = $('#selectionField option:selected').attr("id");
                     if (i == "0") {
                         // (Select item) element
@@ -146,14 +146,20 @@ Released under the MIT license
                     }
                     var val = $('#selectionField option:selected').val();
                     var item = $("g a[*|title*=\"" + val + "\"]");
-                    item.each(function() {
-                        if ($(this).attr("xlink:href").match(/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/g).indexOf(val) > -1) {
-                            var rect = $(this).children();
-                            var new_x = ($("#map").width() / 2) - $(rect).attr("x");
-                            var new_y = ($("#map").height() / 2) - $(rect).attr("y");
 
-                            svgPan.zoom(1);
-                            svgPan.pan({x: new_x, y: new_y});
+                    item.each(function() {
+                        var match = $(this).attr("xlink:href").match(/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/g);
+                        if (match !== null) {
+                            if (match.indexOf(val) > -1) {
+                                var rect = $(this).children();
+                                var new_x = ($("#map").width() / 2) - $(rect).attr("x");
+                                var new_y = ($("#map").height() / 2) - $(rect).attr("y");
+
+                                var old_zoom = svgPan.getZoom();
+                                svgPan.zoom(1);
+                                svgPan.pan({x: new_x, y: new_y});
+                                svgPan.zoom(old_zoom);
+                            }
                         }
                     });
 			    });

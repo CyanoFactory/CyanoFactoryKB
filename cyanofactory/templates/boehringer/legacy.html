@@ -125,7 +125,7 @@ Released under the MIT license
 </svg>
 
 <script type="text/javascript">
-	var svgPan = svgPanZoom('svg', {minZoom: 0.1});
+	var svgPan = svgPanZoom('svg', {minZoom: 0.1, fit: false});
     $(document.body).delegate("select", "change", function(){
         var i = $('#selectionField option:selected').attr("id");
         if (i == "0") {
@@ -136,8 +136,10 @@ Released under the MIT license
         var new_x = ($("#map").width() / 2) - $(item).attr("x");
         var new_y = ($("#map").height() / 2) - $(item).attr("y");
 
+        var old_zoom = svgPan.getZoom();
         svgPan.zoom(1);
         svgPan.pan({x: new_x, y: new_y});
+        svgPan.zoom(old_zoom);
     });
 </script>
 </div>

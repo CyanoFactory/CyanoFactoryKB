@@ -72,6 +72,10 @@ $(document).ready(function() {
             href = $(this).attr("xlink:href");
         }
 
+        if (isDragging) {
+            event.preventDefault();
+        }
+
         if (href === undefined) {
             return;
         }

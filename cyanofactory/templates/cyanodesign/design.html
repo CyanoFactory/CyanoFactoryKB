@@ -580,7 +580,7 @@ Released under the MIT license
                 document.getElementById("visual").innerHTML = x["graph"];
 
                 $("svg").attr("width", "100%").attr("height", "400px");
-                var svgPan = svgPanZoom('svg', {minZoom: 0.1});
+                var svgPan = svgPanZoom('svg', {minZoom: 0.1, fit: false});
                 svgPan.zoom(1);
                 /*$("svg").find(".edge text").each(function() {
                     if ($(this).text().indexOf(cyano_design_objective_select.val() + " ") == 0) {

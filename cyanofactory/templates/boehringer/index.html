@@ -69,6 +69,28 @@ $(document).ready(function() {
             $("form#load_form select").children(":selected").remove();
         });
     });
+
+    var isDragging = false;
+
+    $("#content").on("mousedown", "a", function(event) {
+        isDragging = false;
+        $(this).data('page', {x: event.pageX, y: event.pageY})
+    });
+    $("#content").on("mousemove", "a", function(event) {
+        var p = $(this).data('page');
+        if (p !== undefined) {
+            if (Math.abs(p.x - event.pageX) > 4 ||
+                Math.abs(p.y - event.pageY) > 4) {
+                isDragging = true;
+            }
+        }
+    });
+    $("#content").on("click", "a", function(event) {
+         if (isDragging) {
+            event.preventDefault();
+        }
+    });
+
 });
 </script>
 {% endblock %}
@@ -153,7 +175,7 @@ $(document).ready(function() {
 			{% include "boehringer/boehringer_svg.html" %}
 
 			<script type="text/javascript">
-				var svgPan = svgPanZoom('#boehringer', {minZoom: 0.1});
+				var svgPan = svgPanZoom('#boehringer', {minZoom: 0.1, fit: false});
 			    $(document.body).delegate("select", "change", function(){
                     var i = $('#selectionField option:selected').attr("id");
                     if (i == "0") {
@@ -164,8 +186,10 @@ $(document).ready(function() {
                     var new_x = ($("#map").width() / 2) - $(item).attr("x");
                     var new_y = ($("#map").height() / 2) - $(item).attr("y");
 
+                    var old_zoom = svgPan.getZoom();
                     svgPan.zoom(1);
-                    svgPan.pan({x: new_x, y: new_y});
+                    svgPan.pan({x: new_x , y: new_y});
+                    svgPan.zoom(old_zoom);
 			    });
 			</script>
 			</div>
