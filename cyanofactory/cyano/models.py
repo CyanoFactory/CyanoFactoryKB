@@ -56,7 +56,6 @@ from django.db import models
 
 from guardian.models import UserObjectPermissionBase
 from guardian.models import GroupObjectPermissionBase
-from guardian.core import ObjectPermissionChecker
 
 from south.modelsinspector import add_introspection_rules
 add_introspection_rules([], ["^cyano\.history\.HistoryForeignKey"])
@@ -439,8 +438,7 @@ class GroupProfile(Model):
         if obj is None:
             return self.group.permissions.filter(codename=permission).exists()
         else:
-            checker = ObjectPermissionChecker(self.group)
-            return checker.has_perm(permission, obj)
+            return self.has_perms(permission, Entry.objects.filter(pk=obj.pk)).count()
 
     def has_perms(self, permission, objs):
         """
@@ -558,7 +556,7 @@ class UserProfile(Model):
 
         groups = self.get_groups().values_list("pk", flat=True)
 
-        all_group_perms = EntryGroupObjectPermission.objects.filter(group__in=groups, permission=perm, content_object_id__in=obj_ids)
+        all_group_perms = EntryGroupObjectPermission.objects.filter(group__in=groups, permission=perm, content_object_id__in=obj_ids).values_list("content_object_id", flat=True)
         obj_with_group_perms = objs.model.objects.filter(pk__in=all_group_perms)
 
         return obj_with_user_perms | obj_with_group_perms
@@ -1174,6 +1172,12 @@ class Entry(AbstractEntry):
 
     def first_revision(self):
         return Revision.objects.filter(object_id=self.pk).first()
+
+    def get_permissions(self):
+        return [
+            EntryUserObjectPermission.objects.filter(content_object_id=self.pk),
+            EntryGroupObjectPermission.objects.filter(content_object_id=self.pk)
+        ]
 
     def save(self, revision_detail, force_revision=True, *args, **kwargs):
         from cyano.helpers import slugify
