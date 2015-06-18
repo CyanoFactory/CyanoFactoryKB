@@ -67,7 +67,7 @@ Released under the MIT license
 
 #buttoncontainer > .buttoncontainer_field {display:inline;}
 
-#listChoice > .listChoic {display:inline;}
+#listChoice > .listChoic {display:inline; visibility: hidden}
 
 #chemCheckbox {
     display:inline;
@@ -102,6 +102,7 @@ Released under the MIT license
 	border:1px solid #3d80b3;
     border-radius: 10px;
     margin-bottom: 20px;
+    width: 80%;
     }
 
 .overlay {
@@ -169,6 +170,8 @@ Released under the MIT license
 
 
         <div id="javascriptcontainer" class="javascriptcontainer"></div>
+        <!--
+        // todo enable chemlist feature again
         <div id="chemicals" style="display: inline">
             <div id="chemCheckbox" style="display: inline"></div>
             <div id="chembuttoncontainer" class="chembuttoncontainer">
@@ -178,7 +181,7 @@ Released under the MIT license
                 <input name="+1" type="button" class="demo" value=+1 onclick="expandChemNetwork(value)"/>
                 <input name="+5" type="button" class="demo" value=+5 onclick="expandChemNetwork(value)"/>
             </div>
-
+        -->
         </div>
 
     </div>
@@ -244,6 +247,7 @@ Released under the MIT license
                 )
                 chemicalsBox.append("span")
                         .text("Show Chemicals")
+                        .attr("visibility", "hidden")
             }
             var dialog_progressbar = $("#dialog-progressbar");
 
@@ -484,6 +488,12 @@ Released under the MIT license
                     .enter().append("line")
                         .attr("class", "link")
                         .attr("stroke-width", calculateLinkThikness())
+                        .attr("stroke-dasharray", function(d) {
+                            if(d.snp==0) {
+                                return "5,0"}
+                            else{
+                                return "5,5"}
+                            })
                         .style("stroke", function(d) { return lcolor(d.score);});
 
                 var drag = force.drag()
@@ -1137,7 +1147,9 @@ Released under the MIT license
 
         function createTableCheckboxes() {
             d3.select("#listChoice").selectAll("div")
-                    .data(["Proteins", "Chemicals"])
+                    .data(["Proteins"])
+                    // todo enable chemlist feature again
+                    //.data(["Proteins", "Chemicals"])
                     .enter()
                     .append("div")
                     .attr("class", "listChoic")
@@ -1171,7 +1183,8 @@ Released under the MIT license
 
         function filterList(){
             var protList = {{ protInteracts|safe }};
-            var chemList = {{ chemInteracts|safe }};
+            // todo enable chemlist feature again
+            //var chemList = {{ chemInteracts|safe }};
             var emptyList = [];
             var allList = {{ allInteracts|safe }};
 
@@ -1191,9 +1204,10 @@ Released under the MIT license
             if(list.indexOf("Proteins")>-1){
                 return protList;
             }
-            if(list.indexOf("Chemicals">-1)){
-                return chemList;
-            }
+            // todo enable chemlist feature again
+            //if(list.indexOf("Chemicals">-1)){
+            //    return chemList;
+            //}
 
 
         }

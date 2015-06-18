@@ -3,11 +3,10 @@ from django.http import HttpResponse
 from django.shortcuts import render_to_response
 from cyano.decorators import ajax_required
 from cyanointeraction.models import Proteins, NodeNodeLinks, ProteinsOrthgroups, Chemicals, ProteinChemicalLinks, \
-    ChemicalChemicalLinks, ProteinChemicalLinksDetailed, ChemicalChemicalLinksDetailed
+    ChemicalChemicalLinks, ProteinChemicalLinksDetailed, ChemicalChemicalLinksDetailed, StitchNodeNode
 import networkx as nx
 import json
 from networkx.readwrite import json_graph
-import os
 from cyano.models import ProteinComparison
 from cyano.helpers import render_queryset_to_response
 import re
@@ -43,10 +42,10 @@ def checkInteraction(request, protID, protlimit=10, chemlimit=1):
     infos = proteingraph(protID, protlimit, chemlimit)
     json_file = infos[0]
     protInteractions = listProteinInteractions(protID)
-    chemInteractions = listProteinChemicalInteractions(protID)
+#    chemInteractions = listProteinChemicalInteractions(protID)
     allList = []
     allList.extend(protInteractions)
-    allList.extend(chemInteractions)
+#    allList.extend(chemInteractions)
     allInteractions = sorted(allList, key=lambda k: k['combined_score'], reverse=True)
     prot = Proteins.objects.get(protein_id=protID).annotation
     if prot.__contains__(";"):
@@ -62,7 +61,7 @@ def checkInteraction(request, protID, protlimit=10, chemlimit=1):
             'protid': protID,
             'prot_name': Proteins.objects.get(protein_id=protID).preferred_name,
             'protInteracts': json.dumps(protInteractions),
-            'chemInteracts': json.dumps(chemInteractions),
+#            'chemInteracts': json.dumps(chemInteractions),
             'allInteracts': json.dumps(allInteractions),
             'name': name,
             'list': ["Homology", "Experiment", "Database", "Textmining",
@@ -104,7 +103,7 @@ def checkRequest(request):
     if selectedID[0] == "P":
         data = checkProteinInteractionRequest(selectedID[1:])
     elif selectedID[0] == "C":
-        data = checkChemicalInteractionRequest(selectedID)
+        data = checkChemicalInteractionRequest(int(selectedID[1:]))
     else:
         data = checkProteinInteractionRequest(selectedID)
     template = "cyanointeraction/index.html"
@@ -135,10 +134,10 @@ def checkProteinInteractionRequest(protid):
     infos = proteingraph(protid, 10, 1)
     json_file = infos[0]
     protInteractions = listProteinInteractions(protid)
-    chemInteractions = listProteinChemicalInteractions(protid)
+#    chemInteractions = listProteinChemicalInteractions(protid)
     allList = []
     allList.extend(protInteractions)
-    allList.extend(chemInteractions)
+#    allList.extend(chemInteractions)
     allInteractions = sorted(allList, key=lambda k: k['combined_score'], reverse=True)
 
     prot = Proteins.objects.get(protein_id=protid).annotation
@@ -150,7 +149,7 @@ def checkProteinInteractionRequest(protid):
         'protid': "P" + str(protid),
         'prot_name': Proteins.objects.get(protein_id=protid).preferred_name,
         'protInteracts': json.dumps(protInteractions).replace("'", "\'"),
-        'chemInteracts': json.dumps(chemInteractions).replace("'", "\'"),
+#        'chemInteracts': json.dumps(chemInteractions).replace("'", "\'"),
         'allInteracts': json.dumps(allInteractions).replace("'", "\'"),
         'name': name,
         'list': ["Homology", "Experiment", "Database", "Textmining",
@@ -162,6 +161,58 @@ def checkProteinInteractionRequest(protid):
     }
     return data
 
+
+
+def checkSTITCH(chemid):
+    """
+    Generating the data for an Chemical-Protein-Interaction. Contains the information of both, Interaction of Proteins
+    and Chemicals
+    @param chemid: CHEMID which is used by the STITCH DB without leading "-"
+    @return: A Dictionary with all relevant Data:
+        protid: ProteinID
+        prot_name: Proteinname, given by STRING DB
+        protInteracts: Protein Interaction Partners
+        chemInteracts: Chemical Interaction Partners
+        name: preferred_name
+        list: List of Interaction possibilities
+        json: JSON-File which contains the Interaction-Graph
+        limit: number of nodes contained in the Graph
+        protlimit: maximal amount of Proteins which should be looked at
+        chemlimit: maximal amount of Chemicals which should be looked at
+    """
+
+    infos = stitchgraph(chemid, 10, 1)
+    json_file = infos[0]
+    protInteractions = listSTITCHProteinInteractions(chemid)
+    chemInteractions = listSTITCHChemicalInteractions(chemid)
+    allList = []
+    allList.extend(protInteractions)
+    allList.extend(chemInteractions)
+    allInteractions = sorted(allList, key=lambda k: k['combined_score'], reverse=True)
+
+    chem = Chemicals.objects.get(chemical_id=-chemid).short_name
+    if chem.__contains__(";"):
+        name, rest = chem.split(";", 1)
+    else:
+        name = chem
+    data = {
+        'protid': chemid,
+        'prot_name': chemid,
+        'protInteracts': json.dumps(protInteractions),
+        'chemInteracts': json.dumps(chemInteractions),
+        'allInteracts': json.dumps(allInteractions),
+        'name': name,
+        'list': ["Homology", "Experiment", "Database", "Textmining",
+                 "Genfusion", "Coocurence", "Neighborhood", "Coexpression"],
+        'json': json_file,
+        'limit': infos[1],
+        'protlimit': 10,
+        'chemlimit': 1
+    }
+    return data
+
+def testSTITCH(a):
+    checkSTITCH(171549453)
 
 def checkChemicalInteractionRequest(chemid):
     """
@@ -235,6 +286,9 @@ def proteingraph(protein_id, protlimit, chemlimit):
     """
     if protein_id[0] == "P":
         protein_id = protein_id[1:]
+
+    geneList = readGeneList()
+
     maxhood = 0
     minhood = 10000
     maxScore = 0
@@ -244,11 +298,14 @@ def proteingraph(protein_id, protlimit, chemlimit):
     G = nx.Graph()
     interactions = NodeNodeLinks.objects.filter(node_id_a=protein.protein_id).order_by('-combined_score')[:protlimit]
     # interactions = NodeNodeLinks.objects.filter(node_id_a=prot.protein_id)
+    changed = 0
+    if protein_id in geneList:
+        changed = 1
     G.add_node("P" + str(protein.protein_id),
                name=protein.preferred_name,
                protein=1,
                hood=0,
-               geneid=protein.protein_external_id,
+               geneid=protein.protein_id,
                clicked=1,
                checkbox=1,
                isselected=0,
@@ -256,13 +313,15 @@ def proteingraph(protein_id, protlimit, chemlimit):
                selectvis=1)
     for i in interactions:
         linked = i.node_id_b
+        if linked in geneList:
+            changed = 1
         linkedprot = Proteins.objects.get(protein_id=linked)
         hoodsize = NodeNodeLinks.objects.filter(node_id_a=linked).count()
         G.add_node("P" + str(linked),
                    name=linkedprot.preferred_name,
                    protein=1,
                    hood=hoodsize,
-                   geneid=linkedprot.protein_external_id,
+                   geneid=linkedprot.protein_id,
                    clicked=1,
                    checkbox=1,
                    isselected=0,
@@ -283,7 +342,8 @@ def proteingraph(protein_id, protlimit, chemlimit):
                    clicked=1,
                    checkbox=1,
                    protein=1,
-                   selectvis=1)
+                   selectvis=1,
+                   snp=changed)
         maxhood = hoodsize if maxhood < hoodsize else maxhood
         minhood = hoodsize if minhood > hoodsize else minhood
         maxScore = i.combined_score if maxScore < i.combined_score else maxScore
@@ -297,6 +357,9 @@ def proteingraph(protein_id, protlimit, chemlimit):
                     try:
                         link = NodeNodeLinks.objects.get(node_id_a=i.node_id_b, node_id_b=a.node_id_b)
                         scores = getInteractType(link.evidence_scores)
+                        changedCon=0
+                        if a.node_id_b in geneList or i.node_id_a in geneList:
+                            changedCon=1
                         G.add_edge("P" + str(i.node_id_b),
                                    "P" + str(a.node_id_b),
                                    score=link.combined_score,
@@ -311,21 +374,128 @@ def proteingraph(protein_id, protlimit, chemlimit):
                                    clicked=1,
                                    checkbox=1,
                                    protein=1,
-                                   selectvis=1)
+                                   selectvis=1,
+                                   snp=changedCon)
+                        maxScore = link.combined_score if maxScore < link.combined_score else maxScore
+                        minScore = link.combined_score if minScore > link.combined_score else minScore
+                    except ObjectDoesNotExist:
+                        pass
+# todo fix Stitch fixing
+#    data = findChems(G, chemlimit)
+    data = findSTITCHChems(G, chemlimit)
+    D = data
+#    d = json_graph.node_link_data(G)
+    d = json_graph.node_link_data(D)
+    json_file = json.dumps(d)
+    json_file = calcColourRange(json_file, maxhood, minhood, maxScore, minScore)
+    data = [json_file, D.number_of_nodes()]
+#    data = [json_file, G.number_of_nodes()]
+    return data
+
+
+def stitchgraph(chem_id, protlimit, chemlimit):
+    """
+    Loading the information for a given Chemical ID with a given amount of protein and chemical interaction partner to
+    generate an interaction graph.
+    @param chem_id: CHEMICAL ID used in the STITCH DB
+    @param protlimit: maximal amount of protein interaction partners
+    @param chemlimit: maximal amount of chemical interaction partners
+    @return: List with 2 entries, which contain data from the generated graph:
+        First Element - graph in JSON-Format
+        Second Element - amount of nodes from the graph
+    """
+    geneList = readGeneList()
+
+    maxhood = 0
+    minhood = 10000
+    maxScore = 0
+    minScore = 10000
+    G = nx.Graph()
+    chemical = Chemicals.objects.get(chemical_id=-chem_id)
+    interactions = StitchNodeNode.objects.filter(node_id_a=-chem_id, node_type_b=1148).order_by('-combined_score')[:protlimit]
+    interactions2 = []
+    calledProts = []
+    G.add_node(chem_id,
+               name=chemical.preferred_name,
+               protein=0,
+               hood=0,
+               clicked=1,
+               checkbox=1,
+               isselected=0,
+               selectvis=0)
+    for i in interactions:
+        linkedprot = Proteins.objects.get(protein_id=i.node_id_b)
+        if not linkedprot.preferred_name in calledProts:
+            calledProts.append(linkedprot.preferred_name)
+            interactions2.append(i)
+            change = 0
+            if linkedprot.protein_id in geneList:
+                change = 1
+            hoodsize = NodeNodeLinks.objects.filter(node_id_a=linkedprot.protein_id).count()
+            if not G.has_node("P" + str(linkedprot.protein_id)):
+                G.add_node("P" + str(linkedprot.protein_id),
+                           name=linkedprot.preferred_name,
+                           protein=1,
+                           hood=hoodsize,
+                           geneid=linkedprot.protein_id,
+                           clicked=1,
+                           checkbox=1,
+                           isselected=0,
+                           annotation=re.sub("'", "", linkedprot.annotation),
+                           selectvis=1)
+
+                G.add_edge(chem_id, "P" + str(linkedprot.protein_id),
+                           score=i.combined_score,
+                           clicked=1,
+                           checkbox=1,
+                           selectvis=0,
+                           snp=change)
+                maxhood = hoodsize if maxhood < hoodsize else maxhood
+                minhood = hoodsize if minhood > hoodsize else minhood
+                maxScore = i.combined_score if maxScore < i.combined_score else maxScore
+                minScore = i.combined_score if minScore > i.combined_score else minScore
+    ''' Looking at each Protein and connecting them, if they interact'''
+    for i in interactions2:
+        prot_i = Proteins.objects.get(protein_id=i.node_id_b)
+        for a in interactions2:
+            prot_a = Proteins.objects.get(protein_id=a.node_id_b)
+            if not prot_a.protein_id == prot_i.protein_id:
+                if not (G.has_edge("P" + str(prot_a.protein_id), "P" + str(prot_i.protein_id))):
+                    try:
+                        link = NodeNodeLinks.objects.get(node_id_a=prot_i.protein_id, node_id_b=prot_a.protein_id)
+                        scores = getInteractType(link.evidence_scores)
+                        changedCon = 0
+                        if prot_i.protein_id in geneList or prot_a.protein_id in geneList:
+                            changedCon = 1
+                        G.add_edge("P" + str(prot_i.protein_id), "P" + str(prot_a.protein_id),
+                                   score=link.combined_score,
+                                   Homology=scores["Homology"],
+                                   Experiment=scores["Experiment"],
+                                   Database=scores["Database"],
+                                   Textmining=scores["Textmining"],
+                                   Genfusion=scores["Genfusion"],
+                                   Coocurence=scores["Coocurence"],
+                                   Neighborhood=scores["Neighborhood"],
+                                   Coexpression=scores["Coexpression"],
+                                   clicked=1,
+                                   checkbox=1,
+                                   selectvis=1,
+                                   protein=1,
+                                   snp=changedCon)
                         maxScore = link.combined_score if maxScore < link.combined_score else maxScore
                         minScore = link.combined_score if minScore > link.combined_score else minScore
                     except ObjectDoesNotExist:
                         pass
 
-    data = findChems(G, chemlimit)
-    D = data
-    # d = json_graph.node_link_data(G)
-    d = json_graph.node_link_data(D)
+    #data = findSTITCHChems(G, chemlimit)
+    #D = data
+    d = json_graph.node_link_data(G)
+    #d = json_graph.node_link_data(D)
     json_file = json.dumps(d)
     json_file = calcColourRange(json_file, maxhood, minhood, maxScore, minScore)
-    data = [json_file, D.number_of_nodes()]
-    return data
 
+    data = [json_file, G.number_of_nodes()]
+    return data
 
 # TODO Accelerate Search
 def chemgraph(chem_id, protlimit, chemlimit):
@@ -339,17 +509,21 @@ def chemgraph(chem_id, protlimit, chemlimit):
         First Element - graph in JSON-Format
         Second Element - amount of nodes from the graph
     """
+
+    geneList = readGeneList()
+
     maxhood = 0
     minhood = 10000
     maxScore = 0
     minScore = 10000
     G = nx.Graph()
-    chemical = Chemicals.objects.get(chemical=chem_id)
+    print -chem_id
+    chemical = Chemicals.objects.get(chemical_id=-chem_id)
     interactions = ProteinChemicalLinks.objects.filter(chemical=chem_id, protein__startswith="1148").order_by('-combined_score')[:protlimit]
     interactions2 = []
     calledProts = []
     G.add_node(chem_id,
-               name=chemical.name,
+               name=chemical.preferred_name,
                protein=0,
                hood=0,
                clicked=1,
@@ -357,10 +531,13 @@ def chemgraph(chem_id, protlimit, chemlimit):
                isselected=0,
                selectvis=0)
     for i in interactions:
-        linkedprot = Proteins.objects.get(protein_external_id=i.protein)
+        linkedprot = Proteins.objects.get(protein_id=i.protein)
         if not linkedprot.preferred_name in calledProts:
             calledProts.append(linkedprot.preferred_name)
             interactions2.append(i)
+            change = 0
+            if linkedprot.protein_id in geneList:
+                change = 1
             hoodsize = NodeNodeLinks.objects.filter(node_id_a=linkedprot.protein_id).count()
             if not G.has_node("P" + str(linkedprot.protein_id)):
                 G.add_node("P" + str(linkedprot.protein_id),
@@ -378,7 +555,8 @@ def chemgraph(chem_id, protlimit, chemlimit):
                            score=i.combined_score,
                            clicked=1,
                            checkbox=1,
-                           selectvis=0)
+                           selectvis=0,
+                           snp=change)
                 maxhood = hoodsize if maxhood < hoodsize else maxhood
                 minhood = hoodsize if minhood > hoodsize else minhood
                 maxScore = i.combined_score if maxScore < i.combined_score else maxScore
@@ -393,6 +571,9 @@ def chemgraph(chem_id, protlimit, chemlimit):
                     try:
                         link = NodeNodeLinks.objects.get(node_id_a=prot_i.protein_id, node_id_b=prot_a.protein_id)
                         scores = getInteractType(link.evidence_scores)
+                        changedCon = 0
+                        if prot_i.protein_id in geneList or prot_a.protein_id in geneList:
+                            changedCon = 1
                         G.add_edge("P" + str(prot_i.protein_id), "P" + str(prot_a.protein_id),
                                    score=link.combined_score,
                                    Homology=scores["Homology"],
@@ -406,7 +587,8 @@ def chemgraph(chem_id, protlimit, chemlimit):
                                    clicked=1,
                                    checkbox=1,
                                    selectvis=1,
-                                   protein=1)
+                                   protein=1,
+                                   snp=changedCon)
                         maxScore = link.combined_score if maxScore < link.combined_score else maxScore
                         minScore = link.combined_score if minScore > link.combined_score else minScore
                     except ObjectDoesNotExist:
@@ -493,6 +675,37 @@ def listProteinInteractions(protID):
     return interactionList
 
 
+def listSTITCHChemicalInteractions(chemID):
+    """
+    Getting all chemical interaction partners by a given chemical ID and sorted by their combined score
+    @param chemID: chemical ID by STITCH DB
+    @return: List of dictionaries containing following informations:
+        interactname - ID of the chemical
+        evidence = Dictionary of interaction possibilities and there scores
+        preferred_name = chemical.preferred_name
+        annotation = additional annotation of a protein
+        combined_score = interaction score of chemical with selected protein
+    """
+    interactionList = []
+    interactions = StitchNodeNode.objects.filter(node_id_a=-chemID, node_id_b__startswith="-").order_by(
+        "-combined_score")
+    for interact in interactions:
+        try:
+            chem = Chemicals.objects.get(chemical_id=interact.node_id_b)
+            chemInfo = {"interactname": chem.short_name,
+                        "evidence": getChemChemSource(interact),
+                        "preferred_name": chem.preferred_name,
+                        "annotation": "",
+                        "combined_score": interact.combined_score
+                        }
+
+            #chemInfo["formula"] = chem.smiles_string
+            interactionList.append(chemInfo)
+        except ObjectDoesNotExist:
+            chemInfo = {}
+    return interactionList
+
+
 # TODO changeList Items
 def listChemicalChemicalInteractions(chemID):
     """
@@ -501,7 +714,7 @@ def listChemicalChemicalInteractions(chemID):
     @return: List of dictionaries containing following informations:
         interactname - ID of the chemical
         evidence = Dictionary of interaction possibilities and there scores
-        preferred_name = chemical Name
+        preferred_name = chemical.preferred_name
         annotation = additional annotation of a protein
         combined_score = interaction score of chemical with selected protein
     """
@@ -532,7 +745,7 @@ def listProteinChemicalInteractions(protID):
     @return: List of dictionaries containing following informations:
         interactname - ID of the chemical
         evidence = Dictionary of interaction possibilities and there scores
-        preferred_name = chemical Name
+        preferred_name = chemical.preferred_name
         annotation = additional annotation of a protein
         combined_score = interaction score of chemical with selected protein
     """
@@ -556,6 +769,45 @@ def listProteinChemicalInteractions(protID):
         except ObjectDoesNotExist:
             chemInfo = {}
 
+    return interactionList
+
+
+def listSTITCHProteinInteractions(chemID):
+    """
+    Getting all protein interaction partners by a given chemical ID and sorted by their combined score
+    @param chemID: chemical ID by STITCH DB
+    @return: List of dictionaries containing following informations:
+        interactname - Protein ID
+        evidence = Dictionary of interaction possibilities and there scores
+        preferred_name = Name of the Protein
+        annotation = additional annotation of a protein
+        combined_score = interaction score of protein with selected chemical
+    """
+    interactionList = []
+    interactions = StitchNodeNode.objects.filter(node_id_a=-chemID, node_type_b=1148).order_by("-combined_score")
+    prots = Proteins.objects.filter(protein_id__in=map(lambda x: x.node_id_b, interactions))
+    for interact, prot in zip(interactions, prots):
+        #prot = Proteins.objects.get(protein_external_id=interact.protein)
+        protInfo = {}
+        name = "P" + str(prot.protein_id)
+        protInfo["interactname"] = name
+        scoreData = {}
+        """
+        scoreData = {
+            "Experiment": interact.experimental,
+            "Database": interact.database,
+            "Textmining": interact.textmining,
+        }
+        """
+        protInfo["evidence"] = scoreData
+        protInfo["preferred_name"] = prot.preferred_name
+        protInfo["annotation"] = prot.annotation
+        protInfo["combined_score"] = interact.combined_score
+
+        if protInfo["annotation"].__contains__(";"):
+            protInfo["annotation"], rest = protInfo["annotation"].split(";", 1)
+
+        interactionList.append(protInfo)
     return interactionList
 
 
@@ -700,6 +952,83 @@ def getInteractType(scores):
     return interactType
 
 
+def findSTITCHChems(graph, chemLimit):
+    """
+    Finding Chemicals for each Protein in given network.
+    !!!
+     Finding min and max Values are deactivated -> Problems during Visualization. No max/min calculation for
+     chemicals
+    !!!
+    @param graph: networkx graph
+    @param protlimit: maximal amount of Proteins which should be called for each chemical
+    @param maxScore: maximal combined_score
+    @param minScore: minimal combined_score
+    @param minhood: minimal neighborhood of a node
+    @param maxhood: maximal neighborhood of a node
+    @return: networkx graph with added chemical nodes
+    """
+    graph2 = graph.copy()
+    for node in graph2:
+        if graph.node[node]["protein"] == 1:
+            chemInteracts = StitchNodeNode.objects.filter(node_id_a=graph.node[node]["geneid"]).order_by(
+                '-combined_score')[:chemLimit]
+            for chemInteract in chemInteracts:
+                name = ""
+                try:
+                    name = Chemicals.objects.get(chemical_id=chemInteract.node_id_b).name
+                except ObjectDoesNotExist:
+                    name = ""
+                if not name == "":
+                    if not graph.has_node(chemInteract.chemical):
+                        hood = ProteinChemicalLinks.objects.filter(chemical=chemInteract.chemical,
+                                                                       protein__startswith="1148").count()
+                        graph.add_node(chemInteract.chemical,
+                                       name=name,
+                                       protein=0,
+                                       selectvis=0,
+                                       clicked=1,
+                                       checkbox=1,
+                                       hood=hood)
+                    score = chemInteract.combined_score
+                    ProtChemScoreData = getProteinChemSource(node[1:], chemInteract)
+                    graph.add_edge(node,
+                                   chemInteract.chemical,
+                                   score=score,
+                                   clicked=1,
+                                   checkbox=1,
+                                   Homology=0,
+                                   Genfusion=0,
+                                   Coocurence=0,
+                                   Experiment=ProtChemScoreData["Experiment"],
+                                   Database=ProtChemScoreData["Database"],
+                                   Textmining=ProtChemScoreData["Textmining"],
+                                   protein=0,
+                                   selectvis=0)
+            for chemInteract1 in chemInteracts:
+                for chemInteract2 in chemInteracts:
+                    if not graph.has_edge(chemInteract1, chemInteract2):
+                        try:
+                            cheminteraction = StitchNodeNode.objects.get(node_id_a=chemInteract1.node_id_a,
+                                                                         node_id_b=chemInteract2.node_id_a)
+                            chemScoreData = getChemChemSource(cheminteraction)
+                            graph.add_edge(chemInteract1.chemical,
+                                           chemInteract2.chemical,
+                                           Genfusion=0,
+                                           Coocurence=0,
+                                           Homology=chemScoreData["Homology"],
+                                           Experiment=chemScoreData["Experiment"],
+                                           Database=chemScoreData["Database"],
+                                           Textmining=chemScoreData["Textmining"],
+                                           score=cheminteraction.combined_score,
+                                           clicked=1,
+                                           checkbox=1,
+                                           protein=0,
+                                           selectvis=0)
+                        except ObjectDoesNotExist:
+                            pass
+    return graph
+
+
 def findChems(graph, chemLimit):
     """
     Finding Chemicals for each Protein in given network.
@@ -808,10 +1137,10 @@ def getChemChemSource(interaction):
     @return: dictionary with single interaction scores: Experiment, Database, Textmining, Homology
     """
     data = {
-        "Experiment": interaction.experimental,
-        "Database": interaction.database,
-        "Textmining": interaction.textmining,
-        "Homology": interaction.similarity
+        "Experiment": "",#interaction.experimental,
+        "Database": "",#interaction.database,
+        "Textmining": "",#interaction.textmining,
+        "Homology": "",#interaction.similarity
     }
     return data
 
@@ -1117,3 +1446,11 @@ def calcTimes(request):
 
 
     return HttpResponse("Done")
+import os
+from django.conf import settings
+def readGeneList():
+    # todo check if line ending is correct
+    print settings.STATICFILES_DIRS[0]
+    i_handler = open(settings.STATICFILES_DIRS[0]+"/cyanointeraction/genes_with_snps.txt", "r")
+    gene_list = [line for line in i_handler]
+    return gene_list
