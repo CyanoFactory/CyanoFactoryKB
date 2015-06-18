@@ -12,5 +12,6 @@ urlpatterns = patterns('',
     url(r'^whole', 'cyanointeraction.views.getwholenetwork'),
     url(r'^interaction/pathway_start/$', 'cyanointeraction.views.startpathway'),
     url(r'^interaction/ajax/$', 'cyanointeraction.views.findChems'),
-    url(r'^interaction/pathway/$', 'cyanointeraction.views.getpath')
+    url(r'^interaction/pathway/$', 'cyanointeraction.views.getpath'),
+    url(r'^interaction/test/$', 'cyanointeraction.views.testSTITCH')
 )

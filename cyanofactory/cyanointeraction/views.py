@@ -1446,6 +1446,8 @@ def calcTimes(request):
 
 
     return HttpResponse("Done")
+
+
 import os
 from django.conf import settings
 def readGeneList():

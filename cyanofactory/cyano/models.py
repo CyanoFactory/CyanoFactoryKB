@@ -3930,7 +3930,6 @@ class ProteinMonomer(Protein):
         return self.get_gravy()
 
     def get_as_html_interactions(self, is_user_anonymous):
-        return "" # FIXME
         from cyanointeraction.models import ProteinsNames as IproteinsNames
 
         prot_name = IproteinsNames.objects.filter(protein_name=self.gene.wid).first()
