@@ -19,9 +19,15 @@
 #    Please, cite us in your reasearch!
 #
 
+try:
+    import Image
+except ImportError:
+    from PIL import Image
 
-import Image
-import ImageDraw
+try:
+    import ImageDraw
+except ImportError:
+    from PIL import ImageDraw
 
 def stats(lista):
     """
@@ -41,7 +47,7 @@ class Network:
         M_ij=1 means the ith node has a directed link to the jth node."""
         if not names:
             nn = len(M)
-            names = [str(ele) for ele in xrange(nn)]
+            names = [unicode(ele) for ele in xrange(nn)]
         self.nodesnames = names
         nnodes = len(names)
         self.nnodes = nnodes
@@ -75,9 +81,9 @@ class Network:
         noneigbs = [ii for ii in xrange(nnodes) if len(self.neigbs[ii]) == 0]
         if len(noneigbs) != 0:
             self.no_neigbs = True
-            print "Warning: nodes "+", ".join([names[ele] for ele in \
-                                      noneigbs])+" have no connections at all."
-            print "nCCs could not be calculated (divison by zero)."
+            print("Warning: nodes "+", ".join([names[ele] for ele in \
+                                      noneigbs])+" have no connections at all.")
+            print("nCCs could not be calculated (divison by zero).")
             nCCs = []
         else:
             self.no_neigbs = False
@@ -299,7 +305,7 @@ class Network:
                     dic_posis[i] = nrama
                     dic_posis[j] = nrama
                     nrama += 1
-        orde = [int(ele) for ele in str(ramas[nrama-1]).replace(" ", "").\
+        orde = [int(ele) for ele in unicode(ramas[nrama-1]).replace(" ", "").\
                                   replace("(", "").replace(")", "").split(",")]
         self.tree = ramas[nrama-1]
         self.dists = dists

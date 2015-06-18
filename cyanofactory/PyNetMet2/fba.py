@@ -19,7 +19,6 @@
 #    Please, cite us in your reasearch!
 #
 
-
 import glpk
 
 class FBA:
@@ -71,9 +70,9 @@ class FBA:
                         nv += lista[new][2]
                         kk += 1
                     lista[ii] = (indexes[ii][0], indexes[ii][1], nv)
-                    print "Warning: repeated index in Stoichiometric " + \
+                    print("Warning: repeated index in Stoichiometric " + \
                          "matrix. Look into reaction %i."%indexes[ii][1] + \
-                         " FBA might not be correct."
+                         " FBA might not be correct.")
         topop.sort(reverse=True)
         for ele in topop:
             lista.pop(ele)
@@ -390,7 +389,7 @@ class FBA:
                 pos = ele.products.index(met)
                 stoic.append(ele.stoic[1][pos])
             else:
-                print "HELP HELP HELP!!! SOMETHING WENT WRONG"
+                print("HELP HELP HELP!!! SOMETHING WENT WRONG")
         summ = 0.
         for jj in xrange(nreacs):
             summ += cond[jj]*stoic[jj]*self.flux[self.reacs_by_met[ii][jj]]

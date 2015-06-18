@@ -19,12 +19,13 @@
 #    Please, cite us in your reasearch!
 #
 
+from __future__ import print_function
 
+from codecs import open
 from network import *
 from enzyme import *
 from xml.dom.minidom import parseString
 import re
-
 
 class Metabolism(object):
     """
@@ -454,7 +455,7 @@ class Metabolism(object):
         contrains, external metabolites and objective.     
         """
         # reads the file
-        with open(infile) as f:
+        with open(infile, encoding='utf-8') as f:
             reactions = []
             constraints = []
             external = []
@@ -503,7 +504,7 @@ class Metabolism(object):
             Reads information from sbml file.
         """
         # Reads sbml
-        filee = open(filein)
+        filee = open(filein, encoding='utf-8')
         data = filee.read()
         filee.close()
         # Parse the file
@@ -619,72 +620,72 @@ class Metabolism(object):
         (Reactions, Constraints, External Metabolites and Objective).
         """
         if filetype == "opt":
-            fil = open(fileout,"w")
-            print >>fil, "-REACTIONS"
+            fil = open(fileout, "w", encoding='utf-8')
+            print("-REACTIONS", file=fil)
             for ii, pathname in enumerate(self.pathnames):
                 if pathname == "_TRANSPORT_":
                     continue
-                print >>fil
-                print >>fil, "# " + pathname
+                print("", file=fil)
+                print("# " + pathname, file=fil)
                 for reac in self.pathways[ii]:
-                    print >>fil, self.enzymes[reac]
-            print >>fil
-            print >>fil, "-CONSTRAINTS"
-            print >>fil
+                    fil.write(unicode(self.enzymes[reac]))
+                    fil.write("\n")
+            print("", file=fil)
+            print("-CONSTRAINTS", file=fil)
+            print("", file=fil)
             for constr in self.enzymes:
-                if constr.constraint[0] == None or constr.constraint[1] == None:
+                if constr.constraint[0] is None or constr.constraint[1] is None:
                     continue
-                print >>fil, constr.name + " [" + str(constr.constraint[0]) + ", " + str(constr.constraint[1]) + "]"
-            print >>fil
-            print >>fil, "-EXTERNAL METABOLITES"
-            print >>fil
+                print(constr.name + " [" + str(constr.constraint[0]) + ", " + str(constr.constraint[1]) + "]", file=fil)
+            print("", file=fil)
+            print("-EXTERNAL METABOLITES", file=fil)
+            print("", file=fil)
             exts = set(self.external) | set(self.external_in)
             exts = exts|set(self.external_out)
             exts = list(exts)
             exts.sort()
             for ext in exts:
-                print >>fil, ext
+                print(ext, file=fil)
 
             if self.obj:
-                print >>fil
-                print >>fil, "-OBJ"
-                print >>fil
+                print("", file=fil)
+                print("-OBJ", file=fil)
+                print("", file=fil)
                 for obj in self.obj:
-                    print >>fil, obj[0], "1", obj[1]
+                    print(obj[0] + " 1 " + obj[1], file=fil)
 
             if self.design_obj:
-                print >>fil
-                print >>fil, "-DESIGNOBJ"
-                print >>fil
+                print("", file=fil)
+                print("-DESIGNOBJ", file=fil)
+                print("", file=fil)
                 for obj in self.design_obj:
-                    print >>fil, obj[0], "1", obj[1]
+                    print(obj[0] + " 1 " + obj[1], file=fil)
 
             disabled = filter(lambda x: x.disabled, self.enzymes)
             if disabled:
-                print >>fil
-                print >>fil, "-DISABLE"
-                print >>fil
+                print("", file=fil)
+                print("-DISABLE", file=fil)
+                print("", file=fil)
                 for obj in disabled:
-                    print >>fil, obj.name
+                    print(obj.name, file=fil)
 
             fil.close()
         elif filetype == "sbml":
             if printgenes:
                 enzs = dic_genes.keys()
-            fil = open(fileout, "w")
-            print >>fil, '<?xml version="1.0" encoding="utf-8"?>'
-            print >>fil, '<sbml xmlns="http://www.sbml.org/sbml/level2" xmlns:sbml="http://www.sbml.org/sbml/level2" version="1" level="2" xmlns:html = "http://www.w3.org/1999/xhtml">'
-            print >>fil, '<model id="%s" name="%s" >' % \
-                                                (self.file_name,self.file_name)
+            fil = open(fileout, "w", encoding='utf-8')
+            print('<?xml version="1.0" encoding="utf-8"?>', file=fil)
+            print('<sbml xmlns="http://www.sbml.org/sbml/level2" xmlns:sbml="http://www.sbml.org/sbml/level2" version="1" level="2" xmlns:html = "http://www.w3.org/1999/xhtml">', file=fil)
+            print('<model id="%s" name="%s" >' % (self.file_name,self.file_name), file=fil)
             tab = "    "
-            print >>fil, "<notes>"
-            print >>fil, tab+"<p>Generated by PyNetMet tools. INTERTECH@UPV</p>"
-            print >>fil, "</notes>"
-            print >>fil,"<listOfCompartments>"
-            print >>fil,tab+'<compartment id="Extra_celullar" />'
-            print >>fil,tab+'<compartment id="Cytosol" outside="Extra_cellular" />'
-            print >>fil,"</listOfCompartments>"
-            print >>fil,"<listOfSpecies>"
+            print("<notes>", file=fil)
+            print(tab+"<p>Generated by PyNetMet tools. INTERTECH@UPV</p>", file=fil)
+            print("</notes>", file=fil)
+            print("<listOfCompartments>", file=fil)
+            print(tab+'<compartment id="Extra_celullar" />', file=fil)
+            print(tab+'<compartment id="Cytosol" outside="Extra_cellular" />', file=fil)
+            print("</listOfCompartments>", file=fil)
+            print("<listOfSpecies>", file=fil)
             exts = set(self.external) | set(self.external_in)
             exts = exts|set(self.external_out)
             exts = list(exts)
@@ -695,60 +696,60 @@ class Metabolism(object):
                 else:
                     bcon = "false"
                     comp = "Cytosol"
-                print >>fil, tab+'<species id="%s" name="%s" boundaryCondition="%s" compartment="%s" />'%(met,met,bcon,comp)
-            print >>fil,"</listOfSpecies>"
-            print >>fil,"<listOfReactions>"
+                print(tab+'<species id="%s" name="%s" boundaryCondition="%s" compartment="%s" />'%(met,met,bcon,comp), file=fil)
+            print("</listOfSpecies>", file=fil)
+            print("<listOfReactions>", file=fil)
             objs = [ele[0] for ele in self.obj]
             for ii,enzy in enumerate(self.enzymes):
                 if enzy.reversible:
                     rev = "true"
                 else:
                     rev = "false"
-                print >> fil, tab+'<reaction id="%s" name="%s" reversible="%s">'%(enzy.name,enzy.name,rev)
+                print(tab+'<reaction id="%s" name="%s" reversible="%s">'%(enzy.name,enzy.name,rev), file=fil)
                 if printgenes:
-                    print >> fil, 2*tab+'<notes>'
+                    print(2*tab+'<notes>', file=fil)
                     if enzy.name in enzs:
                         assoc = "Genes : "+", ".join(dic_genes[enzy.name])
                     else:
                         assoc = "No known genes."
-                    print >> fil, 3*tab+'<p>'+assoc+'</p>'
-                    print >> fil, 2*tab+'</notes>'
-                print >> fil, 2*tab+"<listOfReactants>"
+                    print(3*tab+'<p>'+assoc+'</p>', file=fil)
+                    print(2*tab+'</notes>', file=fil)
+                print(2*tab+"<listOfReactants>", file=fil)
                 for met in enzy.substrates:
-                    print >> fil, 3*tab+'<speciesReference species="%s" stoichiometry="%s"/>'%(met,str(enzy.stoic_n(met)))
-                print >> fil, 2*tab+"</listOfReactants>"
-                print >> fil, 2*tab+"<listOfProducts>"
+                    print(3*tab+'<speciesReference species="%s" stoichiometry="%s"/>'%(met,str(enzy.stoic_n(met))), file=fil)
+                print(2*tab+"</listOfReactants>", file=fil)
+                print(2*tab+"<listOfProducts>", file=fil)
                 for met in enzy.products:
-                    print >> fil, 3*tab+'<speciesReference species="%s" stoichiometry="%s"/>'%(met,str(enzy.stoic_n(met)))
-                print >> fil, 2*tab+"</listOfProducts>"
+                    print(3*tab+'<speciesReference species="%s" stoichiometry="%s"/>'%(met,str(enzy.stoic_n(met))), file=fil)
+                print(2*tab+"</listOfProducts>", file=fil)
                 [lb, ub] = map(lambda x: x.constraint)
                 obj = False
                 if enzy.name in objs:
                     obj = True
                     iobj = objs.index(enzy.name)
                 if (ub != None and lb != None) or obj or alllimits or allobjs:
-                    print >> fil, 2*tab+"<kineticLaw>"
-                    print >> fil, 3*tab+"<listOfParameters>"
+                    print(2*tab+"<kineticLaw>", file=fil)
+                    print(3*tab+"<listOfParameters>", file=fil)
                     if lb != None and ub != None:
-                        print >> fil, 4*tab+'<parameter id="LOWER_BOUND" value="%s"/>'%str(lb)
-                        print >> fil, 4*tab+'<parameter id="UPPER_BOUND" value="%s"/>'%str(ub)
+                        print(4*tab+'<parameter id="LOWER_BOUND" value="%s"/>'%str(lb), file=fil)
+                        print(4*tab+'<parameter id="UPPER_BOUND" value="%s"/>'%str(ub), file=fil)
                     elif alllimits:
                         if lb == None:
                             lb = -99999999.
                         if ub == None:
                             ub = 99999999.
-                        print >> fil, 4*tab+'<parameter id="LOWER_BOUND" value="%s"/>'%str(lb)
-                        print >> fil, 4*tab+'<parameter id="UPPER_BOUND" value="%s"/>'%str(ub)
+                        print(4*tab+'<parameter id="LOWER_BOUND" value="%s"/>'%str(lb), file=fil)
+                        print(4*tab+'<parameter id="UPPER_BOUND" value="%s"/>'%str(ub), file=fil)
                     if obj:
-                        print >> fil, 4*tab+'<parameter id= "OBJECTIVE_COEFFICIENT" value="%s"/>'%self.obj[iobj][1]
+                        print(4*tab+'<parameter id= "OBJECTIVE_COEFFICIENT" value="%s"/>'%self.obj[iobj][1], file=fil)
                     elif allobjs:
-                        print >> fil, 4*tab+'<parameter id= "OBJECTIVE_COEFFICIENT" value="0.0"/>'
-                    print >> fil, 3*tab+"</listOfParameters>"
-                    print >> fil, 2*tab+"</kineticLaw>"
-                print >> fil, tab+'</reaction>'
-            print >>fil,"</listOfReactions>"
-            print >>fil,"</model>"
-            print >>fil,"</sbml>"
+                        print(4*tab+'<parameter id= "OBJECTIVE_COEFFICIENT" value="0.0"/>', file=fil)
+                    print(3*tab+"</listOfParameters>", file=fil)
+                    print(2*tab+"</kineticLaw>", file=fil)
+                print(tab+'</reaction>', file=fil)
+            print("</listOfReactions>", file=fil)
+            print("</model>", file=fil)
+            print("</sbml>", file=fil)
             fil.close()
 
     def M_matrix(self,symetric=False):
@@ -832,7 +833,7 @@ class Metabolism(object):
         topop=list(set(topop))
         self.pathnames.pop(self.pathnames.index("_TRANSPORT_"))
         topop.sort(reverse=True)
-        poped = [str(self.enzymes.pop(ele)) for ele in topop]
+        poped = [unicode(self.enzymes.pop(ele)) for ele in topop]
         self.poped = poped
         self.calcs()
 
@@ -841,24 +842,24 @@ class Metabolism(object):
         Writes a log file with the metabolism information.
         """
         ## Prepares LOG file
-        probs = open(fileout, "w")
-        print >>probs, "-Reactions with issues:"
-        print >>probs, "----------------"
-        print >>probs, " "
-        print >>probs, " "
-        print >>probs, " "
-        print >>probs, " General:"
-        print >>probs, " "
+        probs = open(fileout, "w", encoding='utf-8')
+        print("-Reactions with issues:", file=probs)
+        print("----------------", file=probs)
+        print(" ", file=probs)
+        print(" ", file=probs)
+        print(" ", file=probs)
+        print(" General:", file=probs)
+        print(" ", file=probs)
         for enzy in self.enzymes:
             if enzy.issues:
-                print >>probs, "____________________________________"
-                print >>probs, "Issue in reaction ", enzy.name
-                print >>probs, enzy.issues_info
-                print >>probs, "____________________________________"
+                print("____________________________________", file=probs)
+                print("Issue in reaction " + enzy.name, file=probs)
+                print(enzy.issues_info, file=probs)
+                print("____________________________________", file=probs)
         # Searches for reactions where one substrate and one product appear
         #   only in this reaction
-        print >>probs, " "
-        print >>probs, " "
+        print(" ", file=probs)
+        print(" ", file=probs)
         for ii, enzy in enumerate(self.enzymes):
             bla_sus = [self.reacs_per_met[self.dic_mets[ele]] == 1
                        for ele in enzy.substrates]
@@ -871,79 +872,79 @@ class Metabolism(object):
                 sus = False
                 pro = False
             if (sus and pro):
-                print >>probs, " Possible disconnected reaction: ", enzy.name
+                print(" Possible disconnected reaction: " + enzy.name, file=probs)
         # General information about network
-        print >> probs, "      "
-        print >> probs, "      "
-        print >> probs, "      "
-        print >> probs, " Information About Network     "
-        print >> probs, " ----------- ----- -------     "
-        print >> probs, "      "
-        print >> probs, "Number of reactions:", len(self.enzymes)
-        print >> probs, "Number of pathways:", len(self.pathnames)
-        print >> probs, "Number of metabolites:", len(self.mets)
-        print >> probs, "Reversible:", self.nreac_rev
-        print >> probs, "Irreversible:", self.nreac_irr
-        print >> probs, "      "
-        print >> probs, "      "
+        print("      ", file=probs)
+        print("      ", file=probs)
+        print("      ", file=probs)
+        print(" Information About Network     ", file=probs)
+        print(" ----------- ----- -------     ", file=probs)
+        print("      ", file=probs)
+        print("Number of reactions: " + str(len(self.enzymes)), file=probs)
+        print("Number of pathways: " + str(len(self.pathnames)), file=probs)
+        print("Number of metabolites: " + str(len(self.mets)), file=probs)
+        print("Reversible: " + self.nreac_rev, file=probs)
+        print("Irreversible:" + self.nreac_irr, file=probs)
+        print("      ", file=probs)
+        print("      ", file=probs)
         # Information about enzyme-metabolite connections
-        print >> probs, "      "
-        print >> probs, "   ENZYME-METABOLITE"
-        print >> probs, "      "
-        print >> probs, " Most connected Metabolites to enzymes: "
-        print >> probs, "      "
+        print("      ", file=probs)
+        print("   ENZYME-METABOLITE", file=probs)
+        print("      ", file=probs)
+        print(" Most connected Metabolites to enzymes: ", file=probs)
+        print("      ", file=probs)
         con_met = sorted(range(len(self.mets)), key=lambda x:self.reacs_per_met[x],
                          reverse=True)
         for ele in con_met[0:nshow+1]:
-            print >>probs, "%30s : %5i" % (self.mets[ele],
-                                           self.reacs_per_met[ele])
-        print >> probs, "      "
-        print >> probs, " Most connected Metabolites as substrates: "
-        print >> probs, "      "
+            print("%30s : %5i" % (self.mets[ele], self.reacs_per_met[ele]), file=probs)
+
+        print("      ", file=probs)
+        print(" Most connected Metabolites as substrates: ", file=probs)
+        print("      ", file=probs)
         substr = [sum([met in reac.substrates for reac in self.enzymes]+
                   [met in reac.products for reac in self.enzymes if
                   reac.reversible]) for met in self.mets]
         con_met = sorted(range(len(self.mets)), key=lambda x:substr[x],
                          reverse=True)
         for ele in con_met[0:nshow+1]:
-            print >>probs, "%30s : %5i" % (self.mets[ele], substr[ele])
-        print >> probs, "      "
-        print >> probs, " Most connected Metabolites as products: "
-        print >> probs, "      "
+            print("%30s : %5i" % (self.mets[ele], substr[ele]), file=probs)
+        print("      ", file=probs)
+        print(" Most connected Metabolites as products: ", file=probs)
+        print("      ", file=probs)
         substr = [sum([met in reac.products for reac in self.enzymes]+
                   [met in reac.substrates for reac in self.enzymes if 
                   reac.reversible]) for met in self.mets]
         con_met = sorted(range(len(self.mets)), key=lambda x:substr[x],
                          reverse=True)
         for ele in con_met[0:nshow+1]:
-            print >>probs, "%30s : %5i" % (self.mets[ele], substr[ele])
-        print >> probs, "      "
-        print >> probs, "   METABOLITE-METABOLITE"
-        print >> probs, "      "
-        print >> probs, " Most connected Metabolites: "
-        print >> probs, "      "
+            print("%30s : %5i" % (self.mets[ele], substr[ele]), file=probs)
+        print("      ", file=probs)
+        print("   METABOLITE-METABOLITE", file=probs)
+        print("      ", file=probs)
+        print(" Most connected Metabolites: ", file=probs)
+        print("      ", file=probs)
         nlinks = [len(ele) for ele in self.net.neigbs]
         con_met = sorted(range(len(self.nmets)), key=lambda x:nlinks[x],
                          reverse=True)
         for ele in con_met[0:nshow+1]:
-            print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
-        print >> probs, "      "
-        print >> probs, " Most out-connected Metabolites: "
-        print >> probs, "      "
+            print("%30s : %5i" % (self.mets[ele], nlinks[ele]), file=probs)
+        print("      ", file=probs)
+        print(" Most out-connected Metabolites: ", file=probs)
+        print("      ", file=probs)
         nlinks = [len(ele) for ele in self.net.linksout]
         con_met = sorted(range(len(self.nmets)), key=lambda x:nlinks[x],
                          reverse=True)
         for ele in con_met[0:nshow+1]:
-            print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
-        print >> probs, "      "
-        print >> probs, " Most in-connected Metabolites: "
-        print >> probs, "      "
+            print("%30s : %5i" % (self.mets[ele], nlinks[ele]), file=probs)
+        print("      ", file=probs)
+        print(" Most in-connected Metabolites: ", file=probs)
+        print("      ", file=probs)
         nlinks = [len(ele) for ele in self.net.linksin]
         con_met = sorted(range(len(self.nmets)), key=lambda x:nlinks[x],
                          reverse=True)
         for ele in con_met[0:nshow+1]:
-            print >>probs, "%30s : %5i" % (self.mets[ele], nlinks[ele])
+            print("%30s : %5i" % (self.mets[ele], nlinks[ele]), file=probs)
         self.log_file = "logs/Log_" + self.file_name + ".txt"
-        print >>probs, " "
+        print(" ", file=probs)
         probs.close()
 

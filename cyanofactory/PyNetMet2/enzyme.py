@@ -20,6 +20,8 @@
 #    Please, cite us in your research!
 #
 
+from __future__ import unicode_literals
+
 class Enzyme(object):
     '''
     This class defines a chemical reaction object. The input should be an
@@ -174,9 +176,9 @@ class Enzyme(object):
         """
         Returns the reaction in OptGene format.
         """
-        return str(self)
+        return unicode(self).encode("utf-8")
 
-    def __str__(self):
+    def __unicode__(self):
         """
         Returns the reaction in OptGene format.
         """
@@ -184,12 +186,12 @@ class Enzyme(object):
             stoic, metabolite = arg
 
             if stoic == 1:
-                return str(metabolite)
+                return metabolite
             else:
                 if stoic == int(stoic):
                     stoic = int(stoic)
 
-                return "%s %s" % (stoic, str(metabolite))
+                return "%s %s" % (stoic, metabolite)
 
         return "{} : {} {} {}".format(
             self.name,
@@ -203,7 +205,7 @@ class Enzyme(object):
         by the number.
         """
         if not nname:
-            nname = self.name + "*"+str(num)
+            nname = self.name + "*"+unicode(num)
         if num > 0:
             nre = self.copy()
         elif num < 0:
@@ -247,7 +249,7 @@ class Enzyme(object):
                 stoic_cata = other.stoic_n(sub)
             ncoef = stoic_s + stoic_o - stoic_el - stoic_cata
             if ncoef > 0 :
-                to_add.append(str(ncoef) + " " + sub)
+                to_add.append(unicode(ncoef) + " " + sub)
         stri_reac += " + ".join(to_add)
         # Reversibility
         if not self.reversible or not other.reversible:
@@ -272,7 +274,7 @@ class Enzyme(object):
                 stoic_cata = self.stoic_n(prod)
             ncoef = stoic_s + stoic_o - stoic_el - stoic_cata
             if ncoef > 0 :
-                to_add.append(str(ncoef) + " " + prod)
+                to_add.append(unicode(ncoef) + " " + prod)
         stri_reac += " + ".join(to_add)
         enz = Enzyme(stri_reac)
         if len(mets_el):
@@ -441,7 +443,7 @@ class Enzyme(object):
         rev = self.reversible
         stri = name + " : "
         for i in range(len(sustr)):
-            stri += str(stoic[0][i]) + " " + sustr[i] + " + "
+            stri += unicode(stoic[0][i]) + " " + sustr[i] + " + "
         if len(sustr) > 0:
             stri = stri[:len(stri)-2]
         if rev:
@@ -449,7 +451,7 @@ class Enzyme(object):
         else:
             stri += " -> "
         for i in range(len(prods)):
-            stri += str(stoic[1][i]) + " " + prods[i] + " + "
+            stri += unicode(stoic[1][i]) + " " + prods[i] + " + "
         if len(prods) > 0:
             stri = stri[:len(stri)-2]
         return Enzyme(stri)
