@@ -382,14 +382,14 @@ def proteingraph(protein_id, protlimit, chemlimit):
                         pass
 # todo fix Stitch fixing
 #    data = findChems(G, chemlimit)
-    data = findSTITCHChems(G, chemlimit)
-    D = data
-#    d = json_graph.node_link_data(G)
-    d = json_graph.node_link_data(D)
+#    data = findSTITCHChems(G, chemlimit)
+#    D = data
+    d = json_graph.node_link_data(G)
+#    d = json_graph.node_link_data(D)
     json_file = json.dumps(d)
     json_file = calcColourRange(json_file, maxhood, minhood, maxScore, minScore)
-    data = [json_file, D.number_of_nodes()]
-#    data = [json_file, G.number_of_nodes()]
+#    data = [json_file, D.number_of_nodes()]
+    data = [json_file, G.number_of_nodes()]
     return data
 
 
