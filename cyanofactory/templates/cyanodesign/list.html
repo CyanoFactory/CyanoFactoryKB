@@ -115,8 +115,9 @@ $(document).ready(function() {
             <th>{{ object.name }}</th>
             <td>
                 <div class="btn-group" role="group">
+                <a class='btn btn-default btn-xs' href="{% url "cyano-design-history" pk=object.pk %}">View revisions</a>
                 <a class='btn btn-default btn-xs' href="{% url "cyano-design-export" pk=object.pk %}">Export model</a>
-                <a class='btn btn-default btn-xs delete-button'>Delete model</a>
+                <a class='btn btn-default btn-xs delete-button' href="#">Delete model</a>
                 </div>
             </td>
         </tr>

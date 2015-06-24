@@ -15,17 +15,14 @@ from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.template.context import RequestContext
 from django.views.decorators.csrf import ensure_csrf_cookie
 from jsonview.decorators import json_view
-from networkx.algorithms.shortest_paths.generic import has_path, all_shortest_paths
-from networkx.exception import NetworkXNoPath
 from cyano.decorators import ajax_required, permission_required
 from PyNetMet2.metabolism import Metabolism
 from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error
 from cyanodesign.forms import UploadModelForm
-from cyanodesign.helpers import model_from_string, apply_commandlist
-from .models import DesignModel
+from cyanodesign.helpers import model_from_string, apply_commandlist, calc_reactions, get_selected_reaction
+from .models import DesignModel, Revision
 import networkx as nx
 from networkx.readwrite import json_graph
-import math
 import pygraphviz
 import json
 
@@ -49,10 +46,20 @@ def index(request):
 def design(request, pk):
     try:
         item = DesignModel.objects.get(user=request.user.profile, pk=pk)
+        current = item.get_latest_revision()
     except ObjectDoesNotExist:
         return render_queryset_to_response_error(request, error=404, msg="Model not found")
 
-    data = {"pk": pk, "name": item.name}
+    try:
+        revision = request.GET["revision"]
+        try:
+            revision = Revision.objects.get(model=item, pk=revision)
+        except ObjectDoesNotExist:
+            return render_queryset_to_response_error(request, error=404, msg="Revision not found")
+    except KeyError:
+        revision = current
+
+    data = {"pk": pk, "name": item.name, "revision": None if current.pk == revision.pk else revision}
 
     return render_queryset_to_response(request, template="cyanodesign/design.html", data=data)
 
@@ -61,11 +68,20 @@ def design(request, pk):
 @permission_required("access_cyanodesign")
 def get_reactions(request, pk):
     try:
-        item = DesignModel.objects.get(user=request.user.profile, pk=pk).content
-    except:
+        item = DesignModel.objects.get(user=request.user.profile, pk=pk)
+    except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
 
-    org = model_from_string(item)
+    try:
+        revision = request.GET["revision"]
+        try:
+            revision = Revision.objects.get(model=item, pk=revision)
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Bad Revision")
+    except KeyError:
+        revision = item.get_latest_revision()
+
+    org = model_from_string(revision.content)
 
     if org is None:
         return HttpResponseBadRequest("Bad Model")
@@ -97,7 +113,7 @@ def get_reactions(request, pk):
 
 @permission_required("access_cyanodesign")
 def simulate(request, pk):
-    if not all(x in request.POST for x in ["commands", "disabled", "objective", "display", "auto_flux"]):
+    if not all(x in request.POST for x in ["changes", "objectives", "display", "auto_flux"]):
         return HttpResponseBadRequest("Request incomplete")
 
     output_format = request.POST.get("format", "json")
@@ -105,16 +121,23 @@ def simulate(request, pk):
 
     try:
         model = DesignModel.objects.get(user=request.user.profile, pk=pk)
-        content = model.content
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
 
-    org = model_from_string(content)
+    try:
+        revision = request.POST["revision"]
+        try:
+            revision = Revision.objects.get(model=model, pk=revision)
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Bad Revision")
+    except KeyError:
+        revision = model.get_latest_revision()
+
+    org = model_from_string(revision.content)
 
     try:
-        commands = json.loads(request.POST["commands"])
-        disabled = json.loads(request.POST["disabled"])
-        objective = json.loads(request.POST["objective"])
+        changes = json.loads(request.POST["changes"])
+        objectives = json.loads(request.POST["objectives"])
         display = json.loads(request.POST["display"])
         auto_flux = json.loads(request.POST["auto_flux"])
     except ValueError:
@@ -125,36 +148,25 @@ def simulate(request, pk):
     except ValueError:
         return HttpResponseBadRequest("Invalid data type")
 
-    if not all(isinstance(x, list) for x in [commands, disabled, display]):
-        return HttpResponseBadRequest("Invalid data type")
-
-    if not isinstance(objective, basestring):
-        return HttpResponseBadRequest("Invalid data type")
-
     try:
-        org = apply_commandlist(org, commands)
-        if not objective:
+        org = apply_commandlist(org, changes)
+
+        if not objectives:
             raise ValueError("No objective specified")
-        obj_reac = org.get_reaction(objective)
-        if obj_reac is None:
-            raise ValueError("Objective not in model: " + objective)
-        org.obj = [[obj_reac.name, "1"]]
+        org.obj = []
+        for obj in objectives:
+            obj_reac = org.get_reaction(obj["name"])
+            if obj_reac is None:
+                raise ValueError("Objective not in model: " + obj["name"])
+            org.obj.append([obj_reac.name, "1" if obj["maximize"] else -1])
+
+            if obj_reac.disabled:
+                return HttpResponseBadRequest("Objective disabled: " + obj_reac.name)
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + e.message)
 
     for reaction in org.enzymes:
         reaction.disabled = False
-
-    for item in disabled:
-        try:
-            reac = org.get_reaction(item)
-        except ValueError:
-            return HttpResponseBadRequest("Bad disabled list: " + item)
-
-        reac.disabled = True
-
-    if obj_reac.disabled:
-        return HttpResponseBadRequest("Objective disabled: " + objective)
 
     display = filter(lambda x: not len(x) == 0, display)
 
@@ -172,7 +184,7 @@ def simulate(request, pk):
             json.dumps({"solution": fba.get_status()}),
             content_type="application/json")
 
-    full_g, nodeIDs = calcReactions(org, fba)
+    full_g, nodeIDs = calc_reactions(org, fba)
 
     display = json.loads(request.POST["display"])
     display = filter(lambda x: len(x) > 0, display)
@@ -201,7 +213,7 @@ def simulate(request, pk):
 
     display.append(org.obj[0][0])
 
-    g = getSelectedReaction(json_graph.node_link_data(full_g), nodeIDs, display, org)
+    g = get_selected_reaction(json_graph.node_link_data(full_g), nodeIDs, display, org)
 
     graph = nx.to_agraph(g)
     graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
@@ -248,7 +260,7 @@ def simulate(request, pk):
 def export(request, pk):
     try:
         model = DesignModel.objects.get(user=request.user.profile, pk=pk)
-        content = model.content
+        content = model.get_latest_revision().content
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
 
@@ -265,52 +277,46 @@ def export(request, pk):
 @ajax_required
 @permission_required("access_cyanodesign")
 def save(request, pk):
-    if not all(x in request.POST for x in ["commands", "disabled", "objective"]):
+    if not all(x in request.POST for x in ["changes", "objectives", "favourites"]):
         return HttpResponseBadRequest("Request incomplete")
 
     try:
         model = DesignModel.objects.get(user=request.user.profile, pk=pk)
-        content = model.content
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
 
-    org = model_from_string(content)
+    try:
+        revision = request.POST["revision"]
+        try:
+            revision = Revision.objects.get(model=model, pk=revision)
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Bad Revision")
+    except KeyError:
+        revision = model.get_latest_revision()
+
+    org = model_from_string(revision.content)
 
     try:
-        commands = json.loads(request.POST["commands"])
-        disabled = json.loads(request.POST["disabled"])
-        objective = json.loads(request.POST["objective"])
+        changes = json.loads(request.POST["changes"])
+        objectives = json.loads(request.POST["objectives"])
+        favourites = json.loads(request.POST["favourites"])
+        summary = json.loads(request.POST.get("summary", ""))
     except ValueError:
         return HttpResponseBadRequest("Invalid JSON data")
 
-    if not all(isinstance(x, list) for x in [commands, disabled]):
-        return HttpResponseBadRequest("Invalid data type")
-
-    if not isinstance(objective, basestring):
-        return HttpResponseBadRequest("Invalid data type")
-
     try:
-        org = apply_commandlist(org, commands)
-        if objective:
-            obj_reac = org.get_reaction(objective)
-            if obj_reac is None:
-                raise ValueError("Objective not in model: " + objective)
-            org.objective = obj_reac
+        org = apply_commandlist(org, changes)
+        org.obj = []
+        for obj in objectives:
+            if obj["name"]:
+                obj_reac = org.get_reaction(obj["name"])
+                if obj_reac is None:
+                    raise ValueError("Objective not in model: " + obj["name"])
+                org.obj.append([obj_reac.name, "1" if obj["maximize"] else -1])
         else:
-            org.objective = None
+            org.obj = None
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + e.message)
-
-    for reaction in org.enzymes:
-        reaction.disabled = False
-
-    for item in disabled:
-        try:
-            reac = org.get_reaction(item)
-        except ValueError:
-            return HttpResponseBadRequest("Bad disabled list: " + item)
-
-        reac.disabled = True
 
     with tempfile.NamedTemporaryFile(delete=False) as fid:
         path = fid.name
@@ -321,6 +327,13 @@ def save(request, pk):
         model.save()
 
     os.remove(path)
+
+    Revision(
+        model=model,
+        content=model.content,
+        changes=dict(changes=changes,objectives=objectives,favourite=favourites),
+        reason=summary
+    ).save()
 
     return HttpResponse("OK")
 
@@ -377,132 +390,26 @@ def delete(request):
 
     try:
         DesignModel.objects.get(user=request.user.profile, pk=pk).delete()
-    except:
+    except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
 
     return HttpResponse("ok")
 
-def flatten(li):
-    return [item for sublist in li for item in sublist]
 
-def getSelectedReaction(jsonGraph, nodeDic, reacIDs, org):
-    """
-    Filtering selected Reactions and show Results from PyNetMet calculation.
-    It returns a subgraph of the Graph from the jsonGraph. The output is a DOT-Language String.
-    @param jsonGraph: Graph in JSON-Format
-    @param nodeDic: dict mapping names to ids
-    @param reacIDs: Name of reactions that contained in the nodeDic
-    @param org: organism
-    @return Subgraph
-    """
-    # Translate reac names to IDs
-    # Get substrates and products of all reacs
-    metabolites = []
-    for reac in reacIDs:
-        metabolites += org.get_reaction(reac).metabolites
+@permission_required("access_cyanodesign")
+def history(request, pk):
+    try:
+        model = DesignModel.objects.get(user=request.user.profile, pk=pk)
+        revisions = model.revisions.all()
+    except ObjectDoesNotExist:
+        return render_queryset_to_response_error(request, error=404, msg="Model not found")
 
-    met_ids = map(lambda x: nodeDic[x], metabolites)
-    g = json_graph.node_link_graph(jsonGraph)
+    entries = []
 
-    g.remove_edges_from(filter(lambda x: g.get_edge_data(*x)["object"].name not in reacIDs, g.edges(met_ids)))
+    from itertools import groupby
+    for k,v in groupby(revisions, key=lambda x: x.date.date()):
+        entries.append([k, list(v)[::-1]])
 
-    # Get products/substrates directly connected to filter
-    #reacIDs += flatten(g.in_edges(reacIDs)) + flatten(g.out_edges(reacIDs))
+    data = {"model": model, "revisions": entries}
 
-    h = g.subgraph(met_ids)
-    return h
-
-def calcReactions(org, fluxResults):
-    """
-    Adding Results from FLUX-Analysis
-    @param org: organism
-    @param fluxResults: Results from PyNetMet FLUX-Analysis Calculation as String
-    @return Graph with added Attributes
-    """
-    changeDic = {}
-    reactions = fluxResults.reacs
-    for reaction, flux in zip(reactions, fluxResults.flux):
-        if not reaction.name.endswith("_transp"):
-            changeDic[reaction.name] = float('%.3g' % flux)
-
-    vList = changeDic.values()
-
-    for i in xrange(len(vList)):
-        vList[i] = math.sqrt(math.pow(vList[i], 2))
-    vList = sorted(vList)
-
-    oldMin = vList[0]
-    oldMax = vList[-1]
-    oldRange = oldMax - oldMin
-    newMin = 1
-    newMax = 10
-    newRange = newMax - newMin
-
-    enzymes = fluxResults.reacs
-    nodeDic = OrderedDict()
-    nodecounter = 0
-    graph = nx.DiGraph()
-
-    objective = None
-    if len(org.obj) > 0:
-        objective = org.obj[0][0]
-
-    for enzyme in enzymes:
-        if not enzyme.name.endswith("_transp"):
-            nodecounter += 1
-            nodeDic[enzyme.name] = nodecounter
-            if enzyme.name == objective:
-                graph.add_node(nodeDic[enzyme.name])
-
-            for substrate in enzyme.substrates:
-                nodecounter += 1
-                if substrate not in nodeDic:
-                    nodeDic[substrate] = nodecounter
-                    attr = {"label": substrate, "shape": "oval", "color": str((nodecounter % 8)+1)}
-                    graph.add_node(nodeDic[substrate], **attr)
-
-                if enzyme.name == objective:
-                    graph.add_nodes_from([(nodeDic[substrate], {"shape":"box"})])
-
-            for product in enzyme.products:
-                nodecounter += 1
-                if product not in nodeDic:
-                    nodeDic[product] = nodecounter
-                    attr = {"label": product, "shape": "oval", "color": str((nodecounter % 8)+1)}
-                    graph.add_node(nodeDic[product], **attr)
-
-                if enzyme.name == objective:
-                    graph.add_nodes_from([(nodeDic[product], {"shape":"box"})])
-
-            # Check if enzyme is objective
-            for substrate in enzyme.substrates:
-                for product in enzyme.products:
-                    flux = changeDic[enzyme.name]
-
-                    color = "black"
-                    if flux < 0:
-                        color = "red"
-                    elif flux > 0:
-                        color = "green"
-
-                    value = flux
-                    if value != 0:
-                        value = (math.sqrt(math.pow(value, 2)) - oldMin) / oldRange * newRange + newMin
-                    else:
-                        value = 1
-
-                    attr = {"color": color, "penwidth": value, "label": "{} ({})".format(enzyme.name, flux), "object": enzyme}
-
-                    if enzyme.name == objective:
-                        attr["style"] = "dashed"
-
-                    graph.add_edge(nodeDic[substrate], nodeDic[product], attr)
-
-                    if enzyme.name == objective:
-                        graph.add_edge(nodeDic[substrate], nodeDic[enzyme.name])
-                        graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
-
-                    if enzyme.reversible:
-                        graph.add_edge(nodeDic[product], nodeDic[substrate], label=enzyme.name, object=enzyme)
-
-    return graph, nodeDic
+    return render_queryset_to_response(request, template="cyanodesign/history.html", data=data)

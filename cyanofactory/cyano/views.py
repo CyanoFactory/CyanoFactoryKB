@@ -660,6 +660,7 @@ def history_detail(request, species, model, item, detail_id):
     fieldsets = deepcopy(model._meta.fieldsets)
     
     #filter out type, metadata
+    fieldsets = filter(lambda x: type(x) == tuple, fieldsets)
     fieldset_names = [x[0] for x in fieldsets]
     if 'Type' in fieldset_names:
         idx = fieldset_names.index('Type')

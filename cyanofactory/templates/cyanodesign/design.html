@@ -509,18 +509,24 @@ Released under the MIT license
         var beginRequest = function() {
             waitIndicator.show($("#content"));
 
-            return {
-                "commands": JSON.stringify(command_list),
-                "disabled": JSON.stringify(
-                        Enzyme.enzymes.
-                        filter(function(value) { return !value.enabled; }).
-                        map(function(value) { return value.name })
-                ),
-                "objective": JSON.stringify(cyano_design_objective_select.val()),
+            var result = {
+                "changes": JSON.stringify(command_list),
+                "objectives": JSON.stringify([{
+                    "name": cyano_design_objective_select.val(),
+                    "maximize": true
+                }]),
+                "favourites": JSON.stringify([]),
                 "display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
-                "auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
+                "auto_flux": JSON.stringify($("#auto_flux").prop("checked")),
+                "summary": JSON.stringify($("#save-summary").val())
             };
-        };
+
+            {% if revision %}
+            result["revision"] = {{ revision.pk }};
+            {% endif %}
+
+            return result;
+        }
 
         var doExport = function(format) {
             var data = beginRequest();
@@ -599,12 +605,21 @@ Released under the MIT license
         });
 
         $("#design-save").click(function(event) {
+            $("#save-summary").val("");
+            $("#dialog-save-model").modal("show");
+        });
+
+        $("#dialog-save-model .btn-primary").click(function(event) {
             var data = beginRequest();
             $.ajax({
                 url: "{% url "cyano-design-save" pk=pk %}",
                 type: "POST",
                 data: data
             }).done(function(x) {
+                {% if revision %}
+                location.replace("{% url "cyano-design-design" pk=pk %}");
+                {% endif %}
+                $("#dialog-save-model").modal("hide");
                 endRequest();
                 command_list = [];
             }).error(function(x) {
@@ -947,6 +962,20 @@ Released under the MIT license
                 saveEnzyme(reaction);
                 reaction.convertToFloat();
 
+                var command = {
+                    "type": "reaction",
+                    "name": old_name,
+                    "object": {
+                        "name": reaction.name,
+                        "metabolites": reaction.substrates.concat(reaction.products).map(function(x) { return x.name }),
+                        "stoichiometry": reaction.stoichiometric_substrates.map(function(x) { return -x }).concat(reaction.stoichiometric_products),
+                        "constraints": reaction.constraints,
+                        "reversible": reaction.reversible,
+                        "pathway": reaction.pathway,
+                        "enabled": reaction.enabled
+                    }
+                };
+
                 if (create_new_enzyme) {
                     Enzyme.enzymes.push(reaction);
 
@@ -954,14 +983,15 @@ Released under the MIT license
                     datatable_enzymes.sort();
                     datatable_enzymes.draw();
 
-                    command_list.push(["reaction", "add", old_name, reaction.toString(), reaction.constraints[0], reaction.constraints[1], reaction.pathway]);
-                    console.log(command_list[command_list.length - 1]);
+                    command["op"] = "add";
+
+                    command_list.push(command);
                 } else {
-                    command_list.push(["reaction", "edit", old_name, reaction.toString(), reaction.constraints[0], reaction.constraints[1], reaction.pathway]);
-                    console.log(command_list[command_list.length - 1]);
+                    command["op"] = "edit";
+
+                    command_list.push(command);
 
                     if (old_pathway != reaction.pathway) {
-                        console.log("redraw");
                         datatable_enzymes.draw();
                     }
                 }
@@ -988,8 +1018,16 @@ Released under the MIT license
             if (valid) {
                 var metabolite = new Metabolite(name.val(), external.prop("checked"));
                 Metabolite.metabolites.push(metabolite);
-                command_list.push(["metabolite", "add", name.val(), metabolite.name, metabolite.external]);
-                console.log(command_list[command_list.length - 1]);
+
+                command_list.push({
+                    "type": "metabolite",
+                    "op": "add",
+                    "name": metabolite.name,
+                    "object": {
+                        "name": metabolite.name,
+                        "external": metabolite.external
+                    }
+                });
 
                 datatable_metabolites.row.add(metabolite);
                 datatable_metabolites.sort();
@@ -1022,8 +1060,15 @@ Released under the MIT license
                 metabolite.external = external.prop("checked");
 
                 if (old_name != metabolite.name || old_external != metabolite.external) {
-                    command_list.push(["metabolite", "edit", old_name, metabolite.name, metabolite.external]);
-                    console.log(command_list[command_list.length - 1]);
+                    command_list.push({
+                        "type": "metabolite",
+                        "op": "edit",
+                        "name": old_name,
+                        "object": {
+                            "name": metabolite.name,
+                            "external": metabolite.external
+                        }
+                    });
                 }
 
                 metabolite.invalidate();
@@ -1073,7 +1118,15 @@ Released under the MIT license
 
             row.data().external = $(this).is(":checked");
 
-            command_list.push(["metabolite", "edit", row.data().name, row.data().name, row.data().external]);
+            command_list.push({
+                "type": "metabolite",
+                "op": "edit",
+                "name": row.data().name,
+                "object": {
+                    "name": row.data().name,
+                    "external": row.data().external
+                }
+            });
 
             row.data().invalidate();
         });
@@ -1186,7 +1239,12 @@ Released under the MIT license
                 m.removeFromList();
             });
 
-            command_list.push(["reaction", "delete", reaction.name]);
+            command_list.push({
+                "op": "delete",
+                "type": "reaction",
+	            "name": reaction.name,
+                "object": {}
+            });
 
             cyano_design_objective_select[0].selectize.removeOption(reaction.name);
             design_objective_visible_combobox[0].selectize.removeOption(reaction.name);
@@ -1232,7 +1290,7 @@ Released under the MIT license
         });
 
         $.ajax({
-            url: "{% url "cyano-design-get-reactions" pk=pk %}",
+            url: "{% url "cyano-design-get-reactions" pk=pk %}{% if revision %}?revision={{ revision.pk }}{% endif %}",
             context: document.body,
             beforeSend: function() {
                 waitIndicator.show($("#content"));
@@ -1401,6 +1459,12 @@ svg text
 {% endblock %}
 
 {% block content %}
+
+{% if revision %}
+<div class="alert alert-info" role="alert">
+Viewing old model from {{ revision.date }}. Simulating and saving will be based on this old version of the model.
+</div>
+{% endif %}
 
 <div role="tabpanel">
 
@@ -1687,6 +1751,33 @@ svg text
         </div>
     </div>
 </div>
+
+
+<div class="modal fade" id="dialog-save-model" tabindex="-1" role="dialog" aria-labelledby="dialog-save-model-label"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                        aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="dialog-save-model-label">Save model</h4>
+            </div>
+            <div class="modal-body">
+                If you want you can briefly describe your changes to the model. They are displayed in the revision list.
+
+                <div class="form-group">
+                    <label for="save-summary">Summary</label>
+                    <input type="text" id="save-summary" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary">Save</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <input type="submit" id="design-save" class="btn btn-primary" value="Save">
 

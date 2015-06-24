@@ -1,0 +1,42 @@
+{% extends "cyano/base.html" %}
+
+{% comment %}
+Revision page template
+
+Copyright (c) 2015 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+{% endcomment %}
+
+{% load static %}
+{% load templatetags %}
+
+{% block head_title %}{{ block.super }} :: {{ model.name }}{% endblock %}
+{% block page_title %}History of {{ model.name }}{% endblock %}
+
+{% block content %}
+{% autoescape off %}
+    {% url "cyano-design-design" pk=model.pk as url %}
+    {% for revision in revisions %}
+    <div class="panel panel-primary">
+        <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th colspan="3">{{ revision.0 }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for field in revision.1 %}
+            <tr>
+                <th><a href="{{ url }}?revision={{ field.pk }}">{{ field.date }}</a></th>
+                <td><a href="{{ url }}?revision={{ field.pk }}">{{ field.name }}</a></td>
+                <td><a href="{{ url }}?revision={{ field.pk }}">{{ field.reason }}</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+    </div>
+    {% endfor %}
+{% endautoescape %}
+{% endblock %}
