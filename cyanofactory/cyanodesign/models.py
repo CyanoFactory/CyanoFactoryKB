@@ -5,10 +5,10 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
-import base64
 from datetime import datetime
 
 from django.db import models
+from django_extensions.db.fields.json import JSONField
 from cyano.models import UserProfile
 
 
@@ -26,14 +26,14 @@ class DesignModel(models.Model):
     content = models.TextField(verbose_name="BioOpt file content", null=False, blank=False)
 
     def get_latest_revision(self):
-        return self.revisions.last()
+        return self.revisions.order_by("date").last()
 
 class Revision(models.Model):
     model = models.ForeignKey(DesignModel, related_name='revisions', verbose_name='Model')
     content = models.TextField(verbose_name="BioOpt file content", null=False, blank=False)
     date = models.DateTimeField(default=datetime.now, verbose_name = "Modification date")
-    changes = models.TextField(blank=True, default='', verbose_name='Summary of changes')
+    changes = JSONField(verbose_name='Summary of changes')
     reason = models.TextField(blank=True, default='', verbose_name='Description of changes')
 
     class Meta:
-        ordering = ["date"]
+        ordering = ["-date"]

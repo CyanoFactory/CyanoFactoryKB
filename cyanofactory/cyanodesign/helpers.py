@@ -31,41 +31,84 @@ def apply_commandlist(model, commandlist):
             products = []
 
             if op in ["add", "edit"]:
-                for m, s in zip(obj["metabolites"], obj["stoichiometry"]):
-                    (substrates if s < 0 else products).append("{} {}".format(abs(s), m))
+                if "name" not in obj:
+                    raise ValueError("Bad commmand " + str(command))
 
-                reac = "{} : {} {} {}".format(
-                    obj["name"],
-                    " + ".join(substrates),
-                    "<->" if obj["reversible"] else "->",
-                    " + ".join(products)
-                )
+                try:
+                    for m, s in zip(obj["metabolites"], obj["stoichiometry"]):
+                        (substrates if s < 0 else products).append([str(abs(s)), m])
+                except KeyError:
+                    pass
 
             if op == "add":
                 if enzyme is not None:
                     raise ValueError("Reaction already in model: " + name)
                 if name != obj["name"]:
                     raise ValueError("Reaction name mismatch: " + name)
+                if "reversible" not in obj:
+                    raise ValueError("Bad command " + str(command))
+
+                reac = "{} : {} {} {}".format(
+                    obj["name"],
+                    " + ".join([" ".join(x) for x in substrates]),
+                    "<->" if obj["reversible"] else "->",
+                    " + ".join([" ".join(x) for x in products])
+                )
 
                 model.add_reaction(reac)
                 reaction = model.get_reaction(name)
-                reaction.constraint = obj["constraints"]
-                reaction.pathway = obj["pathway"]
-                reaction.disabled = not obj["enabled"]
+
+                try:
+                    reaction.constraint = obj["constraints"]
+                except KeyError:
+                    pass
+
+                try:
+                    reaction.pathway = obj["pathway"]
+                except KeyError:
+                    pass
+
+                try:
+                    reaction.disabled = not obj["enabled"]
+                except KeyError:
+                    pass
+
                 model.calcs()
             elif op == "edit":
                 if enzyme is None:
                     raise ValueError("Reaction not in model: " + name)
 
-                reaction = Enzyme(reac)
-                reaction.constraint = obj["constraints"]
-                reaction.pathway = obj["pathway"]
-                reaction.disabled = not obj["enabled"]
+                if "metabolites" in obj and "substrates" in obj:
+                    enzyme.substrates = map(lambda x: x[1], substrates)
+                    enzyme.products = map(lambda x: x[1], products)
+                    enzyme.stoic[0] = map(lambda x: x[0], substrates)
+                    enzyme.stoic[1] = map(lambda x: x[1], products)
 
-                if reaction.name != enzyme.name and model.has_reaction(reaction.name):
-                    raise ValueError("Reaction already in model: " + reaction.name)
+                try:
+                    enzyme.reversible = obj["reversible"]
+                except KeyError:
+                    pass
 
-                model.enzymes[model.dic_enzs[name]] = reaction
+                try:
+                    enzyme.constraint = obj["constraints"]
+                except KeyError:
+                    pass
+
+                try:
+                    enzyme.pathway = obj["pathway"]
+                except KeyError:
+                    pass
+
+                try:
+                    enzyme.disabled = not obj["enabled"]
+                except KeyError:
+                    pass
+
+                if obj["name"] != enzyme.name and model.has_reaction(obj["name"]):
+                    raise ValueError("Reaction already in model: " + obj["name"])
+
+                enzyme.name = obj["name"]
+
                 model.calcs()
             elif op == "delete":
                 if enzyme is None:
@@ -76,18 +119,25 @@ def apply_commandlist(model, commandlist):
                 raise ValueError("Invalid operation " + op)
 
         elif typ == "metabolite":
+            if "name" not in obj:
+                raise ValueError("Bad commmand " + str(command))
+
             if op in ["add", "edit", "delete"]:
                 model.rename_metabolite(name, obj["name"])
 
-                if obj["external"] and op != "delete":
-                    model.make_metabolite_external(obj["name"])
-                else:
-                    # These are deleted when non references them
-                    model.make_metabolite_internal(obj["name"])
+                if "external" in obj:
+                    if obj["external"] and op != "delete":
+                        model.make_metabolite_external(obj["name"])
+                    else:
+                        # These are deleted when non references them
+                        model.make_metabolite_internal(obj["name"])
             else:
                 raise ValueError("Invalid operation " + op)
 
         elif typ == "pathway":
+            if "name" not in obj:
+                raise ValueError("Bad commmand " + str(command))
+
             if op == "edit":
                 for reac in model.enzymes:
                     if reac.pathway == name:

@@ -652,14 +652,14 @@ class Metabolism(object):
                 print("-OBJ", file=fil)
                 print("", file=fil)
                 for obj in self.obj:
-                    print(obj[0] + " 1 " + obj[1], file=fil)
+                    print(obj[0] + " 1 " + str(obj[1]), file=fil)
 
             if self.design_obj:
                 print("", file=fil)
                 print("-DESIGNOBJ", file=fil)
                 print("", file=fil)
                 for obj in self.design_obj:
-                    print(obj[0] + " 1 " + obj[1], file=fil)
+                    print(obj[0] + " 1 " + str(obj[1]), file=fil)
 
             disabled = filter(lambda x: x.disabled, self.enzymes)
             if disabled:

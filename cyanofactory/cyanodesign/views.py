@@ -165,9 +165,6 @@ def simulate(request, pk):
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + e.message)
 
-    for reaction in org.enzymes:
-        reaction.disabled = False
-
     display = filter(lambda x: not len(x) == 0, display)
 
     for item in display:
@@ -313,8 +310,6 @@ def save(request, pk):
                 if obj_reac is None:
                     raise ValueError("Objective not in model: " + obj["name"])
                 org.obj.append([obj_reac.name, "1" if obj["maximize"] else -1])
-        else:
-            org.obj = None
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + e.message)
 
@@ -408,6 +403,13 @@ def history(request, pk):
 
     from itertools import groupby
     for k,v in groupby(revisions, key=lambda x: x.date.date()):
+        v = list(v)[::-1]
+        for vv in v:
+            try:
+                vv.changes = json.dumps(vv.changes["changes"])
+            except KeyError:
+                vv.changes = json.dumps({})
+
         entries.append([k, list(v)[::-1]])
 
     data = {"model": model, "revisions": entries}

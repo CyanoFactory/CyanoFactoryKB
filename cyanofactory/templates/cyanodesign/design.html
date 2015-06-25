@@ -41,6 +41,7 @@ Released under the MIT license
     var table_metabolites;
     var datatable_metabolites;
     var submit_form;
+    var revision = {% if revision %}{{ revision.pk }}{% else %}undefined{% endif %};
 
     Enzyme.prototype.invalidate = function() {
         this.getMetabolites().forEach(function (obj) {
@@ -513,7 +514,7 @@ Released under the MIT license
                 "changes": JSON.stringify(command_list),
                 "objectives": JSON.stringify([{
                     "name": cyano_design_objective_select.val(),
-                    "maximize": true
+                    "maximize": $("#radio-maximize").prop("checked")
                 }]),
                 "favourites": JSON.stringify([]),
                 "display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
@@ -521,12 +522,12 @@ Released under the MIT license
                 "summary": JSON.stringify($("#save-summary").val())
             };
 
-            {% if revision %}
-            result["revision"] = {{ revision.pk }};
-            {% endif %}
+            if (revision !== undefined) {
+                result["revision"] = revision;
+            }
 
             return result;
-        }
+        };
 
         var doExport = function(format) {
             var data = beginRequest();
@@ -605,7 +606,13 @@ Released under the MIT license
         });
 
         $("#design-save").click(function(event) {
-            $("#save-summary").val("");
+            var txt = "";
+
+            if (revision !== undefined) {
+                txt = "Rollback to revision " + revision;
+            }
+
+            $("#save-summary").val(txt);
             $("#dialog-save-model").modal("show");
         });
 
@@ -616,9 +623,9 @@ Released under the MIT license
                 type: "POST",
                 data: data
             }).done(function(x) {
-                {% if revision %}
-                location.replace("{% url "cyano-design-design" pk=pk %}");
-                {% endif %}
+                if (revision !== undefined) {
+                    location.replace("{% url "cyano-design-design" pk=pk %}");
+                }
                 $("#dialog-save-model").modal("hide");
                 endRequest();
                 command_list = [];
@@ -984,6 +991,7 @@ Released under the MIT license
                     datatable_enzymes.draw();
 
                     command["op"] = "add";
+                    command["name"] = reaction.name;
 
                     command_list.push(command);
                 } else {
@@ -1101,6 +1109,16 @@ Released under the MIT license
             var row = datatable_enzymes.row($(this).closest("tr"));
 
             row.data().enabled = $(this).is(":checked");
+
+            command_list.push({
+                "type": "reaction",
+                "op": "edit",
+                "name": row.data().name,
+                "object": {
+                    "name": row.data().name,
+                    "enabled": row.data().enabled
+                }
+            });
 
             row.data().invalidate();
         });
@@ -1312,12 +1330,14 @@ Released under the MIT license
             updateEnzymeList();
             updateMetabolitesList();
 
+            $("#radio-maximize").prop("checked", true);
+
             if (x.objective) {
-                cyano_design_objective_select[0].selectize.setValue(x.objective)
+                cyano_design_objective_select[0].selectize.setValue(x.objective[0]);
+                if (x.objective[1] == "-1") {
+                    $("#radio-minimize").prop("checked", true);
+                }
             }
-            //var graph = Viz(x["graph"], "svg", "dot");
-            //document.getElementById("visual").innerHTML = graph;
-            //visualize();
 
             waitIndicator.hide($("#content"));
         });
@@ -1525,6 +1545,19 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
                 <div class="form-group">
                     <label class="control-label" for="cyano-design-objective-select">Main objective</label>
                     <select id="cyano-design-objective-select" placeholder="Select a main objective"></select>
+                </div>
+
+               <div class="radio">
+                    <input type="radio" name="maxmingroup" id="radio-maximize" value="maximize-obj">
+                    <label for="radio-maximize">
+                        Maximize objective
+                    </label>
+                </div>
+                <div class="radio">
+                    <input type="radio" name="maxmingroup" id="radio-minimize" value="minimize-obj">
+                    <label for="radio-minimize">
+                        Minimize objective
+                    </label>
                 </div>
             </fieldset>
         </div>

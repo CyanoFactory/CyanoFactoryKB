@@ -15,28 +15,123 @@ Released under the MIT license
 {% block head_title %}{{ block.super }} :: {{ model.name }}{% endblock %}
 {% block page_title %}History of {{ model.name }}{% endblock %}
 
+{% block head %}
+{{ block.super }}
+
+<script type="text/javascript">
+    "use strict";
+
+    var translateChanges = function(changes) {
+        if (jQuery.isEmptyObject(changes)) {
+            return "No changes found.";
+        }
+
+        var change_list = [];
+
+        for (var i = 0; i < changes.length; ++i) {
+            var command = changes[i];
+
+            var op = command["op"];
+            var typ = command["type"];
+            var name = command["name"];
+            var obj = command["object"];
+
+            if (typ == "reaction") {
+                if (op == "add") {
+                    change_list.push("Add reaction " + name);
+                } else if (op == "edit") {
+                    change_list.push("Edit reaction " + name);
+                    if (name != obj["name"]) {
+                        change_list.push("Renamed reaction " + name + " to " + obj["name"]);
+                    }
+                } else if (op == "delete") {
+                    change_list.push("Delete reaction " + name);
+                }
+            } else if (typ == "metabolite") {
+                if (op == "add") {
+                    change_list.push("Add " + (obj["external"] ? "external " : "") + "metabolite " + name);
+                } else if (op == "edit") {
+                    if (name != obj["name"]) {
+                        change_list.push("Rename metabolite " + name + " to " + obj["name"]);
+                    }
+                    change_list.push("Metabolite " + obj["name"] + " set to " + (obj["external"] ? "external" : "internal"));
+                } else if (op == "delete") {
+                    change_list.push("Delete metabolite " + name);
+                }
+            } else if (typ == "pathway") {
+                if (op == "edit") {
+                    change_list.push("Rename pathway " + name + " to " + obj["name"]);
+                }
+            }
+        }
+
+        var result = $("<ul>").addClass("list-unsyled");
+        change_list.forEach(function(item) {
+            $("<li>").text(item).appendTo(result);
+        });
+
+        return result.wrap("<p>").parent().html();
+    };
+
+    $(function () {
+        $(".changes-button").click(function() {
+            var dialog = $("#dialog-show-changes");
+            dialog.find(".modal-body").html(
+                translateChanges($(this).parents("tr").data("changes"))
+            );
+            dialog.modal("show");
+        });
+    });
+</script>
+{% endblock %}
+
+
 {% block content %}
-{% autoescape off %}
-    {% url "cyano-design-design" pk=model.pk as url %}
-    {% for revision in revisions %}
-    <div class="panel panel-primary">
-        <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th colspan="3">{{ revision.0 }}</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for field in revision.1 %}
-            <tr>
-                <th><a href="{{ url }}?revision={{ field.pk }}">{{ field.date }}</a></th>
-                <td><a href="{{ url }}?revision={{ field.pk }}">{{ field.name }}</a></td>
-                <td><a href="{{ url }}?revision={{ field.pk }}">{{ field.reason }}</a></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-        </table>
+{% url "cyano-design-design" pk=model.pk as url %}
+{% for revision in revisions %}
+<div class="panel panel-primary">
+    <table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th colspan="4">{{ revision.0 }}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for field in revision.1 %}
+        <tr data-changes='{{ field.changes|safe }}'>
+            <th><a href="{{ url }}?revision={{ field.pk }}">{{ field.date }}</a></th>
+            <td><a href="{{ url }}?revision={{ field.pk }}">{{ field.name }}</a></td>
+            <td><a href="{{ url }}?revision={{ field.pk }}">{{ field.reason }}</a></td>
+            <td>
+                {% if not forloop.last or not forloop.parentloop.last %}
+                <div class="btn-group" role="group">
+                    <a class='btn btn-default btn-xs changes-button' href="#">Show changes</a>
+                </div>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    </table>
+</div>
+{% endfor %}
+
+<div class="modal fade" id="dialog-show-changes" tabindex="-1" role="dialog" aria-labelledby="dialog-show-changes-label"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                        aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="dialog-show-changes-label">Changes</h4>
+            </div>
+            <div class="modal-body">
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
     </div>
-    {% endfor %}
-{% endautoescape %}
+</div>
 {% endblock %}
