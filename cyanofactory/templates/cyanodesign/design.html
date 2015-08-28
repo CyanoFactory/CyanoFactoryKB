@@ -205,7 +205,7 @@ Released under the MIT license
                 var rows = api.rows( {page:'current'} ).nodes();
                 var last=null;
 
-                api.column(5, {page:'current'} ).data().each( function ( group, i ) {
+                /*api.column(5, {page:'current'} ).data().each( function ( group, i ) {
                     if ( last !== group ) {
                         $(rows).eq( i ).before(
                             '<tr class="group"><td colspan="5">'+group+'</td></tr>'
@@ -213,10 +213,10 @@ Released under the MIT license
 
                         last = group;
                     }
-                } );
+                } );*/
             },
             "displayLength": 25,
-            "order": [[ 5, 'asc' ]],
+            "order": [[ 0, 'asc' ]],
             dom:
                 "<'row'<'col-sm-6'l><'col-sm-6'f>>" +
                 "<'row'>" +
@@ -265,7 +265,7 @@ Released under the MIT license
         });
 
         // Order by the grouping
-        table_enzymes.delegate('tr.group', 'click', function() {
+        /*table_enzymes.delegate('tr.group', 'click', function() {
             var currentOrder = datatable_enzymes.order()[0];
             if ( currentOrder[0] === 2 && currentOrder[1] === 'asc' ) {
                 datatable_enzymes.order( [ 5, 'desc' ] ).draw();
@@ -273,7 +273,7 @@ Released under the MIT license
             else {
                 datatable_enzymes.order( [ 5, 'asc' ] ).draw();
             }
-        } );
+        } );*/
 
         $.fn.dataTable.ext.search.push(
             function( settings, data, dataIndex ) {
@@ -1657,7 +1657,7 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
                             <label class="control-label" for="enzyme-name">Name</label>
                             <input class="form-control" type="text" id="enzyme-name">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group" style="display: none">
                             <label for="reaction-pathway">Pathway</label>
                             <select id="reaction-pathway" placeholder="Select or enter pathway"></select>
                         </div>
