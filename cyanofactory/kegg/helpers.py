@@ -141,7 +141,7 @@ def get_reaction_map(map_id, enzymes, metabolites, export):
                 for metabolite in metabolites:
                     ltitle = title.lower()
                     if metabolite[0].lower() in ltitle:
-                        fill_opacity = "0.2"
+                        fill_opacity = "0.3"
                         metabolites_found.append(metabolite)
                         if metabolite[1] is not None:
                             color_component = fill_color = metabolite[1]
@@ -154,7 +154,7 @@ def get_reaction_map(map_id, enzymes, metabolites, export):
                     for ec in ecs:
                         for enzyme in enzymes:
                             if enzyme[0] == ec:
-                                fill_opacity = "0.2"
+                                fill_opacity = "0.3"
                                 enzymes_found.append(enzyme)
                                 if enzyme[1] is not None:
                                     color_component = fill_color = enzyme[1]
@@ -164,7 +164,7 @@ def get_reaction_map(map_id, enzymes, metabolites, export):
                     for metabolite in metabolites:
                         ltitle = title.lower()
                         if metabolite[0].lower() in ltitle:
-                            fill_opacity = "0.2"
+                            fill_opacity = "0.3"
                             metabolites_found.append(metabolite)
                             if metabolite[1] is not None:
                                 color_component = fill_color = metabolite[1]
@@ -228,9 +228,15 @@ def request_extract(request):
                 item = item.split("#", 2)
                 if len(item[0]) == 0:
                     continue
-                items.append([item[0], item[1]])
+                item.append(item[1])
+                try:
+                    h = (100 - int(item[2])) * 2.4
+                    item[2] = "hsl(" + str(h) + ", 100%, 50%)"
+                except ValueError:
+                    pass
+                items.append([item[0], item[2], item[1]])
             else:
-                items.append([item, None])
+                items.append([item, None, None])
 
     metabolite_items = []
     enzyme_items = []

@@ -4,7 +4,6 @@ echo Cyanofactory KB Initial Import script
 
 python manage.py syncdb
 python manage.py migrate
-python manage.py loaddata cyano_metadata.json
 python manage.py restoredb < boehringer/fixtures/data.dump
 python manage.py autocreateinitial
 python manage.py create_meta

@@ -5,8 +5,13 @@ class WarehouseRouter(object):
         
         #if model._meta.app_label == 'djcelery':
         #    return "djcelery"
+
         if model._meta.app_label == 'cyanointeraction':
-            return 'stringdb'
+        #    return 'stringdb'
+            if model._meta.db_interaction_div == 'string' :
+                return 'stringdb'
+            if model._meta.db_interaction_div == 'stitch':
+                return 'stitchdb'
         return None
 
     def db_for_write(self, model, **hints):

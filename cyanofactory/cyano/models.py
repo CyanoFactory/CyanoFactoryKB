@@ -56,7 +56,6 @@ from django.db import models
 
 from guardian.models import UserObjectPermissionBase
 from guardian.models import GroupObjectPermissionBase
-from guardian.core import ObjectPermissionChecker
 
 from south.modelsinspector import add_introspection_rules
 add_introspection_rules([], ["^cyano\.history\.HistoryForeignKey"])
@@ -439,8 +438,7 @@ class GroupProfile(Model):
         if obj is None:
             return self.group.permissions.filter(codename=permission).exists()
         else:
-            checker = ObjectPermissionChecker(self.group)
-            return checker.has_perm(permission, obj)
+            return self.has_perms(permission, Entry.objects.filter(pk=obj.pk)).count()
 
     def has_perms(self, permission, objs):
         """
@@ -448,17 +446,17 @@ class GroupProfile(Model):
         Returns objects group has perms on.
         Only works for entrys
         """
-        if len(objs) == 0:
-            return []
-
         from django.contrib.auth.models import Permission
         from django.contrib.contenttypes.models import ContentType
+
+        if len(objs) == 0:
+            return Permission.objects.none()
 
         ct = ContentType.objects.get_for_model(Entry)
         try:
             perm = Permission.objects.get(content_type=ct, codename=permission)
         except ObjectDoesNotExist:
-            return []
+            return Permission.objects.none()
 
         obj_ids = objs.values_list("pk", flat=True)
         all_perms = EntryGroupObjectPermission.objects.filter(permission=perm, group=self.group, content_object_id__in=obj_ids).values_list("content_object_id", flat=True)
@@ -537,20 +535,20 @@ class UserProfile(Model):
         Returns objects user has perms on.
         Only works for entrys
         """
+        from django.contrib.auth.models import Permission
+        from django.contrib.contenttypes.models import ContentType
+
         if len(objs) == 0:
-            return []
+            return Permission.objects.none()
 
         if self.user.is_superuser:
             return objs
-
-        from django.contrib.auth.models import Permission
-        from django.contrib.contenttypes.models import ContentType
 
         ct = ContentType.objects.get_for_model(Entry)
         try:
             perm = Permission.objects.get(content_type=ct, codename=permission)
         except ObjectDoesNotExist:
-            return []
+            return Permission.objects.none()
 
         obj_ids = objs.values_list("pk", flat=True)
         all_user_perms = EntryUserObjectPermission.objects.filter(permission=perm, user=self.user, content_object_id__in=obj_ids).values_list("content_object_id", flat=True)
@@ -558,7 +556,7 @@ class UserProfile(Model):
 
         groups = self.get_groups().values_list("pk", flat=True)
 
-        all_group_perms = EntryGroupObjectPermission.objects.filter(group__in=groups, permission=perm, content_object_id__in=obj_ids)
+        all_group_perms = EntryGroupObjectPermission.objects.filter(group__in=groups, permission=perm, content_object_id__in=obj_ids).values_list("content_object_id", flat=True)
         obj_with_group_perms = objs.model.objects.filter(pk__in=all_group_perms)
 
         return obj_with_user_perms | obj_with_group_perms
@@ -1174,6 +1172,12 @@ class Entry(AbstractEntry):
 
     def first_revision(self):
         return Revision.objects.filter(object_id=self.pk).first()
+
+    def get_permissions(self):
+        return [
+            EntryUserObjectPermission.objects.filter(content_object_id=self.pk),
+            EntryGroupObjectPermission.objects.filter(content_object_id=self.pk)
+        ]
 
     def save(self, revision_detail, force_revision=True, *args, **kwargs):
         from cyano.helpers import slugify
@@ -3281,7 +3285,7 @@ class Pathway(SpeciesComponent):
                     try:
                         pw_obj = Pathway.objects.for_species(self.species).for_wid(pathway_name)
                         elem.set("xlink:href", pw_obj.get_absolute_url())
-                        fill_opacity = "0.2"
+                        fill_opacity = "0.3"
                         fill_color = "blue"
                     except ObjectDoesNotExist:
                         elem.set("xlink:href", reverse("kegg.views.map_view", kwargs={"map_id": pathway_name}))
@@ -3300,7 +3304,7 @@ class Pathway(SpeciesComponent):
                     color_component = "green"
                     for ec in ecs:
                         if ec in species_ecs:
-                            fill_opacity = "0.2"
+                            fill_opacity = "0.3"
 
                 if shape == "circle":
                     pending.append(elem)
@@ -3926,7 +3930,6 @@ class ProteinMonomer(Protein):
         return self.get_gravy()
 
     def get_as_html_interactions(self, is_user_anonymous):
-        return "" # FIXME
         from cyanointeraction.models import ProteinsNames as IproteinsNames
 
         prot_name = IproteinsNames.objects.filter(protein_name=self.gene.wid).first()

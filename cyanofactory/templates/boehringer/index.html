@@ -69,6 +69,28 @@ $(document).ready(function() {
             $("form#load_form select").children(":selected").remove();
         });
     });
+
+    var isDragging = false;
+
+    $("#content").on("mousedown", "a", function(event) {
+        isDragging = false;
+        $(this).data('page', {x: event.pageX, y: event.pageY})
+    });
+    $("#content").on("mousemove", "a", function(event) {
+        var p = $(this).data('page');
+        if (p !== undefined) {
+            if (Math.abs(p.x - event.pageX) > 4 ||
+                Math.abs(p.y - event.pageY) > 4) {
+                isDragging = true;
+            }
+        }
+    });
+    $("#content").on("click", "a", function(event) {
+         if (isDragging) {
+            event.preventDefault();
+        }
+    });
+
 });
 </script>
 {% endblock %}
@@ -153,7 +175,7 @@ $(document).ready(function() {
 			{% include "boehringer/boehringer_svg.html" %}
 
 			<script type="text/javascript">
-				var svgPan = svgPanZoom('#boehringer', {minZoom: 0.1});
+				var svgPan = svgPanZoom('#boehringer', {minZoom: 0.1, fit: false});
 			    $(document.body).delegate("select", "change", function(){
                     var i = $('#selectionField option:selected').attr("id");
                     if (i == "0") {
@@ -164,8 +186,10 @@ $(document).ready(function() {
                     var new_x = ($("#map").width() / 2) - $(item).attr("x");
                     var new_y = ($("#map").height() / 2) - $(item).attr("y");
 
+                    var old_zoom = svgPan.getZoom();
                     svgPan.zoom(1);
-                    svgPan.pan({x: new_x, y: new_y});
+                    svgPan.pan({x: new_x , y: new_y});
+                    svgPan.zoom(old_zoom);
 			    });
 			</script>
 			</div>
@@ -184,8 +208,17 @@ $(document).ready(function() {
     <div class="panel-body">
         <form id="search_form" method="post">
             {% csrf_token %}
-            <p>Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using # (e.g. 1.2.3.4#red).<br><br>
-            <textarea id="search_box" class="form-control" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
+            <p>Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors by using # (e.g. 1.2.3.4#red).<br>
+            <div style="text-align:center; background-image:linear-gradient(to right,
+                hsla(240, 100%, 50%, 0.5),
+                hsla(180, 100%, 50%, 0.5),
+                hsla(120, 100%, 50%, 0.5),
+                hsla(60, 100%, 50%, 0.5),
+                hsla(0, 100%, 50%, 0.5))">
+            Colors from 0 to 100
+            </div>
+            <br>
+            <textarea id="search_box" class="form-control" name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.2 != None %}#{{ item.2 }}{% endif %}&#10;{% endfor %}</textarea>
             <br>
             <input class="btn btn-primary" type="submit" value="Submit" />
             <input name="export_button" class="btn btn-primary" type="submit" value="Export" />

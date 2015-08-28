@@ -35,48 +35,29 @@ Released under the MIT license
 {% endwith %}
 {% endblock %}
 
-{% block extrastyles %}
-#list{
-	width:100%;
-}
-#detail tbody.data tr td:nth-child(1){
-	width:3%;
-}
-#detail tbody.data tr td:nth-child(2n){
-	width:15%;
-}
-#detail tbody.data tr td:nth-child(3){
-	width:60%;
-}
-
-#detail a {
-	color: rgb(34, 34, 34);
-}
-{% endblock %}
-
 {% block content %}
 {% autoescape off %}
-<table id="detail">	
-	{% for revision in revisions %}
-		{% if not forloop.first %}
-	<tbody class="spacing">
-		<tr><td colspan="4">&nbsp;</td></tr>
-	</tbody>
-		{% endif %}
-	<tbody class="data">
-		<tr>
-			<th colspan="4">{{ revision.0 }}</th>
-		</tr>				
-		{% for field in revision.1 %}
-		<tr>
-			<th><a href="{{ field.url }}">{{ field.time }}</a></th>
-			<td><a href="{{ field.url }}">{{ field.wid }}</a></td>
-			<td><a href="{{ field.url }}">{{ field.reason }}</a></td>
-			<td><a href="{{ field.author.user.get_absolute_url }}">{{ field.author.get_name }}</a></td>
-		</tr>
-		{% endfor %}
-	</tbody>
-	{% endfor %}	
-</table>
+    {% for revision in revisions %}
+    <div class="panel panel-primary">
+        <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th colspan="4">{{ revision.0 }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for field in revision.1 %}
+            <tr>
+                <th><a href="{{ field.url }}">{{ field.time }}</a></th>
+                <td><a href="{{ field.url }}">{{ field.wid }}</a></td>
+                <td><a href="{{ field.url }}">{{ field.reason }}</a></td>
+                <td><a href="{{ field.author.user.get_absolute_url }}">{{ field.author.get_name }}</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        </table>
+    </div>
+    {% endfor %}
+
 {% endautoescape %}
 {% endblock %}

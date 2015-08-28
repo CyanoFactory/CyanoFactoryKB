@@ -19,7 +19,7 @@ Released under the MIT license
 
 <script>
 $(function() {
-	svgPanZoom('svg', {minZoom: 0.1});
+	svgPanZoom('svg', {minZoom: 0.1, fit: false});
 });
 </script>
 {% endblock %}
@@ -50,7 +50,10 @@ $(function() {
                 <div id="map">
 				<svg height="100%" id="Synechocystis_6803.gml" name="Synechocystis_6803.gml" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
 				<g id="viewport">
-					<image height="6586" width="7036" x="0" xlink:href="{% static "cyano/img/sbgn.png" %}" y="0" /><a xlink:href="http://www.kegg.jp/dbget-bin/www_bget?R00506" xlink:title="R00506"><polygon fill-opacity="0.0" points="378,334 292,334 292,336 378,336" style="stroke-width:1;stroke:rgb(255,0,0)" />
+					<image height="6586" width="7036" x="0" xlink:href="{% static "cyano/img/sbgn.png" %}" y="0" />
+                    <a xlink:href="http://www.kegg.jp/dbget-bin/www_bget?R00506" xlink:title="R00506">
+                        <polygon fill-opacity="0.0" points="378,334 292,334 292,336 378,336" style="stroke-width:1;stroke:rgb(255,0,0)" />
+                    </a>
 					<a xlink:href="{% url "db_xref.views.dbxref" source="Pubmed" xid="16102913" %}" xlink:title="Kucho et al. 2004">
 						<rect alt="Kucho et al. 2004" fill-opacity="0.0" height="20" style="stroke-width:1;stroke:rgb(255,0,0)" width="150" x="3525" y="3460" />
 					</a>

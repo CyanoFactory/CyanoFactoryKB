@@ -61,8 +61,17 @@ Released under the MIT license
 <br>
 <form method="post" >
 {% csrf_token %}
-  <br><br><p style="margin-left: 3" align="left"><b>ECs:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors with #.<br><br>
-  <textarea name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.1 %}#{{ item.1 }}{% endif %}&#10;{% endfor %}</textarea>
+  <br><br><p style="margin-left: 3" align="left"><b>ECs:</b>  Paste white-space separated EC numbers and/or keywords here. Both can be linked to colors with #.<br>
+    <div style="text-align:center; background-image:linear-gradient(to right,
+        hsla(240, 100%, 50%, 0.5),
+        hsla(180, 100%, 50%, 0.5),
+        hsla(120, 100%, 50%, 0.5),
+        hsla(60, 100%, 50%, 0.5),
+        hsla(0, 100%, 50%, 0.5))">
+    Colors from 0 to 100
+    </div>
+    <br>
+  <textarea name="items" cols="10" rows="10">{% for item in items %}{{ item.0 }}{% if item.2 != None %}#{{ item.2 }}{% endif %}&#10;{% endfor %}</textarea>
   <br>
   <input type="submit">
   </p>
@@ -99,7 +108,7 @@ Released under the MIT license
 {% with object=enzyme.0 %}
 {% with color=enzyme.1 %}
 <a xlink:href="http://www.brenda-enzymes.org/php/result_flat.php4?ecno={{ object.ec }}" xlink:title="{{ object.title }}" target="_blank">
-<rect id="e{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:{% if color %}{{ color }}{% else %}{{object.color.name}}{% endif %}; fill-opacity:0.2"/>
+<rect id="e{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:{% if color %}{{ color }}{% else %}{{object.color.name}}{% endif %}; fill-opacity:0.3"/>
 </a>
 {% endwith %}
 {% endwith %}
@@ -108,7 +117,7 @@ Released under the MIT license
 {% for metabolite in metabolites %}
 {% with object=metabolite.0 %}
 {% with color=metabolite.1 %}
-<rect id="m{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:{% if color %}{{ color }}{% else %}{{object.color.name}}{% endif %}; fill-opacity:0.2"/>
+<rect id="m{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:{% if color %}{{ color }}{% else %}{{object.color.name}}{% endif %}; fill-opacity:0.3"/>
 {% endwith %}
 {% endwith %}
 {% endfor %}
@@ -116,7 +125,7 @@ Released under the MIT license
 </svg>
 
 <script type="text/javascript">
-	var svgPan = svgPanZoom('svg', {minZoom: 0.1});
+	var svgPan = svgPanZoom('svg', {minZoom: 0.1, fit: false});
     $(document.body).delegate("select", "change", function(){
         var i = $('#selectionField option:selected').attr("id");
         if (i == "0") {
@@ -127,8 +136,10 @@ Released under the MIT license
         var new_x = ($("#map").width() / 2) - $(item).attr("x");
         var new_y = ($("#map").height() / 2) - $(item).attr("y");
 
+        var old_zoom = svgPan.getZoom();
         svgPan.zoom(1);
         svgPan.pan({x: new_x, y: new_y});
+        svgPan.zoom(old_zoom);
     });
 </script>
 </div>

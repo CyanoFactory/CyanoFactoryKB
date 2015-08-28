@@ -660,6 +660,7 @@ def history_detail(request, species, model, item, detail_id):
     fieldsets = deepcopy(model._meta.fieldsets)
     
     #filter out type, metadata
+    fieldsets = filter(lambda x: type(x) == tuple, fieldsets)
     fieldset_names = [x[0] for x in fieldsets]
     if 'Type' in fieldset_names:
         idx = fieldset_names.index('Type')
@@ -1146,6 +1147,7 @@ def sitemap_species(request, species):
 def permission(request, species, model=None, item=None, edit=False):
     from django.contrib.auth.models import User, Group, Permission
     from guardian.shortcuts import get_users_with_perms, get_groups_with_perms, assign_perm, remove_perm
+    from itertools import groupby
 
     if item is not None:
         obj = cmodels.Entry.objects.get(pk=item.pk)
@@ -1156,8 +1158,23 @@ def permission(request, species, model=None, item=None, edit=False):
 
     permissions = Permission.objects.filter(codename__in=perms)
 
-    u = get_users_with_perms(obj, attach_perms=True, with_group_users=False, with_superusers=False)
-    g = get_groups_with_perms(obj, attach_perms=True)
+    def get_permissions():
+        up, gp = obj.get_permissions()
+        up = up.order_by("user").select_related("user", "permission")
+        gp = gp.order_by("group").select_related("group", "permission")
+
+        u = {}
+        g = {}
+
+        for k, v in groupby(up, lambda x: x.user):
+            u[k] = map(lambda x: x.permission.codename, v)
+
+        for k, v in groupby(gp, lambda x: x.group):
+            g[k] = map(lambda x: x.permission.codename, v)
+
+        return u, g
+
+    u, g = get_permissions()
 
     if request.method == 'POST':
         for r in request.POST:
@@ -1216,8 +1233,8 @@ def permission(request, species, model=None, item=None, edit=False):
                 except ValueError:
                     continue
 
-    u = get_users_with_perms(obj, attach_perms=True, with_group_users=False, with_superusers=False)
-    g = get_groups_with_perms(obj, attach_perms=True)
+    u, g = get_permissions()
+
     ul = []
     gl = []
 

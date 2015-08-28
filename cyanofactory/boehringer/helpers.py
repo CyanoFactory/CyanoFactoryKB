@@ -6,12 +6,12 @@ import boehringer.models as models
 
 def format_output(request):
     if not "items" in request.POST:
-        items = [["1.1.1.1", None],
-                 ["2.2.2.2", None],
-                 ["4.1.2.20", "green"],
-                 ["1.1.1.20", None],
-                 ["1.2.1.3", None],
-                 ["ascorbate", "red"]]
+        items = [["1.1.1.1", None, None],
+                 ["2.2.2.2", None, None],
+                 ["4.1.2.20", "hsl(240.0,100%,50%)", 0],
+                 ["1.1.1.20", "hsl(0.0,100%,50%)", 100],
+                 ["1.2.1.3", "green", "green"],
+                 ["ascorbate", "yellow", "yellow"]]
     else:
         items = []
         for item in re.split("\s+", request.POST["items"]):
@@ -22,9 +22,15 @@ def format_output(request):
                 item = item.split("#", 2)
                 if len(item[0]) == 0:
                     continue
-                items.append([item[0], item[1]])
+                item.append(item[1])
+                try:
+                    h = (100 - int(item[2])) * 2.4
+                    item[2] = "hsl(" + str(h) + ", 100%, 50%)"
+                except ValueError:
+                    pass
+                items.append([item[0], item[2], item[1]])
             else:
-                items.append([item, None])
+                items.append([item, None, None])
     metabolite_items = []
     enzyme_items = []
     for item in items:

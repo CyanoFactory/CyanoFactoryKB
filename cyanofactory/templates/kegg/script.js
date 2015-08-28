@@ -47,6 +47,21 @@ $(document).ready(function() {
         });
     });
 
+    var isDragging = false;
+
+    $("#content").on("mousedown", "a", function(event) {
+        isDragging = false;
+        $(this).data('page', {x: event.pageX, y: event.pageY})
+    });
+    $("#content").on("mousemove", "a", function(event) {
+        var p = $(this).data('page');
+        if (p !== undefined) {
+            if (Math.abs(p.x - event.pageX) > 4 ||
+                Math.abs(p.y - event.pageY) > 4) {
+                isDragging = true;
+            }
+        }
+    });
     $("#content").on("click", "a", function(event) {
         var href = undefined;
 
@@ -57,6 +72,10 @@ $(document).ready(function() {
             href = $(this).attr("xlink:href");
         }
 
+        if (isDragging) {
+            event.preventDefault();
+        }
+
         if (href === undefined) {
             return;
         }
@@ -64,10 +83,12 @@ $(document).ready(function() {
         if (href.indexOf('{% url "kegg.views.index" %}') == 0) {
             event.preventDefault();
 
-            // redirect search form post target
-            var search_form = $("form#search_form");
-            search_form.attr("action", href);
-            search_form.submit();
+            if (!isDragging) {
+                // redirect search form post target
+                var search_form = $("form#search_form");
+                search_form.attr("action", href);
+                search_form.submit();
+            }
         }
     });
 });

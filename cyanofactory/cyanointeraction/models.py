@@ -9,7 +9,10 @@
 from __future__ import unicode_literals
 
 from django.db import models
+from django.db.models import options
 import dbarray
+
+options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('db_interaction_div',)
 
 
 class Abstracts(models.Model):
@@ -21,6 +24,7 @@ class Abstracts(models.Model):
     body = models.TextField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'abstracts'
 
 
@@ -33,6 +37,7 @@ class Actions(models.Model):
     score = models.SmallIntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'actions'
 
 
@@ -43,6 +48,7 @@ class ActionsSets(models.Model):
     sources = models.TextField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'actions_sets'
 
 
@@ -51,6 +57,7 @@ class BestCombinedScoresOrthgroups(models.Model):
     best_score = models.IntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'best_combined_scores_orthgroups'
 
 
@@ -59,6 +66,7 @@ class BestCombinedScoresProteins(models.Model):
     best_score = models.IntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'best_combined_scores_proteins'
 
 
@@ -68,6 +76,7 @@ class Collections(models.Model):
     comment = models.CharField(max_length=1000, blank=True)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'collections'
 
 
@@ -84,6 +93,7 @@ class EvidenceTransfers(models.Model):
     source_tscore = models.SmallIntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'evidence_transfers'
 
 
@@ -92,6 +102,7 @@ class Funccats(models.Model):
     funccat_description = models.CharField(max_length=100)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'funccats'
 
 
@@ -105,6 +116,7 @@ class FusionEvidence(models.Model):
     fusion_score = models.SmallIntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'fusion_evidence'
 
 
@@ -116,6 +128,7 @@ class Genes(models.Model):
     protein_size = models.IntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'genes'
 
 
@@ -124,6 +137,7 @@ class GenesProteins(models.Model):
     gene_id = models.IntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'genes_proteins'
 
 
@@ -135,6 +149,7 @@ class ItemsAbstracts(models.Model):
     mesh_id = models.IntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'items_abstracts'
 
 
@@ -143,6 +158,7 @@ class Meshterms(models.Model):
     description = models.CharField(max_length=255)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'meshterms'
 
 
@@ -154,6 +170,7 @@ class Orthgroups(models.Model):
     species_count = models.SmallIntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'orthgroups'
 
 
@@ -162,6 +179,7 @@ class OrthgroupsAbstracts(models.Model):
     abstract_id = models.CharField(max_length=250)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'orthgroups_abstracts'
 
 
@@ -170,6 +188,7 @@ class OrthgroupsFunccats(models.Model):
     funccat_id = models.IntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'orthgroups_funccats'
 
 
@@ -179,6 +198,7 @@ class OrthgroupsSets(models.Model):
     is_database_set = models.BooleanField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'orthgroups_sets'
 
 
@@ -188,6 +208,7 @@ class OrthgroupsSpecies(models.Model):
     count = models.IntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'orthgroups_species'
 
 
@@ -201,6 +222,7 @@ class ProteinImageMatch(models.Model):
     annotation = models.CharField(max_length=50, blank=True)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'protein_image_match'
 
 
@@ -211,7 +233,9 @@ class NodeNodeLinks(models.Model):
     combined_score = models.SmallIntegerField(null=True, blank=True)
     evidence_scores = dbarray.TextArrayField()
     evidence = {}
+
     class Meta:
+        db_interaction_div = "string"
         db_table = 'node_node_links'
 
 
@@ -226,6 +250,7 @@ class Proteins(models.Model):
     annotation_word_vectors = models.TextField(blank=True)  # This field type is a guess.
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'proteins'
 
 
@@ -234,6 +259,7 @@ class ProteinsMeshterms(models.Model):
     protein_id = models.IntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'proteins_meshterms'
 
 
@@ -246,6 +272,7 @@ class ProteinsNames(models.Model):
     linkout = models.CharField(max_length=15, blank=True)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'proteins_names'
 
 
@@ -261,15 +288,17 @@ class ProteinsOrthgroups(models.Model):
     preferred_linkout_url = models.CharField(max_length=150, blank=True)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'proteins_orthgroups'
 
 
 class ProteinsSequences(models.Model):
-    #protein_id = models.IntegerField()
+    # protein_id = models.IntegerField()
     protein_id = models.IntegerField(primary_key=True)
     sequence = models.TextField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'proteins_sequences'
 
 
@@ -279,6 +308,7 @@ class ProteinsSmartlinkouts(models.Model):
     smart_url = models.CharField(max_length=2000)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'proteins_smartlinkouts'
 
 
@@ -288,6 +318,7 @@ class Runs(models.Model):
     contig_id = models.CharField(max_length=50)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'runs'
 
 
@@ -301,6 +332,7 @@ class RunsGenesProteins(models.Model):
     annotation = models.CharField(max_length=100)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'runs_genes_proteins'
 
 
@@ -309,6 +341,7 @@ class RunsOrthgroups(models.Model):
     orthgroup_id = models.IntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'runs_orthgroups'
 
 
@@ -317,6 +350,7 @@ class ScoreTypes(models.Model):
     score_type = models.CharField(max_length=35)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'score_types'
 
 
@@ -328,6 +362,7 @@ class Sets(models.Model):
     url = models.CharField(max_length=255, blank=True)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'sets'
 
 
@@ -338,6 +373,7 @@ class SetsItems(models.Model):
     is_database_set = models.BooleanField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'sets_items'
 
 
@@ -346,6 +382,7 @@ class SetsPubmedrefs(models.Model):
     pubmed_id = models.CharField(max_length=20, blank=True)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'sets_pubmedrefs'
 
 
@@ -357,6 +394,7 @@ class Species(models.Model):
     type = models.CharField(max_length=10)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'species'
 
 
@@ -367,6 +405,7 @@ class SpeciesNames(models.Model):
     is_string_species = models.NullBooleanField(null=True, blank=True)
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'species_names'
 
 
@@ -377,21 +416,29 @@ class SpeciesNodes(models.Model):
     size = models.IntegerField()
 
     class Meta:
+        db_interaction_div = "string"
         db_table = 'species_nodes'
+
 
 class ChemicalAliases(models.Model):
     chemical = models.CharField(max_length=50)
     alias = models.TextField()
     source = models.TextField()
+
     class Meta:
+        db_interaction_div = "stitch"
         db_table = 'chemical_aliases'
+
 
 class ChemicalChemicalLinks(models.Model):
     chemical1 = models.CharField(max_length=50)
     chemical2 = models.CharField(max_length=50)
     textmining = models.IntegerField()
+
     class Meta:
+        db_interaction_div = "stitch"
         db_table = 'chemical_chemical_links'
+
 
 class ChemicalChemicalLinksDetailed(models.Model):
     chemical1 = models.CharField(max_length=50)
@@ -401,39 +448,67 @@ class ChemicalChemicalLinksDetailed(models.Model):
     database = models.IntegerField()
     textmining = models.IntegerField()
     combined_score = models.IntegerField()
+
     class Meta:
+        db_interaction_div = "stitch"
         db_table = 'chemical_chemical_links_detailed'
+
 
 class ChemicalSources(models.Model):
     flat_chemical = models.CharField(max_length=50)
     stereo_chemical = models.CharField(max_length=50)
     source_name = models.CharField(max_length=50)
     source_id = models.CharField(max_length=50)
+
     class Meta:
+        db_interaction_div = "stitch"
         db_table = 'chemical_sources'
 
+
 class Chemicals(models.Model):
-    chemical = models.TextField()
-    name = models.TextField()
-    molecular_weight = models.FloatField()
-    smiles_string = models.TextField()
+    chemical_id = models.IntegerField()
+    preferred_name = models.TextField()
+    short_name = models.TextField()
+    mw = models.FloatField()
+    drug = models.BooleanField()
+
     class Meta:
+        db_interaction_div = "stitch"
         db_table = 'chemicals'
+
 
 class ChemicalsInchikeys(models.Model):
     flat_chemical_id = models.CharField(max_length=50)
     stereo_chemical_id = models.CharField(max_length=50)
     source_cid = models.IntegerField()
     inchikey = models.TextField()
+
     class Meta:
+        db_interaction_div = "stitch"
         db_table = 'chemicals_inchikeys'
+
 
 class ProteinChemicalLinks(models.Model):
     chemical = models.CharField(max_length=50)
     protein = models.CharField(max_length=50)
     combined_score = models.IntegerField()
+
     class Meta:
-        db_table = 'protein_chemical_links'
+        db_interaction_div = "stitch"
+        # db_table = 'protein_chemical_links'
+        db_table = 'node_node_links'
+
+
+class ProteinChemicalLinks(models.Model):
+    chemical = models.CharField(max_length=50)
+    protein = models.CharField(max_length=50)
+    combined_score = models.IntegerField()
+
+    class Meta:
+        db_interaction_div = "stitch"
+        # db_table = 'protein_chemical_links'
+        db_table = 'node_node_links'
+
 
 class ProteinChemicalLinksDetailed(models.Model):
     chemical = models.CharField(max_length=50)
@@ -443,8 +518,11 @@ class ProteinChemicalLinksDetailed(models.Model):
     database = models.IntegerField()
     textmining = models.IntegerField()
     combined_score = models.IntegerField()
+
     class Meta:
+        db_interaction_div = "stitch"
         db_table = 'protein_chemical_links_detailed'
+
 
 class ProteinChemicalLinksTransfer(models.Model):
     chemical = models.CharField(max_length=50)
@@ -458,8 +536,11 @@ class ProteinChemicalLinksTransfer(models.Model):
     textmining_direct = models.IntegerField()
     textmining_transferred = models.IntegerField()
     combined_score = models.IntegerField()
+
     class Meta:
+        db_interaction_div = "stitch"
         db_table = 'protein_chemical_links_transfer'
+
 
 class Stitchactions(models.Model):
     item_id_a = models.CharField(max_length=50)
@@ -468,5 +549,19 @@ class Stitchactions(models.Model):
     action = models.CharField(max_length=50, blank=True)
     a_is_acting = models.IntegerField()
     score = models.IntegerField()
+
     class Meta:
+        db_interaction_div = "stitch"
         db_table = 'stitchactions'
+
+
+class StitchNodeNode(models.Model):
+    node_id_a = models.IntegerField()
+    node_type_b = models.IntegerField()
+    node_id_b = models.IntegerField()
+    combined_score = models.SmallIntegerField()
+    evidence_scores = dbarray.TextArrayField()
+
+    class Meta:
+        db_interaction_div = "stitch"
+        db_table = "node_node_links"

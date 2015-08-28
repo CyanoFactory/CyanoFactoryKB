@@ -6,6 +6,7 @@ Replace this with more appropriate tests for your application.
 """
 
 from django.test import TestCase
+from views import checkSTITCH
 
 
 class SimpleTest(TestCase):
@@ -14,3 +15,8 @@ class SimpleTest(TestCase):
         Tests that 1 + 1 always equals 2.
         """
         self.assertEqual(1 + 1, 2)
+'''
+class STITCHTest(TestCase):
+    def test_stitch_connection(self):
+        checkSTITCH(171549453)
+        '''

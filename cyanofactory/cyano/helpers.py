@@ -471,7 +471,11 @@ def get_extra_context(request = [], queryset = None, models = [], template = '',
             else:
                 data['last_updated_date'] = cmodels.RevisionDetail.objects.order_by("-date").first().date
         else:
-            data['last_updated_date'] = cmodels.RevisionDetail.objects.order_by("-date").first().date
+            last_update = data['last_updated_date'] = cmodels.RevisionDetail.objects.order_by("-date").first()
+            if last_update is None:
+                data['last_updated_date'] = datetime.datetime.now(tzlocal())
+            else:
+                data['last_updated_date'] = cmodels.RevisionDetail.objects.order_by("-date").first().date
         data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
         
         if queryset is not None and getattr(queryset, "model", None) is None:
@@ -483,7 +487,7 @@ def get_extra_context(request = [], queryset = None, models = [], template = '',
             objDict['model'] = obj.__class__.__name__
             objects.append(objDict)
         
-        now = datetime.datetime.now(tzlocal())        
+        now = datetime.datetime.now(tzlocal())
         json = odict()
         json['title'] = 'CyanoFactory KB{}'.format(" - {}".format(species.name) if species else "")
         json['time'] = str(now.isoformat())

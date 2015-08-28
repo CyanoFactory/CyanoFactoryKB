@@ -14,14 +14,14 @@ Released under the MIT license
 {% for enzyme in enzymes %}
 {% with object=enzyme %}
 <a xlink:href="{% url "db_xref.views.dbxref" source="EC" xid=object.ec %}" xlink:title="{{ object.title }}" target="_blank">
-<rect id="e{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:green; fill-opacity:0.2"/>
+<rect id="e{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:green; fill-opacity:0.3"/>
 </a>
 {% endwith %}
 {% endfor %}
 
 {% for metabolite in metabolites %}
 {% with object=metabolite %}
-<rect id="m{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:blue; fill-opacity:0.2"/>
+<rect id="m{{ forloop.counter }}" x="{{ object.x }}" y="{{ object.y }}" width="{{ object.w }}" height="{{ object.h }}" style="fill:blue; fill-opacity:0.3"/>
 {% endwith %}
 {% endfor %}
 </g>
@@ -29,6 +29,6 @@ Released under the MIT license
 
 <script src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
 <script type="text/javascript">
-var svgPan = svgPanZoom('#boehringer', {minZoom: 0.1});
+var svgPan = svgPanZoom('#boehringer', {minZoom: 0.1, fit: false});
 </script>
 </div>

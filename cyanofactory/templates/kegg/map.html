@@ -47,21 +47,21 @@ Released under the MIT license
 }
 #pathway-found {
     border:solid blue;
-    background:rgba(0,0,255,0.2);
+    background:rgba(0,0,255,0.3);
 }
 #enzyme {
     border:solid green;
 }
 #enzyme-found {
     border:solid green;
-    background:rgba(0,255,0,0.2);
+    background:rgba(0,255,0,0.3);
 }
 #metabolite {
     border:solid red;
 }
 #metabolite-found {
     border:solid red;
-    background:rgba(255,0,0,0.2);
+    background:rgba(255,0,0,0.3);
 }
 {% endblock %}
 
@@ -137,20 +137,31 @@ Released under the MIT license
 
             <script src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
 			<script type="text/javascript">
-	            var svgPan = svgPanZoom('svg', {minZoom: 0.1});
-			    $(document.body).delegate("select", "change", function(){
+	            var svgPan = svgPanZoom('svg', {minZoom: 0.1, fit: false});
+			    $("body").delegate("select", "change", function(){
                     var i = $('#selectionField option:selected').attr("id");
                     if (i == "0") {
                         // (Select item) element
                         return;
                     }
                     var val = $('#selectionField option:selected').val();
-                    var item = $("g a[*|title*=\"" + val + "\"]").children();
-                    var new_x = ($("#map").width() / 2) - $(item).attr("x");
-                    var new_y = ($("#map").height() / 2) - $(item).attr("y");
+                    var item = $("g a[*|title*=\"" + val + "\"]");
 
-                    svgPan.zoom(1);
-                    svgPan.pan({x: new_x, y: new_y});
+                    item.each(function() {
+                        var match = $(this).attr("xlink:href").match(/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/g);
+                        if (match !== null) {
+                            if (match.indexOf(val) > -1) {
+                                var rect = $(this).children();
+                                var new_x = ($("#map").width() / 2) - $(rect).attr("x");
+                                var new_y = ($("#map").height() / 2) - $(rect).attr("y");
+
+                                var old_zoom = svgPan.getZoom();
+                                svgPan.zoom(1);
+                                svgPan.pan({x: new_x, y: new_y});
+                                svgPan.zoom(old_zoom);
+                            }
+                        }
+                    });
 			    });
 			</script>
 			</div>
