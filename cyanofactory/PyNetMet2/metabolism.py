@@ -34,9 +34,9 @@ class Metabolism(object):
     """
 
     def __init__(self, filein, filetype="opt", reactions=list(), constraints=list(),
-                                     external=list(), objective=list(), design_objective=list(), disable=(), fromfile=True):
+                                     external=list(), objective=list(), design_objective=list(), fromfile=True):
         if fromfile and filetype == "opt":
-            [reactions, constraints, external, objective, design_objective, disable] = \
+            [reactions, constraints, external, objective, design_objective] = \
                                                        self.prepare_opt(filein)
         elif fromfile and filetype == "sbml":
             [reactions, constraints, external, objective] = \
@@ -46,7 +46,6 @@ class Metabolism(object):
         self.external = external
         self.objective = objective
         self.design_objective = design_objective
-        self.disable = disable
 
         # Get reactions and pathways
         pathnames = []
@@ -121,10 +120,6 @@ class Metabolism(object):
                 if len(line) == 1:
                     design_objs.append([line[0],"1"])
 
-        for enz in self.enzymes:
-            if enz.name in self.disable:
-                enz.disabled = True
-
         self.design_obj = design_objs
         self.obj = objs
 
@@ -191,6 +186,7 @@ class Metabolism(object):
 
         # Apends reactions for external mets
         enzisinv = ii+1
+        self.pathnames = []
         self.pathnames.append("_TRANSPORT_")
         for line in self.external:
             if line[0] != "#":
@@ -220,9 +216,6 @@ class Metabolism(object):
         nsubs = len(subs)
         M = [[0 for iii in xrange(nsubs)] for jjj in xrange(nsubs)]
         for enzy in self.enzymes:
-            if enzy.disabled:
-                continue
-
             for su in enzy.substrates:
                 for pr in enzy.products:
                     M[subs[su]][subs[pr]] = 1
@@ -450,63 +443,70 @@ class Metabolism(object):
         self.calcs()
 
     def prepare_opt(self, infile):
+        if isinstance(infile, basestring):
+            with open(infile, encoding='utf-8') as f:
+                return self.parse_opt(f)
+        else:
+            return self.parse_opt(infile)
+
+    def parse_opt(self, infile):
         """
         Reads the OptGene file and gathers the reaction information,
         contrains, external metabolites and objective.     
         """
         # reads the file
-        with open(infile, encoding='utf-8') as f:
-            reactions = []
-            constraints = []
-            external = []
-            objective = []
-            design_objective = []
-            disable = []
+        reactions = []
+        constraints = []
+        external = []
+        objective = []
+        design_objective = []
 
-            # Find key positions in the file
-            keyy = ""
-            on = True
+        # Find key positions in the file
+        keyy = ""
+        on = True
 
-            for data in f:
-                line = data.strip()
+        for data in infile:
+            line = data.strip()
 
-                # Skip empty lines
-                if len(line) == 0:
-                    continue
+            # Skip empty lines
+            if len(line) == 0:
+                continue
 
-                if line[0] == "-":
-                    keyy = line
-                elif line[0] == "%" and on:
-                    on = False
-                elif line[0] == "%" and not on:
-                    on = True
-                elif keyy == "-REACTIONS" and line != keyy and on:
-                    reactions.append(line)
-                elif keyy == "-CONSTRAINTS" and line != keyy and on:
-                    constraints.append(line)
-                elif keyy == "-EXTERNAL METABOLITES" and line != keyy and on:
-                    external.append(line)
-                elif keyy == "-OBJ" and line != keyy and on:
-                    objective.append(line)
-                elif keyy == "-DESIGNOBJ" and line != keyy and on:
-                    design_objective.append(line)
-                elif keyy == "-DISABLE" and line != keyy and on:
-                    disable.append(line)
-                else:
-                    pass
+            if line[0] == "-":
+                keyy = line
+            elif line[0] == "%" and on:
+                on = False
+            elif line[0] == "%" and not on:
+                on = True
+            elif keyy == "-REACTIONS" and line != keyy and on:
+                reactions.append(line)
+            elif keyy == "-CONSTRAINTS" and line != keyy and on:
+                constraints.append(line)
+            elif keyy == "-EXTERNAL METABOLITES" and line != keyy and on:
+                external.append(line)
+            elif keyy == "-OBJ" and line != keyy and on:
+                objective.append(line)
+            elif keyy == "-DESIGNOBJ" and line != keyy and on:
+                design_objective.append(line)
+            else:
+                pass
 
-            # Return results
-            return [reactions, constraints, external, objective, design_objective, disable]
+        # Return results
+        return [reactions, constraints, external, objective, design_objective]
 
+    def prepare_sbml(self, infile):
+        if isinstance(infile, basestring):
+            with open(infile, encoding='utf-8') as f:
+                return self.parse_sbml(f)
+        else:
+            return self.parse_sbml(infile)
 
-    def prepare_sbml(self, filein):
+    def parse_sbml(self, filein):
         """
             Reads information from sbml file.
         """
         # Reads sbml
-        filee = open(filein, encoding='utf-8')
-        data = filee.read()
-        filee.close()
+        data = filein.read()
         # Parse the file
         dom = parseString(data)
         reactions = dom.getElementsByTagName('reaction')
@@ -619,14 +619,19 @@ class Metabolism(object):
         Creates an OptGene or SBML file with the metabolism.
         (Reactions, Constraints, External Metabolites and Objective).
         """
+        if isinstance(fileout, basestring):
+            fil = open(fileout, encoding='utf-8')
+        else:
+            fil = fileout
+
         if filetype == "opt":
-            fil = open(fileout, "w", encoding='utf-8')
             print("-REACTIONS", file=fil)
             for ii, pathname in enumerate(self.pathnames):
                 if pathname == "_TRANSPORT_":
                     continue
                 print("", file=fil)
-                print("# " + pathname, file=fil)
+                if pathname is not None:
+                    print("# " + pathname, file=fil)
                 for reac in self.pathways[ii]:
                     fil.write(unicode(self.enzymes[reac]))
                     fil.write("\n")
@@ -661,19 +666,9 @@ class Metabolism(object):
                 for obj in self.design_obj:
                     print(obj[0] + " 1 " + str(obj[1]), file=fil)
 
-            disabled = filter(lambda x: x.disabled, self.enzymes)
-            if disabled:
-                print("", file=fil)
-                print("-DISABLE", file=fil)
-                print("", file=fil)
-                for obj in disabled:
-                    print(obj.name, file=fil)
-
-            fil.close()
         elif filetype == "sbml":
             if printgenes:
                 enzs = dic_genes.keys()
-            fil = open(fileout, "w", encoding='utf-8')
             print('<?xml version="1.0" encoding="utf-8"?>', file=fil)
             print('<sbml xmlns="http://www.sbml.org/sbml/level2" xmlns:sbml="http://www.sbml.org/sbml/level2" version="1" level="2" xmlns:html = "http://www.w3.org/1999/xhtml">', file=fil)
             print('<model id="%s" name="%s" >' % (self.file_name,self.file_name), file=fil)
@@ -682,7 +677,7 @@ class Metabolism(object):
             print(tab+"<p>Generated by PyNetMet tools. INTERTECH@UPV</p>", file=fil)
             print("</notes>", file=fil)
             print("<listOfCompartments>", file=fil)
-            print(tab+'<compartment id="Extra_celullar" />', file=fil)
+            print(tab+'<compartment id="Extra_cellular" />', file=fil)
             print(tab+'<compartment id="Cytosol" outside="Extra_cellular" />', file=fil)
             print("</listOfCompartments>", file=fil)
             print("<listOfSpecies>", file=fil)
@@ -722,7 +717,7 @@ class Metabolism(object):
                 for met in enzy.products:
                     print(3*tab+'<speciesReference species="%s" stoichiometry="%s"/>'%(met,str(enzy.stoic_n(met))), file=fil)
                 print(2*tab+"</listOfProducts>", file=fil)
-                [lb, ub] = map(lambda x: x.constraint)
+                [lb, ub] = enzy.constraint
                 obj = False
                 if enzy.name in objs:
                     obj = True
@@ -750,6 +745,8 @@ class Metabolism(object):
             print("</listOfReactions>", file=fil)
             print("</model>", file=fil)
             print("</sbml>", file=fil)
+
+        if isinstance(fileout, basestring):
             fil.close()
 
     def M_matrix(self,symetric=False):

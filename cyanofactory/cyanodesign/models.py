@@ -23,17 +23,23 @@ class DesignModel(models.Model):
     user = models.ForeignKey(UserProfile, verbose_name="Saved by", related_name='+', editable=False)
     name = models.CharField(max_length=255, null=False, blank=False, verbose_name="Name")
     filename = models.CharField(max_length=255, null=False, blank=False, verbose_name="Filename")
-    content = models.TextField(verbose_name="BioOpt file content", null=False, blank=False)
+    content = models.TextField(verbose_name="BioOpt file content (deprecated)", null=False, blank=False)
 
     def get_latest_revision(self):
         return self.revisions.order_by("date").last()
 
 class Revision(models.Model):
     model = models.ForeignKey(DesignModel, related_name='revisions', verbose_name='Model')
-    content = models.TextField(verbose_name="BioOpt file content", null=False, blank=False)
+    content = JSONField(verbose_name="BioOpt file content in json format", null=False, blank=False)
     date = models.DateTimeField(default=datetime.now, verbose_name = "Modification date")
     changes = JSONField(verbose_name='Summary of changes')
     reason = models.TextField(blank=True, default='', verbose_name='Description of changes')
 
     class Meta:
         ordering = ["-date"]
+
+class DesignTemplate(models.Model):
+    name = models.CharField(max_length=255, null=False, blank=False, verbose_name="Name")
+    description = models.TextField(null=False, blank=True, verbose_name="Description")
+    filename = models.CharField(max_length=255, null=False, blank=False, verbose_name="Filename")
+    content = JSONField(verbose_name="BioOpt file content in json format", null=False, blank=False)

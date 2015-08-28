@@ -60,7 +60,33 @@ $(document).ready(function() {
             var form = $("#dialog-create").find("form");
 
             $.ajax({
-                url: "{% url 'cyano-design-save-upload-form' %}",
+                url: "{% url 'cyano-design-save-upload-form' pk=1 %}",
+                type: "POST",
+                data: new FormData(form[0]),
+                processData: false,
+                contentType: false,
+                success: function(data) {
+                    if (!(data['success'])) {
+                        form.replaceWith(data['form_html']);
+                    }
+                    else {
+                        location.reload();
+                    }
+                },
+                beforeSend: function() {
+                    waitIndicator.show($("#dialog-create").find(".modal-content"));
+                },
+                complete: function() {
+                    waitIndicator.hide($("#dialog-create").find(".modal-content"));
+                }
+            });
+        });
+
+        $("#dialog-template").on("click", ".btn-primary", function () {
+            var form = $("#dialog-template").find("form");
+
+            $.ajax({
+                url: "{% url 'cyano-design-save-upload-form' pk=2 %}",
                 type: "POST",
                 data: new FormData(form[0]),
                 processData: false,
@@ -116,7 +142,15 @@ $(document).ready(function() {
             <td>
                 <div class="btn-group" role="group">
                 <a class='btn btn-default btn-xs' href="{% url "cyano-design-history" pk=object.pk %}">View revisions</a>
-                <a class='btn btn-default btn-xs' href="{% url "cyano-design-export" pk=object.pk %}">Export model</a>
+                <div class="btn-group" role="group">
+                    <a class='btn btn-default btn-xs dropdown-toggle' data-toggle="dropdown" aria-expanded="false">
+                        Export model <span class="caret"></span>
+                    </a>
+                    <ul class="dropdown-menu" role="menu">
+                    <li><a id="export-csv" href="{% url "cyano-design-export" pk=object.pk %}?format=bioopt">As BioOpt file</a></li>
+                    <li><a id="export-png" href="{% url "cyano-design-export" pk=object.pk %}?format=sbml">As SBML file</a></li>
+                    </ul>
+                </div>
                 <a class='btn btn-default btn-xs delete-button' href="#">Delete model</a>
                 </div>
             </td>
@@ -126,9 +160,15 @@ $(document).ready(function() {
 </table>
 
 <!-- Button trigger modal -->
-<button type="button" class="btn btn-primary" data-toggle="modal" data-target="#dialog-create">
-Create new model
-</button>
+<div id="model-create-button" class="btn-group">
+    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+    Create new model <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu" role="menu">
+    <li><a id="export-csv" href="#" data-toggle="modal" data-target="#dialog-create">Upload your own model</a></li>
+    <li><a id="export-png" href="#" data-toggle="modal" data-target="#dialog-template">Create from template</a></li>
+    </ul>
+</div>
 
 <!-- Modal -->
 <div class="modal fade" id="dialog-create" tabindex="-1" role="dialog" aria-hidden="true">
@@ -139,6 +179,13 @@ Create new model
     </div>
 </div>
 
+<div class="modal fade" id="dialog-template" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            {% crispy template_form %}
+        </div>
+    </div>
+</div>
 
 <form method="post">
 <div class="modal fade" id="dialog-delete" tabindex="-1" role="dialog" aria-labelledby="dialog-delete-label"

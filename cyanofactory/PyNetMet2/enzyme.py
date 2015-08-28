@@ -54,7 +54,6 @@ class Enzyme(object):
         self.constraint = []
         self.reversible = None
         self.pathway = pathway
-        self.disabled = False
 
         # 0 reading substrates, 1 reading products
         state = 0

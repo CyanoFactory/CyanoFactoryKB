@@ -34,7 +34,7 @@ class FBA:
         self.eps = eps
         external_in = org.external_in
         external_out = org.external_out
-        reacs = filter(lambda x: not x.disabled, org.enzymes)
+        reacs = org.enzymes
         mets = org.mets
         reac_names = [ele.name for ele in reacs]
         # Stoichiometric matrix
@@ -153,9 +153,9 @@ class FBA:
         lp.rows.add(len(self.mets))
         lp.cols.add(len(self.reacs))
         for ii, ele in enumerate(lp.rows):
-            ele.name = self.mets[ii]
+            ele.name = self.mets[ii].encode("ascii", errors="ignore")
         for ii, ele in enumerate(lp.cols):
-            ele.name = self.reac_names[ii]
+            ele.name = self.reac_names[ii].encode("ascii", errors="ignore")
         #constraints
         ii = 0
         for n in range(len(self.reacs)):

@@ -10,10 +10,12 @@ from networkx.readwrite import json_graph
 from PyNetMet2.enzyme import Enzyme
 from PyNetMet2.metabolism import Metabolism
 from networkx import DiGraph
+from cyanodesign.json_model import JsonModel
+
 
 def apply_commandlist(model, commandlist):
     """
-    :type model: PyNetMet2.metabolism.Metabolism
+    :type model: json_model.JsonModel
     """
     for command in commandlist:
         try:
@@ -27,18 +29,9 @@ def apply_commandlist(model, commandlist):
         if typ == "reaction":
             enzyme = model.get_reaction(name)
 
-            substrates = []
-            products = []
-
             if op in ["add", "edit"]:
                 if "name" not in obj:
                     raise ValueError("Bad commmand " + str(command))
-
-                try:
-                    for m, s in zip(obj["metabolites"], obj["stoichiometry"]):
-                        (substrates if s < 0 else products).append([str(abs(s)), m])
-                except KeyError:
-                    pass
 
             if op == "add":
                 if enzyme is not None:
@@ -48,41 +41,20 @@ def apply_commandlist(model, commandlist):
                 if "reversible" not in obj:
                     raise ValueError("Bad command " + str(command))
 
-                reac = "{} : {} {} {}".format(
-                    obj["name"],
-                    " + ".join([" ".join(x) for x in substrates]),
-                    "<->" if obj["reversible"] else "->",
-                    " + ".join([" ".join(x) for x in products])
-                )
-
-                model.add_reaction(reac)
-                reaction = model.get_reaction(name)
-
-                try:
-                    reaction.constraint = obj["constraints"]
-                except KeyError:
-                    pass
-
-                try:
-                    reaction.pathway = obj["pathway"]
-                except KeyError:
-                    pass
-
-                try:
-                    reaction.disabled = not obj["enabled"]
-                except KeyError:
-                    pass
-
-                model.calcs()
+                model.add_reaction(JsonModel.Reaction(**obj))
             elif op == "edit":
                 if enzyme is None:
                     raise ValueError("Reaction not in model: " + name)
 
-                if "metabolites" in obj and "substrates" in obj:
-                    enzyme.substrates = map(lambda x: x[1], substrates)
-                    enzyme.products = map(lambda x: x[1], products)
-                    enzyme.stoic[0] = map(lambda x: x[0], substrates)
-                    enzyme.stoic[1] = map(lambda x: x[1], products)
+                if obj["name"] != enzyme.name and model.has_reaction(obj["name"]):
+                    raise ValueError("Reaction already in model: " + obj["name"])
+
+                enzyme.name = obj["name"]
+
+                if "substrates" in obj:
+                    enzyme.substrates = map(lambda x: JsonModel.Compound(**x), obj["substrates"])
+                if "products" in obj:
+                    enzyme.products = map(lambda x: JsonModel.Compound(**x), obj["products"])
 
                 try:
                     enzyme.reversible = obj["reversible"]
@@ -100,16 +72,9 @@ def apply_commandlist(model, commandlist):
                     pass
 
                 try:
-                    enzyme.disabled = not obj["enabled"]
+                    enzyme.disabled = obj["disabled"]
                 except KeyError:
                     pass
-
-                if obj["name"] != enzyme.name and model.has_reaction(obj["name"]):
-                    raise ValueError("Reaction already in model: " + obj["name"])
-
-                enzyme.name = obj["name"]
-
-                model.calcs()
             elif op == "delete":
                 if enzyme is None:
                     raise ValueError("Reaction not in model: " + name)
@@ -119,18 +84,21 @@ def apply_commandlist(model, commandlist):
                 raise ValueError("Invalid operation " + op)
 
         elif typ == "metabolite":
-            if "name" not in obj:
-                raise ValueError("Bad commmand " + str(command))
+            if op in ["add", "edit"] and "name" not in obj:
+                raise ValueError("Bad command " + str(command))
 
-            if op in ["add", "edit", "delete"]:
-                model.rename_metabolite(name, obj["name"])
+            if op == "add":
+                if name != obj["name"]:
+                    raise ValueError("Metabolite name mismatch: " + name)
 
+                model.add_metabolite(obj["name"], obj.get("external", False))
+            elif op == "edit":
+                if name != obj["name"]:
+                    model.rename_metabolite(name, obj["name"])
                 if "external" in obj:
-                    if obj["external"] and op != "delete":
-                        model.make_metabolite_external(obj["name"])
-                    else:
-                        # These are deleted when non references them
-                        model.make_metabolite_internal(obj["name"])
+                    model.set_metabolite_external(name, obj["external"])
+            elif op == "delete":
+                model.remove_metabolite(name)
             else:
                 raise ValueError("Invalid operation " + op)
 
@@ -142,33 +110,67 @@ def apply_commandlist(model, commandlist):
                 for reac in model.enzymes:
                     if reac.pathway == name:
                         reac.pathway = obj["name"]
-                model.calcs()
+
             else:
                 raise ValueError("Invalid operation " + op)
 
         else:
             raise ValueError("Invalid command " + typ)
 
-    model.calcs()
     return model
 
+def compress_command_list(commandlist):
+    """
+    :type model: json_model.JsonModel
+    """
+    last_command = None
+
+    new_commandlist = []
+    pending_commands = []
+
+    # No error checking use after apply_commandlist
+
+    for command in commandlist:
+        op = command["op"]
+        typ = command["type"]
+        name = command["name"]
+
+        if len(pending_commands) == 0:
+            pending_commands.append(command)
+            last_command = command
+            continue
+
+        if typ == "metabolite" or typ == "reaction" or typ == "pathway":
+            if last_command["type"] == typ:
+                if last_command["object"].get("name", last_command["name"]) != name or op == "add":
+                    # Different to previous ones
+                    new_commandlist += pending_commands
+                    pending_commands = []
+                    pending_commands.append(command)
+                elif op == "edit":
+                    if last_command["object"].get("name", last_command["name"]) == name:
+                        # Merge with previous
+                        pending_commands[-1]["object"].update(command["object"])
+                    else:
+                        new_commandlist += pending_commands
+                        pending_commands = []
+                elif op == "delete":
+                    # Remove all previous instances and take name of first
+                    command["name"] = pending_commands[0]["name"]
+                    pending_commands = []
+                    new_commandlist.append(command)
+            else:
+                new_commandlist += pending_commands
+                pending_commands = []
+                pending_commands.append(command)
+
+        last_command = command
+
+    new_commandlist += pending_commands
+    return new_commandlist
+
 def model_from_string(model_str):
-    import os
-    import tempfile
-
-    with tempfile.NamedTemporaryFile(delete=False) as fid:
-        path = fid.name
-
-        fid.write(model_str.encode("utf-8"))
-
-    try:
-        org = Metabolism(path)
-    except:
-        return None
-    finally:
-        os.remove(path)
-
-    return org
+    return JsonModel.from_json(model_str)
 
 def flatten(li):
     return [item for sublist in li for item in sublist]
@@ -279,7 +281,7 @@ def calc_reactions(org, fluxResults):
                     else:
                         value = 1
 
-                    attr = {"color": color, "penwidth": value, "label": "{} ({})".format(enzyme.name, flux), "object": enzyme}
+                    attr = {"color": color, "penwidth": value, "label": u"{} ({})".format(enzyme.name, flux), "object": enzyme}
 
                     if enzyme.name == objective:
                         attr["style"] = "dashed"
