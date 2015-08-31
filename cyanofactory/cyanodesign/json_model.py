@@ -20,7 +20,7 @@ class JsonModel(object):
             if "stoichiometry" in kwargs:
                 num = float(kwargs["stoichiometry"])
 
-                if num.is_integer:
+                if num.is_integer():
                     self.stoichiometry = int(num)
 
         def to_json(self):

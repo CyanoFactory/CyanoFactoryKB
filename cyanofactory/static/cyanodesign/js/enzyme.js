@@ -219,8 +219,29 @@ var Metabolite = (function() {
 
         if (idx === -1 ||
             Metabolite.metabolites[idx] == this) {
-            this.name = new_name;
+
             Metabolite.metabolites[idx] = this;
+
+			var that = this;
+
+			this.consumed.concat(this.produced).forEach(function(enzyme) {
+				for (var i = 0; i < enzyme.substrates.length; ++i) {
+					if (that.name == enzyme.substrates[i].name) {
+						enzyme.substrates[i].name = new_name;
+						break;
+					}
+				}
+
+				for (var i = 0; i < enzyme.products.length; ++i) {
+					if (that.name == enzyme.products[i].name) {
+						enzyme.products[i].name = new_name
+						break;
+					}
+				}
+			});
+
+			this.name = new_name;
+
             return true;
         }
         return false;

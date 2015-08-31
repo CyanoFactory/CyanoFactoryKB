@@ -508,8 +508,11 @@ Released under the MIT license
                 event.preventDefault();
             });
 
-        var beginRequest = function() {
-            waitIndicator.show($("#content"));
+        var beginRequest = function(wait_position) {
+            if (wait_position === undefined)
+                waitIndicator.show($("#content"));
+            else
+                waitIndicator.show(wait_position);
 
             var result = {
                 "changes": JSON.stringify(command_list),
@@ -561,8 +564,11 @@ Released under the MIT license
             });
         };
 
-        var endRequest = function() {
-            waitIndicator.hide($("#content"));
+        var endRequest = function(wait_position) {
+            if (wait_position === undefined)
+                waitIndicator.hide($("#content"));
+            else
+                waitIndicator.hide(wait_position);
         };
 
         $("#design-submit").click(function(event) {
@@ -628,7 +634,7 @@ Released under the MIT license
 
         $("#dialog-save-model").on("click", ".btn-primary", function(event) {
             var form = $("#dialog-save-model").find("form");
-            var data = beginRequest();
+            var data = beginRequest($("#dialog-save-model").find(".modal-content"));
             data["summary"] = form.find("#id_save_summary").val();
             $.ajax({
                 url: "{% url "cyano-design-save" pk=pk %}",
@@ -639,18 +645,18 @@ Released under the MIT license
                     location.replace("{% url "cyano-design-design" pk=pk %}");
                 }
                 $("#dialog-save-model").modal("hide");
-                endRequest();
+                endRequest($("#dialog-save-model").find(".modal-content"));
                 command_list = [];
             }).error(function(x) {
                 $("#visual").hide();
                 notifyError(x.responseText);
-                endRequest();
+                endRequest($("#dialog-save-model").find(".modal-content"));
             });
         });
 
         $("#dialog-saveas-model").on("click", ".btn-primary", function(event) {
             var form = $("#dialog-saveas-model").find("form");
-            var data = beginRequest();
+            var data = beginRequest($("#dialog-saveas-model").find(".modal-content"));
             data["saveas_name"] = form.find("#id_saveas_name").val();
             data["saveas_summary"] = form.find("#id_saveas_summary").val();
             $.ajax({
@@ -663,11 +669,11 @@ Released under the MIT license
                 } else {
                     location.replace(x['url'])
                 }
-                endRequest();
+                endRequest($("#dialog-saveas-model").find(".modal-content"));
             }).error(function(x) {
                 $("#visual").hide();
                 notifyError(x.responseText);
-                endRequest();
+                endRequest($("#dialog-saveas-model").find(".modal-content"));
             });
         });
 
@@ -708,6 +714,15 @@ Released under the MIT license
             } else {
                 updateTips(o, error);
                 return false;
+            }
+        }
+
+        function checkRegexpPos(o, regexp, n) {
+            if ( regexp.test(o.val()) ) {
+                updateTips(o, n);
+                return false;
+            } else {
+                return true;
             }
         }
 
@@ -844,7 +859,7 @@ Released under the MIT license
             dialog_metabolite_edit.find("div").removeClass("has-error");
             dialog_metabolite_edit.find(".help-block").remove();
             dialog_metabolite_edit.find("#metabolite-name").val(item.name);
-            dialog_metabolite_edit.find("#external").prop("checked", item.external);
+            dialog_metabolite_edit.find("#external").prop("checked", Metabolite.instanceByName(item.name).external);
             dialog_metabolite_edit.data("object", item);
             dialog_metabolite_edit.modal("show");
         }
@@ -1039,9 +1054,9 @@ Released under the MIT license
             var external = dialog_metabolite_add.find("#add-external");
 
             var valid = checkLength(name, "Name", 1, 100);
-            valid &= !checkRegexp(name, /(^[0-9])/, "Name must not begin with a number");
-            valid &= !checkRegexp(name, /(^<?\-> | <?\-> | <?\->$)/, "Name must not contain lonely <-> or ->");
-            valid &= !checkRegexp(name, /(^\+ | \+ )/, "Lonely + only allowed at end of name");
+            valid &= checkRegexpPos(name, /(^[0-9])/, "Name must not begin with a number");
+            valid &= checkRegexpPos(name, /(^<?\-> | <?\-> | <?\->$)/, "Name must not contain lonely <-> or ->");
+            valid &= checkRegexpPos(name, /(^\+ | \+ )/, "Lonely + only allowed at end of name");
 
             var met_idx = Metabolite.indexByName(name.val());
 
@@ -1076,9 +1091,9 @@ Released under the MIT license
             var external = dialog_metabolite_edit.find("#external");
 
             var valid = checkLength(name, "Name", 1, 100);
-            valid &= !checkRegexp(name, /(^[0-9])/, "Name must not begin with a number");
-            valid &= !checkRegexp(name, /(^<?\-> | <?\-> | <?\->$)/, "Name must not contain lonely <-> or ->");
-            valid &= !checkRegexp(name, /(^\+ | \+ )/, "Lonely + only allowed at end of name");
+            valid &= checkRegexpPos(name, /(^[0-9])/, "Name must not begin with a number");
+            valid &= checkRegexpPos(name, /(^<?\-> | <?\-> | <?\->$)/, "Name must not contain lonely <-> or ->");
+            valid &= checkRegexpPos(name, /(^\+ | \+ )/, "Lonely + only allowed at end of name");
 
             var met_idx = Metabolite.indexByName(name.val());
 

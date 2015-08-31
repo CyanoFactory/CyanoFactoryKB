@@ -354,6 +354,8 @@ def save_as(request, pk):
             name = form.cleaned_data.get('saveas_name')
             summary = form.cleaned_data.get('saveas_summary')
 
+            request.POST = request.POST.copy()
+            request.POST["summary"] = summary
             save(request, pk)
     
             model = DesignModel.objects.get(user=request.user.profile, pk=pk)
@@ -368,7 +370,6 @@ def save_as(request, pk):
             # Repoint to new model
             rev = model.get_latest_revision()
             rev.model = dm
-            rev.reason = summary
             rev.save()
 
             return {'success': True, 'url': reverse("cyano-design-design", kwargs={"pk":dm.pk})}

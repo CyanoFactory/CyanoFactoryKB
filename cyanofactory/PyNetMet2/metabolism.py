@@ -620,7 +620,7 @@ class Metabolism(object):
         (Reactions, Constraints, External Metabolites and Objective).
         """
         if isinstance(fileout, basestring):
-            fil = open(fileout, encoding='utf-8')
+            fil = open(fileout, "w", encoding='utf-8')
         else:
             fil = fileout
 

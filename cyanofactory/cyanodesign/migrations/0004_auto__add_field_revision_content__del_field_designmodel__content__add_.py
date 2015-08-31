@@ -13,26 +13,10 @@ class Migration(SchemaMigration):
                       self.gf('django.db.models.fields.TextField')(default=0),
                       keep_default=False)
 
-        # Deleting field 'DesignModel._content'
-        db.delete_column(u'cyanodesign_designmodel', 'content')
-
-        # Adding field 'DesignModel.content'
-        db.add_column(u'cyanodesign_designmodel', 'content',
-                      self.gf('django.db.models.fields.TextField')(default=0),
-                      keep_default=False)
-
 
     def backwards(self, orm):
         # Deleting field 'Revision.content'
         db.delete_column(u'cyanodesign_revision', 'content')
-
-        # Adding field 'DesignModel._content'
-        db.add_column(u'cyanodesign_designmodel', '_content',
-                      self.gf('django.db.models.fields.TextField')(default=0, db_column='content'),
-                      keep_default=False)
-
-        # Deleting field 'DesignModel.content'
-        db.delete_column(u'cyanodesign_designmodel', 'content')
 
 
     models = {

@@ -93,10 +93,10 @@ def apply_commandlist(model, commandlist):
 
                 model.add_metabolite(obj["name"], obj.get("external", False))
             elif op == "edit":
-                if name != obj["name"]:
-                    model.rename_metabolite(name, obj["name"])
                 if "external" in obj:
                     model.set_metabolite_external(name, obj["external"])
+                if name != obj["name"]:
+                    model.rename_metabolite(name, obj["name"])
             elif op == "delete":
                 model.remove_metabolite(name)
             else:
