@@ -39,7 +39,7 @@ class WarehouseRouter(object):
 
         return None
 
-    def allow_syncdb(self, db, model):
+    def allow_migrate(self, db, model):
         """
         Make sure the auth app only appears in the 'auth_db'
         database.

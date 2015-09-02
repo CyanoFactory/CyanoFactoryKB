@@ -17,7 +17,7 @@ import itertools
 import json
 import math
 import re
-from django.contrib.contenttypes.generic import GenericForeignKey
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.aggregates import Count
 from django.db.models.fields import NullBooleanField
@@ -56,11 +56,6 @@ from django.db import models
 
 from guardian.models import UserObjectPermissionBase
 from guardian.models import GroupObjectPermissionBase
-
-from south.modelsinspector import add_introspection_rules
-add_introspection_rules([], ["^cyano\.history\.HistoryForeignKey"])
-add_introspection_rules([], ["^cyano\.history\.HistoryManyToManyField"])
-
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -780,7 +775,7 @@ class EntryData(Model):
         abstract = True
 
 class EvidencedEntryData(EntryData):
-    evidence = ManyToManyField(Evidence, blank=True, null=True, verbose_name='Evidence')
+    evidence = ManyToManyField(Evidence, blank=True, verbose_name='Evidence')
 
     class Meta:
         abstract = True
@@ -1152,7 +1147,7 @@ class Entry(AbstractEntry):
     model_type = ForeignKey(TableMeta)
     wid = SlugField(max_length=150, verbose_name='WID', validators=[validators.validate_slug])
     name = CharField(max_length=255, blank=True, default='', verbose_name='Name')
-    synonyms = ManyToManyField(Synonym, blank=True, null=True, related_name='entry', verbose_name='Synonyms')
+    synonyms = ManyToManyField(Synonym, blank=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
 
     def __unicode__(self):
@@ -1354,9 +1349,9 @@ class SpeciesComponent(AbstractSpeciesComponent):
     * ``publication_references``: Publications referencing that entry
     '''
     species = ForeignKey('Species', related_name='components', verbose_name='Species')
-    type = ManyToManyField('Type', blank=True, null=True, related_name='members', verbose_name='Type')
-    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_components', verbose_name='Cross references')
-    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_components', verbose_name='Publications')
+    type = ManyToManyField('Type', blank=True, related_name='members', verbose_name='Type')
+    cross_references = ManyToManyField("CrossReference", blank=True, related_name='cross_referenced_components', verbose_name='Cross references')
+    publication_references = ManyToManyField("PublicationReference", blank=True, related_name='publication_referenced_components', verbose_name='Publications')
     parent = ForeignKey('self', blank=True, null=True, on_delete=SET_NULL, related_name='children', verbose_name='Parent')
 
     #getters
@@ -1545,8 +1540,8 @@ class Protein(Molecule):
     parent_ptr_molecule = OneToOneField(Molecule, related_name='child_ptr_protein', parent_link=True, verbose_name='Molecule')
 
     #additional fields
-    prosthetic_groups = ManyToManyField(ProstheticGroupParticipant, blank=True, null=True, related_name='proteins', verbose_name='Prosthetic groups')
-    chaperones = ManyToManyField('self', symmetrical=False, blank=True, null=True, related_name='chaperone_substrates', verbose_name='Chaperones')
+    prosthetic_groups = ManyToManyField(ProstheticGroupParticipant, blank=True, related_name='proteins', verbose_name='Prosthetic groups')
+    chaperones = ManyToManyField('self', symmetrical=False, blank=True, related_name='chaperone_substrates', verbose_name='Chaperones')
     dna_footprint = ForeignKey(DNAFootprint, null=True, blank=True, related_name='proteins', verbose_name='DNA footprint')
     regulatory_rule = ForeignKey(EntryCharData, null=True, blank=True, on_delete=SET_NULL, verbose_name='Regulatory rule', related_name='+')
 
@@ -2684,9 +2679,9 @@ class Gene(Molecule):
     is_essential = ForeignKey(EntryBooleanData, blank=True, null=True, verbose_name='Is essential', related_name='+')
     expression = ForeignKey(EntryPositiveFloatData, blank=True, null=True, verbose_name='Relative expression', related_name='+')
     half_life = ForeignKey(EntryPositiveFloatData, blank=True, null=True, verbose_name='Half life', related_name='+')
-    codons = ManyToManyField(Codon, blank=True, null=True, related_name='genes', verbose_name='Codons')
+    codons = ManyToManyField(Codon, blank=True, related_name='genes', verbose_name='Codons')
     amino_acid = ForeignKey('Metabolite', blank=True, null=True, on_delete=SET_NULL, related_name='genes', verbose_name='Amino acid')
-    homologs = ManyToManyField(Homolog, blank=True, null=True, related_name='genes', verbose_name='Homologs')
+    homologs = ManyToManyField(Homolog, blank=True, related_name='genes', verbose_name='Homologs')
 
     #getters    
     def get_sequence(self, cache=False):
@@ -2908,9 +2903,9 @@ class Metabolite(Molecule):
     pi = FloatField(null=True, blank=True, verbose_name='pI', validators=[validators.MinValueValidator(0)])
     log_p = FloatField(null=True, blank=True, verbose_name='logP')
     log_d = FloatField(null=True, blank=True, verbose_name='logD (pH 7.5)')
-    biomass_composition = ManyToManyField(BiomassComposition, blank=True, null=True, related_name='metabolites', verbose_name='Biomass composition (SP4 media, <br/>5% CO<sub>2</sub>, 37C; mmol gDCW<sup>-1</sup>)')
+    biomass_composition = ManyToManyField(BiomassComposition, blank=True, related_name='metabolites', verbose_name='Biomass composition (SP4 media, <br/>5% CO<sub>2</sub>, 37C; mmol gDCW<sup>-1</sup>)')
     media_composition = ForeignKey(MediaComposition, blank=True, null=True, on_delete=SET_NULL, related_name='metabolites', verbose_name='Media composition (SP4; mM)')
-    map_coordinates = ManyToManyField(MetaboliteMapCoordinate, blank=True, null=True, related_name='metabolites', verbose_name='Map coordinates')
+    map_coordinates = ManyToManyField(MetaboliteMapCoordinate, blank=True, related_name='metabolites', verbose_name='Map coordinates')
 
     #getters
     def get_empirical_formula(self):
@@ -3054,8 +3049,8 @@ class Parameter(SpeciesComponent):
 
     #additional fields
     value = ForeignKey(EntryCharData, verbose_name='Value')
-    reactions = ManyToManyField('Reaction', blank=True, null=True, related_name='parameters', verbose_name='Reactions')
-    molecules = ManyToManyField('Molecule', blank=True, null=True, related_name='parameters', verbose_name='Molecules')
+    reactions = ManyToManyField('Reaction', blank=True, related_name='parameters', verbose_name='Reactions')
+    molecules = ManyToManyField('Molecule', blank=True, related_name='parameters', verbose_name='Molecules')
     state = ForeignKey('State', blank=True, null=True, on_delete=SET_NULL, related_name='parameters', verbose_name='State')
     process = ForeignKey('Process', blank=True, null=True, on_delete=SET_NULL, related_name='parameters', verbose_name='Process')
 
@@ -3436,7 +3431,7 @@ class ProteinComplex(Protein):
 
     #additional fields
     biosynthesis = ManyToManyField(ProteinComplexBiosythesisParticipant, related_name='protein_complexes', verbose_name='Biosynthesis')
-    disulfide_bonds = ManyToManyField(DisulfideBond, blank=True, null=True, related_name='protein_complexes', verbose_name='Disulfide bonds (pH 7.5)')
+    disulfide_bonds = ManyToManyField(DisulfideBond, blank=True, related_name='protein_complexes', verbose_name='Disulfide bonds (pH 7.5)')
     formation_process = ForeignKey('Process', blank=True, null=True, on_delete=SET_NULL, related_name='formed_complexes', verbose_name='Formation process')
 
     #getters
@@ -4078,7 +4073,7 @@ class Reaction(SpeciesComponent):
     direction = CharField(max_length=1, choices=CHOICES_REACTION_DIRECTION, verbose_name='Direction')
     modification = ForeignKey(ModificationReaction, blank=True, null=True, on_delete=SET_NULL, related_name='reactions', verbose_name='Modification')
     enzyme = ForeignKey(EnzymeParticipant, blank=True, null=True, on_delete=SET_NULL, related_name='reactions', verbose_name='Enzyme')
-    coenzymes = ManyToManyField(CoenzymeParticipant, blank=True, null=True, related_name='reactions', verbose_name='Coenzymes')
+    coenzymes = ManyToManyField(CoenzymeParticipant, blank=True, related_name='reactions', verbose_name='Coenzymes')
     is_spontaneous = BooleanField(verbose_name='Is spontaneous (pH 7.5, 25C, <i>I</i> = 0)')
     delta_g = FloatField(blank=True, null=True, verbose_name='&Delta;G (pH 7.5, 25C, <i>I</i> = 0; kJ mol<sup>-1</sup>)')
     keq = ForeignKey(EntryPositiveFloatData, blank=True, null=True, on_delete=SET_NULL, verbose_name='K<sub>eq</sub>', related_name='+')
@@ -4086,10 +4081,10 @@ class Reaction(SpeciesComponent):
     kinetics_backward = ForeignKey(Kinetics, blank=True, null=True, on_delete=SET_NULL, related_name='reactions_backward', verbose_name='Backward kinetics')
     optimal_ph = ForeignKey(EntryPositiveFloatData, blank=True, null=True, on_delete=SET_NULL, verbose_name='Optimal pH', related_name='+')
     optimal_temperature = ForeignKey(EntryFloatData, blank=True, null=True, on_delete=SET_NULL, verbose_name='Optimal temperature', related_name='+')
-    pathways = ManyToManyField('Pathway', blank=True, null=True, related_name='reactions', verbose_name='Pathways')
+    pathways = ManyToManyField('Pathway', blank=True, related_name='reactions', verbose_name='Pathways')
     processes = ForeignKey('Process', blank=True, null=True, on_delete=SET_NULL, related_name='reactions', verbose_name='Process')
     states = ForeignKey('State', blank=True, null=True, on_delete=SET_NULL, related_name='reactions', verbose_name='State')
-    map_coordinates = ManyToManyField(ReactionMapCoordinate, blank=True, null=True, related_name='reactions', verbose_name='Map coordinates')
+    map_coordinates = ManyToManyField(ReactionMapCoordinate, blank=True, related_name='reactions', verbose_name='Map coordinates')
 
     #getters
 
@@ -4334,8 +4329,8 @@ class Species(Entry):
     #additional fields
     genetic_code = CharField(max_length=50, verbose_name='Genetic code', choices = CHOICES_GENETIC_CODE)
 
-    cross_references = ManyToManyField("CrossReference", blank=True, null=True, related_name='cross_referenced_species', verbose_name='Cross references')
-    publication_references = ManyToManyField("PublicationReference", blank=True, null=True, related_name='publication_referenced_species', verbose_name='Publication references')
+    cross_references = ManyToManyField("CrossReference", blank=True, related_name='cross_referenced_species', verbose_name='Cross references')
+    publication_references = ManyToManyField("PublicationReference", blank=True, related_name='publication_referenced_species', verbose_name='Publication references')
 
     #getters
     @permalink
@@ -5052,7 +5047,7 @@ class MassSpectrometryJob(SpeciesComponent):
 
 class Peptide(Protein):
     #parent pointer
-    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_peptide', parent_link=True, verbose_name='Species component')
+    parent_ptr_protein = OneToOneField(SpeciesComponent, related_name='child_ptr_peptide', parent_link=True, verbose_name='Species component')
 
     #additional fields
     sequence = TextField(blank=True, default='', verbose_name='Sequence', validators=[validate_protein_sequence])
@@ -5133,7 +5128,7 @@ class Peptide(Protein):
 
 
 class MassSpectrometryProtein(Protein):
-    parent_ptr_species_component = OneToOneField(SpeciesComponent, related_name='child_ptr_ms_protein', parent_link=True, verbose_name='Species component')
+    parent_ptr_protein = OneToOneField(SpeciesComponent, related_name='child_ptr_ms_protein', parent_link=True, verbose_name='Species component')
 
     score = FloatField(verbose_name="Protein Score")
     coverage = FloatField(verbose_name="% Coverage")

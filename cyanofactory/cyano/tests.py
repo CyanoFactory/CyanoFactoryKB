@@ -27,28 +27,28 @@ MODEL = "Gene"
 ITEM = "sll7106"
 
 def setup():
-    # Permissions
-    management.call_command('loaddata', 'metadata.json')
-    # Create users and groups
-    management.call_command('autocreateinitial')
-    # Create meta data tables
-    management.call_command('create_meta')
-    # Create simple entry
-    g = Genbank(wid = SPECIES,
-            user = "management",
-            reason = "Unit Testing",
-            chromosome = "UnitTest-Chromosome",
-            name = "Chromosome for Unit Test")
-    with open("../sequences/testcase.gb", "r") as f:
-        g.parse(f)
-    g.apply()
-    
-    species = cmodels.Species(wid = "Other-Species", name = "Unit Test species 2")
-    rev = cmodels.RevisionDetail(
-        user = cmodels.UserProfile.objects.get(user__username = "management"),
-        reason = "Unit Testing")
-    rev.save()
-    species.save(rev)
+    ## Permissions
+    #management.call_command('loaddata', 'metadata.json')
+    ## Create users and groups
+    #management.call_command('autocreateinitial')
+    ## Create meta data tables
+    #management.call_command('create_meta')
+    ## Create simple entry
+    #g = Genbank(wid = SPECIES,
+    #        user = "management",
+    #        reason = "Unit Testing",
+    #        chromosome = "UnitTest-Chromosome",
+    #        name = "Chromosome for Unit Test")
+    #with open("../sequences/testcase.gb", "r") as f:
+    #    g.parse(f)
+    #g.apply()
+    #
+    #species = cmodels.Species(wid = "Other-Species", name = "Unit Test species 2")
+    #rev = cmodels.RevisionDetail(
+    #    user = cmodels.UserProfile.objects.get(user__username = "management"),
+    #    reason = "Unit Testing")
+    #rev.save()
+    #species.save(rev)
 
 class CyanoBaseTest(TestCase):
     def setUp(self):

@@ -499,17 +499,6 @@ class ProteinChemicalLinks(models.Model):
         db_table = 'node_node_links'
 
 
-class ProteinChemicalLinks(models.Model):
-    chemical = models.CharField(max_length=50)
-    protein = models.CharField(max_length=50)
-    combined_score = models.IntegerField()
-
-    class Meta:
-        db_interaction_div = "stitch"
-        # db_table = 'protein_chemical_links'
-        db_table = 'node_node_links'
-
-
 class ProteinChemicalLinksDetailed(models.Model):
     chemical = models.CharField(max_length=50)
     protein = models.CharField(max_length=50)

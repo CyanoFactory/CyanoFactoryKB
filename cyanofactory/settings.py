@@ -25,12 +25,25 @@ UNIT_TEST_RUNNING = 'test' in argv
 # Special case for unit testing (SQLite DB -> faster)
 
 if UNIT_TEST_RUNNING:
-    DATABASES = {'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': 'cyanobase'
-    }}
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        ##    'NAME': 'cyano_new3',
+        ##    'USER': 'cyano',
+        ##    'PASSWORD': 'cyano',
+        ##    'HOST': 'localhost',
+        ##    'PORT': '5432',
+            #'ENGINE': 'django.db.backends.sqlite3',
+            #'NAME': 'cyanobase'
+            'NAME': 'cyanofactory_dev_test',
+            'USER': 'cyanofactory_dev',
+            'PASSWORD': '0y6iyx53x3yOn8TahOOF',
+            'HOST': 'cyanofactory.mni.hs-mittweida.de',
+            'PORT': '5432',
+        }
+    }
 
-    TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+    TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
     DEBUG = False
 else:
@@ -134,8 +147,6 @@ HAYSTACK_CONNECTIONS = {
 
 djcelery.setup_loader()
 
-SOUTH_TESTS_MIGRATE = False
-
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -149,7 +160,7 @@ INSTALLED_APPS = (
     'widget_tweaks',
 
     #apps
-    'public',
+    #'public',
     #'biosql',
     'cyano',
     'cyanodesign',
@@ -164,12 +175,10 @@ INSTALLED_APPS = (
     'django_dumpdb',
     'djcelery',
     'haystack',
-    'endless_pagination',
     'rest_framework',
-    'south',
     'crispy_forms',
     #'debug_toolbar',
-    'guardian'
+    'guardian',
 )
 
 AUTHENTICATION_BACKENDS = (
@@ -177,11 +186,7 @@ AUTHENTICATION_BACKENDS = (
     'guardian.backends.ObjectPermissionBackend',
 )
 
-ANONYMOUS_USER_ID = 3
-
-if UNIT_TEST_RUNNING:
-    INSTALLED_APPS += ('django_nose',)
-
+ANONYMOUS_USER_ID = -1
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -245,7 +250,7 @@ AUTH_PROFILE_MODULE = 'cyano.UserProfile'
 LOGIN_URL = ROOT_URL + '/login/'
 LOGIN_REDIRECT_URL = ROOT_URL + '/'
 
-DATABASE_ROUTERS = ['public.router.WarehouseRouter']
+DATABASE_ROUTERS = ['cyano.router.WarehouseRouter']
 
 ABSOLUTE_URL_OVERRIDES = {
     'auth.user': lambda o: ROOT_URL + '/user/' + o.username,

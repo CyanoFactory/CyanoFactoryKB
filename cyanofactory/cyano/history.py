@@ -7,8 +7,7 @@ Released under the MIT license
 from django.contrib.contenttypes.models import ContentType
 
 from django.db.models.fields.related import ForeignKey, ReverseSingleRelatedObjectDescriptor,\
-    ManyToManyField, ReverseManyRelatedObjectsDescriptor
-from django.db.models.related import RelatedObject
+    ManyToManyField, ReverseManyRelatedObjectsDescriptor, ManyToOneRel
 from django.db import router
 from django.db.models.manager import Manager
 
@@ -53,7 +52,7 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
                     ##print "FK", self.field.name
                     rel_obj.detail_history = instance.detail_history
                     for field in rel_obj._meta.fields:
-                        if isinstance(field, RelatedObject):
+                        if isinstance(field, ManyToOneRel):
                             pass
                         elif isinstance(field, ManyToManyField):
                             pass
@@ -143,4 +142,3 @@ class HistoryManyToManyField(ManyToManyField):
     def contribute_to_class(self, cls, name):
         super(HistoryManyToManyField, self).contribute_to_class(cls, name)
         setattr(cls, self.name, HistoryReverseManyRelatedObjectsDescriptor(self))
-

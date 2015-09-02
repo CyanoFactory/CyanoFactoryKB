@@ -95,7 +95,7 @@ class Metabolism(object):
                     bla = bla[0]
                 else:
                     bla = ele
-                line = bla.split()
+                line = bla.rsplit(" ", 2)
                 if len(line) == 3:
                     objs.append([line[0],line[2]])
                 if len(line) == 2:
@@ -112,7 +112,7 @@ class Metabolism(object):
                     bla = bla[0]
                 else:
                     bla = ele
-                line = bla.split()
+                line = bla.rsplit(" ", 2)
                 if len(line) == 3:
                     design_objs.append([line[0],line[2]])
                 if len(line) == 2:

@@ -20,7 +20,6 @@ import re
 
 from django import template
 from django.core.urlresolvers import reverse
-from django.db.models.related import RelatedObject
 from django.template import TemplateSyntaxError
 from django.utils.text import capfirst
 
@@ -239,15 +238,6 @@ def reverseurl(*args, **kwargs):
 	if kwargs.has_key('pk'):
 		return reverse(view, args=(kwargs['pk'], ))
 	return reverse(view)
-
-@register.simple_tag
-def get_field_verbose_name(model, field_name):
-	field = model._meta.get_field_by_name(field_name)[0]
-	if isinstance(field, RelatedObject):
-		return capfirst(field.get_accessor_name())
-	else:
-		verbose_name = field.verbose_name	
-	return verbose_name.replace(' ', '&nbsp;')
 
 @register.simple_tag
 def stringreplace(s, old, new):
