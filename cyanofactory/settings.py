@@ -273,7 +273,7 @@ JOHNNY_TABLE_BLACKLIST = ["djcelery_crontabschedule", "djcelery_intervalschedule
 REST_FRAMEWORK = {
       'DEFAULT_RENDERER_CLASSES': (
         'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.XMLRenderer',
+        'rest_framework_xml.renderers.XMLRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
       ),
     'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)

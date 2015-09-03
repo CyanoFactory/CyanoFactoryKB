@@ -34,7 +34,7 @@ from django.core.urlresolvers import reverse
 from django.db import transaction
 from django.db.models import Count
 from django.db.models.fields import BooleanField, NullBooleanField, AutoField, BigIntegerField, DecimalField, FloatField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField
-from django.db.models.fields.related import RelatedObject, ManyToManyField, ForeignKey
+from django.db.models.fields.related import ManyToManyField, ForeignKey
 from django.db.models.query import EmptyQuerySet
 from django.shortcuts import get_object_or_404
 from django.utils.text import capfirst
@@ -679,8 +679,8 @@ def history_detail(request, species, model, item, detail_id):
             else:
                 field_name = fieldsets[idx][1]['fields'][idx2]
                 field = model._meta.get_field_by_name(field_name)[0]
-                if isinstance(field, RelatedObject):
-                    verbose_name = capfirst(field.get_accessor_name())
+                if hasattr(field, "get_accessor_name"):
+                    verbose_name = field.get_accessor_name()
                 else:
                     verbose_name = field.verbose_name
                 

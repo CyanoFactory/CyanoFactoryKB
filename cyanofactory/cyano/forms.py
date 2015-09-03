@@ -16,8 +16,8 @@ import cyano.helpers as chelpers
 from cyano.layout import Panel, Modal, ModalBody, ModalFooter, ModalHeader, CancelButton
 import cyano.models as cmodels
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Fieldset, ButtonHolder, Submit, Div, Button, HTML
-
+from crispy_forms.layout import Layout, Fieldset, Submit, Button, HTML
+from crispy_forms.bootstrap import FormActions
 
 class SearchForm(forms.Form):
     q = forms.CharField(
@@ -151,7 +151,7 @@ class ImportDataForm(forms.Form):
                 'Summary',
                 'reason'
             ),
-            ButtonHolder(
+            FormActions(
                 Submit('submit', 'Submit')
             )
         )
@@ -211,7 +211,7 @@ class ImportSpeciesForm(forms.Form):
                 'Summary',
                 'reason'
             ),
-            ButtonHolder(
+            FormActions(
                 Submit('submit', 'Submit')
             )
         )
@@ -253,7 +253,7 @@ class DeleteForm(forms.Form):
                 ),
             ),
             ModalFooter(
-                ButtonHolder(
+                FormActions(
                     Submit('delete-submit', 'Delete', css_class='btn btn-danger'),
                     CancelButton('delete-cancel', 'Cancel')
                 )
@@ -286,7 +286,7 @@ class CreateBasketForm(forms.Form):
                 'name'
             ),
             ModalFooter(
-                ButtonHolder(
+                FormActions(
                     Button('basket-create-submit', 'Create Basket', css_class='btn-primary'),
                     CancelButton('delete-cancel', 'Cancel')
                 )
@@ -314,7 +314,7 @@ class RenameBasketForm(forms.Form):
                 'name'
             ),
             ModalFooter(
-                ButtonHolder(
+                FormActions(
                     Button('basket-create-submit', 'Rename Basket', css_class='btn-primary'),
                     CancelButton('delete-cancel', 'Cancel')
                 )

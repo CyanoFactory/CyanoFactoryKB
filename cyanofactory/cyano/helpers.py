@@ -36,17 +36,14 @@ from odict import odict
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
-from django.db.models import get_app, get_models
 from django.db.models.fields import AutoField, BigIntegerField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField, BooleanField, NullBooleanField, DecimalField, FloatField, CharField, CommaSeparatedIntegerField, EmailField, FilePathField, GenericIPAddressField, IPAddressField, SlugField, URLField, TextField, DateField, DateTimeField, TimeField, NOT_PROVIDED, \
     FieldDoesNotExist
-from django.db.models.fields.related import OneToOneField, RelatedObject, ManyToManyField, ForeignKey
-from django.db.models.query import EmptyQuerySet, QuerySet
-from django.http import Http404, HttpResponse
-from django.shortcuts import render_to_response
+from django.db.models.fields.related import OneToOneField, ManyToManyField, ForeignKey
+from django.http import HttpResponse
+from django.shortcuts import render_to_response, render
 from django.template import Context, RequestContext, loader
-from django.template.loader import get_template
-from django.template.defaultfilters import capfirst
 from django.utils.html import strip_tags
+from django.apps import apps
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell import Cell, get_column_letter
@@ -252,7 +249,7 @@ class Colors(HashableObject):
         self.index = index
 
 def getModels(superclass=cmodels.Entry):
-    tmp = get_models(get_app('cyano'))
+    tmp = apps.get_app_config('cyano').get_models()
     tmp2 = OrderedDict()
     for model in tmp:
         if issubclass(model, superclass) and model._meta.concrete_entry_model:
@@ -260,7 +257,7 @@ def getModels(superclass=cmodels.Entry):
     return tmp2
 
 def get_models_in_saving_order(superclass=cmodels.Entry):
-    all_models = get_models(get_app('cyano'))
+    all_models = apps.get_app_config('cyano').get_models()
     entry_models = []
     for model in all_models:
         if issubclass(model, superclass) and model._meta.concrete_entry_model:
@@ -290,7 +287,7 @@ def is_model_referenced(model, referenced_model, checked_models=[]):
     return False
 
 def getModelsMetadata(superclass=cmodels.Entry):
-    tmp = get_models(get_app('cyano'))
+    tmp = apps.get_app_config('cyano').get_models()
     tmp = sorted(tmp, key=lambda x: x.__name__)
     tmp2 = OrderedDict()
     for model in tmp:
@@ -299,7 +296,7 @@ def getModelsMetadata(superclass=cmodels.Entry):
     return tmp2
 
 def getObjectTypes(superclass=cmodels.Entry):
-    tmp = get_models(get_app('cyano'))
+    tmp = apps.get_app_config('cyano').get_models()
     tmp2 = []
     for model in tmp:
         if issubclass(model, superclass) and model._meta.concrete_entry_model:
@@ -308,21 +305,21 @@ def getObjectTypes(superclass=cmodels.Entry):
     return tmp2
 
 def getModel(s):
-    tmp = get_models(get_app('cyano'))
+    tmp = apps.get_app_config('cyano').get_models()
     for model in tmp:
         if issubclass(model, cmodels.Entry) and model._meta.concrete_entry_model and model.__name__ == s:
             return model
     return
 
 def getModelByVerboseName(s):
-    tmp = get_models(get_app('cyano'))
+    tmp = apps.get_app_config('cyano').get_models()
     for model in tmp:
         if issubclass(model, cmodels.Entry) and model._meta.concrete_entry_model and model.verbose_name == s:
             return model
     return
 
 def getModelByVerboseNamePlural(s):
-    tmp = get_models(get_app('cyano'))
+    tmp = apps.get_app_config('cyano').get_models()
     for model in tmp:
         if issubclass(model, cmodels.Entry) and model._meta.concrete_entry_model and model._meta.verbose_name_plural == s:
             return model
@@ -520,7 +517,7 @@ def render_queryset_to_response(request=[], queryset=None, models=[], template='
 
     try:
         if outformat == 'html':
-            return render_to_response(template, data, context_instance = RequestContext(request))
+            return render(request, template, data)
         elif outformat == 'bib':
             response = HttpResponse(
                 write_bibtex(species, queryset),
@@ -1428,8 +1425,8 @@ def create_detail_fieldset(item, fieldsets, is_anonymous):
             else:
                 field_name = fields[idx2]
                 field = model._meta.get_field_by_name(field_name)[0]
-                if isinstance(field, RelatedObject):
-                    verbose_name = capfirst(field.get_accessor_name())
+                if hasattr(field, "get_accessor_name"):
+                    verbose_name = field.get_accessor_name()
                 else:
                     verbose_name = field.verbose_name
 
@@ -1462,17 +1459,14 @@ def format_field_detail_view(obj, field_name, is_user_anonymous, history_id = No
     except FieldDoesNotExist:
         return None
     value = getattr(obj, field_name)
-    
-    if isinstance(field, RelatedObject):
-        field_model = field.model
-        value = value.all()
-    elif isinstance(field, ManyToManyField):
+
+    if isinstance(field, ManyToManyField):
         field_model = field.rel.to
         value = value.all()
     elif isinstance(field, ForeignKey):
         field_model = field.rel.to
         
-    if isinstance(field, (ManyToManyField, RelatedObject)):        
+    if isinstance(field, (ManyToManyField)):
         if issubclass(field_model, cmodels.Entry):
             results = []
             for subvalue in value:
@@ -1577,10 +1571,7 @@ def get_history(species, obj, detail_id):
     for rev in rev_query:
         for key, value in json.loads(rev.new_data).items():
             field = history_obj._meta.get_field_by_name(key)[0]
-            if isinstance(field, RelatedObject):
-                ##print "Rel: " + field.name
-                pass
-            elif isinstance(field, ManyToManyField):
+            if isinstance(field, ManyToManyField):
                 ##print "M2M: " + field.name
                 pass
             elif isinstance(field, ForeignKey):

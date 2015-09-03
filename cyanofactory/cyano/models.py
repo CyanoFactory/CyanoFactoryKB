@@ -1128,7 +1128,7 @@ class SpeciesComponentQuerySet(EntryQuerySet):
 
 
 class AbstractEntry(Model):
-    objects = PassThroughManager.for_queryset_class(EntryQuerySet)()
+    objects = EntryQuerySet.as_manager()
 
     class Meta:
         abstract = True
@@ -1334,7 +1334,7 @@ class EntryGroupObjectPermission(GroupObjectPermissionBase):
 
 
 class AbstractSpeciesComponent(Entry):
-    objects = PassThroughManager.for_queryset_class(SpeciesComponentQuerySet)()
+    objects = SpeciesComponentQuerySet.as_manager()
 
     class Meta:
         abstract = True
@@ -1588,6 +1588,29 @@ class Protein(Molecule):
     def get_as_html_half_life(self, is_user_anonymous):
         return self.get_half_life()
 
+    def clean(self, all_obj_data=None, all_obj_data_by_model=None):
+        #regulatory rule
+        if self.regulatory_rule is not None and self.regulatory_rule.value is not None and self.regulatory_rule.value != '':
+            parse_regulatory_rule(self.regulatory_rule.value, all_obj_data, self.species)
+
+        #DNA footprint
+        if self.dna_footprint is not None:
+            chr_lens = []
+
+            if all_obj_data_by_model is None:
+                species_id = Species.objects.values('id').get(wid=self.species)['id']
+                for obj in Genome.objects.values('length').filter(species__id=species_id):
+                    chr_lens.append(obj['length'])
+            else:
+                for obj in all_obj_data_by_model['Genome']:
+                    if isinstance(obj, Entry):
+                        chr_lens.append(obj.length)
+                    else:
+                        chr_lens.append(obj['length'])
+
+            if self.dna_footprint.length > max(chr_lens):
+                raise ValidationError({'dna_footprint': 'Length must be less than chromosome length'})
+
     #meta information
     class Meta:
         concrete_entry_model = False
@@ -1616,29 +1639,6 @@ class Protein(Molecule):
         verbose_name_plural = 'Proteins'
         wid_unique = False
 
-        @staticmethod
-        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            #regulatory rule
-            if obj_data['regulatory_rule'] is not None and obj_data['regulatory_rule']['value'] is not None and obj_data['regulatory_rule']['value'] != '':
-                parse_regulatory_rule(obj_data['regulatory_rule']['value'], all_obj_data, obj_data['species'])
-
-            #DNA footprint
-            if obj_data['dna_footprint'] is not None:
-                chr_lens = []
-
-                if all_obj_data_by_model is None:
-                    species_id = Species.objects.values('id').get(wid=obj_data['species'])['id']
-                    for obj in Genome.objects.values('length').filter(species__id=species_id):
-                        chr_lens.append(obj['length'])
-                else:
-                    for obj in all_obj_data_by_model['Genome']:
-                        if isinstance(obj, Entry):
-                            chr_lens.append(obj.length)
-                        else:
-                            chr_lens.append(obj['length'])
-
-                if obj_data['dna_footprint']['length'] > max(chr_lens):
-                    raise ValidationError({'dna_footprint': 'Length must be less than chromosome length'})
 
 ''' END: base classes '''
 
@@ -2376,6 +2376,10 @@ class Genome(Molecule):
         
         return genbank.getvalue()
 
+    def clean(self, all_obj_data=None, all_obj_data_by_model=None):
+        if self.sequence is not None and self.sequence != '' and len(self.sequence) != self.length:
+            raise ValidationError({'length': 'Length of sequence property must match length property'})
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -2405,11 +2409,6 @@ class Genome(Molecule):
         verbose_name = 'Genome'
         verbose_name_plural = 'Genome'
         wid_unique = False
-
-        @staticmethod
-        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            if obj_data['sequence'] is not None and obj_data['sequence'] != '' and len(obj_data['sequence']) != obj_data['length']:
-                raise ValidationError({'length': 'Length of sequence property must match length property'})
 
 class Chromosome(Genome):
     #parent pointer
@@ -2491,23 +2490,6 @@ class ChromosomeFeature(SpeciesComponent):
         verbose_name = 'Chromosome feature'
         verbose_name_plural = 'Chromosome features'
         wid_unique = False
-
-        @staticmethod
-        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            if all_obj_data is None:
-                chro = Genome.objects.get(species__wid=obj_data['species'], wid=obj_data['genome'])
-            else:
-                chro = all_obj_data[obj_data['genome']]
-
-            if isinstance(chro, Entry):
-                chr_len = chro.length
-            else:
-                chr_len = chro['length']
-
-            if obj_data['coordinate'] > chr_len:
-                raise ValidationError({'coordinate': 'Coordinate must be less then chromosome length.'})
-            if obj_data['length'] > chr_len:
-                raise ValidationError({'length': 'Length must be less then chromosome length.'})
 
 class FeaturePosition(EntryData):
     """
@@ -2825,6 +2807,22 @@ class Gene(Molecule):
         from cyano.helpers import format_field_detail_view
         return "Transcription unit: %s" % (format_field_detail_view(self, "transcription_units", is_user_anonymous))
 
+    def clean(self, all_obj_data=None, all_obj_data_by_model=None):
+        if all_obj_data is None:
+            chro = Genome.objects.get(species__wid=self.species, wid=self.chromosome)
+        else:
+            chro = all_obj_data[self.chromosome]
+
+        if isinstance(chro, Entry):
+            chr_len = chro.length
+        else:
+            chr_len = chro['length']
+
+        if self.coordinate > chr_len:
+            raise ValidationError({'coordinate': 'Coordinate must be less then chromosome length.'})
+        if self.length > chr_len:
+            raise ValidationError({'length': 'Length must be less then chromosome length.'})
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -2865,24 +2863,6 @@ class Gene(Molecule):
         verbose_name='Gene'
         verbose_name_plural = 'Genes'
         wid_unique = False
-
-        #chromosome coordinate, length
-        @staticmethod
-        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            if all_obj_data is None:
-                chro = Genome.objects.get(species__wid=obj_data['species'], wid=obj_data['chromosome'])
-            else:
-                chro = all_obj_data[obj_data['chromosome']]
-
-            if isinstance(chro, Entry):
-                chr_len = chro.length
-            else:
-                chr_len = chro['length']
-
-            if obj_data['coordinate'] > chr_len:
-                raise ValidationError({'coordinate': 'Coordinate must be less then chromosome length.'})
-            if obj_data['length'] > chr_len:
-                raise ValidationError({'length': 'Length must be less then chromosome length.'})
 
 class Metabolite(Molecule):
     #parent pointer
@@ -3413,18 +3393,6 @@ class Process(SpeciesComponent):
         verbose_name_plural = 'Processes'
         wid_unique = False
 
-        @staticmethod
-        def validate_unique(model, model_objects_data, all_obj_data=None, all_obj_data_by_model=None):
-            order = []
-            for obj in model_objects_data:
-                if isinstance(obj, Entry):
-                    order.append(obj.initialization_order)
-                else:
-                    order.append(obj['initialization_order'])
-
-            if len(set(order)) < len(order):
-                raise ValidationError({'initialization_order': 'Initialization order must unique within a species'})
-
 class ProteinComplex(Protein):
     #parent pointer
     parent_ptr_protein = OneToOneField(Protein, related_name='child_ptr_protein_complex', parent_link=True, verbose_name='Protein')
@@ -3596,6 +3564,81 @@ class ProteinComplex(Protein):
         localization = self.get_localization()
         return '<a href="%s">%s</a>' % (localization.get_absolute_url(), localization.wid, )
 
+    def clean(self, all_obj_data=None, all_obj_data_by_model=None):
+        from cyano.helpers import getModel, getEntry
+
+        #biosynthesis
+        coeff = 0
+        for b in self.biosynthesis:
+            if b['molecule'] == self.wid:
+                coeff += b['coefficient']
+
+        if coeff != 1:
+            raise ValidationError({'biosynthesis': 'Protein complex must appear on the right side of the biosynthesis reaction'})
+
+        #disulfide bonds
+        for dsfb in self.disulfide_bonds:
+            mon_wid = dsfb['protein_monomer']
+
+            if all_obj_data is None:
+                mon = ProteinMonomer.objects.get(species__wid=self.species, wid=mon_wid)
+            else:
+                mon = all_obj_data[mon_wid]
+            if isinstance(mon, Entry):
+                gene_wid = mon.gene.wid
+            else:
+                gene_wid = mon['gene']
+
+            if all_obj_data is None:
+                gene = Gene.objects.get(species_wid=self.species, wid=gene_wid)
+            else:
+                gene = all_obj_data[gene_wid]
+            if isinstance(gene, Entry):
+                mon_len = gene.length / 3
+            else:
+                mon_len = gene['length'] / 3
+
+            if dsfb['residue_1'] > mon_len:
+                raise ValidationError({'disulfide_bond': 'Residue-1 must be less then protein length'})
+            if dsfb['residue_2'] > mon_len:
+                raise ValidationError({'disulfide_bond': 'Residue-2 must be less then protein length'})
+
+        #biosynthesis residues
+        for b in self.biosynthesis:
+            if all_obj_data is None:
+                molecule = getEntry(species_wid=self.species, wid=b['molecule'])
+            else:
+                molecule = all_obj_data[b['molecule']]
+            if isinstance(molecule, Entry):
+                molecule_type = molecule.model_type
+            else:
+                molecule_type = molecule['model_type']
+            molecule_len = None
+            if molecule_type == 'Gene':
+                if isinstance(molecule, Entry):
+                    molecule_len = molecule.length
+                else:
+                    molecule_len = molecule['length']
+            elif molecule_type == 'ProteinMonomer':
+                if isinstance(molecule, Entry):
+                    gene_wid = molecule.gene.wid
+                else:
+                    gene_wid = molecule['gene']
+                if all_obj_data is None:
+                    gene = Gene.objects.get(species__wid=self.species, wid=gene_wid)
+                else:
+                    gene = all_obj_data[gene_wid]
+                if isinstance(gene, Entry):
+                    molecule_len = gene.length
+                else:
+                    molecule_len = gene['length']
+
+            if b['residue'] is not None and not issubclass(getModel(molecule_type), (ProteinMonomer, Gene, )):
+                raise ValidationError({'biosynthesis': 'Residue must be null'})
+
+            if b['residue'] is not None and b['residue'] > molecule_len:
+                raise ValidationError({'biosynthesis': 'Residue must be less than molecule length'})
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -3644,82 +3687,6 @@ class ProteinComplex(Protein):
         verbose_name='Protein complex'
         verbose_name_plural = 'Protein complexes'
         wid_unique = False
-
-        @staticmethod
-        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            from cyano.helpers import getModel, getEntry
-
-            #biosynthesis
-            coeff = 0
-            for b in obj_data['biosynthesis']:
-                if b['molecule'] == obj_data['wid']:
-                    coeff += b['coefficient']
-
-            if coeff != 1:
-                raise ValidationError({'biosynthesis': 'Protein complex must appear on the right side of the biosynthesis reaction'})
-
-            #disulfide bonds
-            for dsfb in obj_data['disulfide_bonds']:
-                mon_wid = dsfb['protein_monomer']
-
-                if all_obj_data is None:
-                    mon = ProteinMonomer.objects.get(species__wid=obj_data['species'], wid=mon_wid)
-                else:
-                    mon = all_obj_data[mon_wid]
-                if isinstance(mon, Entry):
-                    gene_wid = mon.gene.wid
-                else:
-                    gene_wid = mon['gene']
-
-                if all_obj_data is None:
-                    gene = Gene.objects.get(species_wid=obj_data['species'], wid=gene_wid)
-                else:
-                    gene = all_obj_data[gene_wid]
-                if isinstance(gene, Entry):
-                    mon_len = gene.length / 3
-                else:
-                    mon_len = gene['length'] / 3
-
-                if dsfb['residue_1'] > mon_len:
-                    raise ValidationError({'disulfide_bond': 'Residue-1 must be less then protein length'})
-                if dsfb['residue_2'] > mon_len:
-                    raise ValidationError({'disulfide_bond': 'Residue-2 must be less then protein length'})
-
-            #biosynthesis residues
-            for b in obj_data['biosynthesis']:
-                if all_obj_data is None:
-                    molecule = getEntry(species_wid=obj_data['species'], wid=b['molecule'])
-                else:
-                    molecule = all_obj_data[b['molecule']]
-                if isinstance(molecule, Entry):
-                    molecule_type = molecule.model_type
-                else:
-                    molecule_type = molecule['model_type']
-                molecule_len = None
-                if molecule_type == 'Gene':
-                    if isinstance(molecule, Entry):
-                        molecule_len = molecule.length
-                    else:
-                        molecule_len = molecule['length']
-                elif molecule_type == 'ProteinMonomer':
-                    if isinstance(molecule, Entry):
-                        gene_wid = molecule.gene.wid
-                    else:
-                        gene_wid = molecule['gene']
-                    if all_obj_data is None:
-                        gene = Gene.objects.get(species__wid=obj_data['species'], wid=gene_wid)
-                    else:
-                        gene = all_obj_data[gene_wid]
-                    if isinstance(gene, Entry):
-                        molecule_len = gene.length
-                    else:
-                        molecule_len = gene['length']
-
-                if b['residue'] is not None and not issubclass(getModel(molecule_type), (ProteinMonomer, Gene, )):
-                    raise ValidationError({'biosynthesis': 'Residue must be null'})
-
-                if b['residue'] is not None and b['residue'] > molecule_len:
-                    raise ValidationError({'biosynthesis': 'Residue must be less than molecule length'})
 
 class ProteinMonomer(Protein):
     #parent pointer
@@ -3995,6 +3962,20 @@ class ProteinMonomer(Protein):
 
         return gene, cds
 
+    def clean(self, all_obj_data=None, all_obj_data_by_model=None):
+        if self.signal_sequence is not None:
+            if all_obj_data is None:
+                gene = Gene.objects.get(species__wid=self.species, wid=self.gene)
+            else:
+                gene = all_obj_data[self.gene]
+            if isinstance(gene, Entry):
+                mon_len = gene.length / 3
+            else:
+                mon_len = gene['length'] / 3
+
+            if self.signal_sequence.length > mon_len:
+                raise ValidationError({'signal_sequence': 'Length must be less than protein length'})
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -4048,21 +4029,6 @@ class ProteinMonomer(Protein):
         verbose_name='Protein monomer'
         verbose_name_plural = 'Protein monomers'
         wid_unique = False
-
-        @staticmethod
-        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            if obj_data['signal_sequence'] is not None:
-                if all_obj_data is None:
-                    gene = Gene.objects.get(species__wid=obj_data['species'], wid=obj_data['gene'])
-                else:
-                    gene = all_obj_data[obj_data['gene']]
-                if isinstance(gene, Entry):
-                    mon_len = gene.length / 3
-                else:
-                    mon_len = gene['length'] / 3
-
-                if obj_data['signal_sequence']['length'] > mon_len:
-                    raise ValidationError({'signal_sequence': 'Length must be less than protein length'})
 
 class Reaction(SpeciesComponent):
     #parent pointer
@@ -4211,6 +4177,83 @@ class Reaction(SpeciesComponent):
             vmax = '<i>V</i><sub>max</sub> = %s %s' % (k.vmax, k.vmax_unit, )
         return format_with_evidence(obj = k, txt = '%s %s %s' % (law, km, vmax))
 
+    def clean(self, all_obj_data=None, all_obj_data_by_model=None):
+        from cyano.helpers import getEntry, getModel, EmpiricalFormula
+
+        #stoichiometry
+        formula = EmpiricalFormula()
+        includes_macromolecules = False
+        for s in self.stoichiometry:
+            if all_obj_data is None:
+                molecule = getEntry(species_wid=self.species, wid=s['molecule'])
+            else:
+                molecule = all_obj_data[s['molecule']]
+            if isinstance(molecule, Entry):
+                molecule_type = molecule.model_type
+            else:
+                molecule_type = molecule['model_type']
+            if molecule_type == 'Metabolite':
+                if isinstance(molecule, Entry):
+                    molecule_formula = EmpiricalFormula(molecule.empirical_formula)
+                else:
+                    molecule_formula = EmpiricalFormula(molecule['empirical_formula'])
+            else:
+                molecule_formula = EmpiricalFormula() #todo: implement
+
+            formula += molecule_formula * s['coefficient']
+
+            if molecule_type not in ['Metabolite', 'Stimulus']:
+                includes_macromolecules = True
+            if self.modification is not None:
+                includes_macromolecules = True
+
+        if len(formula) > 0 and not includes_macromolecules: #todo: remove "includes_macromolecules"
+            raise ValidationError({'stoichiometry': 'Reaction imbalanced by %s' % formula.get_as_html()})
+
+        #kinetics
+        if self.kinetics_forward    is not None:
+            validate_kinetics(obj_data, 'f')
+        if self.kinetics_backward is not None:
+            validate_kinetics(obj_data, 'r')
+
+        #modication
+        if self.modification is not None:
+            mod = self.modification
+
+            if all_obj_data is None:
+                molecule = getEntry(species_wid=self.species, wid=mod['molecule'])
+            else:
+                molecule = all_obj_data[mod['molecule']]
+            if isinstance(molecule, Entry):
+                molecule_type = molecule.model_type
+            else:
+                molecule_type = molecule['model_type']
+            molecule_len = None
+            if molecule_type == 'Gene':
+                if isinstance(molecule, Entry):
+                    molecule_len = molecule.length
+                else:
+                    molecule_len = molecule['length']
+            elif molecule_type == 'ProteinMonomer':
+                if isinstance(molecule, Entry):
+                    gene_wid = molecule.gene.wid
+                else:
+                    gene_wid = molecule['gene']
+                if all_obj_data is None:
+                    gene = Gene.objects.get(species__wid=self.species, wid=gene_wid)
+                else:
+                    gene = all_obj_data[gene_wid]
+                if isinstance(gene, Entry):
+                    molecule_len = gene.length / 3
+                else:
+                    molecule_len = gene['length'] / 3
+
+            if mod['position'] is not None and not issubclass(getModel(molecule_type), (ProteinMonomer, Gene, )):
+                raise ValidationError({'modification': 'Position must be null'})
+
+            if mod['position'] is not None and mod['position'] > molecule_len:
+                raise ValidationError({'modification': 'Position must be less than molecule length'})
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -4243,84 +4286,6 @@ class Reaction(SpeciesComponent):
         verbose_name='Reaction'
         verbose_name_plural = 'Reactions'
         wid_unique = False
-
-        @staticmethod
-        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            from cyano.helpers import getEntry, getModel, EmpiricalFormula
-
-            #stoichiometry
-            formula = EmpiricalFormula()
-            includes_macromolecules = False
-            for s in obj_data['stoichiometry']:
-                if all_obj_data is None:
-                    molecule = getEntry(species_wid=obj_data['species'], wid=s['molecule'])
-                else:
-                    molecule = all_obj_data[s['molecule']]
-                if isinstance(molecule, Entry):
-                    molecule_type = molecule.model_type
-                else:
-                    molecule_type = molecule['model_type']
-                if molecule_type == 'Metabolite':
-                    if isinstance(molecule, Entry):
-                        molecule_formula = EmpiricalFormula(molecule.empirical_formula)
-                    else:
-                        molecule_formula = EmpiricalFormula(molecule['empirical_formula'])
-                else:
-                    molecule_formula = EmpiricalFormula() #todo: implement
-
-                formula += molecule_formula * s['coefficient']
-
-                if molecule_type not in ['Metabolite', 'Stimulus']:
-                    includes_macromolecules = True
-                if obj_data['modification'] is not None:
-                    includes_macromolecules = True
-
-            if len(formula) > 0 and not includes_macromolecules: #todo: remove "includes_macromolecules"
-                raise ValidationError({'stoichiometry': 'Reaction imbalanced by %s' % formula.get_as_html()})
-
-            #kinetics
-            if obj_data['kinetics_forward']    is not None:
-                validate_kinetics(obj_data, 'f')
-            if obj_data['kinetics_backward'] is not None:
-                validate_kinetics(obj_data, 'r')
-
-            #modication
-            if obj_data['modification'] is not None:
-                mod = obj_data['modification']
-
-                if all_obj_data is None:
-                    molecule = getEntry(species_wid=obj_data['species'], wid=mod['molecule'])
-                else:
-                    molecule = all_obj_data[mod['molecule']]
-                if isinstance(molecule, Entry):
-                    molecule_type = molecule.model_type
-                else:
-                    molecule_type = molecule['model_type']
-                molecule_len = None
-                if molecule_type == 'Gene':
-                    if isinstance(molecule, Entry):
-                        molecule_len = molecule.length
-                    else:
-                        molecule_len = molecule['length']
-                elif molecule_type == 'ProteinMonomer':
-                    if isinstance(molecule, Entry):
-                        gene_wid = molecule.gene.wid
-                    else:
-                        gene_wid = molecule['gene']
-                    if all_obj_data is None:
-                        gene = Gene.objects.get(species__wid=obj_data['species'], wid=gene_wid)
-                    else:
-                        gene = all_obj_data[gene_wid]
-                    if isinstance(gene, Entry):
-                        molecule_len = gene.length / 3
-                    else:
-                        molecule_len = gene['length'] / 3
-
-                if mod['position'] is not None and not issubclass(getModel(molecule_type), (ProteinMonomer, Gene, )):
-                    raise ValidationError({'modification': 'Position must be null'})
-
-                if mod['position'] is not None and mod['position'] > molecule_len:
-                    raise ValidationError({'modification': 'Position must be less than molecule length'})
 
 class Species(Entry):
     #parent pointer
@@ -4525,6 +4490,26 @@ class TranscriptionUnit(Molecule):
     def get_as_fasta(self):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
 
+    def clean(self, all_obj_data=None, all_obj_data_by_model=None):
+        if len(self.genes) == 1:
+            return
+        if len(self.genes) == 0:
+            raise ValidationError({'genes': 'Transcription units most contain at least 1 gene'})
+
+        chr_wids = []
+        if all_obj_data is None:
+            for gene_wid in self.genes:
+                chr_wids.append(Gene.objects.get(species__wid=self.species, wid=gene_wid).chromosome.wid)
+        else:
+            for gene_wid in self.genes:
+                if isinstance(all_obj_data[gene_wid], Entry):
+                    chr_wids.append(all_obj_data[gene_wid].chromosome.wid)
+                else:
+                    chr_wids.append(all_obj_data[gene_wid]['chromosome'])
+
+        if len(set(chr_wids)) > 1:
+            raise ValidationError({'genes': 'Genes must all belong to the same chromosome'})
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -4563,27 +4548,6 @@ class TranscriptionUnit(Molecule):
         verbose_name='Transcription unit'
         verbose_name_plural = 'Transcription units'
         wid_unique = False
-
-        @staticmethod
-        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            if len(obj_data['genes']) == 1:
-                return
-            if len(obj_data['genes']) == 0:
-                raise ValidationError({'genes': 'Transcription units most contain at least 1 gene'})
-
-            chr_wids = []
-            if all_obj_data is None:
-                for gene_wid in obj_data['genes']:
-                    chr_wids.append(Gene.objects.get(species__wid=obj_data['species'], wid=gene_wid).chromosome.wid)
-            else:
-                for gene_wid in obj_data['genes']:
-                    if isinstance(all_obj_data[gene_wid], Entry):
-                        chr_wids.append(all_obj_data[gene_wid].chromosome.wid)
-                    else:
-                        chr_wids.append(all_obj_data[gene_wid]['chromosome'])
-
-            if len(set(chr_wids)) > 1:
-                raise ValidationError({'genes': 'Genes must all belong to the same chromosome'})
 
 class TranscriptionalRegulation(SpeciesComponent):
     #parent pointer
@@ -4639,6 +4603,44 @@ class TranscriptionalRegulation(SpeciesComponent):
 
         return format_with_evidence(obj = bs, txt = txt)
 
+    def clean(self, all_obj_data=None, all_obj_data_by_model=None):
+        #gene wid
+        if all_obj_data is None:
+            tu = TranscriptionUnit.objects.get(species__wid=self.species, wid=self.transcription_unit)
+        else:
+            tu = all_obj_data[self.transcription_unit]
+        if isinstance(tu, Entry):
+            gene_wid = tu.genes.all()[0].wid
+        else:
+            gene_wid = tu['genes'][0]
+
+        #chr wid
+        if all_obj_data is None:
+            gene = Gene.objects.get(species__wid=self.species, wid=gene_wid)
+        else:
+            gene = all_obj_data[gene_wid]
+        if isinstance(gene, Entry):
+            chr_wid = gene.chromosome.wid
+        else:
+            chr_wid = gene['chromosome']
+
+        #chr length
+        if all_obj_data is None:
+            chro = Genome.objects.get(species__wid=self.species, wid=chr_wid)
+        else:
+            chro = all_obj_data[chr_wid]
+        if isinstance(chro, Entry):
+            chr_len = chro.length
+        else:
+            chr_len = chro['length']
+
+        #error check binding site coordinate, length
+        if self.binding_site is not None:
+            if self.binding_site.coordinate > chr_len:
+                raise ValidationError({'binding_site': 'Coordinate must be less then chromosome length.'})
+            if self.binding_site.length > chr_len:
+                raise ValidationError({'binding_site': 'Length must be less then chromosome length.'})
+
     #meta information
     class Meta:
         concrete_entry_model = True
@@ -4667,45 +4669,6 @@ class TranscriptionalRegulation(SpeciesComponent):
         verbose_name='Transcriptional regulation'
         verbose_name_plural = 'Transcriptional regulation'
         wid_unique = False
-
-        @staticmethod
-        def clean(obj_data, all_obj_data=None, all_obj_data_by_model=None):
-            #gene wid
-            if all_obj_data is None:
-                tu = TranscriptionUnit.objects.get(species__wid=obj_data['species'], wid=obj_data['transcription_unit'])
-            else:
-                tu = all_obj_data[obj_data['transcription_unit']]
-            if isinstance(tu, Entry):
-                gene_wid = tu.genes.all()[0].wid
-            else:
-                gene_wid = tu['genes'][0]
-
-            #chr wid
-            if all_obj_data is None:
-                gene = Gene.objects.get(species__wid=obj_data['species'], wid=gene_wid)
-            else:
-                gene = all_obj_data[gene_wid]
-            if isinstance(gene, Entry):
-                chr_wid = gene.chromosome.wid
-            else:
-                chr_wid = gene['chromosome']
-
-            #chr length
-            if all_obj_data is None:
-                chro = Genome.objects.get(species__wid=obj_data['species'], wid=chr_wid)
-            else:
-                chro = all_obj_data[chr_wid]
-            if isinstance(chro, Entry):
-                chr_len = chro.length
-            else:
-                chr_len = chro['length']
-
-            #error check binding site coordinate, length
-            if obj_data['binding_site'] is not None:
-                if obj_data['binding_site']['coordinate'] > chr_len:
-                    raise ValidationError({'binding_site': 'Coordinate must be less then chromosome length.'})
-                if obj_data['binding_site']['length'] > chr_len:
-                    raise ValidationError({'binding_site': 'Length must be less then chromosome length.'})
 
 class Type(SpeciesComponent):
     #parent pointer

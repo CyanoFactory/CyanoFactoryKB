@@ -4,16 +4,16 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, ButtonHolder, Button, Fieldset, Submit
 
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Button
+from crispy_forms.bootstrap import FormActions
 from django import forms
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from bioparser.optgene import OptGeneParser
 from cyano.layout import ModalHeader, ModalBody, ModalFooter, CancelButton
 from cyanodesign.models import DesignTemplate
-
 
 class UploadModelForm(forms.Form):
     name = forms.CharField(
@@ -42,7 +42,7 @@ class UploadModelForm(forms.Form):
                 'file'
             ),
             ModalFooter(
-                ButtonHolder(
+                FormActions(
                     Button('upload-submit', 'Create Model', css_class='btn-primary'),
                     CancelButton('upload-cancel', 'Cancel')
                 )
@@ -85,7 +85,7 @@ class ModelFromTemplateForm(forms.Form):
                 'choice'
             ),
             ModalFooter(
-                ButtonHolder(
+                FormActions(
                     Button('upload-submit', 'Create Model', css_class='btn-primary'),
                     CancelButton('upload-cancel', 'Cancel')
                 )
@@ -124,7 +124,7 @@ class SaveModelForm(forms.Form):
                 'save_summary',
             ),
             ModalFooter(
-                ButtonHolder(
+                FormActions(
                     Button('save-submit', 'Save', css_class='btn-primary'),
                     CancelButton('save-cancel', 'Cancel')
                 )
@@ -159,7 +159,7 @@ class SaveModelAsForm(forms.Form):
                 'saveas_summary',
             ),
             ModalFooter(
-                ButtonHolder(
+                FormActions(
                     Button('saveas-submit', 'Save', css_class='btn-primary'),
                     CancelButton('saveas-cancel', 'Cancel')
                 )

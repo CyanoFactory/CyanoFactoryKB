@@ -229,7 +229,7 @@ class MakeUrlNode(template.Node):
 
 @register.tag
 def makeurl(parser, token):
-	queryargs, newarg, newval = token.split_contents()[:1]
+	queryargs, newarg, newval = token.split_contents()[1:]
 	return MakeUrlNode(queryargs, newarg, newval)
 	
 @register.simple_tag
@@ -245,7 +245,7 @@ def stringreplace(s, old, new):
 
 @register.filter
 def is_concrete_entry(model_verbose_name_plural, app_name):	
-	from public.helpers import getModelByVerboseNamePlural
+	from cyano.helpers import getModelByVerboseNamePlural
 	return not getModelByVerboseNamePlural(model_verbose_name_plural) is None
 	
 @register.simple_tag
@@ -261,12 +261,12 @@ def get_choice_verbose_name(app_name, model_type, field_name, choice_name):
 	
 @register.filter
 def get_cross_reference(source, xid):
-	from public.models import CROSS_REFERENCE_SOURCE_URLS
+	from cyano.models import CROSS_REFERENCE_SOURCE_URLS
 	return CROSS_REFERENCE_SOURCE_URLS[source] % xid
 	
 @register.filter
 def get_genetic_code_name(code):
-	from public.models import CHOICES_GENETIC_CODE
+	from cyano.models import CHOICES_GENETIC_CODE
 	code = '%s' % code
 	
 	codes = [x[0] for x in CHOICES_GENETIC_CODE]
