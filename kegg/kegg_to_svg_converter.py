@@ -6,7 +6,7 @@ because they lack information about some components on the image map
 """
 from PIL import Image
 from xml.etree.ElementTree import ElementTree, Element, SubElement
-from StringIO import StringIO
+from io import StringIO
 import re
 
 def luminance(param):
@@ -156,7 +156,7 @@ for area in areas:
                 split_text.append(text[0])
             
             text = text[1:]
-            print " ".join(text)
+            print(" ".join(text))
         
         elem = Element("tspan")
         elem.text = " ".join(split_text)
@@ -258,7 +258,7 @@ for area in areas:
             area.set("fill", "rgb(" + ",".join(str(x) for x in best_color[:3]) + ")")
                     
         except IndexError:
-            print str(cx) + " " + str(cy)
+            print(str(cx) + " " + str(cy))
 
 for elem in pending:
     graphics.append(elem)

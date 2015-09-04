@@ -233,7 +233,7 @@ class EasyProt(BioParser):
 
         for row in range(rows):
             #print self.quant_stats_info
-            print self.quant_stats_info_complex
+            print(self.quant_stats_info_complex)
             if section_type == START:
                 if sheet_quant_stats_info.cell(row=row, column=1).value is not None:
                     section_type = PARSE_FIRST
@@ -247,7 +247,7 @@ class EasyProt(BioParser):
                 else:
                     typ = sheet_quant_stats_info.cell(row=row, column=0).value
                     for i, item in enumerate(self.quant_stats_info, start=1):
-                        print item
+                        print(item)
                         self.quant_stats_info[item][typ] = sheet_quant_stats_info.cell(row=row, column=i).value
             elif section_type == BETWEEN:
                 if sheet_quant_stats_info.cell(row=row, column=1).value is not None:

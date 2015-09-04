@@ -248,7 +248,7 @@ class FBA:
         design_obj_name = design_obj[0][0]
         # Start KO test
         results=[]
-        for i in xrange(len(self.reacs)):
+        for i in range(len(self.reacs)):
             reac=self.reacs[i]
             if '_transp' in reac.name: # if it's a transport reaction -> pass
                 pass
@@ -391,7 +391,7 @@ class FBA:
             else:
                 print("HELP HELP HELP!!! SOMETHING WENT WRONG")
         summ = 0.
-        for jj in xrange(nreacs):
+        for jj in range(nreacs):
             summ += cond[jj]*stoic[jj]*self.flux[self.reacs_by_met[ii][jj]]
         return summ
 

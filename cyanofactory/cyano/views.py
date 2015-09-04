@@ -83,7 +83,7 @@ def species(request, species):
     def chunks(l, n):
         """ Yield successive n-sized chunks from l.
         """
-        for i in xrange(0, len(l), n):
+        for i in range(0, len(l), n):
             yield l[i:i+n]
 
     outcol = list(chunks(printcol, int(math.ceil(len(printcol) / 3.0))))
@@ -1078,7 +1078,7 @@ def password_change_required(request, species=None):
                            extra_context = context)
 
 @resolve_to_objects
-def login(request, species=None, message=None, error=200, force_next=None):
+def login(request, species=None, message=None, error=200, force_next=None, required_perm=None):
     from django.contrib.auth.views import login as djlogin
 
     context = chelpers.get_extra_context(
@@ -1087,6 +1087,7 @@ def login(request, species=None, message=None, error=200, force_next=None):
     )
 
     context['message'] = message
+    context['required_perm'] = required_perm
 
     if force_next:
         context['next'] = force_next
@@ -1146,7 +1147,7 @@ def sitemap_species(request, species):
 @permission_required(perm.READ_PERMISSION)
 def permission(request, species, model=None, item=None, edit=False):
     from django.contrib.auth.models import User, Group, Permission
-    from guardian.shortcuts import get_users_with_perms, get_groups_with_perms, assign_perm, remove_perm
+    from guardian.shortcuts import assign_perm, remove_perm
     from itertools import groupby
 
     if item is not None:
@@ -1154,7 +1155,7 @@ def permission(request, species, model=None, item=None, edit=False):
     else:
         obj = cmodels.Entry.objects.get(pk=species.pk)
 
-    perms = map(lambda x: x[0], cmodels.Entry._meta.permissions) + ["change_entry", "delete_entry"]
+    perms = list(map(lambda x: x[0], cmodels.Entry._meta.permissions)) + ["change_entry", "delete_entry"]
 
     permissions = Permission.objects.filter(codename__in=perms)
 
@@ -1167,10 +1168,10 @@ def permission(request, species, model=None, item=None, edit=False):
         g = {}
 
         for k, v in groupby(up, lambda x: x.user):
-            u[k] = map(lambda x: x.permission.codename, v)
+            u[k] = list(map(lambda x: x.permission.codename, v))
 
         for k, v in groupby(gp, lambda x: x.group):
-            g[k] = map(lambda x: x.permission.codename, v)
+            g[k] = list(map(lambda x: x.permission.codename, v))
 
         return u, g
 
@@ -1184,7 +1185,7 @@ def permission(request, species, model=None, item=None, edit=False):
                     usr = User.objects.get(pk=uid)
                     ulist = request.POST[r].strip()
                     if len(ulist) > 0:
-                        new_perms = map(lambda x: int(x), ulist.split(" "))
+                        new_perms = list(map(lambda x: int(x), ulist.split(" ")))
                     else:
                         new_perms = []
 

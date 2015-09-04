@@ -53,7 +53,7 @@ class Command(BaseCommand):
         map_names = {}
         
         for i, filename in enumerate(html_files):
-            print "Parsing {} ({}/{})".format(filename, i + 1, html_files_count)
+            print("Parsing {} ({}/{})".format(filename, i + 1, html_files_count))
         
             with open("../kegg/fetch/{}.html".format(filename)) as infile:
                 tree = ElementTree()
@@ -69,7 +69,7 @@ class Command(BaseCommand):
                     if title is None or\
                         coords is None or\
                         shape is None:
-                        print "skipping"
+                        print("skipping")
                         continue
                     
                     if filename in title and ":" in title:
@@ -89,13 +89,13 @@ class Command(BaseCommand):
         all_ecs = sorted(uniqify(all_ecs))
         ec_items = [models.EcNumber(name=x) for x in all_ecs]
         if models.EcNumber.objects.filter(name=ec_items[0].name).exists():
-            print "Already imported, terminating..."
+            print("Already imported, terminating...")
             return
         else:
             models.EcNumber.objects.bulk_create(ec_items)
 
         for i, filename in enumerate(sorted(html_files)):            
-            print "Importing {} ({}/{})".format(filename, i + 1, html_files_count)
+            print("Importing {} ({}/{})".format(filename, i + 1, html_files_count))
 
             numbers = ec_numbers.get(filename)
             if not numbers is None:

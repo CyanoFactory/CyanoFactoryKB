@@ -517,7 +517,7 @@ def chemgraph(chem_id, protlimit, chemlimit):
     maxScore = 0
     minScore = 10000
     G = nx.Graph()
-    print -chem_id
+    print(-chem_id)
     chemical = Chemicals.objects.get(chemical_id=-chem_id)
     interactions = ProteinChemicalLinks.objects.filter(chemical=chem_id, protein__startswith="1148").order_by('-combined_score')[:protlimit]
     interactions2 = []
@@ -1252,13 +1252,13 @@ def proteingraph2json(request):
                                            score=link.combined_score,
                                            opacity=0.2,
                                            selectvis=1)
-            print "Schreibe Datei"
+            print("Schreibe Datei")
             d = json_graph.node_link_data(G)
             data = {"url": 'cyanofactory/cyanointeraction/protein_network/' + str(prot.protein_id) + '.json'}
             json.dump(d, open(data["url"], 'w'))
             a = prot.preferred_name
         else:
-            print prot.preferred_name + " already exists"
+            print(prot.preferred_name + " already exists")
     a = proteins.count()
     return HttpResponse("Finished - " + str(a))
 
@@ -1272,10 +1272,10 @@ Until now 2 Proteins are related if the half of there interactions partners are 
 def compareInteraction(request):
     proteins = Proteins.objects.filter(species_id=1148)
     for prot_a in proteins:
-        print str(prot_a.protein_id)
+        print(str(prot_a.protein_id))
         linked_a = NodeNodeLinks.objects.filter(node_id_a=prot_a.protein_id).order_by('-combined_score')
         size_a = len(linked_a)
-        print "Protein A " + str(size_a)
+        print("Protein A " + str(size_a))
         for prot_b in proteins:
             counter = 0
             if not (prot_a.protein_id == prot_b.protein_id):
@@ -1291,10 +1291,10 @@ def compareInteraction(request):
                             break
                 if size_b != 0 and size_a != 0:
                     if (float(counter) / float(size_a)) >= (float(counter) / float(size_b)) and counter != 0:
-                        print str(counter) + " " + str(size_a) + " " + str(size_b)
-                        print "MATCH"
+                        print(str(counter) + " " + str(size_a) + " " + str(size_b))
+                        print("MATCH")
                         equal = (float(counter) / float(size_a)) / (float(counter) / float(size_b))
-                        print str(equal)
+                        print(str(equal))
                         pc = ProteinComparison
                         pc.objects.get_or_create(protein_a=prot_a.protein_id, protein_b=prot_b.protein_id,
                                                  equal_score=equal)
@@ -1308,7 +1308,7 @@ Needs some time and space
 
 
 def getwholenetwork():
-    print "Running"
+    print("Running")
     proteins = Proteins.objects.filter(species_id=1148)
     actual = 0
     for protein in proteins:
@@ -1361,7 +1361,7 @@ def getwholenetwork():
                     "Neighborhood", "Coexpression", "clicked", "checkbox"]
     g = nx.Graph()
     for afile in os.listdir("json"):
-        print afile
+        print(afile)
         afile = open("json/" + afile, "r")
         adata = json.load(afile)
         ag = json_graph.node_link_graph(adata)
@@ -1403,7 +1403,7 @@ def getTimes(ids):
         if counter == len(ids)/10:
             counter = 0
             procent += 10
-            print str(procent)+"% done"
+            print(str(procent)+"% done")
     return timeList
 
 
@@ -1452,7 +1452,7 @@ import os
 from django.conf import settings
 def readGeneList():
     # todo check if line ending is correct
-    print settings.STATICFILES_DIRS[0]
+    print(settings.STATICFILES_DIRS[0])
     i_handler = open(settings.STATICFILES_DIRS[0]+"/cyanointeraction/genes_with_snps.txt", "r")
     gene_list = [line for line in i_handler]
     return gene_list

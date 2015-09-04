@@ -20,8 +20,6 @@
 #    Please, cite us in your research!
 #
 
-from __future__ import unicode_literals
-
 class Enzyme(object):
     '''
     This class defines a chemical reaction object. The input should be an
@@ -323,10 +321,10 @@ class Enzyme(object):
                 return False
             else:
                 blac = True
-                for ii in xrange(len(subs1)):
+                for ii in range(len(subs1)):
                     blac = blac and (self.stoic_n(subs1[ii]) == \
                                     other.stoic_n(subs2[ii]))
-                for ii in xrange(len(pros1)):
+                for ii in range(len(pros1)):
                     blac = blac and (self.stoic_n(pros1[ii]) == \
                                     other.stoic_n(pros2[ii]))
                 return blac
@@ -336,10 +334,10 @@ class Enzyme(object):
                     return False
                 else:
                     blac = True
-                    for ii in xrange(len(subs1)):
+                    for ii in range(len(subs1)):
                         blac = blac and (self.stoic_n(subs1[ii]) == \
                                        other.stoic_n(pros2[ii]))
-                    for ii in xrange(len(pros1)):
+                    for ii in range(len(pros1)):
                         blac = blac and (self.stoic_n(pros1[ii]) == \
                                        other.stoic_n(subs2[ii]))
                     return blac
@@ -348,10 +346,10 @@ class Enzyme(object):
                     return False
                 else:
                     blac = True
-                    for ii in xrange(len(subs1)):
+                    for ii in range(len(subs1)):
                         blac = blac and (self.stoic_n(subs1[ii]) == \
                                        other.stoic_n(subs2[ii]))
-                    for ii in xrange(len(pros1)):
+                    for ii in range(len(pros1)):
                         blac = blac and (self.stoic_n(pros1[ii]) == \
                                        other.stoic_n(pros2[ii]))
                     return blac

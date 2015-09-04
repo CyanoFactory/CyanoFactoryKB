@@ -47,19 +47,19 @@ class Network:
         M_ij=1 means the ith node has a directed link to the jth node."""
         if not names:
             nn = len(M)
-            names = [unicode(ele) for ele in xrange(nn)]
+            names = [unicode(ele) for ele in range(nn)]
         self.nodesnames = names
         nnodes = len(names)
         self.nnodes = nnodes
         links = []
-        linksin = [[] for ii in xrange(nnodes)]
-        linksout = [[] for ii in xrange(nnodes)]
-        neigbs = [[] for ii in xrange(nnodes)]
-        directed = [M[i][j] == M[j][i] for i in xrange(nnodes) for j in xrange(i+1,nnodes)]
+        linksin = [[] for ii in range(nnodes)]
+        linksout = [[] for ii in range(nnodes)]
+        neigbs = [[] for ii in range(nnodes)]
+        directed = [M[i][j] == M[j][i] for i in range(nnodes) for j in range(i+1,nnodes)]
         directed = reduce(lambda x, y: x and y, directed)
         self.directed = not directed
-        for ii in xrange(nnodes):
-            for jj in xrange(nnodes):
+        for ii in range(nnodes):
+            for jj in range(nnodes):
                 if M[ii][jj]:
                     linksin[jj].append(ii)
                     linksout[ii].append(jj)
@@ -78,7 +78,7 @@ class Network:
                 for b in self.neigbs]
         uCCs = [[list(set(a) | set(b)) for a in self.neigbs]
                  for b in self.neigbs]
-        noneigbs = [ii for ii in xrange(nnodes) if len(self.neigbs[ii]) == 0]
+        noneigbs = [ii for ii in range(nnodes) if len(self.neigbs[ii]) == 0]
         if len(noneigbs) != 0:
             self.no_neigbs = True
             print("Warning: nodes "+", ".join([names[ele] for ele in \
@@ -89,7 +89,7 @@ class Network:
             self.no_neigbs = False
             nCCs = [[float(len(CCs[ii][jj])+(ii in self.neigbs[jj]))/
                    (min(len(self.neigbs[ii]), len(self.neigbs[jj])))
-                   for ii in xrange(nnodes)] for jj in xrange(nnodes)]
+                   for ii in range(nnodes)] for jj in range(nnodes)]
         self.uCCs = uCCs
         self.CCs = CCs
         self.nCCs = nCCs
@@ -156,8 +156,8 @@ class Network:
         draw = ImageDraw.Draw(plot)
         nodx = float(size[0])/nnodes
         nody = float(size[1])/nnodes
-        for i in xrange(nnodes):
-            for j in xrange(nnodes):
+        for i in range(nnodes):
+            for j in range(nnodes):
                 stax = i * nodx
                 stay = j * nody
                 finx = (i+1) * nodx
@@ -170,8 +170,8 @@ class Network:
                 draw.rectangle((stax, stay, finx, finy), outline=lumi,
                                 fill=lumi)
         # The commands below draw a grid
-        for i in xrange(0,nnodes, grid):
-            for j in xrange(0, nnodes, grid):
+        for i in range(0,nnodes, grid):
+            for j in range(0, nnodes, grid):
                 stax = i * nodx
                 stay = j * nody
                 finx = (i+1) * nodx * grid
@@ -194,8 +194,8 @@ class Network:
         draw = ImageDraw.Draw(plot)
         nodx = float(size[0])/nnodes
         nody = float(size[1])/nnodes
-        for i in xrange(nnodes):
-            for j in xrange(nnodes):
+        for i in range(nnodes):
+            for j in range(nnodes):
                 stax = i * nodx
                 stay = j * nody
                 finx = (i+1) * nodx
@@ -208,8 +208,8 @@ class Network:
                 draw.rectangle((stax, stay, finx, finy), outline = lumi,
                                 fill = lumi)
         # The commands below draw a grid
-        for i in xrange(0, nnodes, grid):
-            for j in xrange(0, nnodes, grid):
+        for i in range(0, nnodes, grid):
+            for j in range(0, nnodes, grid):
                 stax = i * nodx
                 stay = j * nody
                 finx = (i+1) * nodx * grid
@@ -232,12 +232,12 @@ class Network:
         ramas = []
         dists = []
         matrix = [ele[:] for ele in matr]
-        dic_posis = [-(ele+1) for ele in xrange(ncomps)]
-        comps = [[] for ele in xrange(ncomps)]
+        dic_posis = [-(ele+1) for ele in range(ncomps)]
+        comps = [[] for ele in range(ncomps)]
         nrama = 0
         mins = []
-        for ii in xrange(ncomps):
-            for jj in xrange(ii+1, ncomps):
+        for ii in range(ncomps):
+            for jj in range(ii+1, ncomps):
                 if matrix[ii][jj] >= 0:
                     mins.append((ii, jj, matrix[ii][jj]))
         mins.sort(key=lambda x:x[2], reverse=not minimo)

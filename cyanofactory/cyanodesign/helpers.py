@@ -217,7 +217,7 @@ def calc_reactions(org, fluxResults):
 
     vList = changeDic.values()
 
-    for i in xrange(len(vList)):
+    for i in range(len(vList)):
         vList[i] = math.sqrt(math.pow(vList[i], 2))
     vList = sorted(vList)
 

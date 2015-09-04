@@ -590,7 +590,7 @@ class OptGeneParser(object):
             lp.cols[i].bounds = tuple(reac.constraint)
             #print tuple(reac.constraint)
 
-        for n in xrange(len(metabolites)):
+        for n in range(len(metabolites)):
             lp.rows[n].bounds = (0., 0.)
 
         ###### Objective

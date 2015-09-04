@@ -14,7 +14,7 @@ class Command(BaseCommand):
     """Creates general groups
     """
     def handle(self, *args, **options):
-        print "Creating groups"
+        print("Creating groups")
 
         everybody, _ = Group.objects.get_or_create(name='Everybody')        
         registred, _ = Group.objects.get_or_create(name='Registred')        

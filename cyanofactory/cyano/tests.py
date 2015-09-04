@@ -12,21 +12,22 @@ Released under the MIT license
 '''
 
 from django.test import TestCase, Client
-from django.core import management
 
 import cyano.models as cmodels
-from bioparser.genbank import Genbank
+from cyano.models import PermissionEnum
 from django.core.exceptions import ObjectDoesNotExist
+from guardian.shortcuts import assign_perm
+from django.contrib.auth.models import User, Group
 
 import settings
 from cyano.forms import ImportSpeciesForm
 
-SPECIES = "UnitTest-Species"
+SPECIES = "Synechocystis"
 SPECIES2 = "Other-Species"
 MODEL = "Gene"
 ITEM = "sll7106"
 
-def setup():
+#def setup():
     ## Permissions
     #management.call_command('loaddata', 'metadata.json')
     ## Create users and groups
@@ -51,23 +52,28 @@ def setup():
     #species.save(rev)
 
 class CyanoBaseTest(TestCase):
+    def __init__(self, *args, **kwargs):
+        self.user = None
+
+        super(TestCase, self).__init__(*args, **kwargs)
+
     def setUp(self):
         self.client = Client()
     
     def doLogin(self):
-        self.client.login(username = "gabriel", password = "aaa")
-        return cmodels.UserProfile.objects.get(user__username = "gabriel")
+        self.client.login(username="gabriel", password="aaa")
+        self.user = User.objects.get(username="gabriel")
     
     def doLogout(self):
         self.client.logout()
     
     def doAdminLogin(self):
-        self.client.login(username = "admin", password = "aaa")
-        return cmodels.UserProfile.objects.get(user__username = "admin")
+        self.client.login(username="admin", password="aaa")
+        self.user = User.objects.get(username="admin")
 
     def doGuestLogin(self):
         """Fake login returning the guest handle"""
-        return cmodels.UserProfile.objects.get(user__username = "guest")
+        self.user = User.objects.get(username="guest")
     
     def getSpecies(self, second = False):
         return cmodels.Species.objects.for_wid(SPECIES2 if second else SPECIES)
@@ -90,7 +96,7 @@ class CyanoBaseTest(TestCase):
             # print note that login was required when a test fails
             if "location" in response._headers:
                 if "login" in response._headers["location"][1]:
-                    print "Login required."
+                    print("Login required.")
 
         self.assertEqual(response.status_code, status, "\nURL: {}\nStatus {} (expected: {})".format(url, response.status_code, status))
             
@@ -155,20 +161,13 @@ class CyanoBaseTest(TestCase):
     def assertMimeTypeXml(self, url, status=200, follow = False):
         """Fail if mimetype is not XML"""
         return self.GET(url, status = status, mimetype = "application/xml", follow = follow)
-    
-    def assertLoginRequired(self, url):
-        """Tests if a view redirects to login page"""
-        # Not for testing the decorator, only if the decorator is set
-        
-        with self.assertTemplateUsed("registration/login.html"):
-            self.assertOK(url, follow = True)
 
-    def assertLoginRequiredNoPerm(self, url):
+    def assertLoginRequired(self, url, required_perm):
         """Tests if a view redirects to login page and passes a no permission status text"""
         with self.assertTemplateUsed("registration/login.html"):
-            response = self.assertOK(url, follow=True)
-            self.assertEquals(response.context_data.get("message", ""),
-                              "You don't have permission to access this item")
+            response = self.assertForbidden(url)
+            self.assertEqual(response.context_data.get("required_perm", "").lower(),
+                              required_perm.lower())
 
 class CyanoBasicTest(CyanoBaseTest):
     def test_logic_works(self):
@@ -191,7 +190,7 @@ class CyanoBasicTest(CyanoBaseTest):
         try:
             res = insp.reserved()
         except Exception:
-            print "RabbitMQ offline?"
+            print("RabbitMQ offline?")
             raise
 
         self.assertIsNotNone(res, "No worker online")
@@ -200,14 +199,14 @@ class CyanoBasicTest(CyanoBaseTest):
         self.doLogin()
         self.assertForbidden(SPECIES + "/")
         
-        self.assertTrue(self.doAdminLogin().is_admin())
+        self.assertTrue(self.doAdminLogin().user.is_superuser)
 
         with self.assertTemplateUsed("cyano/species.html"): 
             self.assertOK(SPECIES + "/")
 
 class CyanoTest(CyanoBaseTest):
     def test_permissions_species(self):
-        self.assertLoginRequiredNoPerm(SPECIES + "/")
+        self.assertLoginRequired(SPECIES + "/")
         
         user = self.doLogin()
 
@@ -341,9 +340,12 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
 
     def test_guest_species(self):
         """Visit species page as guest"""
-        self.assertLoginRequiredNoPerm(SPECIES + "/")
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
-        
+        self.assertLoginRequired(SPECIES + "/", PermissionEnum.ACCESS_SPECIES)
+        assign_perm("cyano."+PermissionEnum.ACCESS_SPECIES, self.doGuestLogin())
+
+        self.assertLoginRequired(SPECIES + "/", PermissionEnum.READ_NORMAL)
+        self.getSpecies().assign_perm(PermissionEnum.READ_NORMAL, self.doGuestLogin())
+
         with self.assertTemplateUsed("cyano/species.html"):
             self.assertOK(SPECIES + "/")
     
@@ -351,7 +353,7 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         """Visit listing page as guest"""
         url = SPECIES + "/" + MODEL + "/"
         
-        self.assertLoginRequiredNoPerm(url)
+        self.assertLoginRequired(url)
         self.assertNotFound(SPECIES + "/" + "Invalid" + "/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
@@ -368,7 +370,7 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         """Visit detail page as guest"""
         url = SPECIES + "/" + MODEL + "/" + ITEM + "/"
         url2 = SPECIES2 + "/" + MODEL + "/" + ITEM + "/"
-        self.assertLoginRequiredNoPerm(url)
+        self.assertLoginRequired(url)
         self.assertNotFound(url2)
 
         self.assertNotFound(SPECIES + "/" + "Invalid" + "/" + ITEM + "/")
@@ -438,7 +440,7 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
 
     def test_guest_exportData(self):
         """Visit export page as guest"""
-        self.assertLoginRequiredNoPerm(SPECIES + "/export/")
+        self.assertLoginRequired(SPECIES + "/export/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
         
@@ -468,9 +470,9 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         """Visit history pages as guest"""
         self.assertNotFound("history/")
         
-        self.assertLoginRequiredNoPerm(SPECIES + "/history/")
-        self.assertLoginRequiredNoPerm(SPECIES + "/" + MODEL + "/history/")
-        self.assertLoginRequiredNoPerm(SPECIES + "/" + MODEL + "/" + ITEM + "/history/")
+        self.assertLoginRequired(SPECIES + "/history/")
+        self.assertLoginRequired(SPECIES + "/" + MODEL + "/history/")
+        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/history/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_HISTORY")
         
@@ -484,7 +486,7 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/history/a/")
         self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/a/")
         
-        self.assertLoginRequiredNoPerm(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/")
+        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_HISTORY")
         
@@ -495,9 +497,9 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         """Visit permission view page as guest"""
         self.assertNotFound("permission/")
         
-        self.assertLoginRequiredNoPerm(SPECIES + "/permission/")
+        self.assertLoginRequired(SPECIES + "/permission/")
         self.assertNotFound(SPECIES + "/" + MODEL + "/permission/")
-        self.assertLoginRequiredNoPerm(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/")
+        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/")
         
         self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_PERMISSION")
         
@@ -797,7 +799,7 @@ class CyanoCreateTest(CyanoBaseTest):
             self.assertOK("new-species/")
         
         self.doLogout()
-        self.assertLoginRequiredNoPerm("new-species/")
+        self.assertLoginRequired("new-species/")
     
     def test_create_mutant(self):
         """Create a new mutant of SPECIES via the webinterface"""
@@ -819,7 +821,7 @@ class CyanoCreateTest(CyanoBaseTest):
             self.assertOK("new-species/")
         
         self.doLogout()
-        self.assertLoginRequiredNoPerm("new-species/")
+        self.assertLoginRequired("new-species/")
         
     # Missing fields are not tested because all fields have required = True -> django feature
     

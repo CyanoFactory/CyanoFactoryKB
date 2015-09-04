@@ -1,3 +1,4 @@
+from urllib.error import HTTPError
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render_to_response
 from django.shortcuts import redirect
@@ -40,17 +41,8 @@ def dbxref(request, source, xid):
     :return:
        Website -- ``db_xref/output.format``
     """
-    import db_xref
-    import os
-    import urlparse
-    import urllib
-    from suds.client import Client
-
-    # via https://stackoverflow.com/questions/11687478/
-    def path2url(path):
-        return urlparse.urljoin('file:', urllib.pathname2url(path))
-
-    client = Client(path2url(os.path.abspath(db_xref.__path__[0]) + "/MiriamWebServices.xml"))
+    import json
+    from urllib.request import Request, urlopen
 
     _format = request.GET.get('format', 'redirect')
     
@@ -61,19 +53,32 @@ def dbxref(request, source, xid):
     if database == "GO" and organism[:3] != "GO:":
         organism = "GO:" + organism
 
+    mappings = {"ec": "ec-code"}
+
+    database = mappings.get(database.lower(), database)
+
+    req = Request(
+        "https://www.ebi.ac.uk/miriamws/main/rest/resolve/urn:miriam:{}:{}".format(database, organism),
+        headers={"Accept": "application/json"}
+    )
+
+    try:
+        res = urlopen(req)
+        do_error = False
+        res = res.readall().decode("utf-8")
+        urls = list(map(lambda x: x["$"], filter(lambda x: not x.get("@deprecated", False) and x.get("@type") == "URL", json.loads(res)["uri"])))
+
+    except HTTPError:
+        do_error = True
+        urls = []
+
     data = {
         "database": database,
         "item": organism,
-        "urls": client.service.getLocations(client.service.getURI(database, organism))
+        "urls": urls
     }
     
     template = "db_xref/output." + _format
-
-    do_error = False
-    
-    if len(data["urls"]) == 0:
-        # Unsupported DB
-        do_error = True
 
     if _format == "txt":
         mimetype = "text/plain"
@@ -98,11 +103,10 @@ def dbxref(request, source, xid):
         c = Context(data)
         return HttpResponseBadRequest(
             t.render(c),
-            mimetype='text/html; charset=UTF-8',
             content_type='text/html; charset=UTF-8')
 
     status = 400 if do_error else 200
 
     t = loader.get_template(template)
     c = Context(data)
-    return HttpResponse(t.render(c), mimetype=mimetype, status=status)
+    return HttpResponse(t.render(c), content_type=mimetype, status=status)

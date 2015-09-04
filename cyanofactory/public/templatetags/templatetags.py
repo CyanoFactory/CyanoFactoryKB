@@ -216,10 +216,10 @@ class MakeUrlNode(template.Node):
 		newarg = self.newarg.resolve(context)
 		newval = self.newval.resolve(context)
 		queryargs = {}
-		for key, val in self.queryargs.resolve(context).iteritems():
+		for key, val in self.queryargs.resolve(context).items():
 			queryargs[key] = val
 		queryargs[newarg] = [newval, ]
-		for key, vals in queryargs.iteritems():
+		for key, vals in queryargs.items():
 			for val in vals:
 				if hasattr(val, 'id'):
 					val = val.id
@@ -235,7 +235,7 @@ def makeurl(parser, token):
 @register.simple_tag
 def reverseurl(*args, **kwargs):
 	view = ''.join(args)
-	if kwargs.has_key('pk'):
+	if "pk" in kwargs 'pk':
 		return reverse(view, args=(kwargs['pk'], ))
 	return reverse(view)
 

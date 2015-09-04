@@ -30,7 +30,7 @@ class Command(BaseCommand):
         #non_cyano_member = Group.objects.get(name='Non-Cyanofactory Member')
         mw = Group.objects.get(name='Mittweida')
         
-        print "Assigning user to groups"
+        print("Assigning user to groups")
         
         gabriel = User.objects.get(username="gabriel")
         gabriel.groups = [cyano_member, mw]

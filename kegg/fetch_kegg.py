@@ -13,7 +13,7 @@ m = re.findall(r'(?<=\s)([0-9]{5})(?=\s)', html)
 mlen = len(m)
 
 for i, match in enumerate(m):
-    print "Downloading {} ({}/{})".format(match, i + 1, mlen)
+    print("Downloading {} ({}/{})".format(match, i + 1, mlen))
     image = "map{}.png".format(match)
     site = "map{}.html".format(match)
     

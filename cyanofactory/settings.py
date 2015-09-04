@@ -25,25 +25,8 @@ UNIT_TEST_RUNNING = 'test' in argv
 # Special case for unit testing (SQLite DB -> faster)
 
 if UNIT_TEST_RUNNING:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        ##    'NAME': 'cyano_new3',
-        ##    'USER': 'cyano',
-        ##    'PASSWORD': 'cyano',
-        ##    'HOST': 'localhost',
-        ##    'PORT': '5432',
-            #'ENGINE': 'django.db.backends.sqlite3',
-            #'NAME': 'cyanobase'
-            'NAME': 'cyanofactory_dev_test',
-            'USER': 'cyanofactory_dev',
-            'PASSWORD': '0y6iyx53x3yOn8TahOOF',
-            'HOST': 'cyanofactory.mni.hs-mittweida.de',
-            'PORT': '5432',
-        }
-    }
-
-    TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+    DATABASES["default"]["NAME"] = "test_cyanofactory_dev"
+    TEST_RUNNER = 'cyano.testrunner.MirrorTestDBTestSuiteRunner'
 
     DEBUG = False
 else:
@@ -172,9 +155,8 @@ INSTALLED_APPS = (
     'cyanointeraction',
 
     #helpers
-    'django_dumpdb',
     'djcelery',
-    'haystack',
+    #'haystack',
     'rest_framework',
     'crispy_forms',
     #'debug_toolbar',

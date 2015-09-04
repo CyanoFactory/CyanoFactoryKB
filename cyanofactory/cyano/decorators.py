@@ -114,14 +114,18 @@ def permission_required(permission):
                 return function(request, *args, **kw)
 
             if species:
-                species = Entry.objects.get(pk=species.pk)
+                species_old_cls = species.__class__
+                species.__class__ = Entry
                 allow_item = None
 
                 if item:
-                    item = Entry.objects.get(pk=item.pk)
+                    item_old_cls = item.__class__
+                    item = item.__class__ = Entry
                     allow_item = user.profile.has_perm(permission, item)
+                    item.__class__ = item_old_cls
 
                 allow_species = user.profile.has_perm(permission, species)
+                species._class__ = species_old_cls
 
                 if allow_species or allow_item:
                     # Has permission
@@ -147,7 +151,8 @@ def permission_required(permission):
                 species=species,
                 error=403,
                 message=msg,
-                force_next=request.build_absolute_uri())
+                force_next=request.build_absolute_uri(),
+                required_perm=permission)
 
         return wrapper
 

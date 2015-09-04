@@ -11,7 +11,7 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 '''
 
-from dateutil.tz import tzlocal
+from datetime import timezone
 from itertools import groupby
 from math import ceil
 import datetime
@@ -216,15 +216,15 @@ class MakeUrlNode(template.Node):
 		newarg = self.newarg.resolve(context)
 		newval = self.newval.resolve(context)
 		queryargs = {}
-		for key, val in self.queryargs.resolve(context).iteritems():
+		for key, val in self.queryargs.resolve(context).items():
 			queryargs[key] = val
 		queryargs[newarg] = [newval, ]
-		for key, vals in queryargs.iteritems():
+		for key, vals in queryargs.items():
 			for val in vals:
 				if hasattr(val, 'id'):
 					val = val.id
 				if val != '':
-					arr.append(key + '=' + unicode(val))
+					arr.append(key + '=' + val)
 		return '&'.join(arr)
 
 @register.tag
@@ -281,8 +281,8 @@ def multiply(val1, val2):
 @register.filter
 def get_template_last_updated(templateFile):
 	import settings
-	return datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + templateFile), tzlocal())
+	return datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + templateFile))
 
 @register.filter	
 def set_time_zone(datetime):		
-	return datetime.replace(tzinfo=tzlocal())
+	return datetime.astimezone(tz=None)

@@ -22,16 +22,13 @@ import os
 import re
 from django.contrib.contenttypes.models import ContentType
 from haystack.models import SearchResult
+from openpyxl.styles.numbers import NumberFormat
 import settings
 import sys
 import tempfile
 from copy import deepcopy
-from dateutil.tz import tzlocal
-from StringIO import StringIO
+from io import StringIO
 from xml.dom.minidom import Document
-
-from BeautifulSoup import BeautifulStoneSoup
-from odict import odict
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
@@ -40,25 +37,18 @@ from django.db.models.fields import AutoField, BigIntegerField, IntegerField, Po
     FieldDoesNotExist
 from django.db.models.fields.related import OneToOneField, ManyToManyField, ForeignKey
 from django.http import HttpResponse
-from django.shortcuts import render_to_response, render
+from django.shortcuts import render
 from django.template import Context, RequestContext, loader
-from django.utils.html import strip_tags
 from django.apps import apps
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.cell import Cell, get_column_letter
-from openpyxl.shared.date_time import SharedDate, CALENDAR_WINDOWS_1900
-from openpyxl.style import NumberFormat, Border, Color, HashableObject, Alignment
+from openpyxl.styles import Border, Color, HashableObject, Alignment
 
-from cyano.templatetags.templatetags import ceil
 import cyano.models as cmodels
 
-from Bio import SeqIO, SeqFeature
 from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
 from Bio.Alphabet import IUPAC
-from Bio.Alphabet.IUPAC import IUPACUnambiguousDNA
-from Bio.SeqFeature import FeatureLocation
 
 class ELEMENT_MWS:
     H = 1.0079
@@ -399,9 +389,6 @@ def getEntry(species_wid = None, wid = None):
             return getModel(tmp.model_type.model_name).objects.select_related(depth=2).get(id=tmp.id)
     except ObjectDoesNotExist:
         return None
-    
-def html_to_ascii(s):
-    return strip_tags(unicode(BeautifulStoneSoup(s, convertEntities=BeautifulStoneSoup.ALL_ENTITIES)).replace("&nbsp;", " "))
 
 '''
 Element order preserved
@@ -452,7 +439,7 @@ def get_extra_context(request = [], queryset = None, models = [], template = '',
     
     data['social_text'] = social_text
 
-    for key, val in request.GET.iterlists():
+    for key, val in request.GET.lists():
         data['queryargs'][key] = val
 
     if outformat == 'html':
@@ -470,7 +457,7 @@ def get_extra_context(request = [], queryset = None, models = [], template = '',
         else:
             last_update = data['last_updated_date'] = cmodels.RevisionDetail.objects.order_by("-date").first()
             if last_update is None:
-                data['last_updated_date'] = datetime.datetime.now(tzlocal())
+                data['last_updated_date'] = datetime.datetime.now()
             else:
                 data['last_updated_date'] = cmodels.RevisionDetail.objects.order_by("-date").first().date
         data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
@@ -484,8 +471,8 @@ def get_extra_context(request = [], queryset = None, models = [], template = '',
             objDict['model'] = obj.__class__.__name__
             objects.append(objDict)
         
-        now = datetime.datetime.now(tzlocal())
-        json = odict()
+        now = datetime.datetime.now()
+        json = OrderedDict()
         json['title'] = 'CyanoFactory KB{}'.format(" - {}".format(species.name) if species else "")
         json['time'] = str(now.isoformat())
         json['species'] = species.wid if species else ""
@@ -603,7 +590,7 @@ def render_queryset_to_response(request=[], queryset=None, models=[], template='
                 species.name if species else "",
                 'CyanoFactory KB', now.isoformat(),
                 request.build_absolute_uri(),
-                html_to_ascii('&copy;'), now.year, 'Experimental & Computational Biology, University of Applied Sciences Mittweida',
+                "©", now.year, 'Experimental & Computational Biology, University of Applied Sciences Mittweida',
                 ))
             doc.appendChild(comment)
 
@@ -683,7 +670,7 @@ def render_queryset_to_response_error(request = [], queryset = None, model = Non
         objects = []
         
         now = datetime.datetime.now(tzlocal())
-        json_data = odict()
+        json_data = OrderedDict()
         json_data['title'] = 'CyanoFactory KB'
         json_data['time'] = str(now.isoformat())
         json_data['species'] = species.wid if species else ""
@@ -741,7 +728,6 @@ def writeExcel(species, queryset, modelArr, is_user_anonymous):
     wb.properties.keywords = 'biology, systems, database, knowledge base'
     wb.properties.category = ''
     wb.properties.company = 'Experimental & Computational Biology, University of Applied Sciences Mittweida'
-    wb.properties.excel_base_date = CALENDAR_WINDOWS_1900
     
     #print table of contents
     ws = wb.create_sheet(title = 'Contents')
@@ -754,7 +740,7 @@ def writeExcel(species, queryset, modelArr, is_user_anonymous):
             now.strftime("%Y-%m-%d"), 
             settings.ROOT_URL + reverse('cyano.views.exportData', kwargs={'species_wid': species.wid}),
             ), 10, False),
-        ('%s %s %s' % (html_to_ascii('&copy;'), now.year, wb.properties.company), 10, False),
+        ('%s %s %s' % ("©", now.year, wb.properties.company), 10, False),
     )    
     for i in range(len(headers)):        
         ws.merge_cells(start_row=i, start_column=0, end_row=i, end_column=1)
@@ -955,8 +941,8 @@ def get_excel_headers(model, is_user_anonymous=False):
         if (field.rel is not None) and isinstance(field, ForeignKey) and (not issubclass(field.rel.to, (cmodels.Entry, User, ))):
             for subfield in field.rel.to._meta.fields + field.rel.to._meta.many_to_many:
                 if not subfield.auto_created:
-                    subheaders.append(html_to_ascii(subfield.verbose_name))
-        headers.append((html_to_ascii(field.verbose_name), subheaders, ))
+                    subheaders.append(subfield.verbose_name)
+        headers.append((field.verbose_name, subheaders, ))
     return headers
     
 def format_value_excel(obj, field, depth = 0):
@@ -984,15 +970,12 @@ def format_value_excel(obj, field, depth = 0):
         format_code = NumberFormat.FORMAT_TEXT
     elif field.__class__ is DateField:
         value = datetime.datetime.combine(value, datetime.time())
-        value = SharedDate().datetime_to_julian(date=value)
         data_type = Cell.TYPE_NUMERIC
         format_code = NumberFormat.FORMAT_DATE_YYYYMMDD2
     elif field.__class__ is DateTimeField:
-        value = SharedDate().datetime_to_julian(date=value)
         data_type = Cell.TYPE_NUMERIC
         format_code = 'yyy-mm-dd h:mm:ss'
     elif field.__class__ is TimeField:
-        value = SharedDate().datetime_to_julian(date=value)
         data_type = Cell.TYPE_NUMERIC
         format_code = NumberFormat.FORMAT_DATE_TIME4
     elif isinstance(field, ForeignKey):
@@ -1000,7 +983,7 @@ def format_value_excel(obj, field, depth = 0):
         if issubclass(field.rel.to, (cmodels.Entry, cmodels.UserProfile)):
             value = None
             if subobj is not None:
-                value = unicode(subobj)
+                value = subobj
             data_type = Cell.TYPE_STRING
             format_code = NumberFormat.FORMAT_TEXT
         elif depth > 0:
@@ -1109,7 +1092,7 @@ def batch_import_from_excel(species_wid, fileName, user):
     all_obj_wids = {species_wid: 'Species'}
     all_obj_data = {species_wid: species}
     all_obj_data_by_model = {'Species': [species]}
-    for model_name, model in getModels().iteritems():
+    for model_name, model in getModels().items():
         if not issubclass(model, cmodels.SpeciesComponent):
             continue
         all_obj_data_by_model[model_name] = []
@@ -1201,7 +1184,7 @@ def read_excel_data(filename):
     errors = []
 
     #check headers
-    for modelname, model in models.iteritems():
+    for modelname, model in models.items():
         ws = wb.get_sheet_by_name(name = model._meta.verbose_name_plural[:31])
         if ws is None:
             continue
@@ -1233,7 +1216,7 @@ def read_excel_data(filename):
 
     #get data
     newobjects = {}
-    for modelname, model in models.iteritems():
+    for modelname, model in models.items():
         ws = wb.get_sheet_by_name(name = model._meta.verbose_name_plural[:31])
         if ws is None:
             continue
@@ -1354,7 +1337,7 @@ def read_excel_data(filename):
 
 def format_error_as_html_list(error):
     fullmsg = '<ul>' 
-    for key, msg in error.message_dict.iteritems():
+    for key, msg in error.message_dict.items():
         if isinstance(msg, (str, unicode, )):
             msg = [msg]
         
@@ -1970,7 +1953,7 @@ def validate_object_fields(model, data, wids, species_wid, entry_wid):
                         try:
                             data[field.name] = validate_object_fields(field.rel.to, data[field.name], wids, species_wid, entry_wid)
                         except ValidationError as error:
-                            tmp = ['%s: %s' % (key, val, ) for key, val in error.message_dict.iteritems()]
+                            tmp = ['%s: %s' % (key, val, ) for key, val in error.message_dict.items()]
                             raise ValidationError('<ul><li>%s</li></ul>' % '</li><li>'.join(tmp))
                             
             elif isinstance(field, ManyToManyField):
@@ -1988,7 +1971,7 @@ def validate_object_fields(model, data, wids, species_wid, entry_wid):
                         try:
                             data[field.name][idx] = validate_object_fields(field.rel.to, data[field.name][idx], wids, species_wid, entry_wid)
                         except ValidationError as error:
-                            tmp = ['%s: %s' % (key, val, ) for key, val in error.message_dict.iteritems()]
+                            tmp = ['%s: %s' % (key, val, ) for key, val in error.message_dict.items()]
                             raise ValidationError('<ul><li>%s</li></ul>' % '</li><li>'.join(tmp))
             else:                
                 if data.has_key(field.name):
@@ -2196,7 +2179,7 @@ def readFasta(species_wid, filename, user):
             sequences[wid] += data[i].strip()    
     
     #retrieve chromosomes/plasmids
-    for wid, sequence in sequences.iteritems():
+    for wid, sequence in sequences.items():
         try:
             chro = cmodels.Genome.objects.get(species__wid=species_wid, wid=wid)
         except ObjectDoesNotExist as error:
@@ -2206,7 +2189,7 @@ def readFasta(species_wid, filename, user):
         return (False, cmodels.format_list_html(error_messages))
     
     #validate
-    for wid, sequence in sequences.iteritems():
+    for wid, sequence in sequences.items():
         chro = cmodels.Genome.objects.get(species__wid=species_wid, wid=wid)
         chro.sequence = sequence
         try:
@@ -2219,7 +2202,7 @@ def readFasta(species_wid, filename, user):
 
         
     #save
-    for wid, sequence in sequences.iteritems():    
+    for wid, sequence in sequences.items():    
         chro = cmodels.Genome.objects.get(species__wid=species_wid, wid=wid)
         chro.sequence = sequence
         chro.full_clean()
@@ -2268,7 +2251,7 @@ def write_bibtex(species, qs):
             now.isoformat(), 
             settings.ROOT_URL + reverse('cyano.views.exportData', kwargs={'species_wid': species.wid}),
             )) \
-        + ('\t%s %s %s\n' % (html_to_ascii('&copy;'), now.year, 'Covert Lab, Department of Bioengineering, Stanford University', )) \
+        + ('\t%s %s %s\n' % ("©", now.year, 'Covert Lab, Department of Bioengineering, Stanford University', )) \
         + '"}\n\n' \
         + '\n\n'.join(bibs)
 
@@ -2313,7 +2296,7 @@ def get_invalid_objects(species_id, validate_fields=False, validate_objects=True
     all_obj_data_by_model['Species'] = [species]
     
     wids = []
-    for model_name, model in getModels(cmodels.SpeciesComponent).iteritems():
+    for model_name, model in getModels(cmodels.SpeciesComponent).items():
         all_obj_data_by_model[model_name] = []
         for obj in model.objects.select_related().filter(species__id=species_id):
             wids.append(obj.wid)
@@ -2334,7 +2317,7 @@ def get_invalid_objects(species_id, validate_fields=False, validate_objects=True
 
     #validate
     errors = []
-    for model_name, model in getModels().iteritems():
+    for model_name, model in getModels().items():
         for obj in all_obj_data_by_model[model_name]:
             obj_data = get_edit_form_fields(species_wid, model, obj=obj)[1]
             obj_data['species'] = species_wid
@@ -2409,14 +2392,14 @@ class EmpiricalFormula(dict):
                 if val != 0:
                     self[match.group(1)] = val
             
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             val = float(val)
             if val != 0:
                 self[key] = val
         
     def __add__(self, other):
         c = deepcopy(self)
-        for key, val in other.iteritems():
+        for key, val in other.items():
             if c.has_key(key):
                 c[key] += val
             else:
@@ -2434,7 +2417,7 @@ class EmpiricalFormula(dict):
         
     def __neg__(self):
         b = EmpiricalFormula()
-        for key, val in self.iteritems():
+        for key, val in self.items():
             b[key] = -val
         return b
         
@@ -2443,13 +2426,13 @@ class EmpiricalFormula(dict):
             
         c = EmpiricalFormula()
         if other != 0:
-            for key, val in self.iteritems():
+            for key, val in self.items():
                 c[key] = val * other
         return c
         
     def get_molecular_weight(self):
         mw = 0
-        for key, val in self.iteritems():
+        for key, val in self.items():
             mw += val * getattr(ELEMENT_MWS, key)
         return mw        
         

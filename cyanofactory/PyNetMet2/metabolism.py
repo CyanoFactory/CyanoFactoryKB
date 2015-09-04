@@ -22,8 +22,8 @@
 from __future__ import print_function
 
 from codecs import open
-from network import *
-from enzyme import *
+from .network import *
+from .enzyme import *
 from xml.dom.minidom import parseString
 import re
 
@@ -202,7 +202,7 @@ class Metabolism(object):
 
         # writes reactions in pathways
         pathways = [[] for ele in self.pathnames]
-        for ii in xrange(len(self.enzymes)):
+        for ii in range(len(self.enzymes)):
             pathway = self.enzymes[ii].pathway
             if pathway in self.pathnames:
                 ipath = self.pathnames.index(pathway)
@@ -214,7 +214,7 @@ class Metabolism(object):
 
         # Constructs the M matrix (metabolites connections)
         nsubs = len(subs)
-        M = [[0 for iii in xrange(nsubs)] for jjj in xrange(nsubs)]
+        M = [[0 for iii in range(nsubs)] for jjj in range(nsubs)]
         for enzy in self.enzymes:
             for su in enzy.substrates:
                 for pr in enzy.products:
@@ -305,7 +305,7 @@ class Metabolism(object):
                     self.external_in.extend(enzy.metabolites)
                     self.transport.append(ii+nreacs_old)
         # writes reactions in pathways
-        for ii in xrange(len(self.enzymes[nreacs_old:])):
+        for ii in range(len(self.enzymes[nreacs_old:])):
             pathway = self.enzymes[ii+nreacs_old].pathway
             if pathway in self.pathnames:
                 ipath = self.pathnames.index(pathway)
@@ -756,7 +756,7 @@ class Metabolism(object):
         """
         nsubs = len(self.dic_mets)
         subs=self.dic_mets
-        M = [[0 for iii in xrange(nsubs)] for jjj in xrange(nsubs)]
+        M = [[0 for iii in range(nsubs)] for jjj in range(nsubs)]
         for enzy in self.enzymes:
             for su in enzy.substrates:
                 for pr in enzy.products:
@@ -782,7 +782,7 @@ class Metabolism(object):
         reacs = self.enzymes
         nnodes = nsubs + nreacs
         nodes = self.mets + [ele.name for ele in reacs]
-        M = [[0 for iii in xrange(nnodes)] for jjj in xrange(nnodes)]
+        M = [[0 for iii in range(nnodes)] for jjj in range(nnodes)]
         for ii, reac in enumerate(reacs):
             for su in reac.substrates:
                 M[subs[su]][enzs[reac.name]+nsubs] = 1

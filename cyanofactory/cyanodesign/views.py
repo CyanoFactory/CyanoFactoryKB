@@ -5,8 +5,7 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
-import StringIO
-from collections import OrderedDict
+from io import StringIO
 import os
 import tempfile
 from crispy_forms.utils import render_crispy_form
@@ -217,7 +216,7 @@ def simulate(request, pk):
     graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
     graph.node_attr.update(style="filled", colorscheme="pastel19")
     outgraph = str(graph.to_string())
-    outgraph = pygraphviz.AGraph(outgraph)
+    outgraph = graph.pygraphviz.AGraph(outgraph)
     outgraph = outgraph.draw(format="svg", prog="dot")
 
     if output_format == "json":
@@ -241,7 +240,7 @@ def simulate(request, pk):
         r['Content-Disposition'] = 'attachment; filename={}.svg'.format(model.filename)
         return r
     elif output_format == "csv":
-        s = StringIO.StringIO()
+        s = StringIO()
         for reac, flux in zip(fba.reacs, fba.flux):
             s.write(reac.name)
             s.write("\t")
@@ -269,7 +268,7 @@ def export(request, pk):
 
     org = model_from_string(content)
 
-    ss = StringIO.StringIO()
+    ss = StringIO()
 
     org.to_model().dump(fileout=ss, filetype="opt" if form == "bioopt" else "sbml")
 
@@ -395,7 +394,7 @@ def upload(request, pk):
                 #save to temporary file
                 filename = request.FILES['file'].name
 
-                ss = StringIO.StringIO()
+                ss = StringIO()
 
                 with tempfile.NamedTemporaryFile(delete=False) as fid:
                     path = fid.name

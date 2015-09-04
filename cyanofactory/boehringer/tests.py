@@ -7,6 +7,9 @@ Released under the MIT license
 
 from cyano.tests import CyanoBaseTest
 from django.core import management
+import boehringer.models as models
+
+ACCESS_PERM = "access_boehringer"
 
 def setup():
     import sys
@@ -21,36 +24,52 @@ def setup():
 
 class BoehringerStandaloneGuestTest(CyanoBaseTest):
     """Tests standalone feature under /boehringer/ as guest"""
+    def test_boehringer_data_loaded(self):
+        msg = "Data not imported\nRun \"manage.py loaddata boehringer/fixtures/boehringer.json\""
+
+        self.assertEqual(models.BioMolecule.objects.count(), 2565, msg=msg)
+        self.assertEqual(models.Enzyme.objects.count(), 1016, msg=msg)
+        self.assertEqual(models.Metabolite.objects.count(), 1549, msg=msg)
+        self.assertEqual(models.Color.objects.count(), 3, msg=msg)
     
     def test_main_page_guest(self):
         """Main page as guest"""
-        self.assertLoginRequired("boehringer/")
+        self.assertLoginRequired("boehringer/", ACCESS_PERM)
 
     def test_legacy_page_guest(self):
         """Main page as guest"""
-        self.assertLoginRequired("boehringer/legacy/")
+        self.assertLoginRequired("boehringer/legacy/", ACCESS_PERM)
 
-class BoehringerStandaloneTest(CyanoBaseTest):
+class BoehringerStandaloneTest(BoehringerStandaloneGuestTest):
     """Tests standalone feature under /boehringer/"""
+
     def setUp(self):
         self.doLogin()
     
-    def test_main_page_works(self):
-        """Main page loads"""        
+    def test_main_page(self):
+        """Main page loads"""
+        self.user.profile.assign_perm(ACCESS_PERM)
+
         with self.assertTemplateUsed("boehringer/index.html"):
             self.assertOK("boehringer/")
     
-    def test_legacy_page_works(self):
+    def test_legacy_page(self):
         """Legacy page loads"""
+        self.user.profile.assign_perm(ACCESS_PERM)
+
         with self.assertTemplateUsed("boehringer/legacy.html"):
             self.assertOK("boehringer/legacy/")
-    
+
+class BoehringerStandaloneTestWithPermission(CyanoBaseTest):
+    def setUp(self):
+        self.doLogin()
+        self.user.profile.assign_perm(ACCESS_PERM)
+
     def test_default_search(self):
         """default search results are correct"""
         with self.assertTemplateUsed("boehringer/index.html"):
             resp = self.assertOK("boehringer/")
             self.assertContains(resp, "4 hits - 1 miss")
-            self.assertContains(resp, "1 hit - 0 misses")
             self.assertContains(resp, "L-Ascorbate")
 
     def test_ec_search(self):

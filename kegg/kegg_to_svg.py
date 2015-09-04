@@ -10,7 +10,7 @@ import urllib2
 import shutil
 from PIL import Image
 from xml.etree.ElementTree import ElementTree, Element, SubElement
-from StringIO import StringIO
+from io import StringIO
 
 def extract_ecs(text):
     """Extracts EC numbers out of a string and returns a list with all numbers"""
@@ -35,7 +35,7 @@ html_files = filter(lambda x: x.endswith(".html"), os.listdir("fetch"))
 html_files_count = len(html_files)
 
 for i, file in enumerate(html_files):
-    print "Parsing {} ({}/{})".format(file, i + 1, html_files_count)
+    print("Parsing {} ({}/{})".format(file, i + 1, html_files_count))
     
     file = file[:-5] # Remove extension
     
@@ -137,7 +137,7 @@ for i, file in enumerate(html_files):
             
             if len(uniqify(extract_ecs(title))) > 0:
                 if color_component == "rgb(0,255,0)":
-                    print "Pathway link with EC_Number!"
+                    print("Pathway link with EC_Number!")
                 color_component = "rgb(0,0,255)"
             
             

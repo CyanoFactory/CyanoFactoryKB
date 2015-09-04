@@ -40,7 +40,7 @@ class Command(BaseCommand):
         
         for name in args:
             if not User.objects.filter(username=name).count():
-                print "User {} not found".format(name)
+                print("User {} not found".format(name))
 
             else:
                 user = User.objects.get(username=name)                
@@ -72,4 +72,4 @@ class Command(BaseCommand):
                 user.save()
                 user.profile.save()
 
-                print "Sent new password for {} to {}".format(name, user.email)
+                print("Sent new password for {} to {}".format(name, user.email))

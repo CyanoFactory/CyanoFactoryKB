@@ -197,7 +197,7 @@ def get_reaction_map(map_id, enzymes, metabolites, export):
 
         ##template = loader.get_template("cyano/pathway/sidebar.html")
 
-        out = StringIO.StringIO()
+        out = StringIO()
         ##out.write(template.render(Context()))
         out.write("""<svg id="kegg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" pointer-events="visible">""")
         tree.write(out)

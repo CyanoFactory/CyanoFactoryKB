@@ -24,13 +24,13 @@ from django.db.models.fields import NullBooleanField
 import subprocess
 import sys
 from datetime import datetime
-import StringIO
+from io import StringIO
 
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
 from Bio import SeqRecord, SeqIO
 
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Permission
 from django.contrib.auth.models import Group
 from django.core import validators
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
@@ -50,12 +50,11 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 from copy import deepcopy
 from django.conf import settings
 
-from model_utils.managers import PassThroughManager
-
 from django.db import models
 
 from guardian.models import UserObjectPermissionBase
 from guardian.models import GroupObjectPermissionBase
+from guardian.shortcuts import assign_perm, remove_perm
 
 def enum(**enums):
     return type(str('Enum'), (), enums)
@@ -426,6 +425,28 @@ class GroupProfile(Model):
     group = OneToOneField(Group, related_name="profile")
     description = CharField(max_length=255, blank=True, default='', verbose_name="Group description")
 
+    def assign_perm(self, permission, obj=None):
+        if obj is None:
+            if "." in permission:
+                app_label, codename = permission.split(1)
+                perm = Permission.objects.filter(content_type__app_label=app_label, codename=codename)
+            else:
+                codename = permission
+                perm = Permission.objects.filter(codename=codename)
+                if perm.count() > 1:
+                    raise ValueError("Permission is ambiguous: {}".format(codename))
+
+            perm = perm.first()
+            assign_perm("{}.{}".format(perm.content_type.app_label, perm.codename), self.group)
+        else:
+            old_cls = self.__class__
+            self.__class__ = Entry
+
+            try:
+                assign_perm(permission, self.group, obj)
+            finally:
+                self.__class__ = old_cls
+
     def has_perm(self, permission, obj=None):
         """
         Improved perm check respecting all groups
@@ -510,6 +531,28 @@ class UserProfile(Model):
         profiles |= GroupProfile.objects.filter(group__name="Everybody")
 
         return profiles
+
+    def assign_perm(self, permission, obj=None):
+        if obj is None:
+            if "." in permission:
+                app_label, codename = permission.split(1)
+                perm = Permission.objects.filter(content_type__app_label=app_label, codename=codename)
+            else:
+                codename = permission
+                perm = Permission.objects.filter(codename=codename)
+                if perm.count() > 1:
+                    raise ValueError("Permission is ambiguous: {}".format(codename))
+
+            perm = perm.first()
+            assign_perm("{}.{}".format(perm.content_type.app_label, perm.codename), self.user)
+        else:
+            old_cls = self.__class__
+            self.__class__ = Entry
+
+            try:
+                assign_perm(permission, self.user, obj)
+            finally:
+                self.__class__ = old_cls
 
     def has_perm(self, permission, obj=None):
         """
@@ -677,7 +720,7 @@ class EntryDataQuerySet(QuerySet):
             return obj
 
 class EntryData(Model):
-    objects = PassThroughManager.for_queryset_class(EntryDataQuerySet)()
+    objects = EntryDataQuerySet.as_manager()
 
     def __unicode__(self):
         arr = []
@@ -1032,7 +1075,7 @@ class Synonym(EntryData):
 @receiver(m2m_changed)
 def m2m_changed_save(sender, instance, action, reverse, model, pk_set, **kwargs):
     if reverse:
-        print "WARN: Reverse support not implemented:",sender,instance,pk_set
+        print("WARN: Reverse support not implemented:",sender,instance,pk_set)
         return
 
     if not pk_set is None and len(pk_set) > 0 and isinstance(instance, Entry):
@@ -1727,14 +1770,14 @@ class Genome(Molecule):
             from Bio import pairwise2
             pairwise2.MAX_ALIGNMENTS = 1
             align = pairwise2.align.globalxx(self.sequence[:100], new_obj[:100])
-            output = StringIO.StringIO()
+            output = StringIO()
 
             for o, n in zip(align[0][0], align[0][1]):
                 output.write("|" if o == n else " ")
 
             align_graphic = output.getvalue()
             output.close()
-            output = StringIO.StringIO()
+            output = StringIO()
 
             old_align = re.sub(r'(.{80})', r'\1\n', align[0][0]).split("\n")
             new_align = re.sub(r'(.{80})', r'\1\n', align[0][1]).split("\n")
@@ -2083,11 +2126,8 @@ class Genome(Molecule):
             'types': types
         })
 
-        from time import time
-        start = time()
         template = loader.get_template("cyano/fields/structure.html")
         rendered = template.render(c)
-        print time() - start
 
         return rendered
 
@@ -2347,7 +2387,7 @@ class Genome(Molecule):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence()) + "\r\n"
     
     def get_as_genbank(self):
-        genbank = StringIO.StringIO()
+        genbank = StringIO()
         genes = Gene.objects.filter(species=self.species, chromosome_id=self.pk).prefetch_related("cross_references", "protein_monomers")
         record = SeqRecord.SeqRecord(Seq(self.sequence, IUPAC.IUPACAmbiguousDNA()))
 
@@ -3308,7 +3348,7 @@ class Pathway(SpeciesComponent):
 
             template = loader.get_template("cyano/pathway/sidebar.html")
 
-            out = StringIO.StringIO()
+            out = StringIO()
             out.write(template.render(Context()))
 
             out.write('<script type="text/javascript" src="' + settings.STATIC_URL + 'boehringer/js/svg-pan-zoom.js"></script>')
@@ -3906,7 +3946,7 @@ class ProteinMonomer(Protein):
         return self.get_fasta_header() + "\r\n" + re.sub(r"(.{70})", r"\1\r\n", self.get_sequence(cache=True)) + "\r\n"
 
     def get_as_genbank(self):
-        genbank = StringIO.StringIO()
+        genbank = StringIO()
 
         record = SeqRecord.SeqRecord(Seq(self.get_sequence()[:-1], IUPAC.IUPACProtein()))
         record.description = self.name
@@ -5161,7 +5201,7 @@ class MassSpectrometryProtein(Protein):
             fielddata = create_detail_fieldset(self.species, feature, fieldsets, False)
 
             tip_title = fielddata[0][0]
-            tip_text = StringIO.StringIO()
+            tip_text = StringIO()
 
             for dataset in fielddata:
                 for item in dataset[1]["fields"]:
@@ -5202,7 +5242,7 @@ class MassSpectrometryProtein(Protein):
 
         #features
         featureStyle = '.features rect{fill:#%s;}' % (colors[2], )
-        features = StringIO.StringIO()
+        features = StringIO()
 
         for feature in self.protein_details.all():
             features.write(draw_segment(feature))
