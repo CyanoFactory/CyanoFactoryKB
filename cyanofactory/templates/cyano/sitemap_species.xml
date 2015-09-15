@@ -14,26 +14,27 @@ Released under the MIT license
 
 {% load templatetags %}
 {% load filters %}
+{% load tz %}
 
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 	<!-- species home page -->
 	<url>
-		<loc>{{ ROOT_URL }}{{ species.get_absolute_url }}</loc> 
-		<lastmod>{{ species.detail.date|set_time_zone|date:"Y-m-d" }}</lastmod>
+		<loc>{{ species.get_absolute_url }}</loc>
+		<lastmod>{{ species.last_revision.detail.date|localtime|date:"Y-m-d" }}</lastmod>
 	</url>
 	
 	<!-- species browse -->
 	{% for model_name in modelnames %}
 	<url>
-		<loc>{{ ROOT_URL }}{% url "cyano.views.listing" species_wid=species.wid model_type=model_name %}</loc> 
-		<lastmod>{{ species.detail.date|set_time_zone|date:"Y-m-d" }}</lastmod>
+		<loc>{% url "cyano.views.listing" species_wid=species.wid model_type=model_name %}</loc>
+		<lastmod>{{ species.last_revision.detail.date|localtime|date:"Y-m-d" }}</lastmod>
 	</url>
 	{% endfor %}
 	<!-- species entries -->
 	{% for entry in entries %}
 	<url>
-		<loc>{{ ROOT_URL }}{{ entry|get_absolute_url:species }}</loc> 
-		<lastmod>{{ entry.detail.date|set_time_zone|date:"Y-m-d" }}</lastmod>
+		<loc>{{ entry.get_absolute_url }}</loc>
+		<lastmod>{{ entry.last_revision.detail.date|localtime|date:"Y-m-d" }}</lastmod>
 	</url>
 	{% endfor %}
 </urlset>

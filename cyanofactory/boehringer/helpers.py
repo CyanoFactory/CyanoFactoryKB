@@ -82,6 +82,8 @@ def format_output(request):
             'enzymes_hits': enzymes_hits,
             'metabolites_no_hits': len(metabolite_items) - metabolites_hits,
             'enzymes_no_hits': len(enzyme_items) - enzymes_hits,
-            'queries': models.Query.objects.filter(user=request.user.profile)}
+            'queries': [] if request.user.is_anonymous() else models.Query.objects.filter(user=request.user.profile),
+            'is_anonymous': request.user.is_anonymous()
+    }
 
     return data

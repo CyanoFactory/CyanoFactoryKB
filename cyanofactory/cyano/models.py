@@ -24,7 +24,7 @@ from django.db.models.fields import NullBooleanField
 import subprocess
 import sys
 from datetime import datetime
-from io import StringIO
+from io import StringIO, BytesIO
 
 from Bio.Seq import Seq
 from Bio.Alphabet import IUPAC
@@ -37,10 +37,11 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField,\
     FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, signals
-from django.db.models.query import QuerySet
+from django.db.models.query import QuerySet, Prefetch
 from django.template import loader, Context
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import m2m_changed
+from model_utils.managers import InheritanceManager
 
 from .templatetags.templatetags import set_time_zone
 from .cache import Cache
@@ -242,6 +243,10 @@ options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('listing', 'concrete_entry_mode
                                                  'facet_fields', 'clean', 'validate_unique', 'wid_unique',
                                                  'group_field')
 
+
+def get_anonymous_user_instance(User):
+    return User.objects.get(username='guest')
+
 ''' BEGIN: validators '''
 def validate_dna_sequence(seq):
     validators.RegexValidator(regex=r'^[ACGT]+$', message='Enter a valid DNA sequence consisting of only the letters A, C, G, and T')(seq)
@@ -413,7 +418,7 @@ class GlobalPermission(Model):
     class Meta:
         permissions = (
             ("access_species", "Can access any species"),
-            ("create_mutant", "Can create mutants"),
+            ("create_mutant", "Can create new species or mutants"),
             ("access_sbgn", "Can access SBGN map"),
         )
 
@@ -439,13 +444,13 @@ class GroupProfile(Model):
             perm = perm.first()
             assign_perm("{}.{}".format(perm.content_type.app_label, perm.codename), self.group)
         else:
-            old_cls = self.__class__
-            self.__class__ = Entry
+            old_cls = obj.__class__
+            obj.__class__ = Entry
 
             try:
                 assign_perm(permission, self.group, obj)
             finally:
-                self.__class__ = old_cls
+                obj.__class__ = old_cls
 
     def has_perm(self, permission, obj=None):
         """
@@ -546,13 +551,13 @@ class UserProfile(Model):
             perm = perm.first()
             assign_perm("{}.{}".format(perm.content_type.app_label, perm.codename), self.user)
         else:
-            old_cls = self.__class__
-            self.__class__ = Entry
+            old_cls = obj.__class__
+            obj.__class__ = Entry
 
             try:
                 assign_perm(permission, self.user, obj)
             finally:
-                self.__class__ = old_cls
+                obj.__class__ = old_cls
 
     def has_perm(self, permission, obj=None):
         """
@@ -667,7 +672,7 @@ class Revision(Model):
     Always only the new value of a single cell is stored to save memory.
     
     :Columns:
-        * ``current``: Reference to the latest entry
+        * ``current``: Reference to the entry
         * ``detail``: Contains additional information about the edit
         * ``action``: Type of the operation (Update, Insert, Delete)
         * ``column``: Table and column where the modification occured
@@ -682,6 +687,9 @@ class Revision(Model):
 
     def __unicode__(self):
         return str(self.current)
+
+    class Meta:
+        ordering = ['detail__date']
 
 class Evidence(Model):
     value = TextField(blank=True, default='', verbose_name='Value')
@@ -763,7 +771,7 @@ class EntryData(Model):
 
         fields = self._meta.fields
         # Remove primary keys and some fields that don't need revisioning:
-        fields = itertools.ifilter(lambda x: not x.primary_key, fields)
+        fields = filter(lambda x: not x.primary_key, fields)
 
         for field in fields:
             if hasattr(self, field.name + "_id"):
@@ -1172,6 +1180,7 @@ class SpeciesComponentQuerySet(EntryQuerySet):
 
 class AbstractEntry(Model):
     objects = EntryQuerySet.as_manager()
+    child_objects = InheritanceManager()
 
     class Meta:
         abstract = True
@@ -1206,10 +1215,14 @@ class Entry(AbstractEntry):
         return self.name or self.wid
 
     def last_revision(self):
-        return Revision.objects.filter(object_id=self.pk).last()
+        return Revision.objects.filter(
+            content_type_id=ContentType.objects.get_for_model(self).pk,
+            object_id=self.pk).prefetch_related('detail').last()
 
     def first_revision(self):
-        return Revision.objects.filter(object_id=self.pk).first()
+        return Revision.objects.filter(
+            content_type_id=ContentType.objects.get_for_model(self).pk,
+            object_id=self.pk).prefetch_related('detail').first()
 
     def get_permissions(self):
         return [
@@ -1246,7 +1259,7 @@ class Entry(AbstractEntry):
 
         fields = self._meta.fields
         # Remove primary keys and some fields that don't need revisioning:
-        fields = itertools.ifilter(lambda x: (not x.primary_key) and
+        fields = filter(lambda x: (not x.primary_key) and
                          (not x.name in ["detail", "created_detail"]), fields)
 
         for field in fields:
@@ -1403,14 +1416,21 @@ class SpeciesComponent(AbstractSpeciesComponent):
         super(SpeciesComponent, self).delete(revision_detail, using=using)
 
     #@permalink
-    def get_absolute_url(self, history_id=None):
+    def get_absolute_url(self, history_id=None, api=False):
         species_key = "species/%s" % self.species_id
         species = Cache.try_get(species_key, lambda: self.species, 60)
 
-        if history_id is None:
-            return "%s/%s/%s/%s" % (settings.ROOT_URL, species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid)
-        else:
-            return "%s/%s/%s/%s/history/%s" % (settings.ROOT_URL, species.wid, TableMeta.get_by_id(self.model_type_id).model_name, self.wid, history_id)
+        return "%s/%s%s/%s/%s%s" % (
+            settings.ROOT_URL,
+            "api/" if api else "",
+            species.wid,
+            TableMeta.get_by_id(self.model_type_id).model_name,
+            "%s/" % history_id if history_id is not None else "",
+            self.wid
+        )
+
+    def get_absolute_url_api(self):
+        return self.get_absolute_url(api=True)
 
     @classmethod
     def get_model_url(cls, species):
@@ -1461,7 +1481,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
             key = r.authors + ' ' + r.editors
             results[key] = r.get_citation(cross_references=True)
 
-        keys = results.keys()
+        keys = list(results.keys())
         keys.sort()
         ordered_results = []
         for key in keys:
@@ -1873,7 +1893,7 @@ class Genome(Molecule):
 
             ret = []
 
-            segments = shift(range(num_segments), int(segment_index))
+            segments = shift(list(range(num_segments)), int(segment_index))
 
             w_drawn = 0
 
@@ -1950,7 +1970,7 @@ class Genome(Molecule):
         def add_segment(wid, coordinate, length, typ, url):
             segment_index = math.floor((coordinate - 1) / chr_attrib.nt_per_segment)
 
-            segments = shift(range(num_segments), int(segment_index))
+            segments = shift(list(range(num_segments)), int(segment_index))
 
             w_drawn = 0
             done = False
@@ -1988,7 +2008,7 @@ class Genome(Molecule):
                 feature_attrib.width = max(3, w * chr_attrib.one_nt_width)
                 #y = row_offset[i] + j * (featureHeight + 1)
 
-                if isinstance(typ, basestring):
+                if isinstance(typ, str):
                     pass
                 else:
                     if typ and all_features_types_count[typ.pk] == 0:
@@ -2247,7 +2267,7 @@ class Genome(Molecule):
 
             feature_attrib.title = tip_title.replace("'", "\'")
 
-            if isinstance(typ, basestring):
+            if isinstance(typ, str):
                 pass
             else:
                 if typ and all_features_types_count[typ.id] == 0:
@@ -2410,7 +2430,7 @@ class Genome(Molecule):
         features += [source]
 
         for item in genes:
-            features += item.get_as_seqfeature(self.species, record.seq)
+            features += item.get_as_seqfeature(record.seq)
         
         SeqIO.write(record, genbank, "genbank")
         
@@ -2715,8 +2735,8 @@ class Gene(Molecule):
         seq = chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
 
         if self.direction == 'r':
-            seq = unicode(Seq(seq, IUPAC.ambiguous_dna).reverse_complement())
-        return seq
+            seq = Seq(seq, IUPAC.ambiguous_dna).reverse_complement()
+        return str(seq)
 
     def get_length(self):
         return self.length
@@ -2742,7 +2762,7 @@ class Gene(Molecule):
     def get_extinction_coefficient(self):
         from cyano.helpers import ExtinctionCoefficient
 
-        seq = Seq(self.get_sequence(), IUPAC.ambiguous_dna).transcribe()
+        seq = Seq(str(self.get_sequence()), IUPAC.ambiguous_dna).transcribe()
 
         value = 0;
         for i in range(len(seq) - 1):
@@ -3352,7 +3372,9 @@ class Pathway(SpeciesComponent):
             out.write(template.render(Context()))
 
             out.write('<script type="text/javascript" src="' + settings.STATIC_URL + 'boehringer/js/svg-pan-zoom.js"></script>')
-            tree.write(out)
+            xmlout = BytesIO()
+            tree.write(xmlout)
+            out.write(xmlout.getvalue().decode())
             out.write('<script type="text/javascript">var svgPan = svgPanZoom("svg", {minZoom: 0.1});</script>')
 
             return out.getvalue()
@@ -3740,7 +3762,7 @@ class ProteinMonomer(Protein):
 
     #getters
     def get_sequence(self, cache=False):
-        return unicode(Seq(self.gene.get_sequence(cache=cache), IUPAC.ambiguous_dna).translate(table=self.species.genetic_code))
+        return str(Seq(str(self.gene.get_sequence(cache=cache)), IUPAC.ambiguous_dna).translate(table=self.species.genetic_code))
 
     def get_length(self):
         return len(self.get_sequence())
@@ -4339,8 +4361,12 @@ class Species(Entry):
 
     #getters
     @permalink
-    def get_absolute_url(self, species = None, history_id = None):
+    def get_absolute_url(self, history_id = None):
         return ('cyano.views.species', (), {'species_wid': self.wid})
+
+    @permalink
+    def get_absolute_url_api(self):
+        return ('cyano-api-species', (), {'species_wid': self.wid})
 
     #html formatting
     def get_as_html_comments(self, is_user_anonymous):
@@ -4485,7 +4511,7 @@ class TranscriptionUnit(Molecule):
     def get_sequence(self, cache=False):
         seq = self.get_chromosome(cache=cache).sequence[self.get_coordinate() - 1:self.get_coordinate() - 1 + self.get_length()]
         if self.get_direction() == 'r':
-            seq = unicode(Seq(seq, IUPAC.ambiguous_dna).reverse_complement())
+            seq = str(Seq(seq, IUPAC.ambiguous_dna).reverse_complement())
         return seq
 
     def get_gc_content(self):
@@ -5050,7 +5076,7 @@ class MassSpectrometryJob(SpeciesComponent):
 
 class Peptide(Protein):
     #parent pointer
-    parent_ptr_protein = OneToOneField(SpeciesComponent, related_name='child_ptr_peptide', parent_link=True, verbose_name='Species component')
+    parent_ptr_protein = OneToOneField(Protein, related_name='child_ptr_peptide', parent_link=True, verbose_name='Species component')
 
     #additional fields
     sequence = TextField(blank=True, default='', verbose_name='Sequence', validators=[validate_protein_sequence])
@@ -5131,7 +5157,7 @@ class Peptide(Protein):
 
 
 class MassSpectrometryProtein(Protein):
-    parent_ptr_protein = OneToOneField(SpeciesComponent, related_name='child_ptr_ms_protein', parent_link=True, verbose_name='Species component')
+    parent_ptr_protein = OneToOneField(Protein, related_name='child_ptr_ms_protein', parent_link=True, verbose_name='Protein')
 
     score = FloatField(verbose_name="Protein Score")
     coverage = FloatField(verbose_name="% Coverage")

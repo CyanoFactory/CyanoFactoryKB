@@ -129,6 +129,7 @@ $(document).ready(function() {
 <li><a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}">Edit {{ object.wid }}</a></li>
 <li><a data-toggle="modal" href="{% url 'cyano.views.delete' species_wid=species.wid model_type=model_type wid=object.wid %}" data-target="#delete-form">Delete {{ object.wid }}</a></li>
 <li><a href="{% url "cyano.views.permission" species_wid=species.wid model_type=model_type wid=object.wid %}">View permissions of {{ object.wid }}</a></li>
+<li><a href="{% url "cyano.views.permission_edit" species_wid=species.wid model_type=model_type wid=object.wid %}">Edit permissions of {{ object.wid }}</a></li>
 {% endwith %}
 {% endblock %}
 {% block action_icons_export %}

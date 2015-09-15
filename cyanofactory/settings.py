@@ -107,7 +107,6 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'cyano.middleware.PasswordChangeMiddleware',
-    'cyano.middleware.ProcessFileUploadMiddleware',
     #'django.contrib.messages.middleware.MessageMiddleware',
 )
 
@@ -169,6 +168,7 @@ AUTHENTICATION_BACKENDS = (
 )
 
 ANONYMOUS_USER_ID = -1
+GUARDIAN_GET_INIT_ANONYMOUS_USER = 'cyano.models.get_anonymous_user_instance'
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
@@ -212,13 +212,12 @@ LOGGING = {
 
 CACHES = {
     'default': {
-        'BACKEND': 'johnny.backends.locmem.LocMemCache',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'cyano-cache',
         'TIMEOUT': 600,
         'OPTIONS': {
             'MAX_ENTRIES': 1000
         },
-        'JOHNNY_CACHE': False,
     }
 }
 
@@ -258,7 +257,7 @@ REST_FRAMEWORK = {
         'rest_framework_xml.renderers.XMLRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
       ),
-    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',)
+    'DEFAULT_FILTER_BACKENDS': ('rest_framework.filters.DjangoFilterBackend',),
 }
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'

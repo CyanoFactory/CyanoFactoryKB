@@ -4,23 +4,26 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
+from django.views.decorators.http import require_POST
+from jsonview.decorators import json_view
 
 import kegg.models as models
 from kegg.helpers import get_reaction_map, request_extract, items_to_quoted_string
-from cyano.decorators import ajax_required, permission_required
+from cyano.decorators import ajax_required, global_permission_required
 from cyano.helpers import render_queryset_to_response
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.contrib.auth.decorators import login_required
 from django.db.models.query_utils import Q
+from jsonview.exceptions import BadRequest
 
 
-@permission_required("access_kegg")
+@global_permission_required("access_kegg")
 def index(request):
     items, enzymes, metabolites = request_extract(request)
 
-    ecs = map(lambda x: x[0], enzymes)
-    metas = map(lambda x: x[0], metabolites)
+    ecs = list(map(lambda x: x[0], enzymes))
+    metas = list(map(lambda x: x[0], metabolites))
 
     query = None
 
@@ -50,12 +53,13 @@ def index(request):
             'overview_maps': overview,
             'other_maps': other,
             'items': items,
-            'queries': models.Query.objects.filter(user=request.user.profile),
+            'queries': [] if request.user.is_anonymous() else models.Query.objects.filter(user=request.user.profile),
+            'is_anonymous': request.user.is_anonymous()
         }
     )
 
 
-@permission_required("access_kegg")
+@global_permission_required("access_kegg")
 def map_view(request, map_id):
     export = "export_button" in request.POST
 
@@ -83,28 +87,30 @@ def map_view(request, map_id):
             'enzymes': enzymes,
             'metabolites': metabolites,
             'items': items,
-            'queries': models.Query.objects.filter(user=request.user.profile),
+            'queries': [] if request.user.is_anonymous() else models.Query.objects.filter(user=request.user.profile),
+            'is_anonymous': request.user.is_anonymous()
         }
     )
 
 
+@require_POST
 @ajax_required
-@permission_required("access_kegg")
+@login_required
+@global_permission_required("access_kegg")
+@json_view
 def index_ajax(request):
-    import json
-
     pk = request.POST.get("pk", 0)
     op = request.POST.get("op", "")
 
     if not op in ["load", "delete", "save"]:
-        return HttpResponseBadRequest("Invalid op")
+        raise BadRequest("Invalid op")
 
     if op == "save":
         name = request.POST.get("name", "")
         query = request.POST.get("query", "")
 
-        if all(len(x) == 0 for x in [name, query]):
-            return HttpResponseBadRequest("Invalid name or query")
+        if any(len(x) == 0 for x in [name, query]):
+            raise BadRequest("Invalid name or query")
 
         try:
             query_obj = models.Query.objects.get(name=name, user=request.user.profile)
@@ -115,25 +121,24 @@ def index_ajax(request):
             query_obj = models.Query.objects.create(name=name, query=query, user=request.user.profile)
             created = True
 
-        return HttpResponse(json.dumps(
-            {"name": query_obj.name,
-             "pk": query_obj.pk,
-             "created": created})
-        )
+        return {"name": query_obj.name,
+                "pk": query_obj.pk,
+                "created": created
+        }
 
     try:
         pk = int(pk)
     except ValueError:
-        return HttpResponseBadRequest("Bad pk")
+        raise BadRequest("Bad pk")
 
     try:
         query = models.Query.objects.get(pk=pk, user=request.user.profile)
     except ObjectDoesNotExist:
-        return HttpResponseBadRequest("No item found")
+        raise BadRequest("No item found")
 
     if op == "load":
-        return HttpResponse(json.dumps({"name": query.name, "query": query.query}))
+        return {"name": query.name, "query": query.query}
     elif op == "delete":
         query.delete()
-        return HttpResponse("ok")
+        return {}
 

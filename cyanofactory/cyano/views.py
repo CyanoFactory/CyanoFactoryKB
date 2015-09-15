@@ -17,11 +17,13 @@ import json
 import math
 import os
 from crispy_forms.utils import render_crispy_form
+from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.template.context import Context, RequestContext
 from django.views.decorators.csrf import ensure_csrf_cookie
 from haystack.inputs import AutoQuery
 from jsonview.decorators import json_view
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 import settings
 import tempfile
@@ -36,7 +38,7 @@ from django.db.models import Count
 from django.db.models.fields import BooleanField, NullBooleanField, AutoField, BigIntegerField, DecimalField, FloatField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField
 from django.db.models.fields.related import ManyToManyField, ForeignKey
 from django.db.models.query import EmptyQuerySet
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils.text import capfirst
 
 from haystack.query import SearchQuerySet
@@ -46,25 +48,32 @@ from cyano.forms import ExportDataForm, ImportDataForm, ImportSpeciesForm, Delet
 import cyano.helpers as chelpers
 import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
-from cyano.decorators import resolve_to_objects, ajax_required, permission_required
+from cyano.decorators import resolve_to_objects, ajax_required, permission_required, global_permission_required, \
+    redirect_api_request
 from django.db.transaction import atomic
 from django.http.response import HttpResponseRedirect, HttpResponseBadRequest, Http404
 from django.http.response import HttpResponse
-from rest_framework import generics, filters, permissions
+from rest_framework import generics, filters, permissions, pagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 import cyano.serializers as cserializers
 
-
+@redirect_api_request('cyano-api-index')
 def index(request):
     return chelpers.render_queryset_to_response(
         request,
         template="cyano/index.html",
         )
 
+def not_found(request, *args, **kwargs):
+    return chelpers.render_queryset_to_response_error(
+        request,
+        error=404,
+        msg="The requested page was not found"
+    )
 
-# Global permissions must be before object resolution
-@permission_required(perm.ACCESS_SPECIES)
+@redirect_api_request('cyano-api-species', ["species_wid"])
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def species(request, species):
@@ -107,7 +116,7 @@ def about(request, species=None):
             'ROOT_URL': settings.ROOT_URL,
         }
     )
-        
+
 @resolve_to_objects
 def tutorial(request, species=None):
     return chelpers.render_queryset_to_response(
@@ -132,7 +141,7 @@ def users(request, species = None):
         models = [cmodels.UserProfile],
         queryset = queryset,
         template = 'cyano/users.html')
-        
+
 @login_required   
 @resolve_to_objects
 def user(request, username, species = None):
@@ -144,7 +153,7 @@ def user(request, username, species = None):
         queryset = queryset,
         template = 'cyano/user.html')    
 
-@permission_required(perm.ACCESS_SPECIES)
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 def search(request, species = None):
     query = request.GET.get('q', '')
@@ -227,7 +236,8 @@ def search_google(request, species, query):
             'engine': 'google',
             })
 
-@permission_required(perm.ACCESS_SPECIES)
+@redirect_api_request('cyano-api-list', ["species_wid", "model_type"])
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def listing(request, species, model):
@@ -259,7 +269,7 @@ def listing(request, species, model):
         facets = []
         for facet in tmp:
             value = facet[field_full_name]
-            if value is None or unicode(value) == '':
+            if value is None or value == '':
                 continue
             
             if isinstance(field, (ForeignKey, ManyToManyField)):
@@ -276,10 +286,10 @@ def listing(request, species, model):
             else:
                 id_ = value
                 name = capfirst(value)
-            if value is not None and unicode(value) != '':
+            if value is not None and value != '':
                 facets.append({
-                    'id': unicode(id_), 
-                    'name': unicode(name or id_),
+                    'id': id_,
+                    'name': name or id_,
                     'count': facet['count']})
         if len(facets) > 1:
             facet_fields.append({
@@ -347,7 +357,6 @@ def listing(request, species, model):
         }
     )
 
-
 class EntryPermission(permissions.BasePermission):
     """
     Global permission check for blacklisted IPs.
@@ -363,17 +372,81 @@ class EntryPermission(permissions.BasePermission):
         if not user.has_perm(perm.ACCESS_SPECIES):
             return False
 
+        if not "species_wid" in view.kwargs:
+            return True
+
         species = view.get_species(view.kwargs["species_wid"])
         return user.has_perms(perm.READ_NORMAL, species)
 
+class ApiIndex(generics.ListAPIView):
+    permission_classes = (EntryPermission,)
+    serializer_class = cserializers.SpeciesList
 
-class EntryList(generics.GenericAPIView):
+    def get_queryset(self, *args, **kwargs):
+        if not self.request.user.is_authenticated():
+            # Special handling for guests
+            user = cmodels.UserProfile.objects.get(user__username="guest")
+        else:
+            user = self.request.user.profile
+
+        species_list = cmodels.Species.objects.for_permission(cmodels.PermissionEnum.READ_NORMAL, user)
+
+        return species_list
+
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+class ApiSpecies(generics.ListAPIView):
+    permission_classes = (EntryPermission,)
+    serializer_class =  cserializers.SpeciesOverview
+
+    def __init__(self):
+        super().__init__()
+
+        self.species = None
+
+    def get_species(self, species_wid):
+        species = cmodels.Species.objects.for_wid(species_wid, get=False)
+
+        try:
+            species.get()
+        except ObjectDoesNotExist as e:
+            raise Http404
+
+        return species
+
+    def get_queryset(self, *args, **kwargs):
+        queryset = []
+        for model in chelpers.getModels(cmodels.SpeciesComponent).values():
+            count = model.objects.for_species(self.species.get()).count()
+            if count > 0:
+                args = {"species_wid": self.species.get().wid, "model_type": model._meta.object_name}
+                queryset.append({
+                    "name": model._meta.object_name,
+                    "count": count,
+                    "url": reverse("cyano-api-list", kwargs=args),
+                    "web_url": reverse("cyano.views.listing", kwargs=args)
+                })
+
+        return queryset
+
+    def get(self, request, *args, **kwargs):
+        self.species = self.get_species(kwargs.get("species_wid"))
+
+        return super().get(request, *args, **kwargs)
+
+class ApiEntryList(generics.ListAPIView):
     filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter,)
     search_fields = ('wid', 'name', 'synonyms')
     filter_fields = ('id', 'wid', 'name')
     filter_class = None
-    serializer_class = cserializers.Entry
     permission_classes = (EntryPermission,)
+
+    def __init__(self):
+        super().__init__()
+
+        self.species = None
+        self.model_type = None
 
     def get_species(self, species_wid):
         species = cmodels.Species.objects.for_wid(species_wid, get=False)
@@ -385,46 +458,37 @@ class EntryList(generics.GenericAPIView):
 
         return species
 
-    def get_queryset(self, species_wid, model_type):
-        species = self.get_species(species_wid)
+    def get_serializer(self, queryset, *args, **kwargs):
+        return chelpers.getSerializer(self.model_type, queryset, context={"request": self.request}, *args, **kwargs)
 
-        model = chelpers.getModel(model_type)
+    def get_queryset(self, *args, **kwargs):
+        model = chelpers.getModel(self.model_type)
         if model is None or not issubclass(model, cmodels.SpeciesComponent):
             raise Http404
 
-        return model.objects.for_species(species.get())
+        return model.objects.for_species(self.species.get())
 
-    def get(self, request, species_wid, model_type, format=None):
-        objects = self.get_queryset(species_wid, model_type)
+    def get(self, request, *args, **kwargs):
+        self.species = self.get_species(kwargs.get("species_wid"))
+        self.model_type = kwargs.get("model_type")
 
-        model = chelpers.getModel(model_type)
-        self.filter_fields += tuple(model._meta.facet_fields)
-
-        self.serializer_class = chelpers.getSerializer(model_type)
-        self.filter_class = chelpers.getFilter(model_type)
-
-        objects = self.filter_queryset(objects)
-
-        serializer = chelpers.getSerializer(model_type)(
-            objects,
-            many=True,
-            context={'request': request, 'species': self.get_species(species_wid)})
-
-        data = serializer.data
-
-        return Response(data)
-
-    def post(self, request, species, model, format=None):
-        #serializer = EntrySerializer(data=request.DATA)
-
-        #return self.create(request, *args, **kwargs)
-        raise Http404
+        return super().get(request, *args, **kwargs)
 
 
-class EntryDetail(APIView):
+class ApiEntryDetail(generics.RetrieveAPIView):
+    filter_backends = (filters.DjangoFilterBackend, filters.SearchFilter,)
+    search_fields = ('wid', 'name', 'synonyms')
+    filter_fields = ('id', 'wid', 'name')
     serializer_class = cserializers.Entry
     permission_classes = (EntryPermission,)
+    lookup_field = "wid"
 
+    def __init__(self):
+        super().__init__()
+
+        self.species = None
+        self.model_type = None
+        self.wid = None
 
     def get_species(self, species_wid):
         species = cmodels.Species.objects.for_wid(species_wid, get=False)
@@ -436,55 +500,22 @@ class EntryDetail(APIView):
 
         return species
 
-    def get_object(self, species_wid, model_type, wid):
-        species = self.get_species(species_wid)
-
-        try:
-            species.get()
-        except ObjectDoesNotExist as e:
-            raise Http404
-
-        model = chelpers.getModel(model_type)
+    def get_queryset(self, *args, **kwargs):
+        model = chelpers.getModel(self.model_type)
         if model is None or not issubclass(model, cmodels.SpeciesComponent):
             raise Http404
 
-        species_obj = model.objects.for_species(species.get())
+        return model.objects.for_species(self.species.get()).for_wid(self.wid, get=False)
 
-        # resolve numeric wid to real wid
-        try:
-            i_wid = int(wid)
-            obj = species_obj.filter(pk=i_wid)
+    def get_serializer(self, queryset, *args, **kwargs):
+        return chelpers.getSerializer(self.model_type, queryset, context={"request": self.request}, *args, **kwargs)
 
-            if obj.count() != 1:
-                raise Http404
+    def get(self, request, *args, **kwargs):
+        self.species = self.get_species(kwargs.get("species_wid"))
+        self.model_type = kwargs.get("model_type")
+        self.wid = kwargs.get("wid")
 
-            wid = obj[0].pk
-
-        except ValueError:
-            pass
-
-        obj = species_obj.for_wid(wid=wid, get=False)
-
-        if obj.count() != 1:
-            raise Http404
-
-        return obj
-
-    def get(self, request, species_wid, model_type, wid, format=None):
-        objects = self.get_object(species_wid, model_type, wid)
-        serializer = chelpers.getSerializer(model_type)(
-            objects,
-            many=True,
-            context={'request': request, 'species': self.get_species(species_wid)}
-        )
-
-        return Response(serializer.data)
-
-    def put(self, request, *args, **kwargs):
-        return self.update(request, *args, **kwargs)
-
-    def delete(self, request, *args, **kwargs):
-        return self.destroy(request, *args, **kwargs)
+        return super().get(request, *args, **kwargs)
 
 
 class BasketList(generics.GenericAPIView):
@@ -528,13 +559,15 @@ class BasketDetail(generics.GenericAPIView):
         raise Http404
 
 
-@permission_required(perm.ACCESS_SPECIES)
+@redirect_api_request('cyano-api-detail', ["species_wid", "model_type", "wid"])
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def detail(request, species, model, item):
     fieldsets = deepcopy(model._meta.fieldsets)
-    
-    if request.GET.get('format', 'html') == "html":
+
+    format = request.GET.get('format', 'html')
+    if format == "html":
         #filter out type, metadata
         fieldset_names = [x[0] for x in filter(lambda x: isinstance(x, tuple), fieldsets)]
         if 'Type' in fieldset_names:
@@ -565,7 +598,7 @@ def detail(request, species, model, item):
     )
 
 
-@permission_required(perm.ACCESS_SPECIES)
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def detail_field(request, species, model, item):
@@ -593,7 +626,7 @@ def detail_field(request, species, model, item):
     return HttpResponse(rendered)
 
 
-@permission_required(perm.ACCESS_SPECIES)
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_HISTORY)
 def history(request, species, model=None, item=None):
@@ -603,38 +636,46 @@ def history(request, species, model=None, item=None):
 
     if item:
         # Item specific
-        objects = cmodels.Revision.objects.filter(object_id=item.pk).distinct().order_by("-detail")
+        components = [item.pk]
+        objects = cmodels.Revision.objects.filter(object_id=item.pk).distinct().prefetch_related("detail")
 
     elif model:
         # Model specific
         components = model.objects.for_species(species)
         ct_id = ContentType.objects.get_for_model(model).pk
-        objects = cmodels.Revision.objects.filter(object_id__in=components, content_type__pk=ct_id).order_by("-detail")
+        objects = cmodels.Revision.objects.filter(object_id__in=components, content_type__pk=ct_id).prefetch_related("detail")
 
     else:
         # Whole species specific
         components = cmodels.SpeciesComponent.objects.for_species(species)
-        objects = cmodels.Revision.objects.filter(object_id__in=components).distinct().order_by("-detail")
+        objects = cmodels.Revision.objects.filter(object_id__in=components).distinct().prefetch_related("detail")
+
+    entry_pks = cmodels.Entry.objects.filter(pk__in=components).values("pk", "wid", "model_type")
+    entry_dict = {}
+    for entry_pk in entry_pks:
+        entry_dict[entry_pk["pk"]] = entry_pk
     
-    for obj in objects:
+    for i,obj in enumerate(objects):
         if not issubclass(ContentType.objects.get_for_id(obj.content_type_id).model_class(), cmodels.Entry):
             continue
 
         last_date = date
-        wid = obj.current.wid
-        item_model = obj.current.model_type.model_name
+        wid = entry_dict[obj.object_id]["wid"]
+        item_model = cmodels.TableMeta.get_by_id(entry_dict[obj.object_id]["model_type"]).model_name
         detail_id = obj.detail.pk
         date = obj.detail.date.date()
         time = obj.detail.date.strftime("%H:%M")
         reason = obj.detail.reason
-        author = obj.detail.user
-        url = reverse("cyano.views.history_detail", kwargs = {"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
+        author = "" # obj.detail.user
+        url = reverse("cyano.views.history_detail", kwargs={"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
 
         if last_date != date:
             revisions.append(entry)
             entry = [date, []]
 
         entry[1].append({'id': detail_id, 'time': time, 'wid': wid, 'reason': reason, 'author': author, 'url': url})
+
+        print(i)
     revisions.append(entry)
 
     if item:
@@ -653,14 +694,14 @@ def history(request, species, model=None, item=None):
             })
 
 
-@permission_required(perm.ACCESS_SPECIES)
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_HISTORY)
 def history_detail(request, species, model, item, detail_id):
     fieldsets = deepcopy(model._meta.fieldsets)
     
     #filter out type, metadata
-    fieldsets = filter(lambda x: type(x) == tuple, fieldsets)
+    fieldsets = list(filter(lambda x: type(x) == tuple, fieldsets))
     fieldset_names = [x[0] for x in fieldsets]
     if 'Type' in fieldset_names:
         idx = fieldset_names.index('Type')
@@ -729,14 +770,14 @@ def history_detail(request, species, model, item, detail_id):
     )
 
 
-@permission_required(perm.ACCESS_SPECIES)
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
 def add(request, species=None, model=None):
     return edit(request, species=species, model=model, action='add')
 
 
-@permission_required(perm.ACCESS_SPECIES)
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
 def edit(request, species, model = None, item = None, action='edit'):
@@ -833,7 +874,7 @@ def edit(request, species, model = None, item = None, action='edit'):
         )
 
 
-@permission_required(perm.ACCESS_SPECIES)
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects 
 @permission_required(perm.WRITE_DELETE)
 def delete(request, species, model=None, item=None):
@@ -888,7 +929,7 @@ def delete(request, species, model=None, item=None):
         )
 
 
-@permission_required(perm.ACCESS_SPECIES)
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def exportData(request, species):
@@ -928,7 +969,7 @@ def exportData(request, species):
             models = models)
 
 
-@permission_required(perm.ACCESS_SPECIES)
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
 def importData(request, species):
@@ -989,11 +1030,11 @@ def importData(request, species):
     )
 
 
-@permission_required(perm.ACCESS_SPECIES)
+
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
-@permission_required(perm.WRITE_NORMAL)
 @atomic
-def importSpeciesData(request, species=None):
+def importSpeciesData(request):
     data = {}
     
     if request.method == 'POST':
@@ -1004,33 +1045,17 @@ def importSpeciesData(request, species=None):
             rev.save()
             
             mutant = False
-            if species: # Create mutant
-                import itertools
-                
-                mutant = True
-                
-                through = cmodels.SpeciesComponent.species.through
-                    
-                component = cmodels.SpeciesComponent.objects.for_species(species).values_list("pk", flat=True).order_by("pk")
-                
-                species.pk = None
-                species.id = None
-                species.wid = form.cleaned_data['new_wid']
-                species.name = form.cleaned_data['new_species']
-                species.save(rev)
-                
-                through.objects.bulk_create(map(lambda x: through(species_id = x[0], speciescomponent_id = x[1]), itertools.izip(itertools.cycle([species.pk]), component)))
-            else: # Create species
-                species = cmodels.Species(wid = form.cleaned_data['new_wid'], name = form.cleaned_data['new_species'])
-                species.save(rev)
-                cmodels.Pathway.add_boehringer_pathway(species, rev)
+
+            species = cmodels.Species(wid = form.cleaned_data['new_wid'], name = form.cleaned_data['new_species'])
+            species.save(rev)
+            cmodels.Pathway.add_boehringer_pathway(species, rev)
 
             # Assign permissions
-            new_perm, _ = cmodels.UserPermission.objects.get_or_create(entry = species, user = request.user.profile)
-            new_perm.allow.add(*cmodels.Permission.objects.all())
+            for perm in map(lambda x: x[0], cmodels.Entry._meta.permissions):
+                request.user.profile.assign_perm(perm, species)
 
             data['success'] = True
-            data['message'] = "New %s %s created" % ("mutant" if mutant else "species", species.name)
+            data['message'] = "New %s %s created" % ("species", species.name)
         else:
             data['success'] = False
             data['message'] = "An error occured. Please check the fields for errors."
@@ -1040,10 +1065,9 @@ def importSpeciesData(request, species=None):
 
     data["form"] = form
     return chelpers.render_queryset_to_response(
-        species = species,
-        request = request, 
-        template = 'cyano/importSpeciesForm.html', 
-        data = data,
+        request=request,
+        template='cyano/importSpeciesForm.html',
+        data=data,
         )
     
 def validate(request, species_wid):
@@ -1110,42 +1134,110 @@ def logout(request, species=None):
     return djlogout(request, extra_context = context)
 
 def sitemap(request):
-    return chelpers.render_queryset_to_response(
-        request = request, 
-        template = 'cyano/sitemap.xml', 
-        data = {
+    return render(
+        request,
+        'cyano/sitemap.xml',
+        {
             'ROOT_URL': settings.ROOT_URL,
             'qs_species': cmodels.Species.objects.all(),
-        }
+        },
+        content_type="application/xml"
     )
     
 def sitemap_toplevel(request):
-    return chelpers.render_queryset_to_response(
-        request = request, 
-        template = 'cyano/sitemap_toplevel.xml', 
-        data = {
+    return render(
+        request,
+        'cyano/sitemap_toplevel.xml',
+        {
             'ROOT_URL': settings.ROOT_URL,
-        }
+        },
+        content_type="application/xml"
     )
 
 
-@permission_required(perm.ACCESS_SPECIES)
+@global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
 def sitemap_species(request, species):
-    return chelpers.render_queryset_to_response(
-        species = species,
-        request = request, 
-        template = 'cyano/sitemap_species.xml',
-        data = {
+    # Fixme: Limited to 1000 items, make request faster
+    return render(
+        request,
+        'cyano/sitemap_species.xml',
+        {
+            'species': species,
             'ROOT_URL': settings.ROOT_URL,
-            'entries': cmodels.SpeciesComponent.objects.for_species(species).select_related("detail"),
-        }
+            'entries': cmodels.SpeciesComponent.child_objects.filter(species=species.pk).select_subclasses()[:1000],
+            'model_names': chelpers.getModels()
+        },
+        content_type='application/xml'
     )
 
 @resolve_to_objects
 @permission_required(perm.READ_PERMISSION)
-def permission(request, species, model=None, item=None, edit=False):
+def permission(request, species, model=None, item=None):
+    from django.contrib.auth.models import User, Group, Permission
+    from itertools import groupby
+
+    if item is not None:
+        obj = cmodels.Entry.objects.get(pk=item.pk)
+    else:
+        obj = cmodels.Entry.objects.get(pk=species.pk)
+
+    perms = list(map(lambda x: x[0], cmodels.Entry._meta.permissions)) + ["change_entry", "delete_entry"]
+
+    permissions = Permission.objects.filter(codename__in=perms)
+
+    def get_permissions():
+        up, gp = obj.get_permissions()
+        up = up.order_by("user").select_related("user", "permission")
+        gp = gp.order_by("group").select_related("group", "permission")
+
+        u = {}
+        g = {}
+
+        for k, v in groupby(up, lambda x: x.user):
+            u[k] = list(map(lambda x: x.permission.codename, v))
+
+        for k, v in groupby(gp, lambda x: x.group):
+            g[k] = list(map(lambda x: x.permission.codename, v))
+
+        return u, g
+
+    u, g = get_permissions()
+
+    ul = []
+    gl = []
+
+    # Add users/groups that aren't
+    ux = User.objects.exclude(pk__in=map(lambda x: x.pk, u.keys()))
+    gx = Group.objects.exclude(pk__in=map(lambda x: x.pk, g.keys()))
+
+    u.update(dict(zip(ux, [[] for x in range(len(ux))])))
+    g.update(dict(zip(gx, [[] for x in range(len(gx))])))
+
+    for usr in u.keys():
+        ul.append(
+            {"pk": usr.pk,
+             "username": usr.username,
+             "name": usr.first_name + " " + usr.last_name,
+             "permissions": permissions.filter(codename__in=u[usr]).values_list("pk", flat=True)})
+
+    for grp in g.keys():
+        gl.append({
+            "pk": grp.pk,
+            "name": grp.name,
+            "permissions": permissions.filter(codename__in=g[grp]).values_list("pk", flat=True)})
+
+    data = {"users": ul, "groups": gl, "permissions": permissions, "edit": False}
+
+    return chelpers.render_queryset_to_response(
+        request,
+        template="cyano/global_permission.html",
+        data=data)
+
+@resolve_to_objects
+@permission_required(perm.WRITE_PERMISSION)
+def permission_edit(request, species, model=None, item=None):
     from django.contrib.auth.models import User, Group, Permission
     from guardian.shortcuts import assign_perm, remove_perm
     from itertools import groupby
@@ -1259,12 +1351,13 @@ def permission(request, species, model=None, item=None, edit=False):
             "name": grp.name,
             "permissions": permissions.filter(codename__in=g[grp]).values_list("pk", flat=True)})
 
-    data = {"users": ul, "groups": gl, "permissions": permissions}
+    data = {"users": ul, "groups": gl, "permissions": permissions, "edit": True}
 
     return chelpers.render_queryset_to_response(
         request,
         template="cyano/global_permission.html",
         data=data)
+
 
 @login_required
 @resolve_to_objects
@@ -1322,7 +1415,7 @@ def jobs(request, species = None):
                     'running': running})
 
 
-@permission_required("access_sbgn")
+@global_permission_required("access_sbgn")
 def sbgn(request):
     return chelpers.render_queryset_to_response(
         request,
@@ -1566,7 +1659,7 @@ def global_permission(request):
             "permissions": grp.permissions.values_list("pk", flat=True)
         })
 
-    data = {"users": ul, "groups": gl, "permissions": permissions}
+    data = {"users": ul, "groups": gl, "permissions": permissions, "edit": True}
 
     return chelpers.render_queryset_to_response(
         request,

@@ -10,7 +10,7 @@ Released under the MIT license
 {% load static %}
 
 {% block head_title %}{{ block.super }} :: Edit permissions{% endblock %}
-{% block page_title %}Global permissions{% endblock %}
+{% block page_title %}Permissions{% endblock %}
 
 {% block head %}
 {{ block.super }}
@@ -82,7 +82,7 @@ $(document).ready(function() {
 {% block content %}
 <div class="row">
 
-<div class="col-md-6">
+<div class="col-md-{% if edit %}6{% else %}12{% endif %}">
     <div class="form-group">
         <label for="ug_list">Existing permissions</label>
         <select id="ug_list" size="10" class="form-control">
@@ -99,6 +99,7 @@ $(document).ready(function() {
         </select>
     </div>
 </div>
+{% if edit %}
 <div class="col-md-6">
     <div class="form-group">
         <label for="available">Add user/group</label>
@@ -117,22 +118,23 @@ $(document).ready(function() {
         </select>
     </div>
 </div>
+{% endif %}
 </div>
 <div class="panel panel-default" id="permissions">
     <div class="panel-heading">Select permissions for <span id="heading_text">(None)</span></div>
     <div class="panel-body">
         {% for permission in permissions %}
         <p>
-            <input id="{{ permission.codename }}" type="checkbox" data-pk="{{ permission.id }}"> <label for="{{ permission.codename }}">{{ permission.name }}</label>
+            <input {% if not edit %}disabled{% endif %} id="{{ permission.codename }}" type="checkbox" data-pk="{{ permission.id }}"> <label for="{{ permission.codename }}">{{ permission.name }}</label>
         </p>
         {% endfor %}
     </div>
 </div>
-
+{% if edit %}
 <form method="post">
 {% csrf_token %}
 </form>
 
 <button type="submit" class="btn btn-primary">Submit</button>
-
+{% endif %}
 {% endblock %}

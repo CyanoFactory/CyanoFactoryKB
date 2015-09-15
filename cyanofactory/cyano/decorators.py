@@ -4,6 +4,8 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
+from django.core.urlresolvers import reverse
+from django.http.response import HttpResponseRedirect
 from django.utils.functional import wraps
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
@@ -89,6 +91,45 @@ def resolve_to_objects(function):
     return wrapper
 
 
+def global_permission_required(permission):
+    """Checks whether a user has a permission for the specified entry
+    """
+
+    def decorator(function):
+        @wraps(function)
+        def wrapper(request, *args, **kw):
+            from cyano.views import login
+
+            user = request.user
+
+            if not user.is_authenticated():
+                # Special handling for guests
+                user = User.objects.get(username="guest")
+
+            # Admins always have full access
+            if user.is_superuser:
+                return function(request, *args, **kw)
+
+            # Global perm check
+            if user.profile.has_perm(permission):
+                return function(request, *args, **kw)
+
+            # No perm fallthrough
+            msg = "You need global permission \"{}\"".format(permission)
+
+            return login(
+                request,
+                species=None,
+                error=403,
+                message=msg,
+                force_next=request.build_absolute_uri(),
+                required_perm=permission)
+
+        return wrapper
+
+    return decorator
+
+
 def permission_required(permission):
     """Checks whether a user has a permission for the specified entry
     """
@@ -119,10 +160,12 @@ def permission_required(permission):
                 allow_item = None
 
                 if item:
-                    item_old_cls = item.__class__
-                    item = item.__class__ = Entry
-                    allow_item = user.profile.has_perm(permission, item)
-                    item.__class__ = item_old_cls
+                    # __class__ assignment: 'Entry' object layout differs from 'ModelBase'#
+                    #item_old_cls = item.__class__
+                    #item = item.__class__ = Entry
+                    entry_item = Entry.objects.get(pk=item.pk)
+                    allow_item = user.profile.has_perm(permission, entry_item)
+                    #item.__class__ = item_old_cls
 
                 allow_species = user.profile.has_perm(permission, species)
                 species._class__ = species_old_cls
@@ -131,20 +174,15 @@ def permission_required(permission):
                     # Has permission
                     return function(request, *args, **kw)
             else:
-                # Global perm check
-                if user.profile.has_perm(permission):
-                    return function(request, *args, **kw)
+                raise ValueError("Species required for permission check")
 
             # No perm fallthrough
-            if species:
-                msg = "You need permission \"{}\" to access ".format(permission)
+            msg = "You need permission \"{}\" to access ".format(permission)
 
-                if item:
-                    msg += "item {} of ".format(item.wid)
+            if item:
+                msg += "item {} of ".format(item.wid)
 
-                msg += "species {}".format(species.wid)
-            else:
-                msg = "You need global permission \"{}\"".format(permission)
+            msg += "species {}".format(species.wid)
 
             return login(
                 request,
@@ -178,3 +216,19 @@ def ajax_required(f):
     wrap.__doc__ = f.__doc__
     wrap.__name__ = f.__name__
     return wrap
+
+def redirect_api_request(target, target_args=list()):
+    def decorator(function):
+        @wraps(function)
+        def wrapper(request, *args, **kw):
+            format = request.GET.get('format', 'html')
+            if format in ['xml', 'json']:
+                return HttpResponseRedirect("%s?format=%s" % (
+                    reverse(target, args=map(lambda x: kw[x], target_args)), format)
+                )
+
+            return function(request, *args, **kw)
+
+        return wrapper
+
+    return decorator

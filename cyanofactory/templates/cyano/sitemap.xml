@@ -13,6 +13,7 @@ Released under the MIT license
 {% endcomment %}
 
 {% load templatetags %}
+{% load tz %}
 
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 	<!-- top level -->
@@ -24,7 +25,7 @@ Released under the MIT license
 	{% for specie in qs_species %}
 	<sitemap>
 		<loc>{{ ROOT_URL }}{% url "cyano.views.sitemap_species" species_wid=specie.wid %}</loc>
-		<lastmod>{{ specie.detail.date|set_time_zone|date:"Y-m-d" }}</lastmod>
+		<lastmod>{{ specie.last_revision.detail.date|localtime|date:"Y-m-d" }}</lastmod>
 	</sitemap>
 	{% endfor %}
 </sitemapindex>

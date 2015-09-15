@@ -75,7 +75,3 @@ class PasswordChangeMiddleware(object):
             if profile.force_password_change:
                 return HttpResponseRedirect(reverse("password_change_required"))
 
-
-class ProcessFileUploadMiddleware(object):
-    def process_request(self, request):
-        pass

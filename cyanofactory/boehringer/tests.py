@@ -4,23 +4,13 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
+import json
 
 from cyano.tests import CyanoBaseTest
 from django.core import management
 import boehringer.models as models
 
 ACCESS_PERM = "access_boehringer"
-
-def setup():
-    import sys
-
-    # Create users and groups
-    management.call_command('autocreateinitial')
-    # Import boehringer (reads from stdin)
-    sys.stdin = open("boehringer/fixtures/data.dump")
-    management.call_command('restoredb')
-    sys.stdin.close()
-    sys.stdin = sys.__stdin__    
 
 class BoehringerStandaloneGuestTest(CyanoBaseTest):
     """Tests standalone feature under /boehringer/ as guest"""
@@ -34,11 +24,25 @@ class BoehringerStandaloneGuestTest(CyanoBaseTest):
     
     def test_main_page_guest(self):
         """Main page as guest"""
-        self.assertLoginRequired("boehringer/", ACCESS_PERM)
+        self.assertPermissionRequired("boehringer/", ACCESS_PERM)
 
     def test_legacy_page_guest(self):
         """Main page as guest"""
-        self.assertLoginRequired("boehringer/legacy/", ACCESS_PERM)
+        self.assertPermissionRequired("boehringer/legacy/", ACCESS_PERM)
+
+    def test_main_page_guest_permission(self):
+        self.doGuestLogin()
+        self.user.profile.assign_perm(ACCESS_PERM)
+
+        with self.assertTemplateUsed("boehringer/index.html"):
+            self.assertOK("boehringer/")
+
+    def test_legacy_page_guest_permission(self):
+        self.doGuestLogin()
+        self.user.profile.assign_perm(ACCESS_PERM)
+
+        with self.assertTemplateUsed("boehringer/legacy.html"):
+            self.assertOK("boehringer/legacy/")
 
 class BoehringerStandaloneTest(BoehringerStandaloneGuestTest):
     """Tests standalone feature under /boehringer/"""
@@ -110,3 +114,47 @@ class BoehringerStandaloneTestWithPermission(CyanoBaseTest):
             self.assertContains(resp, "Phosphoribosyl-ATP")
             self.assertContains(resp, "Alcohol dehydrogenase")
             self.assertContains(resp, "Aldehyde dehydrogenase")
+
+class BoehringerUsabilityTestUser(CyanoBaseTest):
+    def setUp(self):
+        self.doLogin()
+        self.user.profile.assign_perm(ACCESS_PERM)
+
+    def test_ajax_ok(self):
+        self.assertPOSTBadRequest("boehringer/ajax/", ajax=True)
+
+        self.assertPOSTBadRequest("boehringer/ajax/?op=invalid", ajax=True)
+
+    def test_ajax_save(self):
+        self.assertPOSTBadRequest("boehringer/ajax/?op=load&pk=1", ajax=True)
+
+        self.assertPOSTBadRequest("boehringer/ajax/", data={"op":"save", "name": "aaa", "query": ""}, ajax=True)
+        self.assertPOSTBadRequest("boehringer/ajax/", data={"op":"save", "name": "", "query": "aaa"}, ajax=True)
+
+        res = self.assertPOSTOK("boehringer/ajax/", data={"op": "save", "name": "test", "query": "aaa"}, ajax=True)
+        j = json.loads(res.content.decode())
+        self.assertEquals(j["name"], "test")
+        self.assertEquals(j["created"], True)
+
+        res = self.assertPOSTOK("boehringer/ajax/", data={"op": "save", "name": "test", "query": "aaa"}, ajax=True)
+        j = json.loads(res.content.decode())
+        self.assertEquals(j["created"], False)
+
+    def test_ajax_load(self):
+        res = self.assertPOSTOK("boehringer/ajax/", data={"op": "save", "name": "test", "query": "aaa"}, ajax=True)
+        j = json.loads(res.content.decode())
+
+        res = self.assertPOSTOK("boehringer/ajax/", data={"op": "load", "pk": j["pk"]}, ajax=True)
+        j = json.loads(res.content.decode())
+
+        self.assertEquals(j["name"], "test")
+        self.assertEquals(j["query"], "aaa")
+
+    def test_ajax_delete(self):
+        res = self.assertPOSTOK("boehringer/ajax/", data={"op": "save", "name": "test", "query": "aaa"}, ajax=True)
+        j = json.loads(res.content.decode())
+
+        self.assertPOSTOK("boehringer/ajax/", data={"op": "delete", "pk": j["pk"]}, ajax=True)
+
+        # Deleted now
+        res = self.assertPOSTBadRequest("boehringer/ajax/", data={"op": "load", "pk": j["pk"]}, ajax=True)

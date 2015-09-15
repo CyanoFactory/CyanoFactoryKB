@@ -10,11 +10,13 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 '''
+from django.core.urlresolvers import reverse
 
 from django.test import TestCase, Client
+from cyano.helpers import getModelsMetadata
 
 import cyano.models as cmodels
-from cyano.models import PermissionEnum
+from cyano.models import PermissionEnum as P
 from django.core.exceptions import ObjectDoesNotExist
 from guardian.shortcuts import assign_perm
 from django.contrib.auth.models import User, Group
@@ -23,7 +25,7 @@ import settings
 from cyano.forms import ImportSpeciesForm
 
 SPECIES = "Synechocystis"
-SPECIES2 = "Other-Species"
+SPECIES2 = "Ecoli"
 MODEL = "Gene"
 ITEM = "sll7106"
 
@@ -86,11 +88,11 @@ class CyanoBaseTest(TestCase):
             assert_func(l)
 
     # via http://djangosnippets.org/snippets/137/
-    def GET(self, url, params = {}, status=200, mimetype="text/html", follow = False):
+    def GET(self, url, params={}, status=200, mimetype="text/html", follow=False, ajax=False):
         """Get a URL and require a specific status code before proceeding"""
         if url[0] != "/":
             url = "/" + url
-        response = self.client.get(url, params, follow = follow)
+        response = self.client.get(url, params, follow = follow, HTTP_X_REQUESTED_WITH='XMLHttpRequest' if ajax else "")
 
         if response.status_code != status:
             # print note that login was required when a test fails
@@ -103,36 +105,46 @@ class CyanoBaseTest(TestCase):
         self.assertTrue(response["content-type"].startswith(mimetype), "Mimetype {} (expected: {})".format(response["content-type"], mimetype))     
         return response
 
-    def POST(self, url, params = {}, status=200, mimetype="text/html"):
+    def POST(self, url, params = {}, status=200, mimetype="text/html", ajax=False):
         """Make a POST and require a specific status code before proceeding"""
         if url[0] != "/":
             url = "/" + url
-        response = self.client.post(url, params)
+        response = self.client.post(url, params, HTTP_X_REQUESTED_WITH='XMLHttpRequest' if ajax else "")
         self.assertEqual(response.status_code, status, "\nURL: {}\nStatus {} (expected: {})".format(url, response.status_code, status))
         self.assertTrue(response["content-type"].startswith(mimetype), "Mimetype {} (expected: {})".format(response["content-type"], mimetype))
         return response
 
-    def assertOK(self, url, data = {}, follow = False):
+    def assertOK(self, url, data={}, follow=False, mimetype="text/html", ajax=False):
         """Fail if result code is not 200"""
-        return self.GET(url, params = data, status = 200, follow = follow)
+        return self.GET(url, params=data, status=200, follow=follow, mimetype=mimetype, ajax=ajax)
     
-    def assertPOSTOK(self, url, data = {}, follow = False):
+    def assertPOSTOK(self, url, data={}, follow=False, ajax=False):
         """Fail if result code is not 200"""
-        return self.POST(url, params = data, status = 200)
+        mimetype = "application/json" if ajax else "text/html"
+
+        return self.POST(url, params=data, status=200, ajax=ajax, mimetype=mimetype)
 
     def assertNotFound(self, url, follow = False):
         """Fail if found (code != 404)"""
-        return self.GET(url, status = 404, follow = follow)
+        return self.GET(url, status=404, follow=follow)
     
     def assertForbidden(self, url, follow = False):
         """Fail if not forbidden (code 403)"""
-        return self.GET(url, status = 403, follow = follow)
+        return self.GET(url, status=403, follow=follow)
 
-    def assertBadRequest(self, url, follow = False):
+    def assertBadRequest(self, url, follow = False, ajax=False, data={}):
         """Fail if not bad request (code 400)"""
-        return self.GET(url, status = 400, follow = follow)
+        mimetype = "application/json" if ajax else "text/html"
+
+        return self.GET(url, status=400, follow=follow, ajax=ajax, params=data, mimetype=mimetype)
+
+    def assertPOSTBadRequest(self, url, follow=False, ajax=False, data={}):
+        """Fail if not bad request (code 400)"""
+        mimetype = "application/json" if ajax else "text/html"
+
+        return self.POST(url, status=400, ajax=ajax, params=data, mimetype=mimetype)
     
-    def assertRedirect(self, url, target_url = None, target_status = 200):
+    def assertRedirect(self, url, target_url=None, target_status=200):
         """Fail if a url does not redirect (code 302)"""
         response = self.GET(url, status = 302)
         if target_url:
@@ -141,7 +153,7 @@ class CyanoBaseTest(TestCase):
             return self.assertRedirects(response, target_url, 302, target_status)
         return response
     
-    def assertRedirectPermanent(self, url, target_url = None, target_status = 200):
+    def assertRedirectPermanent(self, url, target_url=None, target_status=200):
         """Fail if a url does not permanently redirect (code 301)"""
         response = self.GET(url, status = 301)
         if target_url:
@@ -150,9 +162,9 @@ class CyanoBaseTest(TestCase):
             return self.assertRedirects(response, target_url, 301, target_status)
         return response
     
-    def assertMimeTypeText(self, url, status=200, follow = False):
+    def assertMimeTypeText(self, url, status=200, follow=False):
         """Fail if mimetype is not text"""
-        return self.GET(url, status = status, mimetype = "text/plain", follow = follow)
+        return self.GET(url, status = status, mimetype = "text/plain", follow=follow)
     
     def assertMimeTypeJson(self, url, status=200, follow = False):
         """Fail if mimetype is not json"""
@@ -162,12 +174,22 @@ class CyanoBaseTest(TestCase):
         """Fail if mimetype is not XML"""
         return self.GET(url, status = status, mimetype = "application/xml", follow = follow)
 
-    def assertLoginRequired(self, url, required_perm):
+    def assertLoginRequired(self, url, ajax=False):
+        """Tests if a view redirects to login page"""
+        # Not for testing the decorator, only if the decorator is set
+
+        with self.assertTemplateUsed("registration/login.html"):
+            self.assertOK(url, follow=True, ajax=ajax)
+
+    def assertPermissionRequired(self, url, required_perm):
         """Tests if a view redirects to login page and passes a no permission status text"""
         with self.assertTemplateUsed("registration/login.html"):
             response = self.assertForbidden(url)
             self.assertEqual(response.context_data.get("required_perm", "").lower(),
                               required_perm.lower())
+
+    def assignPerm(self, which, obj=None):
+        self.user.profile.assign_perm(which, obj)
 
 class CyanoBasicTest(CyanoBaseTest):
     def test_logic_works(self):
@@ -198,49 +220,50 @@ class CyanoBasicTest(CyanoBaseTest):
     def test_is_admin(self):
         self.doLogin()
         self.assertForbidden(SPECIES + "/")
-        
-        self.assertTrue(self.doAdminLogin().user.is_superuser)
+
+        self.doAdminLogin()
+        self.assertTrue(self.user.is_superuser)
 
         with self.assertTemplateUsed("cyano/species.html"): 
             self.assertOK(SPECIES + "/")
 
 class CyanoTest(CyanoBaseTest):
     def test_permissions_species(self):
-        self.assertLoginRequired(SPECIES + "/")
+        self.assertPermissionRequired(SPECIES + "/", P.ACCESS_SPECIES)
         
-        user = self.doLogin()
+        self.doGuestLogin()
+        self.user.profile.assign_perm(P.ACCESS_SPECIES)
 
-        self.assertForbidden(SPECIES + "/")
+        self.assertPermissionRequired(SPECIES + "/", P.READ_NORMAL)
 
         entry = cmodels.Species.objects.for_wid(SPECIES)
-        user.add_allow_permission(entry, "READ_NORMAL")
+        self.user.profile.assign_perm(P.READ_NORMAL, entry)
 
         with self.assertTemplateUsed("cyano/species.html"): 
             self.assertOK(SPECIES + "/")
-        
-        user.add_deny_permission(entry, "READ_NORMAL")
-        
-        self.assertForbidden(SPECIES + "/")
     
-    def test_empty_permission_deleted(self):
-        user = self.doLogin()
-        entry = cmodels.Species.objects.for_wid(SPECIES)
-        
-        with self.assertRaises(ObjectDoesNotExist):
-            cmodels.UserPermission.objects.get(user = user, entry = entry)
-        
-        user.add_allow_permission(entry, "READ_NORMAL")
-        cmodels.UserPermission.objects.get(user = user, entry = entry)
-        user.delete_allow_permission(entry, "READ_NORMAL")
-        
-        with self.assertRaises(ObjectDoesNotExist):
-            cmodels.UserPermission.objects.get(user = user, entry = entry)
+    #def test_empty_permission_deleted(self):
+    #    user = self.doLogin()
+    #    entry = cmodels.Species.objects.for_wid(SPECIES)
+    #
+    #    with self.assertRaises(ObjectDoesNotExist):
+    #        cmodels.UserPermission.objects.get(user = user, entry = entry)
+    #
+    #    user.add_allow_permission(entry, "READ_NORMAL")
+   # #    cmodels.UserPermission.objects.get(user = user, entry = entry)
+    #    user.delete_allow_permission(entry, "READ_NORMAL")
+    #
+    #    with self.assertRaises(ObjectDoesNotExist):
+    #        cmodels.UserPermission.objects.get(user = user, entry = entry)
     
     def test_species_not_found(self):
+        self.doGuestLogin()
+        self.user.profile.assign_perm(P.ACCESS_SPECIES)
+
         with self.assertTemplateUsed("cyano/error.html"):
             self.assertNotFound("/Wrong-Species/")
 
-class CyanoGuestUserTestBase(CyanoBaseTest):
+class CyanoUserTestBase(CyanoBaseTest):
     def _test_index(self):
         with self.assertTemplateUsed("cyano/index.html"): 
             self.assertOK("/")
@@ -251,8 +274,8 @@ class CyanoGuestUserTestBase(CyanoBaseTest):
             self.assertOK(SPECIES + "/%s/" % (s))
 
         self.assertNotFound("%s/invalid/" % (s))
-        self.assertNotFound(SPECIES + "/%s/invalid/" % (s))
-        self.assertNotFound(SPECIES + "/model/%s/" % (s))
+        self.assertNotFound(SPECIES + "/%s/invalid/" % s)
+        self.assertNotFound(SPECIES + "/model/%s/" % s)
 
     def _test_search(self, google):
         test_urls = ["%ssearch/",
@@ -274,89 +297,79 @@ class CyanoGuestUserTestBase(CyanoBaseTest):
             for url in test_google_urls:
                 self.assertOK(url % (""))
                 self.assertOK(url % (SPECIES + "/"))
-                
-    def _test_sitemap(self):
-        self.assertNotFound("sitemap.xml/")
-        self.assertNotFound("sitemap_toplevel.xml/")
-        self.assertNotFound("sitemap/%s.xml/" % (SPECIES))
-        
-        with self.assertTemplateUsed("cyano/sitemap.xml"):
-            self.assertOK("sitemap.xml")
-        
-        with self.assertTemplateUsed("cyano/sitemap_toplevel.xml"):
-            self.assertOK("sitemap_toplevel.xml")
-        
-        with self.assertTemplateUsed("cyano/sitemap_species.xml"):
-            self.assertOK("sitemap/%s.xml" % (SPECIES))
-        
-        with self.assertTemplateUsed("cyano/error.html"):
-            self.assertNotFound("sitemap/Wrong-Species.xml")
 
-class CyanoGuestTest(CyanoGuestUserTestBase):
-    def test_guest_index(self):
-        """Visits the main page as guest"""
+
+class CyanoUserTestAccessSpeciesPerm(CyanoUserTestBase):
+    """Tests that already set ACCESS_SPECIES permission"""
+
+    def setUp(self):
+        """Give Guest ACCESS_SPECIES permission, this check is used anywhere"""
+
+        super(CyanoUserTestAccessSpeciesPerm, self).setUp()
+        self.doGuestLogin()
+        self.user.profile.assign_perm(P.ACCESS_SPECIES)
+
+    def test_index(self):
+        """Visits the main page"""
         self._test_index()
 
-    def test_guest_login(self):
-        """Visit login page as guest"""
+    def test_login(self):
+        """Visit login page"""
         self._test_loginout("login", "login")
     
-    def test_guest_logout(self):
-        """Visit logout page as guest"""
+    def test_logout(self):
+        """Visit logout page"""
         self._test_loginout("logout", "logged_out")
-    
-    def _test_basic_uri_stuff(self, s):
-        self.assertLoginRequired("%s/" % (s))
-        self.assertLoginRequired(SPECIES + "/%s/" % (s))
-        
-        self.assertNotFound("%s/invalid/" % (s))
-        self.assertNotFound(SPECIES + "/%s/invalid/" % (s))
-        self.assertNotFound(SPECIES + "/%s/users/" % (s))
 
-    def test_guest_users(self):
-        """Visit users page as guest"""
-        self._test_basic_uri_stuff("users")
+    def _test_basic_uri_stuff(self, s):
+        self.assertLoginRequired("%s/" % s)
+        self.assertLoginRequired(SPECIES + "/%s/" % s)
+        
+        self.assertNotFound("%s/invalid/" % s)
+        self.assertNotFound(SPECIES + "/%s/invalid/" % s)
+        self.assertNotFound(SPECIES + "/%s/user/" % s)
+
+    def test_users(self):
+        """Visit users page"""
+        self._test_basic_uri_stuff("user")
     
-    def test_guest_user(self):
-        """Visit user profile pages as guest"""
+    def test_user(self):
+        """Visit user profile pages"""
         self._test_basic_uri_stuff("user/admin")
         self._test_basic_uri_stuff("user/invalid")
     
-    def test_guest_job(self):
-        """Visit jobs page as guest"""
+    def test_job(self):
+        """Visit jobs page"""
         self._test_basic_uri_stuff("jobs")
     
-    def test_guest_search_google_on(self):
-        """Tests search functions (google search enabled) as guest"""
+    def test_search_google_on(self):
+        """Tests search functions (google search enabled)"""
         settings.GOOGLE_SEARCH_ENABLED = True
 
-        self._test_search(google = True)
+        self._test_search(google=True)
 
-    def test_guest_search_google_off(self):
-        """Tests search functions (google search disabled) as guest"""
+    def test_search_google_off(self):
+        """Tests search functions (google search disabled)"""
         settings.GOOGLE_SEARCH_ENABLED = False
 
-        self._test_search(google = False)
+        self._test_search(google=False)
 
-    def test_guest_species(self):
-        """Visit species page as guest"""
-        self.assertLoginRequired(SPECIES + "/", PermissionEnum.ACCESS_SPECIES)
-        assign_perm("cyano."+PermissionEnum.ACCESS_SPECIES, self.doGuestLogin())
-
-        self.assertLoginRequired(SPECIES + "/", PermissionEnum.READ_NORMAL)
-        self.getSpecies().assign_perm(PermissionEnum.READ_NORMAL, self.doGuestLogin())
+    def test_species(self):
+        """Visit species page"""
+        self.assertPermissionRequired(SPECIES + "/", P.READ_NORMAL)
+        self.assignPerm(P.READ_NORMAL, self.getSpecies())
 
         with self.assertTemplateUsed("cyano/species.html"):
             self.assertOK(SPECIES + "/")
     
-    def test_guest_listing(self):
-        """Visit listing page as guest"""
+    def test_listing(self):
+        """Visit listing page"""
         url = SPECIES + "/" + MODEL + "/"
         
-        self.assertLoginRequired(url)
+        self.assertPermissionRequired(url, P.READ_NORMAL)
         self.assertNotFound(SPECIES + "/" + "Invalid" + "/")
-        
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
+
+        self.assignPerm(P.READ_NORMAL, self.getSpecies())
         
         self.assertNotFound(SPECIES + "/" + "Invalid" + "/")
         
@@ -366,83 +379,97 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         self.assertNotFound(SPECIES + "/Species/")
         self.assertNotFound(SPECIES + "/Entry/")
 
-    def test_guest_detail(self):
-        """Visit detail page as guest"""
+    def test_listing_many(self):
+        """Visit different listing pages"""
+        self.assignPerm(P.READ_NORMAL, self.getSpecies())
+
+        for key in getModelsMetadata(cmodels.SpeciesComponent).keys():
+            with self.assertTemplateUsed("cyano/list.html"):
+                self.assertOK(reverse("cyano.views.listing", kwargs=dict(species_wid=SPECIES, model_type=key)))
+
+    def test_detail(self):
+        """Visit detail page"""
         url = SPECIES + "/" + MODEL + "/" + ITEM + "/"
         url2 = SPECIES2 + "/" + MODEL + "/" + ITEM + "/"
-        self.assertLoginRequired(url)
+        self.assertPermissionRequired(url, P.READ_NORMAL)
         self.assertNotFound(url2)
 
         self.assertNotFound(SPECIES + "/" + "Invalid" + "/" + ITEM + "/")
         self.assertNotFound(SPECIES + "/" + MODEL + "/" + "Invalid" + "/")
 
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
-        self.doGuestLogin().add_allow_permission(self.getSpecies(second = True), "READ_NORMAL")
-        
-        self.assertNotFound(url2)
+        self.assignPerm(P.READ_NORMAL, self.getSpecies())
+
         self.assertNotFound(SPECIES + "/" + "Invalid" + "/" + ITEM + "/")
         self.assertNotFound(SPECIES + "/" + MODEL + "/" + "Invalid" + "/")
         
         with self.assertTemplateUsed("cyano/detail.html"):
             self.assertOK(url)
 
-    def test_guest_add(self):
-        """Visit add page as guest"""
+    def test_add(self):
+        """Visit add page"""
+
+        # Special case for species
         self.assertNotFound("Species/")
-        
-        self.assertLoginRequired("Species/add/")
-        
-        self.assertLoginRequired(SPECIES + "/" + MODEL + "/add/")
-        
-        self.assertNotFound(SPECIES + "/add/")
+        self.assertPermissionRequired("Species/add/", P.ACCESS_SPECIES)
+
+        self.assertPermissionRequired(SPECIES + "/" + MODEL + "/add/", P.ACCESS_SPECIES)
+        self.assertPermissionRequired(SPECIES + "/add/", P.ACCESS_SPECIES)
+        self.assertPermissionRequired(SPECIES + "/add/invalid/")
+
         self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/add/")
         self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/add/invalid/")
-        self.assertNotFound(SPECIES + "/add/invalid/")
         self.assertNotFound(SPECIES + "/" + MODEL + "/add/invalid/")
     
-    def test_guest_add_permission(self):
-        """Visit add page as guest with permission"""
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "WRITE_NORMAL")
+    def test_add_permission(self):
+        """Visit add page with permission"""
+        self.doGuestLogin()
+        self.user.profile.assign_perm(P.ACCESS_SPECIES)
 
-        self.assertLoginRequired(SPECIES + "/" + MODEL + "/add/")
+        self.assertPermissionRequired(SPECIES + "/" + MODEL + "/add/", P.WRITE_NORMAL)
+        self.user.profile.assign_perm(P.WRITE_NORMAL, self.getSpecies())
+
+        with self.assertTemplateUsed("cyano/edit.html"):
+            self.assertOK(SPECIES + "/" + MODEL + "/add/")
     
-    def _test_editdelete_guest(self, s):
-        self.assertNotFound("%s/" % (s))
-        self.assertLoginRequired("Species/%s/" % (s))
+    def _test_editdelete(self, s, p):
+        self.assertNotFound("%s/" % s)
+        self.assertNotFound("Species/%s/")
 
-        self.assertNotFound(SPECIES + "/" + MODEL + "/%s/" % (s))
-        self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/%s/invalid/" % (s))
-        self.assertNotFound(SPECIES + "/%s/invalid/" % (s))
-        self.assertNotFound(SPECIES + "/" + MODEL + "/%s/invalid/" % (s))
+        self.assertNotFound(SPECIES + "/" + MODEL + "/%s/" % s)
+        self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/%s/invalid/" % s)
+        self.assertNotFound(SPECIES + "/%s/invalid/" % s)
+        self.assertNotFound(SPECIES + "/" + MODEL + "/%s/invalid/" % s)
         
-        self.assertLoginRequired(SPECIES + "/%s/" % (s))
-        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/%s/" % (s))
+        self.assertPermissionRequired(SPECIES + "/%s/" % s, p)
+        self.assertPermissionRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/%s/" % s, p)
     
-    def test_guest_edit(self):
-        """Visit edit page as guest"""
-        self._test_editdelete_guest("edit")
+    def test_edit(self):
+        """Visit edit page"""
+        self._test_editdelete("edit", P.WRITE_NORMAL)
     
-    def test_guest_edit_permission(self):
-        """Visit edit page as guest with permission"""
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "WRITE_NORMAL")
+    def test_edit_permission(self):
+        """Visit edit page with permission"""
+        self.assignPerm(P.WRITE_NORMAL, self.getSpecies())
 
-        self.assertLoginRequired(SPECIES + "/edit/")
+        with self.assertTemplateUsed("cyano/edit.html"):
+            self.assertOK(SPECIES + "/edit/")
     
-    def test_guest_delete(self):
-        """Visit delete page as guest"""
-        self._test_editdelete_guest("delete")
+    def test_delete(self):
+        """Visit delete page"""
+        self._test_editdelete("delete", P.WRITE_DELETE)
     
-    def test_guest_delete_permission(self):
-        """Visit delete page as guest with permission"""
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "WRITE_DELETE")
+    def test_delete_permission(self):
+        """Visit delete page with permission"""
+        self.assignPerm(P.WRITE_DELETE, self.getSpecies())
 
-        self.assertLoginRequired(SPECIES + "/delete/")
+        with self.assertTemplateUsed("cyano/delete.html"):
+            self.assertOK(SPECIES + "/delete/")
 
-    def test_guest_exportData(self):
-        """Visit export page as guest"""
-        self.assertLoginRequired(SPECIES + "/export/")
+    def test_exportData(self):
+        """Visit export page"""
+        self.assertPermissionRequired(SPECIES + "/export/", P.READ_NORMAL)
         
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
+        self.assignPerm(P.READ_NORMAL, self.getSpecies())
         
         with self.assertTemplateUsed("cyano/exportDataForm.html"):
             self.assertOK(SPECIES + "/export/")
@@ -451,88 +478,99 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         self.assertNotFound("invalid/export/")
         self.assertNotFound(SPECIES + "/model/export/")
 
-    def test_guest_import(self):
-        """Visit import page as guest"""
+    def test_import(self):
+        """Visit import page"""
         self.assertNotFound("import/")
         
-        self.assertLoginRequired("/import/data/")
-        self.assertLoginRequired("/import/species/")
+        self.assertNotFound("/import/data/")
+        self.assertNotFound("/import/species/")
         
-        self.assertLoginRequired(SPECIES + "/import/data/")
-        self.assertLoginRequired(SPECIES + "/import/species/")
+        self.assertPermissionRequired(SPECIES + "/import/data/", P.WRITE_NORMAL)
+        self.assertPermissionRequired(SPECIES + "/import/species/", P.WRITE_NORMAL)
         
         self.assertNotFound("/import/data/invalid/")
         self.assertNotFound("/import/species/invalid/")
         self.assertNotFound(SPECIES + "/import/data/invalid/")
         self.assertNotFound(SPECIES + "/import/species/invalid/")
 
-    def test_guest_history(self):
-        """Visit history pages as guest"""
+    def test_history(self):
+        """Visit history pages"""
         self.assertNotFound("history/")
         
-        self.assertLoginRequired(SPECIES + "/history/")
-        self.assertLoginRequired(SPECIES + "/" + MODEL + "/history/")
-        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/history/")
+        self.assertPermissionRequired(SPECIES + "/history/", P.READ_HISTORY)
+        self.assertPermissionRequired(SPECIES + "/" + MODEL + "/history/", P.READ_HISTORY)
+        self.assertPermissionRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/history/", P.READ_HISTORY)
         
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_HISTORY")
+        self.assignPerm(P.READ_HISTORY, self.getSpecies())
         
         with self.assertTemplateUsed("cyano/history.html"):
             self.assertOK(SPECIES + "/history/")
             self.assertOK(SPECIES + "/" + MODEL + "/history/")
             self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/history/")
     
-    def test_guest_history_detail(self):
-        """Visit history detail page as guest"""
+    def test_history_detail(self):
+        """Visit history detail page"""
         self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/history/a/")
         self.assertNotFound(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/a/")
         
-        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/")
+        self.assertPermissionRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/", P.READ_HISTORY)
         
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_HISTORY")
+        self.assignPerm(P.READ_HISTORY, self.getSpecies())
         
         with self.assertTemplateUsed("cyano/history_detail.html"):
-            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/")
+            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/history/3/")
 
-    def test_guest_permission(self):
-        """Visit permission view page as guest"""
-        self.assertNotFound("permission/")
+    def test_permission(self):
+        """Visit permission view page"""
+        #self.assertRedirect("permission/", "login/?next={}".format(reverse('cyano.views.global_permission')))
         
-        self.assertLoginRequired(SPECIES + "/permission/")
+        self.assertPermissionRequired(SPECIES + "/permission/", P.READ_PERMISSION)
         self.assertNotFound(SPECIES + "/" + MODEL + "/permission/")
-        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/")
+        self.assertPermissionRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/", P.READ_PERMISSION)
         
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_PERMISSION")
+        self.assignPerm(P.READ_PERMISSION, self.getSpecies())
         
-        with self.assertTemplateUsed("cyano/permission.html"):
+        with self.assertTemplateUsed("cyano/global_permission.html"):
             self.assertOK(SPECIES + "/permission/")
             self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/")
 
-    def test_guest_permission_edit(self):
-        """Visit permission edit page as guest"""
-        # Special case: Matches species_wid/edit
-        self.assertLoginRequired("permission/edit/")
-        # Special case: Matches species_wid/model/edit
-        self.assertLoginRequired(SPECIES + "/" + MODEL + "/permission/edit/")
+    def test_permission_edit(self):
+        """Visit permission edit page"""
+        # Global permissions have no edit url
+        self.assertNotFound("permission/edit/")
+        # model has no permissions
+        self.assertNotFound(SPECIES + "/" + MODEL + "/permission/edit/")
         
-        self.assertLoginRequired(SPECIES + "/permission/edit/")
-        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
-        
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "WRITE_PERMISSION")
-        
-        self.assertLoginRequired(SPECIES + "/permission/edit/")
-        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
-        
-        self.doGuestLogin().add_allow_permission(self.getSpecies(), "READ_PERMISSION")
+        self.assertPermissionRequired(SPECIES + "/permission/edit/", P.WRITE_PERMISSION)
+        self.assertPermissionRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/", P.WRITE_PERMISSION)
 
-        self.assertLoginRequired(SPECIES + "/permission/edit/")
-        self.assertLoginRequired(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
+        self.assignPerm(P.WRITE_PERMISSION, self.getSpecies())
 
-    def test_guest_sitemap(self):
-        """Visit sitemaps as guest"""
-        self._test_sitemap()
+        self.assertOK(SPECIES + "/permission/edit/")
+        self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
+
+    def test_sitemap(self):
+        """Visit sitemaps"""
+        self.assertNotFound("sitemap.xml/")
+        self.assertNotFound("sitemap_toplevel.xml/")
+        self.assertNotFound("sitemap/%s.xml/" % (SPECIES))
+
+        with self.assertTemplateUsed("cyano/sitemap.xml"):
+            self.assertMimeTypeXml("sitemap.xml", mimetype="application/xml")
+
+        with self.assertTemplateUsed("cyano/sitemap_toplevel.xml"):
+            self.assertMimeTypeXml("sitemap_toplevel.xml", mimetype="application/xml")
+
+        self.assertPermissionRequired("sitemap/%s.xml" % SPECIES, P.READ_NORMAL)
+        self.assignPerm(P.READ_NORMAL, self.getSpecies())
+        with self.assertTemplateUsed("cyano/sitemap_species.xml"):
+            self.assertMimeTypeXml("sitemap/%s.xml" % SPECIES, mimetype="application/xml")
+
+        with self.assertTemplateUsed("cyano/error.html"):
+            self.assertNotFound("sitemap/Wrong-Species.xml")
     
-    def test_guest_license(self):
-        """Visit license page as guest"""
+    def test_license(self):
+        """Visit license page"""
         with self.assertTemplateUsed("cyano/license.html"):
             self.assertOK("license/")
             self.assertOK(SPECIES + "/license/")
@@ -541,10 +579,98 @@ class CyanoGuestTest(CyanoGuestUserTestBase):
         self.assertNotFound(SPECIES + "/license/invalid/")
         self.assertNotFound(SPECIES + "/model/license/")
 
-class CyanoUserTest(CyanoGuestUserTestBase):
+class CyanoUserTestReadNormalPerm(CyanoUserTestBase):
+    """Tests that already set ACCESS_SPECIES and READ_NORMAL permission"""
+
     def setUp(self):
-        super(CyanoUserTest, self).setUp()
+        """Give Guest ACCESS_SPECIES and READ_NORMAL permission, this check is used anywhere"""
+
+        super(CyanoUserTestReadNormalPerm, self).setUp()
+        self.doGuestLogin()
+        self.user.profile.assign_perm(P.ACCESS_SPECIES)
+        self.assignPerm(P.READ_NORMAL, self.getSpecies())
+
+    def _test_detail_formats(self, url, fasta_fail=False, genbank_fail=False):
+        with self.assertTemplateUsed("cyano/detail.html"):
+            self.assertOK(url)
+
+        # Not testing json, is rest-framework code like xml
+        self.assertMimeTypeXml("/api/" + url + "?format=xml")
+
+        def ok_func(u):
+            return self.assertOK(u, mimetype="application/octet-stream")
+
+        fasta_func = self.assertBadRequest if fasta_fail else ok_func
+        genbank_func = self.assertBadRequest if genbank_fail else ok_func
+
+        fasta_func(url + "?format=fasta")
+        genbank_func(url + "?format=genbank")
+
+    def test_detail_plasmid(self):
+        self.assertNotFound(SPECIES + "/Chromosome/pSYSA/")
+
+        self._test_detail_formats(SPECIES + "/Plasmid/pSYSA/")
+
+    def test_detail_compartment(self):
+        url = SPECIES + "/Compartment/Cytosol/"
+
+        args = [True, True]
+
+        self._test_detail_formats(SPECIES + "/Compartment/Cytosol/", *args)
+        self._test_detail_formats(SPECIES + "/Compartment/Extra_cellular/", *args)
+
+    def test_detail_genes(self):
+        args = [False, True]
+
+        # mRNA
+        self._test_detail_formats(SPECIES + "/Gene/sll7001/", *args)
+
+        # rRNA
+        self._test_detail_formats(SPECIES + "/Gene/ST6803r01/", *args)
+
+        # tRNA, reversed
+        self._test_detail_formats(SPECIES + "/Gene/ST6803t18/", *args)
+
+    def test_detail_metabolites(self):
+        args = [True, True]
+
+        self._test_detail_formats(SPECIES + "/Metabolite/ATP/", *args)
+        self._test_detail_formats(SPECIES + "/Metabolite/ethanol/", *args)
+
+    def test_detail_pathways(self):
+        args = [True, True]
+
+        self._test_detail_formats(SPECIES + "/Pathway/Boehringer/", *args)
+        self._test_detail_formats(SPECIES + "/Pathway/map00010/", *args)
+
+    def test_detail_proteinmonomers(self):
+        self._test_detail_formats(SPECIES + "/ProteinMonomer/sll7001_Monomer/")
+        self._test_detail_formats(SPECIES + "/ProteinMonomer/sll0575_Monomer/")
+
+    def test_detail_reactions(self):
+        args = [True, True]
+
+        self._test_detail_formats(SPECIES + "/Reaction/_1_1_1_100a_r/", *args)
+        self._test_detail_formats(SPECIES + "/Reaction/Biomass_r/", *args)
+
+    def test_detail_transcription_units(self):
+        args = [False, True]
+
+        self._test_detail_formats(SPECIES + "/TranscriptionUnit/TU_sll0006-sll0007-sll0008/", *args)
+        self._test_detail_formats(SPECIES + "/TranscriptionUnit/TU_sll0661/", *args)
+
+    def test_detail_publications(self):
+        args = [True, True]
+
+        self._test_detail_formats(SPECIES + "/PublicationReference/PUB_14686584/", *args)
+        self._test_detail_formats(SPECIES + "/PublicationReference/REF_0001/", *args)
+
+
+class CyanoLoginTest(CyanoUserTestBase):
+    def setUp(self):
+        super(CyanoLoginTest, self).setUp()
         self.doLogin()
+        self.user.profile.assign_perm(P.ACCESS_SPECIES)
     
     def test_user_index(self):
         """Visits the main page as logged in user"""
@@ -561,8 +687,8 @@ class CyanoUserTest(CyanoGuestUserTestBase):
     def test_user_users(self):
         """Visit users page as logged in user"""
         with self.assertTemplateUsed("cyano/users.html"):
-            self.assertOK("users/")
-            self.assertOK(SPECIES + "/users/")
+            self.assertOK("user/")
+            self.assertOK(SPECIES + "/user/")
     
     def test_user_user(self):
         """Visit user profile pages as logged in user"""
@@ -590,189 +716,13 @@ class CyanoUserTest(CyanoGuestUserTestBase):
         
         self._test_search(google = False)
 
-    def test_user_species(self):
-        """Visit species page as logged in user"""
-        self.assertForbidden(SPECIES + "/")
-        self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
-        
-        with self.assertTemplateUsed("cyano/species.html"):
-            self.assertOK(SPECIES + "/")
-    
-    def test_user_listing(self):
-        """Visit listing page as logged in user"""
-        url = SPECIES + "/" + MODEL + "/"
-        
-        self.assertForbidden(url)
-
-        self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
-        
-        with self.assertTemplateUsed("cyano/list.html"):
-            self.assertOK(url)
-
-    def test_user_detail(self):
-        """Visit detail page as logged in user"""
-        url = SPECIES + "/" + MODEL + "/" + ITEM + "/"
-        self.assertForbidden(url)
-
-        self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
-        self.doLogin().add_allow_permission(self.getSpecies(second = True), "READ_NORMAL")
-
-        with self.assertTemplateUsed("cyano/detail.html"):
-            self.assertOK(url)
-            self.assertOK(SPECIES + "/Chromosome/UnitTest-Chromosome/")
-
-    def test_user_add(self):
-        """Visit add page as logged in user"""
-        with self.assertTemplateUsed("cyano/edit.html"):
-            self.assertOK("Species/add/")
-
-        self.assertForbidden(SPECIES + "/" + MODEL + "/add/")
-    
-    def test_user_add_permission(self):
-        """Visit add page as logged in user with permission"""
-        self.doLogin().add_allow_permission(self.getSpecies(), "WRITE_NORMAL")
-
-        with self.assertTemplateUsed("cyano/edit.html"):
-            self.assertOK("Species/add/")
-            self.assertOK(SPECIES + "/" + MODEL + "/add/")
-    
-    def _test_editdelete_user(self, s):
-        self.assertNotFound("Species/%s/" % (s))
-
-        self.assertForbidden(SPECIES + "/%s/" % (s))
-        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/%s/" % (s))
-    
-    def test_user_edit(self):
-        """Visit edit page as logged in user"""
-        self._test_editdelete_user("edit")
-    
-    def test_user_edit_permission(self):
-        """Visit edit page as logged in user with permission"""
-        self.doLogin().add_allow_permission(self.getSpecies(), "WRITE_NORMAL")
-
-        with self.assertTemplateUsed("cyano/edit.html"):
-            self.assertOK(SPECIES + "/edit/")
-            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/edit/")
-    
-    def test_user_delete(self):
-        """Visit delete page as logged in user"""
-        self._test_editdelete_user("delete")
-    
-    def test_user_delete_permission(self):
-        """Visit delete page as logged in user with permission"""
-        self.doLogin().add_allow_permission(self.getSpecies(), "WRITE_DELETE")
-
-        with self.assertTemplateUsed("cyano/delete.html"):
-            self.assertOK(SPECIES + "/delete/")
-            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/delete/")
-
-    def test_user_exportData(self):
-        """Visit export page as logged in user"""
-        self.assertForbidden(SPECIES + "/export/")
-        
-        self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
-        
-        with self.assertTemplateUsed("cyano/exportDataForm.html"):
-            self.assertOK(SPECIES + "/export/")
-
-    def test_user_import(self):
-        """Visit import page as logged in user"""
-        with self.assertTemplateUsed("cyano/importDataForm.html"):
-            self.assertOK("/import/data/")
-        
-        self.assertForbidden(SPECIES + "/import/data/")
-        
-        with self.assertTemplateUsed("cyano/importSpeciesForm.html"):
-            self.assertOK("/import/species/")
-        
-        self.assertForbidden(SPECIES + "/import/species/")
-    
-    def test_user_species_import_permission(self):
-        """Visit import species page as logged in user with permission"""
-        self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
-
-        with self.assertTemplateUsed("cyano/importSpeciesForm.html"):
-            self.assertOK(SPECIES + "/import/species/")
-    
-    def test_user_data_import_permission(self):
-        """Visit import data page as logged in user with permission"""
-        self.doLogin().add_allow_permission(self.getSpecies(), "WRITE_NORMAL")
-
-        with self.assertTemplateUsed("cyano/importDataForm.html"):
-            self.assertOK(SPECIES + "/import/data/")
-
-    def test_user_history(self):
-        """Visit history pages as logged in user"""
-        self.assertForbidden(SPECIES + "/history/")
-        self.assertForbidden(SPECIES + "/" + MODEL + "/history/")
-        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/history/")
-        
-        self.doLogin().add_allow_permission(self.getSpecies(), "READ_HISTORY")
-        
-        with self.assertTemplateUsed("cyano/history.html"):
-            self.assertOK(SPECIES + "/history/")
-            self.assertOK(SPECIES + "/" + MODEL + "/history/")
-            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/history/")
-    
-    def test_user_history_detail(self):
-        """Visit history detail page as logged in user"""
-        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/")
-        
-        self.doLogin().add_allow_permission(self.getSpecies(), "READ_HISTORY")
-        
-        with self.assertTemplateUsed("cyano/history_detail.html"):
-            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/history/1/")
-
-    def test_user_permission(self):
-        """Visit permission view page as logged in user"""    
-        self.assertForbidden(SPECIES + "/permission/")
-        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/")
-        
-        self.doLogin().add_allow_permission(self.getSpecies(), "READ_PERMISSION")
-        
-        with self.assertTemplateUsed("cyano/permission.html"):
-            self.assertOK(SPECIES + "/permission/")
-            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/")
-
-    def test_user_permission_edit(self):
-        """Visit permission edit page as logged in user"""
-        # Special case: Matches species_wid/edit
-        self.assertNotFound("permission/edit/")
-        # Special case: Matches species_wid/model/edit
-        self.assertNotFound(SPECIES + "/" + MODEL + "/permission/edit/")
-        
-        self.assertForbidden(SPECIES + "/permission/edit/")
-        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
-        
-        self.doLogin().add_allow_permission(self.getSpecies(), "WRITE_PERMISSION")
-        
-        self.assertForbidden(SPECIES + "/permission/edit/")
-        self.assertForbidden(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
-        
-        self.doLogin().add_allow_permission(self.getSpecies(), "READ_PERMISSION")
-        
-        with self.assertTemplateUsed("cyano/permission_edit.html"):
-            self.assertOK(SPECIES + "/permission/edit/")
-            self.assertOK(SPECIES + "/" + MODEL + "/" + ITEM + "/permission/edit/")
-
-    def test_user_sitemap(self):
-        """Visit sitemaps as logged in user"""
-        self._test_sitemap()
-
-    def test_guest_license(self):
-        """Visit license page as logged in user"""
-        with self.assertTemplateUsed("cyano/license.html"):
-            self.assertOK("license/")
-            self.assertOK(SPECIES + "/license/")
-
-        self.assertNotFound("license/invalid/")
-        self.assertNotFound(SPECIES + "/license/invalid/")
-        self.assertNotFound(SPECIES + "/model/license/")
-
 class CyanoCreateTest(CyanoBaseTest):
     def setUp(self):
         super(CyanoCreateTest, self).setUp()
+        self.doGuestLogin()
+        self.user.profile.assign_perm(P.ACCESS_SPECIES)
         self.doLogin()
+        self.user.profile.assign_perm(P.ACCESS_SPECIES)
     
     def test_new_species_missing(self):
         """Test new species is missing"""
@@ -788,41 +738,19 @@ class CyanoCreateTest(CyanoBaseTest):
                 'new_wid': "new-species",
                 'reason': 'unit test'
             }
-            self.assertPOSTOK("/import/species/", data = data)
+            self.assertPOSTOK("/import/species/", data=data)
 
         cmodels.Species.objects.for_wid("new-species")
         
         self.assertNotFound("new-species/" + MODEL + "/" + ITEM + "/")
         
-        # Permission test
+        # Permission test, POST created permissions
         with self.assertTemplateUsed("cyano/species.html"):
             self.assertOK("new-species/")
         
         self.doLogout()
-        self.assertLoginRequired("new-species/")
-    
-    def test_create_mutant(self):
-        """Create a new mutant of SPECIES via the webinterface"""
-        with self.assertTemplateUsed("cyano/importSpeciesForm.html"):
-            data = {
-                'new_species': "New Species",
-                'new_wid': "new-species",
-                'reason': 'unit test'
-            }
-            self.doLogin().add_allow_permission(self.getSpecies(), "READ_NORMAL")
-            self.assertPOSTOK(SPECIES + "/import/species/", data=data)
+        self.assertPermissionRequired("new-species/", P.READ_NORMAL)
 
-        cmodels.Species.objects.for_wid("new-species")
-        
-        self.assertOK("new-species/" + MODEL + "/" + ITEM + "/")
-        
-        # Permission test
-        with self.assertTemplateUsed("cyano/species.html"):
-            self.assertOK("new-species/")
-        
-        self.doLogout()
-        self.assertLoginRequired("new-species/")
-        
     # Missing fields are not tested because all fields have required = True -> django feature
     
     def test_create_species_wid_used(self):

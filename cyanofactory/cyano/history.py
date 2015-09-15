@@ -21,20 +21,23 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
         try:
             rel_obj = getattr(instance, self.cache_name)
         except AttributeError:
-            #if hasattr(instance, "detail_history"):
-            #    print "redirecting to " + str(instance.detail_history)
-            val = getattr(instance, self.field.attname)
-            if val is None:
+            val = self.field.get_local_related_value(instance)
+            if None in val:
                 rel_obj = None
             else:
-                other_field = self.field.rel.get_related_field()
-                if other_field.rel:
-                    params = {'%s__%s' % (self.field.rel.field_name, other_field.rel.field_name): val}
+                params = {
+                    rh_field.attname: getattr(instance, lh_field.attname)
+                    for lh_field, rh_field in self.field.related_fields}
+                qs = self.get_queryset(instance=instance)
+                extra_filter = self.field.get_extra_descriptor_filter(instance)
+                if isinstance(extra_filter, dict):
+                    params.update(extra_filter)
+                    qs = qs.filter(**params)
                 else:
-                    params = {'%s__exact' % self.field.rel.field_name: val}
-                qs = self.get_query_set(instance=instance)
+                    qs = qs.filter(extra_filter, **params)
                 # Assuming the database enforces foreign keys, this won't fail.
-                rel_obj = qs.get(**params)
+                rel_obj = qs.get()
+
                 if hasattr(instance, "detail_history"):
 
                     ct_id = ContentType.objects.get_for_model(instance._meta.concrete_model).pk
@@ -68,10 +71,12 @@ class HistoryReverseSingleRelatedObjectDescriptor(ReverseSingleRelatedObjectDesc
                                 pass
 
                 if not self.field.rel.multiple:
-                    setattr(rel_obj, self.field.related.get_cache_name(), instance)
+                    setattr(rel_obj, self.field.rel.get_cache_name(), instance)
             setattr(instance, self.cache_name, rel_obj)
         if rel_obj is None and not self.field.null:
-            raise self.field.rel.to.DoesNotExist
+            raise self.RelatedObjectDoesNotExist(
+                "%s has no %s." % (self.field.model.__name__, self.field.name)
+            )
         else:
             return rel_obj
 
@@ -80,7 +85,7 @@ and adds behavior for many-to-many related objects."""
 
 def create_history_many_related_manager(superclass):
     class HistoryManyRelatedManager(superclass):             
-        def get_query_set(self):
+        def get_queryset(self):
             if hasattr(self.instance, "detail_history"):
                 from cyano.models import Revision
 
@@ -91,19 +96,21 @@ def create_history_many_related_manager(superclass):
                 except (AttributeError, KeyError):
                     db = self._db or router.db_for_read(self.instance.__class__, instance=self.instance)
 
-                    ct_id = ContentType.objects.get_for_model(self.instance._meta.concrete_model).pk
+                    ct_id = ContentType.objects.get_for_model(self.model).pk
+
+                    queryset = Manager.get_queryset(self).using(db)._next_is_sticky().all()#.filter(**self.core_filters)
 
                     revision = Revision.objects.filter(
-                        object_id=self.instance.pk,
+                        object_id__in=queryset,
                         content_type__pk=ct_id,
                         detail_id__lte=self.instance.detail_history).order_by("-detail").first()
 
-                    queryset = Manager.get_query_set(self).using(db)._next_is_sticky().all()#.filter(**self.core_filters)
-
                     data = []
-                    new_data = json.loads(revision.new_data)
-                    if self.prefetch_cache_name in new_data:
-                        data = new_data[self.prefetch_cache_name]
+
+                    if revision is not None:
+                        new_data = json.loads(revision.new_data)
+                        if self.prefetch_cache_name in new_data:
+                            data = new_data[self.prefetch_cache_name]
 
                     ##print "History:", self.instance.detail_history, "Data:", data
 
@@ -118,8 +125,8 @@ def create_history_many_related_manager(superclass):
                     
                     return queryset
             else:
-                queryset = super(HistoryManyRelatedManager, self).get_query_set()
-            
+                queryset = super(HistoryManyRelatedManager, self).get_queryset()
+
             #print queryset
             return queryset
 

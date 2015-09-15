@@ -50,7 +50,7 @@ $(document).ready(function() {
             {
                 "targets": [0, 1],
                 "createdCell": function (td, cellData, rowData, row, col) {
-                    $(td).wrapInner($("<a></a>").attr("href", rowData["url"]));
+                    $(td).wrapInner($("<a></a>").attr("href", rowData["web_url"]));
                 },
             },
             {
@@ -59,9 +59,9 @@ $(document).ready(function() {
                 "orderable": false,
                 "data": function (rowData, type, set, meta) {
                     var tag = "<a class='btn btn-default btn-xs'></a>";
-                    var edit = $(tag).attr("href", rowData["url"] + "/edit").text("Edit");
+                    var edit = $(tag).attr("href", rowData["web_url"] + "/edit").text("Edit");
                     var del = $(tag)
-                            .attr("href", rowData["url"] + "/delete")
+                            .attr("href", rowData["web_url"] + "/delete")
                             .attr("data-toggle", "modal")
                             .attr("data-target", "#delete-form")
                             .data("toggle", "modal")
@@ -167,7 +167,7 @@ var updateTable = function() {
 
     var filterString = filters.join("&");
 
-    $('#new_list').DataTable().ajax.url("{% url "cyano-api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,url&" + filterString).load();
+    $('#new_list').DataTable().ajax.url("{% url "cyano-api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,web_url&" + filterString).load();
 }
 
 </script>

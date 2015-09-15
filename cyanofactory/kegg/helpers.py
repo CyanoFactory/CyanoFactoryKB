@@ -4,6 +4,7 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
+from io import BytesIO
 
 from django.conf import settings
 from django.core.urlresolvers import reverse
@@ -35,7 +36,7 @@ def extract_ecs(text):
 
 
 def get_reaction_map(map_id, enzymes, metabolites, export):
-    import StringIO
+    from io import StringIO
 
     # Workaround broken PIL installation
     # see: https://code.djangoproject.com/ticket/6054
@@ -200,7 +201,9 @@ def get_reaction_map(map_id, enzymes, metabolites, export):
         out = StringIO()
         ##out.write(template.render(Context()))
         out.write("""<svg id="kegg" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100%" height="100%" pointer-events="visible">""")
-        tree.write(out)
+        xmlout = BytesIO()
+        tree.write(xmlout)
+        out.write(xmlout.getvalue().decode())
         out.write("</svg>")
 
         # overwrite enzymes and metabolites content

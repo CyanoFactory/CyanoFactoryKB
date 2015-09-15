@@ -152,7 +152,7 @@ Released under the MIT license
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Import <span class="caret"></span></a>
                         <ul class="dropdown-menu" role="menu">
-                            <li><a href="{% if species %}{% url "cyano.views.importSpeciesData" species_wid=species.wid %}{% else %}{% url "cyano.views.importSpeciesData" %}{% endif %}">{% if species %}Create Mutant{% else %}Create New Species{% endif %}</a></li>
+                            {% if not species %}<li><a href="{% url "cyano.views.importSpeciesData" %}">Create New Species</a></li>{% endif %}
                             <li {% if not species %}class="disabled"{% endif %}><a href="{% if species %}{% url "cyano.views.importData" species_wid=species.wid %}{% else %}#{% endif %}">Import Data</a></li>
                             <li><a href="{% if species %}{% url "cyano.views.jobs" species_wid=species.wid %}{% else %}{% url "cyano.views.jobs" %}{% endif %}">View Import Jobs</a></li>
                         </ul>

@@ -11,7 +11,6 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 '''
 
-from datetime import timezone
 from itertools import groupby
 from math import ceil
 import datetime
@@ -21,7 +20,6 @@ import re
 from django import template
 from django.core.urlresolvers import reverse
 from django.template import TemplateSyntaxError
-from django.utils.text import capfirst
 
 numeric_test = re.compile("^\d+$")
 register = template.Library()
@@ -31,11 +29,11 @@ register = template.Library()
 def getattribute(value, arg):
 	'''Gets an attribute of an object dynamically from a string name'''
 
-	if hasattr(value, unicode(arg)):
+	if hasattr(value, arg):
 		return getattr(value, arg)
 	elif hasattr(value, 'has_key') and value.has_key(arg):
 		return value[arg]
-	elif numeric_test.match(unicode(arg)) and len(value) > int(arg):
+	elif numeric_test.match(arg) and len(value) > int(arg):
 		return value[int(arg)]
 	else:
 		return None

@@ -6,10 +6,13 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 from django.template import loader
+from django.views.decorators.http import require_POST
+from jsonview.decorators import json_view
+from jsonview.exceptions import BadRequest
 
 import boehringer.models as models
 from boehringer.helpers import format_output
-from cyano.decorators import ajax_required, permission_required
+from cyano.decorators import ajax_required, global_permission_required
 from cyano.helpers import render_queryset_to_response
 from django.core.exceptions import ObjectDoesNotExist
 from django.http.response import HttpResponse, HttpResponseBadRequest
@@ -22,7 +25,7 @@ def legacy(request):
     return index(request, True)
 
 
-@permission_required("access_boehringer")
+@global_permission_required("access_boehringer")
 def index(request, legacy=None):
     """
     """
@@ -47,9 +50,11 @@ def index(request, legacy=None):
             template="boehringer/index.html"
         )
 
-
+@require_POST
 @ajax_required
-@permission_required("access_boehringer")
+@login_required
+@global_permission_required("access_boehringer")
+@json_view
 def index_ajax(request):
     import json
 
@@ -57,14 +62,14 @@ def index_ajax(request):
     op = request.POST.get("op", "")
 
     if not op in ["load", "delete", "save"]:
-        return HttpResponseBadRequest("Invalid op")
+        raise BadRequest("Invalid op")
 
     if op == "save":
         name = request.POST.get("name", "")
         query = request.POST.get("query", "")
 
-        if all(len(x) == 0 for x in [name, query]):
-            return HttpResponseBadRequest("Invalid name or query")
+        if any(len(x) == 0 for x in [name, query]):
+            raise BadRequest("Invalid name or query")
 
         try:
             query_obj = models.Query.objects.get(name=name, user=request.user.profile)
@@ -75,24 +80,24 @@ def index_ajax(request):
             query_obj = models.Query.objects.create(name=name, query=query, user=request.user.profile)
             created = True
 
-        return HttpResponse(json.dumps(
-            {"name": query_obj.name,
-             "pk": query_obj.pk,
-             "created": created})
-        )
+        return {
+            "name": query_obj.name,
+            "pk": query_obj.pk,
+            "created": created
+        }
 
     try:
         pk = int(pk)
     except ValueError:
-        return HttpResponseBadRequest("Bad pk")
+        raise BadRequest("Bad pk")
 
     try:
         query = models.Query.objects.get(pk=pk, user=request.user.profile)
     except ObjectDoesNotExist:
-        return HttpResponseBadRequest("No item found")
+        raise BadRequest("No item found")
 
     if op == "load":
-        return HttpResponse(json.dumps({"name": query.name, "query": query.query}))
+        return {"name": query.name, "query": query.query}
     elif op == "delete":
         query.delete()
-        return HttpResponse("ok")
+        return {}

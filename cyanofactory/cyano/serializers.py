@@ -1,6 +1,15 @@
+"""
+Copyright (c) 2014 Gabriel Kind <gkind@hs-mittweida.de>
+Hochschule Mittweida, University of Applied Sciences
+
+Released under the MIT license
+"""
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
+from rest_framework.relations import PrimaryKeyRelatedField
 import cyano.models as cmodels
+from django.conf import settings
 
 # via https://gist.github.com/dbrgn/4e6fc1fe5922598592d6
 class DynamicFieldsMixin(object):
@@ -19,7 +28,7 @@ class DynamicFieldsMixin(object):
         super(DynamicFieldsMixin, self).__init__(*args, **kwargs)
 
         if 'request' in self.context:
-            fields = self.context['request'].QUERY_PARAMS.get('fields')
+            fields = self.context['request'].query_params.get('fields')
             if fields:
                 fields = fields.split(',')
                 # Drop any fields that are not specified in the `fields` argument.
@@ -52,8 +61,16 @@ class WidField(serializers.SlugRelatedField):
 
 class WidManyRelatedField(serializers.ManyRelatedField):
     def to_representation(self, iterable):
-        return list(iterable.values_list("wid", flat=True))
+        res = list()
 
+        for x in iterable.values("id", "wid", "model_type", "species__wid"):
+            res.append({
+                "id": x["id"],
+                "wid": x["wid"],
+                "url": "%s/api/%s/%s/%s" % (settings.ROOT_URL, x["species__wid"], cmodels.TableMeta.get_by_id(x["model_type"]).model_name, x["wid"])
+            })
+
+        return res
 
 class WidFieldMany(serializers.RelatedField):
     def to_internal_value(self, data):
@@ -71,16 +88,32 @@ class WidFieldMany(serializers.RelatedField):
         return WidManyRelatedField(**list_kwargs)
 
 
+class SpeciesList(serializers.ModelSerializer):
+    count = serializers.IntegerField(source='components.count', read_only=True)
+    url = serializers.URLField(source='get_absolute_url_api')
+    web_url = serializers.URLField(source='get_absolute_url')
+
+    class Meta:
+        model = cmodels.Species
+        fields = cmodels.Species._meta.field_list + ["count", "url", "web_url"]
+
+
+class SpeciesOverview(serializers.Serializer):
+    name = serializers.StringRelatedField()
+    count = serializers.IntegerField()
+    url = serializers.StringRelatedField()
+    web_url = serializers.StringRelatedField()
+
+
 class CyanoSerializer(DynamicFieldsMixin, serializers.ModelSerializer):
     pass
-
 
 class Entry(CyanoSerializer):
     class Meta:
         model = cmodels.Entry
         fields = cmodels.Entry._meta.field_list
 
-additional_fields = ['species', 'url']
+additional_fields = ['species', 'url', 'web_url']
 
 
 class BasketComponent(CyanoSerializer):
@@ -103,7 +136,9 @@ class Basket(CyanoSerializer):
 class SpeciesComponent(CyanoSerializer):
     species = WidField(read_only=True)
     type = WidFieldMany(allow_null=True, many=True, queryset=cmodels.Type.objects.all(), required=False)
-    url = serializers.URLField(source='get_absolute_url')
+    url = serializers.URLField(source='get_absolute_url_api')
+    cross_references = serializers.StringRelatedField(many=True)
+    web_url = serializers.URLField(source='get_absolute_url')
 
     class Meta:
         model = cmodels.SpeciesComponent

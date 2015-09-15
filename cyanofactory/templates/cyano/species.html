@@ -20,6 +20,7 @@ Released under the MIT license
 <li><a href="{% url "cyano.views.edit" species_wid=species.wid %}">Edit {{ species.wid }}</a></li>
 <li><a data-toggle="modal" href="{% url 'cyano.views.delete' species_wid=species.wid %}" data-target="#delete-form">Delete {{ species.wid }}</a></li>
 <li><a href="{% url "cyano.views.permission" species_wid=species.wid %}">View permissions of {{ species.wid }}</a></li>
+<li><a href="{% url "cyano.views.permission_edit" species_wid=species.wid %}">Edit permissions of {{ species.wid }}</a></li>
 {{ block.super }}
 {% endblock %}
 
