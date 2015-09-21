@@ -26,6 +26,7 @@ from .network import *
 from .enzyme import *
 from xml.dom.minidom import parseString
 import re
+import six
 
 class Metabolism(object):
     """
@@ -237,10 +238,12 @@ class Metabolism(object):
         self._net = None
 
         # Check for duplicated enzyme names and rename
+        non_uniq_run = False
         non_uniq = filter(lambda x: self.has_reaction(x), self.mets)
-        if len(non_uniq) > 0:
-            for x in non_uniq:
-                self.rename_reaction(x, x + "_r", no_update=True)
+        for x in non_uniq:
+            self.rename_reaction(x, x + "_r", no_update=True)
+            non_uniq_run = True
+        if non_uniq_run:
             self.calcs()
 
     @property
@@ -443,7 +446,7 @@ class Metabolism(object):
         self.calcs()
 
     def prepare_opt(self, infile):
-        if isinstance(infile, basestring):
+        if isinstance(infile, six.string_types):
             with open(infile, encoding='utf-8') as f:
                 return self.parse_opt(f)
         else:
@@ -495,7 +498,7 @@ class Metabolism(object):
         return [reactions, constraints, external, objective, design_objective]
 
     def prepare_sbml(self, infile):
-        if isinstance(infile, basestring):
+        if isinstance(infile, six.string_types):
             with open(infile, encoding='utf-8') as f:
                 return self.parse_sbml(f)
         else:
@@ -619,7 +622,7 @@ class Metabolism(object):
         Creates an OptGene or SBML file with the metabolism.
         (Reactions, Constraints, External Metabolites and Objective).
         """
-        if isinstance(fileout, basestring):
+        if isinstance(fileout, six.string_types):
             fil = open(fileout, "w", encoding='utf-8')
         else:
             fil = fileout
@@ -746,7 +749,7 @@ class Metabolism(object):
             print("</model>", file=fil)
             print("</sbml>", file=fil)
 
-        if isinstance(fileout, basestring):
+        if isinstance(fileout, six.string_types):
             fil.close()
 
     def M_matrix(self,symetric=False):

@@ -78,7 +78,7 @@ class FBA:
             lista.pop(ele)
         MM = lista[:]
         #constraints
-        constr = map(lambda x: x.constraint, reacs)
+        constr = list(map(lambda x: x.constraint, reacs))
         # FBA
         self.ext_in = external_in
         self.ext_out = external_out
@@ -100,7 +100,7 @@ class FBA:
             stri += "%30s ---->  %9.9f  \n" % ele
         stri += "\nFlux on objective                   : %9.9f \n" % self.lp.obj.value
         fluxes = [ele[1] for ele in fluxes]
-        no_flux = len(filter(lambda x:abs(x)<self.eps,fluxes))
+        no_flux = len(list(filter(lambda x:abs(x)<self.eps,fluxes)))
         wi_flux = len(fluxes)-no_flux
         stri += "Reactions with flux    (flux>eps)   : %i \n"%wi_flux
         stri += "Reactions without flux (flux<eps)   : %i \n"%no_flux
@@ -153,9 +153,9 @@ class FBA:
         lp.rows.add(len(self.mets))
         lp.cols.add(len(self.reacs))
         for ii, ele in enumerate(lp.rows):
-            ele.name = self.mets[ii].encode("ascii", errors="ignore")
+            ele.name = self.mets[ii]
         for ii, ele in enumerate(lp.cols):
-            ele.name = self.reac_names[ii].encode("ascii", errors="ignore")
+            ele.name = self.reac_names[ii]
         #constraints
         ii = 0
         for n in range(len(self.reacs)):
