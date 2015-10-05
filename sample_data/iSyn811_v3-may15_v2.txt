@@ -1,0 +1,1476 @@
+-REACTIONS
+
+# GLYCOLYSIS
+2.7.1.2a : beta-D-glucose + ATP -> beta-D-glucose-6-phosphate + ADP
+2.7.1.2b : alpha-D-glucose + ATP <-> alpha-D-glucose 6-phosphate + ADP
+5.3.1.9a : alpha-D-glucose 6-phosphate <-> beta-D-glucose-6-phosphate
+5.3.1.9b : beta-D-glucose-6-phosphate <-> fructose-6-phosphate
+2.7.1.11 : ATP + fructose-6-phosphate -> ADP + fructose-1,6-bisphosphate
+4.1.2.13a : fructose-1,6-bisphosphate <-> dihydroxy-acetone phosphate + D-glyceraldehyde-3-phosphate
+3.1.3.11 : fructose-1,6-bisphosphate + H2O -> fructose-6-phosphate + phosphate O4P
+5.3.1.1 : D-glyceraldehyde-3-phosphate <-> dihydroxy-acetone phosphate
+_1.2.1.59a : NAD+ + H+ + D-glyceraldehyde-3-phosphate + phosphate O4P -> NADH + 1,3-diphosphateglycerate
+_1.2.1.59b : NADPH + 1,3-diphosphateglycerate -> NADP+ + H+ + D-glyceraldehyde-3-phosphate + phosphate O4P
+1.2.1.12 : D-glyceraldehyde-3-phosphate + phosphate O4P + NAD+ + H+ <-> 1,3-diphosphateglycerate + NADH
+2.7.2.3 : 3-phosphoglycerate + ATP <-> 1,3-diphosphateglycerate + ADP
+5.4.2.1 : 3-phosphoglycerate <-> 2-phosphoglycerate
+4.2.1.11 : 2-phosphoglycerate <-> phosphoenolpyruvate + H2O
+2.7.1.40a : ADP + phosphoenolpyruvate -> ATP + pyruvate
+2.7.9.2 : H2O + pyruvate + ATP -> phosphate O4P + phosphoenolpyruvate + AMP
+
+# TCA CYCLE
+6.2.1.5 : succinate + coenzyme A + ATP <-> succinyl-CoA + ADP + phosphate O4P
+_1.3.99.1 : succinate + PQ <-> fumarate + PQH2
+4.2.1.2 : malate <-> fumarate + H2O
+1.1.1.37 : malate + NAD+ <-> oxaloacetate + NADH + H+ 
+2.3.3.1 : oxaloacetate + acetyl-CoA + H2O <-> citrate + coenzyme A
+4.2.1.3a : citrate <-> cis-aconitate + H2O
+4.2.1.3b : cis-aconitate + H2O <-> D-isocitrate
+1.1.1.42 : D-isocitrate + NADP+ <-> 2-ketoglutarate + CO2 + NADPH + H+ 
+
+# GLYOXYLATE SHUNT
+6.2.1.9 : coenzyme A + malate + ATP <-> phosphate O4P + L-malyl-CoA + ADP
+# not pres ! would made up glyoxylate shunt ~~IMPORTANT, following 2 reactions not in sequence!!~~
+&4.1.3.1 : D-isocitrate -> glyoxylate + succinate
+&2.3.3.9 : acetyl-CoA + H2O + glyoxylate <-> malate + coenzyme A
+4.1.1.39oxi : D-ribulose-1,5-bisphosphate + O2 + H2O -> 3-phosphoglycerate + 2-phosphoglycolate + 2 H+
+_3.1.3.18 : 2-phosphoglycolate + H2O -> glycolate + phosphate O4P
+_1.1.3.15 : glycolate + O2 <-> glyoxylate + H2O2
+_4.1.1.2 : oxalate + H+ -> formate + CO2
+
+
+# PENTOSE PHOSPHATE PATHWAY
+1.1.1.49 : beta-D-glucose-6-phosphate + NADP+ <-> D-glucono-delta-lactone-6-phosphate + NADPH + H+ 
+3.1.1.31 : D-glucono-delta-lactone-6-phosphate + H2O -> 6-phospho-D-gluconate
+1.1.1.44 : 6-phospho-D-gluconate + NADP+ -> D-ribulose-5-phosphate + CO2 + NADPH + H+ 
+5.1.3.1 : D-ribulose-5-phosphate <-> D-xylulose-5-phosphate
+5.3.1.6 : D-ribose-5-phosphate <-> D-ribulose-5-phosphate
+5.3.1.9c : alpha-D-glucose 6-phosphate <-> fructose-6-phosphate
+2.2.1.1a : D-ribose-5-phosphate + D-xylulose-5-phosphate <-> D-sedoheptulose-7-phosphate + D-glyceraldehyde-3-phosphate
+2.2.1.1b : D-erythrose-4-phosphate + D-xylulose-5-phosphate <-> fructose-6-phosphate + D-glyceraldehyde-3-phosphate
+2.2.1.2 : D-glyceraldehyde-3-phosphate + D-sedoheptulose-7-phosphate <-> fructose-6-phosphate + D-erythrose-4-phosphate
+4.1.2.14 : 2-keto-3-deoxy-6-phospho-gluconate -> D-glyceraldehyde-3-phosphate + pyruvate
+4.1.2.4 : deoxyribose-5-phosphate <-> acetaldehyde + D-glyceraldehyde-3-phosphate
+_1.1.1.47a : beta-D-glucose + NAD+ -> D-glucono-1,5-lactone + NADH + H+ 
+_1.1.1.47b : beta-D-glucose + NADP+ -> D-glucono-1,5-lactone + NADPH + H+ 
+_1.1.5.2 : beta-D-glucose + UQ -> D-glucono-1,5-lactone + UQH2
+
+
+# CALVIN CYCLE ADDITION TO PPP
+2.7.1.19 : D-ribulose-5-phosphate + ATP -> D-ribulose-1,5-bisphosphate + ADP
+4.1.2.13b : dihydroxy-acetone phosphate + D-erythrose-4-phosphate -> D-sedoheptulose-1,7-bisphosphate
+3.1.3.37 : H2O + D-sedoheptulose-1,7-bisphosphate -> phosphate O4P + D-sedoheptulose-7-phosphate
+# in "SPECIAL" 4.1.1.39 : D-ribulose-1,5-bisphosphate + CO2 + H2O -> 2 3-phosphoglycerate + 2 H+
+
+
+# AMINO ACIDS
+# alanine - Ala
+5.1.1.1 : L-alanine <-> D-alanine
+1.4.1.1 : NAD+ + H2O + L-alanine <-> ammonia H3N + NADH + pyruvate + H+ 
+tRNA 6.1.1.7 : tRNAala + L-alanine + ATP -> L-alanyl-tRNAala + diphosphate + AMP
+
+# Asp, Arg, Asn, Lys and Thr
+# aspartate - Asp
+1.4.3.16 : O2 + H2O + L-aspartate -> ammonia H3N + H2O2 + oxaloacetate
+2.6.1.1a : L-aspartate + 2-ketoglutarate <-> L-glutamate + oxaloacetate
+4.1.1.11 : L-aspartate -> beta-alanine + CO2
+4.1.1.15b : L-aspartate -> beta-alanine + CO2
+# - from fumarate to Asp
+4.3.2.2a : adenylo-succinate <-> fumarate + AMP
+6.3.4.4 : L-aspartate + inosine-5'-phosphate + GTP <-> adenylo-succinate + phosphate O4P + GDP
+# - from Asp to Arg
+2.1.3.3 : L-ornithine + carbamoyl-phosphate <-> citrulline + phosphate O4P
+6.3.4.5a : L-aspartate + citrulline + ATP <-> L-arginino-succinate + diphosphate + AMP
+4.3.2.1 : L-arginino-succinate <-> L-arginine + fumarate
+# - from Asp to Asn
+3.5.1.1 : L-asparagine + H2O <-> ammonia H3N + L-aspartate
+# - from Asp to Thr
+2.7.2.4 : L-aspartate + ATP -> L-aspartyl-4-phosphate + ADP
+1.2.1.11 : NADPH + L-aspartyl-4-phosphate + H+ -> NADP+ + phosphate O4P + L-aspartate-semialdehyde 
+_1.1.1.3a : L-aspartate-semialdehyde + NADPH + H+ <-> homoserine + NADP+ 
+_1.1.1.3b : homoserine + NAD+ <-> L-aspartate-semialdehyde + NADH + H+ 
+2.7.1.39 : homoserine + ATP -> O-phospho-L-homoserine + ADP
+4.2.3.1a : O-phospho-L-homoserine + H2O -> phosphate O4P + L-threonine
+# - from Asp to Lys
+4.2.1.52 : pyruvate + L-aspartate-semialdehyde -> 2 H2O + L-2,3-dihydrodipicolinate
+_1.3.1.26a : tetrahydrodipicolinate + NADP+ <-> L-2,3-dihydrodipicolinate + NADPH + H+ 
+_1.3.1.26b : tetrahydrodipicolinate + NAD+ <-> L-2,3-dihydrodipicolinate + NADH + H+ 
+2.6.1.83 : L,L-diaminopimelate + 2-ketoglutarate <-> tetrahydrodipicolinate + L-glutamate + H2O
+5.1.1.7 : L,L-diaminopimelate <-> meso-diaminopimelate
+4.1.1.20 : meso-diaminopimelate -> CO2 + L-lysine
+tRNA 6.1.1.12 : tRNAasp + L-aspartate + ATP -> L-aspartyl-tRNAasp + diphosphate + AMP
+_3.5.1.15 : N-acyl-L-aspartate + H2O -> a carboxylate + L-aspartate
+
+# arginine - Arg
+# - from Asp to Arg
+tRNA 6.1.1.19 : tRNAarg + L-arginine + ATP -> L-arginyl-tRNAarg + diphosphate + AMP
+# - from Arg to putrescine
+4.1.1.19 : L-arginine -> CO2 + agmatine
+3.5.3.11 : H2O + agmatine -> urea + putrescine
+
+# asparagine - Asn
+# - from Asp to Asn
+tRNA 6.1.1.22 : tRNAasn + L-asparagine + ATP -> L-asparaginyl-tRNAasn + diphosphate + AMP
+tRNA 6.3.5.6 : L-glutamine + L-aspartyl-tRNAAsn + ATP -> L-glutamate + L-asparaginyl-tRNAasn + phosphate O4P + ADP
+
+# lysine - Lys
+# - from Asp to Lys
+# - Ile, Leu and Val degradation (mostly not pres)
+tRNA 6.1.1.6 : tRNAlys + L-lysine + ATP -> L-lysyl-tRNAlys + diphosphate + AMP
+4.1.1.18 : L-lysine -> CO2 + cadaverine
+
+# threonine - Thr
+# - from Asp to Thr
+THREOSPON-RXN : 2-amino-3-oxobutanoate <-> aminoacetone + CO2
+4.3.1.19a : L-threonine -> 2-oxobutanoate + ammonia H3N
+tRNA 6.1.1.3 : tRNAthr + L-threonine + ATP -> L-threonyl-tRNAthr + diphosphate + AMP
+
+# Ser, Cys and Gly
+# serine - Ser
+# - from 3PG to Ser
+1.1.1.95 : 3-phosphoglycerate + NAD+ -> 3-phospho-hydroxypyruvate + NADH + H+ 
+_4.3.1.19b : L-serine <-> pyruvate + ammonia H3N
+# - from Ser to Cys
+2.3.1.30 : L-serine + acetyl-CoA <-> O-acetyl-L-serine + coenzyme A
+2.5.1.47 : O-acetyl-L-serine + hydrogen sulfide H2S <-> L-cysteine + acetate
+# - from Ser to Gly (& viceversa)
+2.1.2.1 : L-serine + tetrahydrofolate <-> 5,10-methylene-THF + glycine + H2O
+tRNA 6.1.1.11 : tRNAser + L-serine + ATP -> L-seryl-tRNAser + diphosphate + AMP
+
+# cysteine - Cys
+# - from Ser to Cys
+tRNA 6.1.1.16 : tRNAcys + L-cysteine + ATP -> L-cysteinyl-tRNAcys + diphosphate + AMP
+
+# glycine - Gly
+# - from Ser to Gly (& viceversa)
+tRNA 6.1.1.14 : tRNAgly + glycine + ATP -> glycyl-tRNAgly + diphosphate + AMP
+
+# Glu, Gln, Pro and Trp
+# glutamate - Glu
+transport TRANS-RXN59G-639 : L-glutamate_extrac + H+_extrac -> L-glutamate + H+
+1.4.1.4 : L-glutamate + H2O + NADP+ <-> ammonia H3N + 2-ketoglutarate + NADPH + H+ 
+# - from Glu to Pro
+2.7.2.11 : L-glutamate + ATP -> L-glutamate-5-phosphate + ADP
+1.2.1.41 : L-glutamate gamma-semialdehyde + phosphate O4P + NADP+ <-> L-glutamate-5-phosphate + NADPH + H+ 
+SPONTPRO-RXN : L-glutamate gamma-semialdehyde <-> H2O + pyrroline 5-carboxylate
+_1.5.1.12a : pyrroline 5-carboxylate + NAD+ + 2 H2O <-> L-glutamate + NADH + H+ 
+_1.5.1.2a1 : L-proline + NADP+ <-> pyrroline 5-carboxylate + NADPH + H+ 
+_1.5.1.2a2 : L-proline + NAD+ <-> pyrroline 5-carboxylate + NADH + H+ 
+# - from Glu to Gln
+3.5.1.2a : L-glutamine + H2O <-> L-glutamate + ammonia H3N
+6.3.1.2 : ammonia H3N + L-glutamate + ATP -> L-glutamine + ADP + phosphate O4P
+1.4.1.14 : NAD+ + 2 L-glutamate <-> NADH + 2-ketoglutarate + L-glutamine + H+ 
+_1.4.7.1 : 2 L-glutamate + thioredoxin disulfide <-> L-glutamine + 2-ketoglutarate + thioredoxin
+5.1.1.3 : L-glutamate <-> D-glutamate
+_3.5.1.2b : D-glutamine + H2O -> D-glutamate + ammonia H3N
+# not pres ! would interconvert D-Gln and L-Gln ~~IMPORTANT, following reaction not in sequence!!~~
+&5.1.1.9 : D-glutamine <-> L-glutamine
+# - from Glu to Trp - chorismate comes from Phe biosynthesis
+4.1.3.27 : chorismate + L-glutamine -> L-glutamate + anthranilate + pyruvate
+2.4.2.18 : N-(5'-phosphoribosyl)-anthranilate + diphosphate <-> anthranilate + 5-phosphoribosyl 1-pyrophosphate
+5.3.1.24 : N-(5'-phosphoribosyl)-anthranilate <-> 1-(o-carboxyphenylamino)-1'-deoxyribulose-5'-phosphate
+4.1.1.48 : 1-(o-carboxyphenylamino)-1'-deoxyribulose-5'-phosphate -> indole-3-glycerol-phosphate + CO2 + H2O
+4.2.1.20a : indole-3-glycerol-phosphate + L-serine <-> L-tryptophan + H2O + D-glyceraldehyde-3-phosphate
+_4.2.1.20b : indole-3-glycerol-phosphate <-> indole
+4.2.1.20c : indole + L-serine -> L-tryptophan + H2O
+4.1.1.15a : L-glutamate -> CO2 + 4-aminobutyrate
+2.6.1.1b : 3-sulfinoalanine + 2-ketoglutarate -> L-glutamate + 3-sulfinyl-pyruvate
+tRNA 6.1.1.17 : tRNAGlu + L-glutamate + ATP -> L-glutamyl-tRNAGlu + diphosphate + AMP
+
+# glutamine - Gln
+transport TRANS-RXN59G-245 : L-glutamine_extrac + H+_extrac -> L-glutamine + H+
+# - from Glu to Gln
+tRNA _6.3.5.7 : L-glutamine + L-glutamyl-tRNAGlu + ATP -> L-glutamate + L-glutaminyl-tRNAGln + phosphate O4P + ADP
+# not pres ! would produce Gln's tRNA ~~IMPORTANT, following reaction not in sequence!!~~
+tRNA &6.1.1.18 : tRNAgln + L-glutamine + ATP <-> L-glutaminyl-tRNAGln + diphosphate + AMP
+
+# proline - Pro
+# - from Glu to Pro
+# - from Pro to pyruvate - not pres
+_1.5.1.12d : trans-4-Hydroxy-L-proline -> L-1 pyrroline-3-hydroxy-5-carboxylate
+_1.5.1.2b : L-1 pyrroline-3-hydroxy-5-carboxylate -> trans-4-Hydroxy-L-proline
+_1.5.1.12b : L-1 pyrroline-3-hydroxy-5-carboxylate -> L-erythro-4-hydroxy-glutamate
+_2.6.1.1c : L-erythro-4-hydroxy-glutamate -> D-4-hydroxy-2-keto-glutarate
+4.1.3.16 : D-4-hydroxy-2-keto-glutarate <-> glyoxylate + pyruvate
+_pyrroline1 : L-1 pyrroline-3-hydroxy-5-carboxylate <-> L-4-hydroxy-glutamate semialdehyde
+_1.5.1.12c : L-4-hydroxy-glutamate semialdehyde <-> L-erythro-4-hydroxy-glutamate
+_1.5.99.8a : L-4-hydroxy-glutamate semialdehyde <-> L-erythro-4-hydroxy-glutamate
+tRNA 6.1.1.15 : L-proline + tRNApro + ATP -> L-prolyl-tRNApro + diphosphate + AMP
+5.2.1.8 : peptidylproline (omega = 180) -> peptidylproline (omega = 0)
+
+# tryptophan - Trp
+# - from Glu to Trp 
+tRNA 6.1.1.2 : ATP + tRNAtrp + L-tryptophan -> AMP + diphosphate + L-tryptophanyl-tRNAtrp
+
+# Phe and Tyr
+# phenylalanine - Phe
+# - chorismate production (common to Phe, Tyr and Trp)
+2.5.1.54 : phosphoenolpyruvate + D-erythrose-4-phosphate + H2O -> 3-deoxy-D-arabino-heptulosonate-7-phosphate + phosphate O4P
+4.2.3.4 : 3-deoxy-D-arabino-heptulosonate-7-phosphate -> 3-dehydroquinate + phosphate O4P
+4.2.1.10 : 3-dehydroquinate -> H2O + 3-dehydro-shikimate
+1.1.1.25 : NADP+ + shikimate <-> NADPH + 3-dehydro-shikimate + H+ 
+2.7.1.71 : shikimate + ATP -> shikimate-3-phosphate + ADP
+2.5.1.19 : shikimate-3-phosphate + phosphoenolpyruvate <-> 5-enolpyruvyl-shikimate-3-phosphate + phosphate O4P
+4.2.3.5 : 5-enolpyruvyl-shikimate-3-phosphate -> phosphate O4P + chorismate
+# - from chorismate to prephenate (common to Phe and Tyr)
+5.4.99.5 : chorismate <-> prephenate
+# - from prephenate to Phe
+4.2.1.51 : prephenate <-> phenylpyruvate + H2O + CO2
+2.6.1.9b : phenylpyruvate + L-glutamate <-> L-phenylalanine + 2-ketoglutarate
+# - from Phe to Tyr (not pres)
+4.2.1.96 : 4alpha-hydroxy-tetrahydrobiopterin -> dihydrobiopterin + H2O
+tRNA 6.1.1.20 : tRNAphe + L-phenylalanine + ATP -> L-phenylalanyl-tRNAphe + diphosphate + AMP
+_1.11.1.7b : 2 L-phenylalanine -> 2 2-Phenylacetamide + H2O2
+_3.5.1.4b : 2-Phenylacetamide + H2O -> Phenylacetate + ammonia H3N
+
+# tyrosine - Tyr
+# - chorismate production (common to Phe, Tyr and Trp)
+# - from chorismate to prephenate (common to Phe and Tyr)
+# - from prephenate to Tyr I
+1.3.1.12 : prephenate + NAD+ <-> 4-hydroxyphenylpyruvate + CO2 + NADH + H+ 
+_2.6.1.1d : 4-hydroxyphenylpyruvate <-> L-tyrosine
+# - from prephenate to Tyr II - not pres 
+# - from Phe to Tyr - not pres
+tRNA 6.1.1.1 : L-tyrosine + tRNAtyr + ATP -> L-tyrosyl-tRNAtyr + diphosphate + AMP
+
+
+# histidine - His
+# - 5-phosphoribosyl 1-pyrophosphate comes from Pirimidine biosynthesis
+2.4.2.17 : phosphoribosyl-ATP + diphosphate <-> ATP + 5-phosphoribosyl 1-pyrophosphate
+3.6.1.31 : phosphoribosyl-ATP + H2O -> phosphoribosyl-AMP + diphosphate
+3.5.4.19 : phosphoribosyl-AMP + H2O -> phosphoribosylformiminoAICAR-phosphate
+5.3.1.16 : phosphoribosylformiminoAICAR-phosphate -> phosphoribulosylformimino-AICAR-P
+2.4.2.-a : phosphoribulosylformimino-AICAR-P + L-glutamine -> L-glutamate + D-erythro-imidazole-glycerol-phosphate + aminoimidazole carboxamide ribonucleotide
+4.2.1.19 : D-erythro-imidazole-glycerol-phosphate -> imidazole acetol-phosphate + H2O
+2.6.1.9a : imidazole acetol-phosphate + L-glutamate <-> L-histidinol-phosphate + 2-ketoglutarate
+# not pres ! would close His production ~~IMPORTANT, following reaction not in sequence!!~~
+&3.1.3.15 : L-histidinol-phosphate + H2O <-> histidinol + phosphate O4P
+1.1.1.23a : histidinol + NAD+ -> histidinal + NADH + H+ 
+1.1.1.23b : histidinal + NAD+ + H2O -> L-histidine + NADH + H+ 
+tRNA 6.1.1.21 : tRNAhis + L-histidine + ATP -> L-histidyl-tRNAhis + diphosphate + AMP
+
+
+# Val, Ile and Leu
+# valine - Val
+_2.2.1.6d : pyruvate -> 2-acetolactate
+1.1.1.86a : 2,3-dihydroxy-isovalerate + NADP+ <-> 2-acetolactate + NADPH + H+ 
+4.2.1.9a : 2,3-dihydroxy-isovalerate -> 2-keto-isovalerate + H2O
+2.6.1.42a : L-glutamate + 2-keto-isovalerate <-> L-valine + 2-ketoglutarate 
+tRNA 6.1.1.9 : tRNAval + L-valine + ATP -> L-valyl-tRNAval + diphosphate + AMP
+
+# isoleucine - Ile
+_2.2.1.6e : pyruvate + 2-oxobutanoate -> 2-aceto-2-hydroxy-butyrate
+_4.2.1.35a : (R)-2-methylmalate -> 2-methylmaleate + H2O
+_4.2.1.35b : 2-methylmaleate + H2O -> D-erythro-3-methylmalate
+_1.1.1.85b : D-erythro-3-methylmalate -> 2-oxobutanoate + CO2
+1.1.1.86b : 2-aceto-2-hydroxy-butyrate + NADPH + H+ <-> 2,3-dihydroxy-3-methylvalerate + NADP+ 
+4.2.1.9b : 2,3-dihydroxy-3-methylvalerate -> 2-keto-3-methyl-valerate + H2O
+2.6.1.42b : L-isoleucine + 2-ketoglutarate <-> L-glutamate + 2-keto-3-methyl-valerate
+tRNA 6.1.1.5 : tRNAile + L-isoleucine + ATP -> L-isoleucyl-tRNAile + diphosphate + AMP
+
+# leucine - Leu
+2.3.3.13 : 2-keto-isovalerate + acetyl-CoA + H2O -> 2-isopropylmalate + coenzyme A
+4.2.1.33a : 2-isopropylmalate <-> isopropylmaleate + H2O
+4.2.1.33b : 3-isopropylmalate <-> isopropylmaleate + H2O
+1.1.1.85a : 3-isopropylmalate + NAD+ -> 2-isopropyl-3-oxosuccinate + NADH + H+ 
+RXN-7800 : 2-isopropyl-3-oxosuccinate <-> 2-ketoisocaproate + CO2
+2.6.1.42c : L-glutamate + 2-ketoisocaproate -> L-leucine + 2-ketoglutarate 
+tRNA 6.1.1.4 : L-leucine + tRNAleu + ATP -> L-leucyl-tRNAleu + diphosphate + AMP
+
+
+# methionine - Met
+# from homoserine to L-homocysteine
+# not pres ! would produce L-homocysteine ~~IMPORTANT, following 2 reactions not in sequence!!~~
+&2.3.1.31 : acetyl-CoA + homoserine <-> coenzyme A + O-acetyl-L-homoserine
+&2.5.1.49 : O-acetyl-L-homoserine + hydrogen sulfide H2S <-> L-homocysteine + acetate
+# - from L-homocysteine to Met
+3.3.1.1 : S-adenosyl-L-homocysteine + H2O <-> L-homocysteine + adenosine
+2.1.1.13 : L-homocysteine + 5-methyl-THF <-> L-methionine + tetrahydrofolate
+2.5.1.6 : ATP + L-methionine + H2O -> phosphate O4P + diphosphate + S-adenosyl-L-methionine
+tRNA 2.1.2.9b : 10-formyl-tetrahydrofolate + L-methionyl-tRNAmet + H2O -> tetrahydrofolate + N-formyl-L-methionyl-tRNAfmet
+tRNA 6.1.1.10 : tRNAmet + L-methionine + ATP -> L-methionyl-tRNAmet + diphosphate + AMP
+_2.1.1.37 : S-adenosyl-L-methionine + DNA -> S-adenosyl-L-homocysteine + DNA containing 5-methylcytosine
+
+
+# additional aa reactions 
+1.2.1.16 : succinate semialdehyde + NADP+ + H2O -> NADPH + succinate + H+ 
+2.4.2.28 : S-methyl-5'-thioadenosine + phosphate O4P -> adenine + 5-methylthioribose-1-phosphate
+5.3.1.23 : 5-methylthioribose-1-phosphate -> 5-methylthioribulose-1-phosphate
+3.5.2.10 : H2O + creatinine -> creatine
+1.13.11.27 : 4-hydroxyphenylpyruvate + O2 -> CO2 + homogentisate
+
+
+# NUCLEIC ACIDS
+# Pyrimidine biosynthesis (C, T, U)
+6.3.5.5 : 2 ATP + L-glutamine + HCO3- + H2O -> L-glutamate + 2 ADP + phosphate O4P + carbamoyl-phosphate
+2.1.3.2 : L-aspartate + carbamoyl-phosphate -> N-carbamoyl-L-aspartate + phosphate O4P
+3.5.2.3 : dihydroorotate + H2O <-> N-carbamoyl-L-aspartate
+1.3.98.1 : O2 + dihydroorotate <-> H2O2 + orotate
+2.4.2.10 : orotidine-5'-phosphate + diphosphate <-> 5-phosphoribosyl 1-pyrophosphate + orotate
+4.1.1.23 : orotidine-5'-phosphate -> CO2 + UMP
+# - Uracil
+3.1.3.5g : UMP + H2O <-> uridine + phosphate O4P
+2.7.4.14a : ATP + UMP <-> ADP + UDP
+_2.7.4.22 : ATP + UMP <-> ADP + UDP
+2.4.2.9 : diphosphate + UMP <-> 5-phosphoribosyl 1-pyrophosphate + uracil
+3.6.1.19e : H2O + UTP -> diphosphate + UMP
+2.7.4.6e : UDP + ATP <-> UTP + ADP
+3.5.4.13a : H2O + CTP -> ammonia H3N + UTP
+6.3.4.2 : ATP + UTP + ammonia H3N -> ADP + phosphate O4P + CTP
+2.7.4.6h : dUDP + ATP <-> dUTP + ADP
+3.6.1.19f : H2O + dUTP -> diphosphate + dUMP
+2.7.4.9b : ATP + dUMP <-> ADP + dUDP 
+1.17.4.1e : dUDP + thioredoxin disulfide + H2O <-> UDP + thioredoxin
+2.1.1.148 : 5,10-methylene-THF + dUMP + NADPH + H+ -> dTMP + tetrahydrofolate + NADP+ 
+#2.7.7.8c : RNAn1 + phosphate O4P -> RNAn + UDP
+#2.7.7.6c : UTP + RNAn -> diphosphate + RNAn1
+3.5.4.1a : H2O + cytosine -> ammonia H3N + uracil
+# - Cytosine
+2.7.4.6f : CDP + ATP <-> CTP + ADP
+2.7.4.14b : ATP + CMP <-> ADP + CDP
+1.17.4.1d : dCDP + thioredoxin disulfide + H2O <-> CDP + thioredoxin
+3.1.3.5h : CMP + H2O <-> cytidine + phosphate O4P
+2.7.4.6g : dCDP + ATP <-> dCTP + ADP
+2.7.4.14c : ATP + dCMP <-> ADP + dCDP
+3.1.3.5i : dCMP + H2O <-> deoxycytidine + phosphate O4P
+3.5.4.13b : H2O + dCTP -> ammonia H3N + dUTP
+#2.7.7.6d : CTP + RNAn -> diphosphate + RNAn1
+#2.7.7.8d : RNAn1 + phosphate O4P -> RNAn + CDP
+#2.7.7.7c : dCTP + DNAn <-> diphosphate + DNAn1
+# - Thymine
+3.1.3.5j : thymidine + H2O <-> dTMP + phosphate O4P
+2.7.4.9a : ATP + dTMP <-> ADP + dTDP
+2.7.4.6i : dTDP + ATP <-> dTTP + ADP
+#2.7.7.7d : dTTP + DNAn <-> diphosphate + DNAn1
+_3.5.4.1b : H2O + thymine -> ammonia H3N + 5-methylcytosine
+
+
+# Purine metabolism (A, G)
+_3.6.1.13 : ADP-ribose + H2O -> AMP + D-ribose-5-phosphate
+2.7.6.1 : ATP + D-ribose-5-phosphate -> 5-phosphoribosyl 1-pyrophosphate + AMP
+2.4.2.14 : 5-phosphoribosyl 1-pyrophosphate + L-glutamine + H2O -> 5-phospho-beta-D-ribosyl-amine + diphosphate + L-glutamate
+6.3.4.13 : 5-phospho-beta-D-ribosyl-amine + ATP + glycine -> ADP + phosphate O4P + 5-phospho-ribosyl-glycineamide
+2.1.2.2a : 10-formyl-tetrahydrofolate + 5-phospho-ribosyl-glycineamide <-> tetrahydrofolate + 5'-phosphoribosyl-N-formylglycineamide
+6.3.5.3 : ATP + 5'-phosphoribosyl-N-formylglycineamide + L-glutamine + H2O -> L-glutamate + ADP + phosphate O4P + 5-phosphoribosyl-N-formylglycineamidine
+6.3.3.1 : ATP + 5-phosphoribosyl-N-formylglycineamidine -> ADP + phosphate O4P + 5-aminoimidazole ribonucleotide
+4.1.1.21 : 4-carboxyaminoimidazole ribonucleotide <-> 5-aminoimidazole ribonucleotide + CO2
+6.3.2.6 : ATP + 4-carboxyaminoimidazole ribonucleotide + L-aspartate <-> ADP + phosphate O4P + 5'-phosphoribosyl-4-(N-succinocarboxamide)-5-aminoimidazole
+4.3.2.2b : 5'-phosphoribosyl-4-(N-succinocarboxamide)-5-aminoimidazole <-> fumarate + aminoimidazole carboxamide ribonucleotide
+2.1.2.3 : 10-formyl-tetrahydrofolate + aminoimidazole carboxamide ribonucleotide <-> tetrahydrofolate + phosphoribosyl-formamido-carboxamide
+2.4.2.7c : aminoimidazole carboxamide ribonucleotide <-> 5-Amino-4-imidazolecarboxyamide
+# - Inosine
+3.5.4.10 : inosine-5'-phosphate + H2O <-> phosphoribosyl-formamido-carboxamide
+3.1.3.5c : inosine-5'-phosphate + H2O <-> inosine + phosphate O4P
+_2.7.4.3c : inosine-5'-phosphate + ITP <-> 2 IDP
+3.6.1.19a : H2O + ITP -> diphosphate + inosine-5'-phosphate
+3.6.1.19g : H2O + dITP -> diphosphate + dIMP
+_1.17.4.1b : dIDP + thioredoxin disulfide + H2O <-> IDP + thioredoxin
+2.7.4.6j : IDP + ATP <-> ITP + ADP
+2.7.4.6b : dIDP + ATP <-> dITP + ADP
+1.1.1.205 : H2O + NAD+ + inosine-5'-phosphate <-> xanthosine-5-phosphate + NADH + H+ 
+# - Xanthosine
+3.1.3.5d : xanthosine-5-phosphate + H2O <-> xanthosine + phosphate O4P
+3.6.1.19b : H2O + XTP -> diphosphate + xanthosine
+6.3.5.2 : xanthosine-5-phosphate + H2O + L-glutamine + ATP -> L-glutamate + GMP + diphosphate + AMP
+# - Adenine
+3.1.3.5a : AMP + H2O <-> adenosine + phosphate O4P
+2.4.2.7a : AMP + diphosphate <-> 5-phosphoribosyl 1-pyrophosphate + adenine
+2.7.4.3a : AMP + ATP <-> 2 ADP
+2.7.4.6a : dADP + ATP <-> dATP + ADP
+2.7.1.40b : dATP + pyruvate <-> dADP + phosphoenolpyruvate
+1.17.4.1a : dADP + thioredoxin disulfide + H2O <-> ADP + thioredoxin
+2.7.4.3b : dAMP + dATP <-> 2 dADP
+3.1.3.5b : dAMP + H2O <-> 5'-deoxyadenosine + phosphate O4P
+#2.7.7.7a : dATP + DNAn <-> diphosphate + DNAn1
+#2.7.7.6a : ATP + RNAn -> diphosphate + RNAn1
+#2.7.7.8a : RNAn1 + phosphate O4P -> RNAn + ADP
+2.4.2.-b : adenosine + phosphate O4P <-> ribose-1-phosphate + adenine
+#_2.7.7.19 : ATP + RNAn -> diphosphate + RNAn1 
+# - Guanine
+3.1.3.5e : GMP + H2O <-> guanosine + phosphate O4P
+2.4.2.7b : GMP + diphosphate <-> 5-phosphoribosyl 1-pyrophosphate + guanine
+2.7.4.8a : GMP + ATP <-> GDP + ADP
+3.6.1.19c : H2O + GTP -> diphosphate + GMP
+1.17.4.1c : dGDP + thioredoxin disulfide + H2O <-> GDP + thioredoxin
+2.7.4.6c : GDP + ATP <-> GTP + ADP
+2.7.1.40c : GTP + pyruvate <-> GDP + phosphoenolpyruvate
+2.7.4.8b : dGMP + ATP <-> dGDP + ADP
+2.7.4.6d : dGDP + ATP <-> dGTP + ADP
+2.7.1.40d : dGTP + pyruvate <-> dGDP + phosphoenolpyruvate
+3.1.3.5f : dGMP + H2O <-> deoxyguanosine + phosphate O4P
+3.1.5.1 : H2O + dGTP -> diphosphate + deoxyguanosine
+3.6.1.19d : H2O + dGTP -> diphosphate + dGMP
+3.1.7.2 : guanosine 5'-diphosphate,3'-diphosphate + H2O <-> diphosphate + GDP
+3.6.1.11 : H2O + guanosine 3'-diphosphate 5'-triphosphate <-> phosphate O4P + guanosine 5'-diphosphate,3'-diphosphate
+#2.7.7.6b : GTP + RNAn -> diphosphate + RNAn1
+#2.7.7.8b : RNAn1 + phosphate O4P -> RNAn + GDP
+#2.7.7.7b : dGTP + DNAn <-> diphosphate + DNAn1
+_3.6.5.3 : GTP + H2O -> GDP + phosphate O4P
+# - ApppA production
+2.7.7.4 : sulfate O4S + ATP -> adenosine 5'-phosphosulfate + diphosphate
+2.7.1.25 : adenosine 5'-phosphosulfate + ATP -> phosphoadenosine-5'-phosphosulfate + ADP
+3.1.3.7a : adenosine-3',5'-bisphosphate + H2O -> AMP + phosphate O4P
+_3.1.3.7b : phosphoadenosine-5'-phosphosulfate + H2O -> adenosine 5'-phosphosulfate + phosphate O4P
+_2.7.7.53a : adenosine 5'-phosphosulfate + ATP -> sulfate O4S + 5',5'''-diadenosine tetraphosphate
+2.7.7.53b : ATP + ADP <-> phosphate O4P + 5',5'''-diadenosine tetraphosphate
+# - Purine cyclases
+4.6.1.1 : ATP -> cyclic-AMP + diphosphate
+4.6.1.2 : GTP -> cyclic-GMP + diphosphate
+# - from xanthine to Gly - mainly NOT PRESENT
+4.1.1.-b : 4-amino-5-imidazole carboxylate <-> 4-aminoimidazole + CO2
+
+
+# Folate biosynthesis
+3.5.4.16 : GTP + H2O -> formate + 7,8-dihydroneopterin triphosphate
+3.6.1.-a : 7,8-dihydroneopterin triphosphate + H2O <-> dihydroneopterin phosphate + diphosphate
+3.6.1.-b : dihydroneopterin phosphate + H2O <-> 7,8-dihydro-D-neopterin + phosphate O4P
+4.1.2.25 : 7,8-dihydro-D-neopterin <-> glycolaldehyde + 6-hydroxymethyl-7,8-dihydropterin
+2.7.6.3 : 6-hydroxymethyl-7,8-dihydropterin + ATP -> (2-amino-4-hydroxy-7,8-dihydropteridin-6-yl)methyl diphosphate + AMP
+2.5.1.15 : p-aminobenzoate + (2-amino-4-hydroxy-7,8-dihydropteridin-6-yl)methyl diphosphate -> 7,8-dihydropteroate + diphosphate
+4.1.3.38 : 4-amino-4-deoxychorismate <-> p-aminobenzoate + pyruvate
+# not pres ! (would connect formate to folate biosynthesis) ~~IMPORTANT, following reaction not in sequence!!~~
+&6.3.4.3 : tetrahydrofolate + formate + ATP <-> ADP + phosphate O4P + 10-formyl-tetrahydrofolate
+# not pres ! (would connect 4.1.3.38 to aa production) ~~IMPORTANT, following reaction not in sequence!!~~
+&2.6.1.85 : L-glutamine + chorismate <-> L-glutamate + 4-amino-4-deoxychorismate
+6.3.2.12 : L-glutamate + 7,8-dihydropteroate + ATP -> 7,8-dihydrofolate + phosphate O4P + ADP
+# not pres ! (would complete this pathway) ~~IMPORTANT, following reaction not in sequence!!~~
+&1.5.1.3 : NADP+ + tetrahydrofolate <-> NADPH + 7,8-dihydrofolate + H+ 
+# - from tetrahydrofolate to a tetrahydrofolate polyglutamate
+6.3.2.17a : tetrahydrofolate + L-glutamate + ATP <-> tetrahydrofolate-L-glutamate + ADP + phosphate O4P
+6.3.2.17b : tetrahydrofolate-L-glutamate + L-glutamate + ATP <-> a tetrahydrofolate polyglutamate + ADP + phosphate O4P
+# - from 7,8-dihydropteroate to dihydrobiopterin
+6.3.2.17c : L-glutamate + 7,8-dihydropteroate + ATP -> 7,8-dihydrofolate + phosphate O4P + ADP
+_4.2.3.12 : 7,8-dihydroneopterin triphosphate -> 6-pyruvoyl-5,6,7,8-tetrahydropterin + diphosphate
+_1.1.1.153 : tetrahydrobiopterin + 2 NADP+ -> 6-pyruvoyl-5,6,7,8-tetrahydropterin + 2 NADPH + 2 H+ 
+# - one carbon pool by folate
+2.1.2.2b : H2O + 5,10-methenyltetrahydrofolate + 5-phospho-ribosyl-glycineamide -> tetrahydrofolate + 5'-phosphoribosyl-N-formylglycineamide
+_1.4.4.2 : H-protein-lipoyllysine + glycine -> H-Protein-S-aminomethyldihydrolipoyllysine + CO2
+_2.1.2.10a : H-Protein-S-aminomethyldihydrolipoyllysine + tetrahydrofolate -> [H protein]-dihydrolipoyllysine C8H16NOS2R + 5,10-methylene-THF + ammonia H3N
+_1.8.1.4c : [H protein]-dihydrolipoyllysine C8H16NOS2R + NAD+ -> H-protein-lipoyllysine + NADH + H+ 
+1.5.1.5 : 5,10-methylene-THF + NADP+ <-> NADPH + 5,10-methenyltetrahydrofolate 
+3.5.1.10 : H2O + 10-formyl-tetrahydrofolate -> tetrahydrofolate + formate
+3.5.4.9a : H2O + 5,10-methenyltetrahydrofolate <-> 10-formyl-tetrahydrofolate
+6.3.3.2 : 5-formyl-tetrahydrofolate + ATP -> 5,10-methenyltetrahydrofolate + ADP + phosphate O4P
+2.1.2.10b : 5,10-methenyltetrahydrofolate + H2O <-> 5-formyl-tetrahydrofolate
+# not pres ! (would complete this pathway, reaction 2.1.1.13 HAS TO CONSUME 5-methyl-THF) ~~IMPORTANT, following 2 reactions not in sequence!!~~
+&1.5.1.20a : 5-methyl-THF + NADP+ <-> 5,10-methylene-THF + NADPH + H+ 
+&1.5.1.20b : 5-methyl-THF + NAD+ <-> 5,10-methylene-THF + NADH + H+ 
+2.1.2.9a : 10-formyl-tetrahydrofolate + L-methionyl-tRNAfmet + H2O -> tetrahydrofolate + N-formyl-L-methionyl-tRNAfmet
+_1.8.98.1 : N-{7-[(2-sulfoethyl)dithio]heptanoyl}-O3-phospho-L-threonine + dihydromethanophenazine -> coenzyme B + coenzyme M + methanophenazine
+_1.12.98.1 : H2 + coenzyme F420 <-> reduced coenzyme F420
+
+
+# Photosynthesis
+# in "SPECIAL" _lightII : photonII_extrac -> photonII
+# in "SPECIAL" _lightI : photonI_extrac -> photonI
+_PSII : 4 photonII + 2 H2O + 4 PSII -> O2 + 4 H+_thylac + 4 PSII*
+_PQ : 2 PSII* + PQ + 2 H+ -> 2 PSII + PQH2
+_citb6 : PQH2 + 2 citb6f + 2 H+ -> PQ + 2 citb6f* + 4 H+_thylac
+_1.10.9.1 : citb6f* + PC -> citb6f + PC*
+_PSI : photonI + PC* + PSI -> PC + PSI*
+_Fd : PSI* + Fd -> PSI + Fd*
+_FNR : Fd* + FNR -> Fd + FNR*
+_1.18.1.2 : 2 FNR* + NADP+ + H+ -> 2 FNR + NADPH 
+_3.6.3.14 : 4 H+_thylac + phosphate O4P + ADP <-> 4 H+ + H2O + ATP
+3.6.1.1 : H2O + diphosphate -> 2 phosphate O4P
+2.7.4.1 : ATP + diphosphate -> ADP + PPPi
+# not pres ! would act as a sink ~~IMPORTANT, following reaction not in sequence!!~~
+&3.6.1.15 : H2O + ATP -> phosphate O4P + ADP
+_NADPH2 : NADPH -> NADPH2 + NADP+ + H+
+_1.12.1.3 : NADPH2 + 2 H+ <-> H2 
+_cyclicPS : 2 Fd* + PQ + 2 H+ -> 2 Fd + PQH2
+_NDH1 : NADPH + 2 PC -> NADP+ + H+ + 2 PC* 
+
+
+# Oxidative phosphorylation
+_1.6.5.3 : NADH + PQ + 5 H+ -> NAD+ + PQH2 + 4 H+_thylac 
+_1.6.99.3 : NADH + PQ + 5 H+ -> NAD+ + PQH2 + 4 H+_thylac 
+1.10.3.- : 2 PQH2 + O2 -> 2 PQ + 2 H2O
+_cit c : citb6f* + cit c -> citb6f + cit c*
+_cit cM : PC* + cit cM -> PC + cit cM*
+_1.9.3.1a : 4 cit c* + O2 + 8 H+ -> 4 cit c + 4 H+_thylac + 2 H2O
+_1.9.3.1b : 4 cit cM* + O2 + 8 H+ -> 4 cit cM + 4 H+_thylac + 2 H2O
+_PSIaltern : photonI + cit c* + PSI -> cit c + PSI*
+Flv : 2 NADPH + 2 H+ + O2 -> 2 NADP+ + 2 H2O
+
+
+# Urea Cycle and metabolism of amino groups
+2.3.1.35 : L-glutamate + N-acetyl-L-ornithine <-> N-acetyl-L-glutamate + L-ornithine
+2.6.1.11 : N-acetyl-L-ornithine + 2-ketoglutarate <-> L-glutamate + N-acetyl-L-glutamate 5-semialdehyde
+_3.5.1.14 : N-acetyl-L-ornithine + H2O -> L-ornithine + acetate
+1.2.1.38 : N-acetyl-L-glutamate 5-semialdehyde + NADP+ + phosphate O4P <-> N-acetylglutamyl-phosphate + NADPH + H+ 
+2.7.2.8 : N-acetyl-L-glutamate + ATP -> N-acetylglutamyl-phosphate + ADP
+2.3.1.1 : L-glutamate + acetyl-CoA -> N-acetyl-L-glutamate + coenzyme A
+3.5.1.5 : H2O + urea -> 2 ammonia H3N + CO2
+4.2.1.1a : H2CO3 <-> H2O + CO2
+_1.4.3.4 : O2 + H2O + N-acetylputrescine -> ammonia H3N + H2O2 + N4-acetylaminobutanal
+_1.2.1.3a : N4-acetylaminobutanal + NAD+ + H2O <-> N4-acetylaminobutanoate + NADH + H+ 
+_1.2.1.3b : 4-aminobutanal + NAD+ + H2O <-> 4-aminobutanoate + NADH + H+ 
+_3.5.1.4a : 4-Guanidinobutanamide + H2O -> 4-Guanidinobutanoate + ammonia H3N
+
+
+# Nitrogen metabolism
+_NR : Fd* + NR -> Fd + NR* 
+_NiR : Fd* + NiR -> Fd + NiR* 
+1.7.7.2 : 2 NR* + nitrate NO3 + 2 H+ -> 2 NR + nitrite NO2 + H2O 
+1.7.7.1 : 6 NiR* + nitrite NO2 + 8 H+ -> 6 NiR + NH4+ + 2 H2O 
+2.7.2.2a : ammonia H3N + CO2 + ATP -> carbamoyl-phosphate + ADP
+4.2.1.104 : cyanate + HCO3- + H+ <-> carbamate + CO2
+_2.7.2.2b : carbamate + ATP + H+ <-> carbamoyl-phosphate + ADP
+1.7.99.7 : 2 nitric oxide + reduced acceptor -> nitrous oxide + acceptor + H2O
+
+
+# Nicotinate and nicotinamide metabolism (NAD biosynthesis)
+1.4.3.- : O2 + L-aspartate -> H2O2 + iminoaspartate
+QUINOLINATE-SYNTHA-RXN : iminoaspartate + dihydroxy-acetone phosphate -> quinolinate + 2 H2O + phosphate O4P
+2.4.2.19 : 5-phosphoribosyl 1-pyrophosphate + quinolinate -> CO2 + diphosphate + nicotinate nucleotide
+3.1.3.5k : nicotinate nucleotide + H2O -> nicotinate D-ribonucleoside + phosphate O4P
+2.7.7.1a : nicotinate nucleotide + ATP -> deamido-NAD + diphosphate
+2.7.7.18a : ATP + nicotinate nucleotide -> diphosphate + deamido-NAD
+_6.3.1.5 : ATP + deamido-NAD + ammonia H3N -> AMP + diphosphate + NAD+ + H+
+2.7.7.1b : nicotinamide mononucleotide + ATP -> NAD+ + H+ + diphosphate
+2.7.7.18b : ATP + nicotinamide mononucleotide -> diphosphate + NAD+ + H+
+3.1.3.5l : nicotinamide mononucleotide + H2O -> N-Ribosylnicotinamide + phosphate O4P
+2.7.1.23 : NAD+ + ATP -> NADP+ + ADP
+1.6.1.2 : NAD+ + NADPH <-> NADH + NADP+ 
+
+
+# Ubiquinone biosynthesis (not complete, should be! -> forced to be complete)
+# - Ubiquinone branch
+# not pres ! would begin UQ branch ~~IMPORTANT, following 2 reactions not in sequence!!~~
+&4.1.3.40 : chorismate <-> 4-hydroxybenzoate + pyruvate
+&octaprenylsyn : all-trans-geranyl-geranyl diphosphate -> all-trans-octaprenyl diphosphate
+2.5.1.-c : all-trans-octaprenyl diphosphate + 4-hydroxybenzoate -> 3-octaprenyl-4-hydroxybenzoate + diphosphate
+4.1.1.-a : 3-octaprenyl-4-hydroxybenzoate -> 2-octaprenylphenol + CO2
+OCTAPRENYLPHENOL-HYDROX-RXN : 2 2-octaprenylphenol + O2 <-> 2 2-octaprenyl-6-hydroxyphenol
+# not pres ! would allow UQ biosynthesis ~~IMPORTANT, following reaction not in sequence!!~~
+&2.1.1.64b : S-adenosyl-L-methionine + 2-octaprenyl-6-hydroxyphenol <-> S-adenosyl-L-homocysteine + 2-octaprenyl-6-methoxyphenol
+1.14.13.-a : 2-octaprenyl-6-methoxyphenol + O2 + NADPH -> 2-octaprenyl-6-methoxy-1,4-benzoquinone + NADP+ + H+ + H2O
+2.1.1.-c : 2-octaprenyl-6-methoxy-1,4-benzoquinone + S-adenosyl-L-methionine -> S-adenosyl-L-homocysteine + 2-octaprenyl-3-methyl-6-methoxy-1,4-benzoquinone
+1.14.13.-b : 2-octaprenyl-3-methyl-6-methoxy-1,4-benzoquinone + O2 + NADPH + H+ <-> 2-octaprenyl-3-methyl-5-hydroxy-6-methoxy-1,4-benzoquinone + NADP+ + H2O
+# not pres ! would allow UQ biosynthesis ~~IMPORTANT, following reaction not in sequence!!~~
+&2.1.1.64a : S-adenosyl-L-methionine + 2-octaprenyl-3-methyl-5-hydroxy-6-methoxy-1,4-benzoquinone <-> S-adenosyl-L-homocysteine + ubiquinone-8
+_UQsyn : ubiquinone-8 -> UQ
+# - Plastoquinone branch
+# not pres ! would end producing PQ ~~IMPORTANT, following 2 reactions not in sequence!!~~
+&2.5.1.-e : homogentisate + all-trans-nonaprenyl diphosphate -> 2-methyl-6-solanyl-1,4-benzoquinone + diphosphate + CO2
+&2.1.1.-d : 2-methyl-6-solanyl-1,4-benzoquinone + S-adenosyl-L-methionine -> plastoquinone-9 + S-adenosyl-L-homocysteine
+_PQsyn : plastoquinone-9 -> PQ
+# - Phylloquinone/Menaquinone branch
+5.4.4.2 : chorismate -> isochorismate
+2.5.1.64 : 2-ketoglutarate + isochorismate -> 2-succinyl-6-hydroxy-2,4-cyclohexadiene-1-carboxylate + pyruvate + CO2
+4.2.1.113 : 2-succinyl-6-hydroxy-2,4-cyclohexadiene-1-carboxylate -> o-succinylbenzoate + H2O
+6.2.1.26 : ATP + o-succinylbenzoate + coenzyme A -> AMP + diphosphate + O-succinylbenzoyl-CoA
+4.1.3.36 : O-succinylbenzoyl-CoA <-> coenzyme A + 1,4-dihydroxy-2-naphthoate
+2.5.1.-a : all-trans-octaprenyl diphosphate + 1,4-dihydroxy-2-naphthoate -> demethylmenaquinone-8 + diphosphate + CO2
+2.1.1.-a : demethylmenaquinone-8 + S-adenosyl-L-methionine -> S-adenosyl-L-homocysteine + menaquinone-8
+2.5.1.-b : 1,4-dihydroxy-2-naphthoate + phytyl diphosphate -> demethylphylloquinone + CO2 + diphosphate
+2.1.1.-b : demethylphylloquinone + S-adenosyl-L-methionine -> phylloquinone + S-adenosyl-L-homocysteine
+
+
+# Sulfur metabolism
+1.8.4.8 : phosphoadenosine-5'-phosphosulfate + thioredoxin <-> sulfite O3S + adenosine-3',5'-bisphosphate + thioredoxin disulfide
+&1.13.11.18 : sulfite O3S <-> S0 + O2 + H2O
+#&Sre : S0 + thioredoxin -> hydrogen sulfide H2S + thioredoxin disulfide
+1.8.7.1 : sulfite O3S + 6 Fd* + 6 H+ <-> hydrogen sulfide H2S + 6 Fd + 3 H2O
+THIOSULFSPON-RXN : thiosulfate <-> sulfite O3S + S0
+
+
+# Ethanol metabolism (part of Glycolysis)
+6.2.1.1 : coenzyme A + acetate + ATP <-> acetyl-CoA + diphosphate + AMP
+1.2.1.3c : acetaldehyde + NAD+ + H2O <-> NADH + acetate + H+ 
+1.1.1.1 : acetaldehyde + NADH + H+ -> ethanol + NAD+ 
+1.1.1.2 : NADPH + acetaldehyde + H+ -> NADP+ + ethanol 
+2.3.1.8 : phosphate O4P + acetyl-CoA <-> acetylphosphate + coenzyme A
+2.7.2.1 : ATP + acetate <-> ADP + acetylphosphate
+
+
+# coenzyme A biosynthesis
+_1.1.1.86 : 2-acetolactate + NADPH + H+ -> 2,3-dihydroxy-isovalerate + NADP+ 
+_4.2.1.9 : 2,3-dihydroxy-isovalerate -> 2-keto-isovalerate + H2O
+2.1.2.11 : 5,10-methylene-THF + 2-keto-isovalerate + H2O -> tetrahydrofolate + 2-dehydropantoate
+1.1.1.169 : R-pantoate + NADP+ <-> 2-dehydropantoate + NADPH + H+ 
+6.3.2.1 : beta-alanine + R-pantoate + ATP -> pantothenate + diphosphate + AMP
+_1.2.1.3d : beta-aminopropion aldehyde + NAD+ + H2O <-> NADH + beta-alanine + H+ 
+2.7.1.33 : pantothenate + ATP -> D-4'-phosphopantothenate + ADP
+6.3.2.5 : D-4'-phosphopantothenate + L-cysteine + CTP -> R-4'-phosphopantothenoyl-L-cysteine + diphosphate + CMP
+4.1.1.36 : R-4'-phosphopantothenoyl-L-cysteine -> pantetheine 4'-phosphate + CO2
+_2.7.7.3 : ATP + pantetheine 4'-phosphate -> diphosphate + 3'-dephospho-CoA C21H35N7O13P2S
+_2.7.1.24 : ATP + 3'-dephospho-CoA C21H35N7O13P2S -> ADP + coenzyme A
+
+
+# Fatty acid biosynthesis
+_6.4.1.2a : ATP + acetyl-CoA + HCO3- + H+ -> ADP + phosphate O4P + malonyl-CoA
+_6.4.1.2b : carboxybiotin-carboxyl-carrier protein + acetyl-CoA + -> biotin-BCCP (monomer) + malonyl-CoA
+_6.3.4.14 : ATP + biotin-BCCP (monomer) + CO2 -> ADP + phosphate O4P + carboxybiotin-carboxyl-carrier protein
+2.3.1.39 : malonyl-CoA + an [acyl-carrier protein] -> coenzyme A + a malonyl-ACP
+2.3.1.41a : acetyl-CoA + an [acyl-carrier protein] -> an acetyl-ACP + coenzyme A + CO2
+2.3.1.41b : an acetyl-ACP + a malonyl-ACP -> acetoacetyl-[acp] C4H5O2SR + CO2
+1.1.1.100a : (3R)-3-Hydroxybutanoyl-[acyl-carrier protein] C4H7O2SR + NADP+ <-> acetoacetyl-[acp] C4H5O2SR + NADPH + H+ 
+4.2.1.-a : (3R)-3-Hydroxybutanoyl-[acyl-carrier protein] C4H7O2SR <-> but-2-enoyl-[acyl-carrier protein] C4H5OSR + H2O
+1.3.1.9a : butyryl-[acyl-carrier protein] C4H7OSR + NAD+ <-> but-2-enoyl-[acyl-carrier protein] C4H5OSR + NADH + H+ 
+2.3.1.41c : butyryl-[acyl-carrier protein] C4H7OSR + a malonyl-ACP -> 3-oxohexanoyl-[acyl-carrier protein] C6H9O2SR + CO2
+1.1.1.100b : (R)-3-Hydroxyhexanoyl-[acyl-carrier protein] C6H11O2SR + NADP+ <-> 3-oxohexanoyl-[acyl-carrier protein] C6H9O2SR + NADPH + H+ 
+4.2.1.-b : (R)-3-Hydroxyhexanoyl-[acyl-carrier protein] C6H11O2SR <-> trans-hex-2-enoyl-[acyl-carrier protein] C6H9OSR + H2O
+1.3.1.9b : hexanoyl-[acyl-carrier protein] C6H11OSR + NAD+ <-> trans-hex-2-enoyl-[acyl-carrier protein] C6H9OSR + NADH + H+ 
+2.3.1.41d : hexanoyl-[acyl-carrier protein] C6H11OSR + a malonyl-ACP -> 3-oxooctanoyl-[acyl-carrier protein] C8H13O2SR + CO2 + an [acyl-carrier protein]
+1.1.1.100c : (R)-3-Hydroxyoctanoyl-[acyl-carrier protein] C8H15O2SR + NADP+ <-> 3-oxooctanoyl-[acyl-carrier protein] C8H13O2SR + NADPH + H+ 
+4.2.1.-c : (R)-3-Hydroxyoctanoyl-[acyl-carrier protein] C8H15O2SR <-> trans-oct-2-enoyl-[acyl-carrier protein] C8H13OSR + H2O
+1.3.1.9c : octanoyl-[acyl-carrier protein] C8H15OSR + NAD+ <-> trans-oct-2-enoyl-[acyl-carrier protein] C8H13OSR + NADH + H+ 
+2.3.1.41e : octanoyl-[acyl-carrier protein] C8H15OSR + a malonyl-ACP -> 3-oxodecanoyl-[acyl-carrier protein] C10H17O2SR + CO2 + an [acyl-carrier protein]
+1.1.1.100d : (R)-3-Hydroxydecanoyl-[acyl-carrier protein] C10H19O2SR + NADP+ <-> 3-oxodecanoyl-[acyl-carrier protein] C10H17O2SR + NADPH + H+ 
+1.3.1.9d : decanoyl-[acyl-carrier protein] C10H19OSR + NAD+ <-> trans-dec-2-enoyl-[acyl-carrier protein] C10H17OSR + NADH + H+ 
+4.2.1.-d : (R)-3-Hydroxydecanoyl-[acyl-carrier protein] C10H19O2SR <-> trans-dec-2-enoyl-[acyl-carrier protein] C10H17OSR + H2O
+2.3.1.41f : decanoyl-[acyl-carrier protein] C10H19OSR + a malonyl-ACP -> 3-oxododecanoyl-[acyl-carrier protein] C12H21O2SR + CO2 + an [acyl-carrier protein]
+1.1.1.100e : (R)-3-Hydroxydodecanoyl-[acyl-carrier protein] C12H23O2SR + NADP+ <-> 3-oxododecanoyl-[acyl-carrier protein] C12H21O2SR + NADPH + H+ 
+4.2.1.-e : (R)-3-Hydroxydodecanoyl-[acyl-carrier protein] C12H23O2SR <-> trans-dodec-2-enoyl-[acyl-carrier protein] C12H21OSR + H2O
+1.3.1.9e : dodecanoyl-[acyl-carrier protein] C12H23OSR + NAD+ <-> trans-dodec-2-enoyl-[acyl-carrier protein] C12H21OSR + NADH + H+ 
+2.3.1.41g : dodecanoyl-[acyl-carrier protein] C12H23OSR + a malonyl-ACP -> 3-oxotetradecanoyl-[acyl-carrier protein] C14H25O2SR + CO2 + an [acyl-carrier protein]
+1.1.1.100f : (R)-3-Hydroxytetradecanoyl-[acyl-carrier protein] C14H27O2SR + NADP+ <-> 3-oxotetradecanoyl-[acyl-carrier protein] C14H25O2SR + NADPH + H+ 
+4.2.1.-f : (R)-3-Hydroxytetradecanoyl-[acyl-carrier protein] C14H27O2SR <-> trans-tetradec-2-enoyl-[acyl-carrier protein] C14H25OSR + H2O
+1.3.1.9f : tetradecanoyl-[acyl-carrier protein] C14H27OSR + NAD+ <-> trans-tetradec-2-enoyl-[acyl-carrier protein] C14H25OSR + NADH + H+ 
+2.3.1.41h : tetradecanoyl-[acyl-carrier protein] C14H27OSR + a malonyl-ACP -> 3-oxohexadecanoyl-[acyl-carrier protein] C16H29O2SR + CO2 + an [acyl-carrier protein]
+1.1.1.100g : (R)-3-Hydroxypalmitoyl-[acyl-carrier protein] C16H31O2SR + NADP+ <-> 3-oxohexadecanoyl-[acyl-carrier protein] C16H29O2SR + NADPH + H+ 
+4.2.1.-g : (R)-3-Hydroxypalmitoyl-[acyl-carrier protein] C16H31O2SR <-> trans-hexadec-2-enoyl-[acyl-carrier protein] C16H29OSR + H2O
+1.3.1.9g : hexadecanoyl-[acyl-carrier protein] C16H31OSR + NAD+ <-> trans-hexadec-2-enoyl-[acyl-carrier protein] C16H29OSR + NADH + H+ 
+2.3.1.179i : hexadecanoyl-[acyl-carrier protein] C16H31OSR + a malonyl-ACP -> 3-oxooctadecanoyl-[acp] C18H33O2SR + CO2 + an [acyl-carrier protein]
+1.1.1.100h : 3-Hydroxyoctadecanoyl-[acp] C18H35O2SR + NADP+ <-> 3-oxooctadecanoyl-[acp] C18H33O2SR + NADPH + H+ 
+4.2.1.-h : 3-Hydroxyoctadecanoyl-[acp] C18H35O2SR <-> trans-octadec-2-enoyl-[acp] C18H33OSR + H2O
+1.3.1.9h : octadecanoyl-[acyl-carrier protein] C18H35OSR + NAD+ <-> trans-octadec-2-enoyl-[acp] C18H33OSR + NADH + H+ 
+_1.14.19.1a : hexadecanoyl-[acyl-carrier protein] C16H31OSR + O2 + 2 H+ <-> (9Z)-hexadecanoyl-[acyl-carrier protein] C16H31OSR + H2O
+_1.14.19.1b : octadecanoyl-[acyl-carrier protein] C18H35OSR + O2 + 2 H+ <-> (9Z)-octadecanoyl-[acyl-carrier protein] C18H33OSR + H2O
+_1.14.19.-a : (9Z)-octadecanoyl-[acyl-carrier protein] C18H33OSR + NADPH + H+ + O2 <-> (9Z,12Z)-octadecadienoyl-[acyl-carrier protein] C18H31OSR + NADP+ + 2 H2O 
+_1.14.19.-b : (9Z,12Z)-octadecadienoyl-[acyl-carrier protein] C18H31OSR + NADPH + H+ + O2 <-> (9Z,12Z,15Z)-octadecatrienoyl-[acyl-carrier protein] C18H29OSR + NADP+ + 2 H2O 
+_1.14.19.-c : (9Z)-octadecanoyl-[acyl-carrier protein] C18H33OSR + NADPH + H+ + O2 <-> (6Z,9Z)-octadecadienoyl-[acyl-carrier protein] C18H31OSR + NADP+ + 2 H2O 
+_1.14.19.-d : (6Z,9Z)-octadecadienoyl-[acyl-carrier protein] C18H31OSR + NADPH + H+ + O2 <-> (6Z,9Z,12Z)-octadecatrienoyl-[acyl-carrier protein] C18H29OSR + NADP+ + 2 H2O 
+_1.14.19.-e : (6Z,9Z,12Z)-octadecatrienoyl-[acyl-carrier protein] C18H29OSR + NADPH + H+ + O2 <-> (6Z,9Z,12Z,15Z)-octadecatetraenoyl-[acyl-carrier protein] C18H27OSR + NADP+ + 2 H2O 
+# not pres ! would end ACP release and fatty acid formation ~~IMPORTANT, following 6 reactions not in sequence!!~~
+&3.1.2.14a : octanoyl-[acyl-carrier protein] C8H15OSR + H2O -> octanoic acid + an [acyl-carrier protein]
+&3.1.2.14b : decanoyl-[acyl-carrier protein] C10H19OSR + H2O -> decanoic acid + an [acyl-carrier protein]
+&3.1.2.14c : dodecanoyl-[acyl-carrier protein] C12H23OSR + H2O -> dodecanoic acid + an [acyl-carrier protein]
+&3.1.2.14d : tetradecanoyl-[acyl-carrier protein] C14H27OSR + H2O -> tetradecanoic acid + an [acyl-carrier protein]
+&3.1.2.14e : hexadecanoyl-[acyl-carrier protein] C16H31OSR + H2O -> hexadecanoic acid + an [acyl-carrier protein]
+&3.1.2.14f : (9Z)-hexadecanoyl-[acyl-carrier protein] C16H31OSR + H2O -> (9Z)-hexadecanoic acid + an [acyl-carrier protein]
+&3.1.2.14g : octadecanoyl-[acyl-carrier protein] C18H35OSR + H2O -> octadecanoic acid + an [acyl-carrier protein]
+&3.1.2.14h : (9Z)-octadecanoyl-[acyl-carrier protein] C18H33OSR + H2O -> (9Z)-octadecanoic acid + an [acyl-carrier protein]
+&3.1.2.14i : (9Z,12Z)-octadecadienoyl-[acyl-carrier protein] C18H31OSR + H2O -> (9Z,12Z)-octadecanoic acid + an [acyl-carrier protein]
+&3.1.2.14j : (9Z,12Z,15Z)-octadecatrienoyl-[acyl-carrier protein] C18H29OSR + H2O -> (9Z,12Z,15Z)-octadecanoic acid + an [acyl-carrier protein]
+&3.1.2.14k : (6Z,9Z)-octadecadienoyl-[acyl-carrier protein] C18H31OSR + H2O -> (6Z,9Z)-octadecanoic acid + an [acyl-carrier protein]
+&3.1.2.14l : (6Z,9Z,12Z)-octadecatrienoyl-[acyl-carrier protein] C18H29OSR + H2O -> (6Z,9Z,12Z)-octadecanoic acid + an [acyl-carrier protein]
+&3.1.2.14m : (6Z,9Z,12Z,15Z)-octadecatetraenoyl-[acyl-carrier protein] C18H27OSR + H2O -> (6Z,9Z,12Z,15Z)-octadecanoic acid + an [acyl-carrier protein]
+2.3.1.179a : acetyl-CoA + acyl-carrier protein HSR -> an acetyl-ACP + CO2
+2.3.1.179b : an acetyl-ACP + a malonyl-ACP -> acetoacetyl-[acp] C4H5O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.179c : butyryl-[acyl-carrier protein] C4H7OSR + a malonyl-ACP -> 3-oxohexanoyl-[acyl-carrier protein] C6H9O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.179d : hexanoyl-[acyl-carrier protein] C6H11OSR + a malonyl-ACP -> 3-oxooctanoyl-[acyl-carrier protein] C8H13O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.179e : octanoyl-[acyl-carrier protein] C8H15OSR + a malonyl-ACP -> 3-oxodecanoyl-[acyl-carrier protein] C10H17O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.179f : decanoyl-[acyl-carrier protein] C10H19OSR + a malonyl-ACP -> 3-oxododecanoyl-[acyl-carrier protein] C12H21O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.179g : dodecanoyl-[acyl-carrier protein] C12H23OSR + a malonyl-ACP -> 3-oxotetradecanoyl-[acyl-carrier protein] C14H25O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.179h : tetradecanoyl-[acyl-carrier protein] C14H27OSR + a malonyl-ACP -> 3-oxohexadecanoyl-[acyl-carrier protein] C16H29O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.180a : acetyl-CoA + acyl-carrier protein HSR -> an acetyl-ACP + CO2
+2.3.1.180b : an acetyl-ACP + a malonyl-ACP -> acetoacetyl-[acp] C4H5O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.180c : butyryl-[acyl-carrier protein] C4H7OSR + a malonyl-ACP -> 3-oxohexanoyl-[acyl-carrier protein] C6H9O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.180d : hexanoyl-[acyl-carrier protein] C6H11OSR + a malonyl-ACP -> 3-oxooctanoyl-[acyl-carrier protein] C8H13O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.180e : octanoyl-[acyl-carrier protein] C8H15OSR + a malonyl-ACP -> 3-oxodecanoyl-[acyl-carrier protein] C10H17O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.180f : decanoyl-[acyl-carrier protein] C10H19OSR + a malonyl-ACP -> 3-oxododecanoyl-[acyl-carrier protein] C12H21O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.180g : dodecanoyl-[acyl-carrier protein] C12H23OSR + a malonyl-ACP -> 3-oxotetradecanoyl-[acyl-carrier protein] C14H25O2SR + CO2 + an [acyl-carrier protein]
+2.3.1.180h : tetradecanoyl-[acyl-carrier protein] C14H27OSR + a malonyl-ACP -> 3-oxohexadecanoyl-[acyl-carrier protein] C16H29O2SR + CO2 + an [acyl-carrier protein]
+
+
+# Porphyrin and chlorophyll metabolism
+# - from glutamate-1-semialdehyde to uroporphyrinogen-III
+tRNA 1.2.1.70 : glutamate-1-semialdehyde + NADP+ + H+ + tRNAGlu <-> L-glutamyl-tRNAGlu + NADPH
+5.4.3.8 : glutamate-1-semialdehyde -> 5-amino-levulinate
+4.2.1.24 : 2 5-amino-levulinate -> 2 H2O + porphobilinogen
+2.5.1.61 : H2O + 4 porphobilinogen -> 4 ammonia H3N + hydroxymethylbilane
+4.2.1.75 : hydroxymethylbilane -> uroporphyrinogen-III + H2O
+_uroporphyrinogen-I : hydroxymethylbilane -> uroporphyrinogen-I + H2O
+_uroporphyrin-I : uroporphyrinogen-I -> uroporphyrin-I + 6 H+
+4.1.1.37b : uroporphyrinogen-III -> 4 CO2 + coproporphyrinogen I
+_coproporphyrin-I : coproporphyrinogen I -> coproporphyrin I + 6 H+
+_uroporphyrin-III : uroporphyrinogen-III -> uroporphyrin-III + 6 H+
+# - from uroporphyrinogen-III to protoporphyrinogen-IX
+4.1.1.37a : uroporphyrinogen-III -> 4 CO2 + coproporphyrinogen III
+_1.3.3.3 : coproporphyrinogen III + O2 + 2 H+ -> protoporphyrinogen-IX + 2 CO2 + 2 H2O 
+_1.3.99.22 : coproporphyrinogen III + 2 S-adenosyl-L-methionine -> protoporphyrinogen-IX + 2 CO2 + 2 L-methionine + 2 5'-deoxyadenosine
+# not pres ! (would connect protoporphyrinogen-IX to protoporphyrin IX production) ~~IMPORTANT, following reaction not in sequence!!~~ 
+&1.3.3.4 : protoporphyrinogen-IX + O2 -> protoporphyrin IX + 3 H2O
+# - Heme production
+4.99.1.1 : Fe2+ + protoporphyrin IX -> 2 H+ + protoheme IX
+2.5.1.-d : protoheme IX + (E,E)-farnesyl diphosphate + H2O -> heme o + diphosphate
+_COX15 : heme o -> heme a
+_1.14.99.3 : 3 O2 + 3 thioredoxin + protoheme IX -> biliverdin + 3 H2O + 3 thioredoxin disulfide + CO + Fe2+
+1.3.7.5 : biliverdin + 2 thioredoxin -> (3Z)-phycocyanobilin + 2 thioredoxin disulfide
+1.3.1.24a : biliverdin + NADPH + H+ -> NADP+ + bilirubin 
+1.3.1.24b : biliverdin + NADH + H+ -> NAD+ + bilirubin 
+# - Chlorophyll pathway
+6.6.1.1 : ATP + protoporphyrin IX + Mg2+ + H2O -> Mg-protoporphyrin + phosphate O4P + ADP + 2 H+
+2.1.1.11 : Mg-protoporphyrin + S-adenosyl-L-methionine -> S-adenosyl-L-homocysteine + Mg-protoporphyrin monomethyl ester
+Zn-Bacterio-chlorophyll-a : Mg-protoporphyrin monomethyl ester + Zn2+ -> Zn-Bacterio-chlorophyll a + Mg2+
+1.14.13.81a : Mg-protoporphyrin monomethyl ester + NADPH + O2 + H+ -> 131-hydroxy-magnesium-protoporphyrin IX 13-monomethyl ester + NADP+ + H2O 
+1.14.13.81b : 131-hydroxy-magnesium-protoporphyrin IX 13-monomethyl ester + NADPH + O2 + H+ -> 131-oxo-magnesium-protoporphyrin IX 13-monomethyl ester + NADP+ + 2 H2O 
+1.14.13.81c : 131-oxo-magnesium-protoporphyrin IX 13-monomethyl ester + NADPH + O2 + H+ -> divinyl protochlorophyllide a + NADP+ + 2 H2O 
+1.3.1.33a : divinyl protochlorophyllide a + NADPH + H+ -> NADP+ + divinylchlorophyllide a 
+# not pres ! (would connect divinylchlorophyllide a to chlorophyllide a production) ~~IMPORTANT, following reaction not in sequence!!~~ 
+&1.3.1.75a : divinylchlorophyllide a + NADPH + H+ <-> chlorophyllide a + NADP+ 
+# not pres ! (would connect divinyl protochlorophyllide a to monovinyl protochlorophyllide a production) ~~IMPORTANT, following reaction not in sequence!!~~ 
+&1.3.1.75b : divinyl protochlorophyllide a + NADPH + H+ <-> monovinyl protochlorophyllide a + NADP+ 
+_BacChl : monovinyl protochlorophyllide a + phytyl diphosphate -> bacterio-chlorophylls
+_BacPheo : monovinyl protochlorophyllide a + phytyl diphosphate -> bacterio-pheophytins
+1.3.1.33b : monovinyl protochlorophyllide a + NADPH + H+ -> NADP+ + chlorophyllide a 
+_1.18.-.- : monovinyl protochlorophyllide a + ATP -> chlorophyllide a + ADP
+_dChla : divinyl protochlorophyllide a -> divinylchlorophyll a
+_Chla : divinylchlorophyll a -> chlorophyll a
+2.5.1.62 : chlorophyllide a + phytyl diphosphate -> chlorophyll a + diphosphate
+_Chlb : chlorophyll a + H2O -> chlorophyll b + 4 H+
+_Pheo : chlorophyll a -> pheophytins
+# - Cob(II)yrinate a,c diamide pathway
+2.1.1.107a : S-adenosyl-L-methionine + uroporphyrinogen-III -> S-adenosyl-L-homocysteine + precorrin-1
+2.1.1.107b : S-adenosyl-L-methionine + precorrin-1 -> S-adenosyl-L-homocysteine + precorrin-2
+_2.1.1.130 : S-adenosyl-L-methionine + precorrin-2 -> S-adenosyl-L-homocysteine + precorrin-3A
+# - Cobalt pathway
+4.99.1.3 : precorrin-2 + Co2+ <-> cobalt-precorrin-2 + 2 H+
+2.1.1.151 : S-adenosyl-L-methionine + cobalt-precorrin-2 <-> S-adenosyl-L-homocysteine + cobalt-precorrin-3
+2.1.1.131a : cobalt-precorrin-3 + S-adenosyl-L-methionine <-> cobalt-precorrin-4 + S-adenosyl-L-homocysteine
+2.1.1.133a : S-adenosyl-L-methionine + cobalt-precorrin-4 <-> S-adenosyl-L-homocysteine + cobalt-precorrin-5A
+RXN-8763 : cobalt-precorrin-5A + H2O <-> cobalt-precorrin-5B + acetaldehyde
+RXN-8764 : cobalt-precorrin-5B + S-adenosyl-L-methionine -> cobalt-precorrin-6A + S-adenosyl-L-homocysteine
+_1.3.1.54a : cobalt-precorrin-6A + NADPH + H+ <-> cobalt-precorrin-6B + NADP+ 
+RXN-8766 : cobalt-precorrin-6B + S-adenosyl-L-methionine -> cobalt-precorrin-7 + S-adenosyl-L-homocysteine
+RXN-8767 : cobalt-precorrin-7 + S-adenosyl-L-methionine -> cobalt-precorrin-8x + S-adenosyl-L-homocysteine + CO2
+RXN-8768 : cobalt-precorrin-8x <-> cobyrinate
+_6.3.1.- : cobyrinate + 2 L-glutamine + 2 ATP + 2 H2O <-> cob(II)yrinate a,c-diamide + 2 L-glutamate + 2 ADP + 2 phosphate O4P
+# - Non-Cobalt pathway
+2.1.1.131b : precorrin-3B + S-adenosyl-L-methionine -> precorrin-4 + S-adenosyl-L-homocysteine
+2.1.1.133b : S-adenosyl-L-methionine + precorrin-4 -> S-adenosyl-L-homocysteine + precorrin-5
+_1.3.1.54b : precorrin-6A + NADPH + H+ -> precorrin-6B + NADP+ 
+_2.1.1.132 : 2 S-adenosyl-L-methionine + precorrin-6Y <-> 2 S-adenosyl-L-homocysteine + precorrin-8x + CO2
+5.4.1.2 : precorrin-8x -> hydrogenobyrinate
+_6.3.5.9 : 2 ATP + hydrogenobyrinate + 2 L-glutamine + 2 H2O -> 2 ADP + 2 phosphate O4P + hydrogenobyrinate a,c-diamide + 2 L-glutamate 
+6.6.1.2 : hydrogenobyrinate a,c-diamide + Co2+ + ATP + H2O -> cob(II)yrinate a,c-diamide + ADP + phosphate O4P + 2 H+
+# - coenzyme B12 pathway
+# not pres ! (would connect cob(II)yrinate a,c-diamide to cob(I)yrinate a,c-diamide production) ~~IMPORTANT, following reaction not in sequence!!~~ 
+&1.16.8.1 : 2 cob(II)yrinate a,c-diamide + FMN -> 2 cob(I)yrinate a,c-diamide + FMNH2
+2.5.1.17a : cob(I)yrinate a,c-diamide + ATP -> adenosyl-cobyrinate a,c-diamide + PPPi
+6.3.5.10 : adenosyl-cobyrinate a,c-diamide + 4 L-glutamine + 4 ATP + 4 H2O -> 4 L-glutamate + adenosyl-cobyrate + 4 ADP + 4 phosphate O4P
+6.3.1.10a : ATP + adenosyl-cobyrate + (R)-1-amino-2-propanol O-2-phosphate -> ADP + phosphate O4P + adenosylcobinamide
+RXN-8626 : L-threonine + ATP <-> L-threonine O-3-phosphate + ADP
+4.1.1.81 : L-threonine O-3-phosphate -> (R)-1-amino-2-propanol O-2-phosphate + CO2
+6.3.1.10b : ATP + adenosyl-cobyrate + (R)-1-Aminopropan-2-ol -> ADP + phosphate O4P + adenosylcobinamide
+2.5.1.17b : cobinamide + ATP -> adenosylcobinamide + PPPi
+2.7.1.156 : adenosylcobinamide + ATP -> adenosyl-cobinamide phosphate + ADP
+2.7.7.62 : adenosyl-cobinamide phosphate + GTP -> adenosylcobinamide-GDP + diphosphate
+2.7.8.26 : adenosylcobinamide-GDP + alpha-ribazole -> coenzyme B12 + GMP
+
+
+# Riboflavin metabolism
+3.5.4.25 : 3 H2O + GTP -> diphosphate + 2,5-diamino-6-(ribosylamino)-4-(3H)-pyrimidinone 5'-phosphate + formate
+3.5.4.26 : H2O + 2,5-diamino-6-(ribosylamino)-4-(3H)-pyrimidinone 5'-phosphate -> 5-amino-6-(5'-phosphoribosylamino)uracil + ammonia H3N
+1.1.1.193 : 5-amino-6-(5'-phosphoribosylamino)uracil + NADPH + H+ -> 5-amino-6-(5'-phosphoribitylamino)uracil + NADP+ 
+RIBOPHOSPHAT-RXN : 5-amino-6-(5'-phosphoribitylamino)uracil + H2O <-> 5-amino-6-ribitylamino-2,4(1H,3H)-pyrimidinedione + phosphate O4P
+LUMAZINESYN-RXN : 5-amino-6-ribitylamino-2,4(1H,3H)-pyrimidinedione + 3,4-dihydroxy-2-butanone-4-P -> 6,7-dimethyl-8-(1-D-ribityl)lumazine + phosphate O4P + 2 H2O
+DIOHBUTANONEPSYN-RXN : D-ribulose-5-phosphate -> 3,4-dihydroxy-2-butanone-4-P + formate
+2.5.1.9 : 2 6,7-dimethyl-8-(1-D-ribityl)lumazine -> 5-amino-6-ribitylamino-2,4(1H,3H)-pyrimidinedione + riboflavin
+_lumazine : 6,7-dimethyl-8-(1-D-ribityl)lumazine + UQ -> 7-Hydroxy-6-methyl-8-ribityl lumazine + UQH2 
+2.7.1.26 : riboflavin + ATP -> FMN + ADP
+2.7.7.2 : FMN + ATP -> FAD + diphosphate
+_benzimidazole : 2 riboflavin + 2 CO2 -> 4 dimethylbenzimidazole + 3 O2
+# not pres ! would end producing alpha-ribazole ~~IMPORTANT, following 3 reactions not in sequence!!~~
+&2.4.2.21 : nicotinate nucleotide + dimethylbenzimidazole <-> nicotinate + alpha-ribazole-5'-P
+&3.1.3.73 : H2O + alpha-ribazole-5'-P <-> alpha-ribazole + phosphate O4P
+&2.4.2.1 : nicotinate + ribose-1-phosphate <-> nicotinate D-ribonucleoside + phosphate O4P
+&2.7.1.173 : nicotinate D-ribonucleoside + ATP -> nicotinate nucleotide + ADP 
+
+
+# REDOX compounds
+_1.8.1.9 : thioredoxin disulfide + NADPH + H+ <-> thioredoxin + NADP+ 
+# caution ! 'thioredoxin disulfide' has two more electrons than 'thioredoxin' but 'Fd*' has only one more electron than 'Fd'
+&1.8.7.2 : thioredoxin disulfide + 2 Fd* + 2 H+ <-> 2 Fd + thioredoxin
+&1.5.1.39a : FMNH2 + NADP+ <-> FMN + NADPH + H+ 
+&1.5.1.39b : FMNH2 + NAD+ <-> FMN + NADH + H+ 
+1.11.1.6 : 2 H2O2 -> 2 H2O + O2
+_1.15.1.1 : 2 O2- + 2 H+ <-> O2 + H2O2
+_1.11.1.7a : methanol + O2 -> formaldehyde + H2O2
+
+
+
+# Pyruvate metabolism
+1.1.1.38 : NAD+ + malate -> NADH + CO2 + pyruvate + H+ 
+4.1.1.31 : phosphoenolpyruvate + H2O + CO2 -> phosphate O4P + oxaloacetate
+1.2.4.1 : pyruvate + lipoate acetyltransferase N6-(lipoyl)lysine <-> lipoate acetyltransferase N6-(S-acetyldihydrolipoyl)lysine + CO2
+2.3.1.12 : acetyl-CoA + lipoate acetyltransferase N6-(dihydrolipoyl)lysine <-> coenzyme A + lipoate acetyltransferase N6-(S-acetyldihydrolipoyl)lysine
+1.8.1.4a : lipoate acetyltransferase N6-(dihydrolipoyl)lysine + NAD+ -> lipoate acetyltransferase N6-(lipoyl)lysine + NADH + H+ 
+4.2.3.3 : dihydroxy-acetone phosphate -> methylglyoxal + phosphate O4P
+4.4.1.5 : S-lactoyl-glutathione <-> methylglyoxal + glutathione
+3.1.2.6 : S-lactoyl-glutathione + H2O -> glutathione + D-lactate
+1.1.1.28 : NAD+ + D-lactate -> NADH + pyruvate + H+ 
+2.3.1.9 : 2 acetyl-CoA <-> acetoacetyl-CoA + coenzyme A
+
+
+# Glutathione metabolism
+3.4.11.2a : cysteinylglycine + H2O -> L-cysteine + glycine
+3.4.11.2b : R-S-cysteinylglycine + H2O -> R-S-cysteine + glycine
+6.3.2.3 : glycine + L-gamma-glutamylcysteine + ATP -> glutathione + phosphate O4P + ADP
+_2.3.2.2a : glutathione -> L-glutamate + cysteinylglycine
+_2.3.2.2b : L-alanine + glutathione -> (5-L-glutamyl)-L-alanine + cysteinylglycine
+_2.3.2.2c : L-aspartate + glutathione -> (5-L-glutamyl)-L-aspartate + cysteinylglycine
+_2.3.2.2d : L-arginine + glutathione -> (5-L-glutamyl)-L-arginine + cysteinylglycine
+_2.3.2.2e : L-asparagine + glutathione -> (5-L-glutamyl)-L-asparagine + cysteinylglycine
+_2.3.2.2f : L-lysine + glutathione -> (5-L-glutamyl)-L-lysine + cysteinylglycine
+_2.3.2.2g : L-threonine + glutathione -> (5-L-glutamyl)-L-threonine + cysteinylglycine
+_2.3.2.2h : L-serine + glutathione -> (5-L-glutamyl)-L-serine + cysteinylglycine
+_2.3.2.2i : L-cysteine + glutathione -> (5-L-glutamyl)-L-cysteine + cysteinylglycine
+_2.3.2.2j : L-glutamate + glutathione -> (5-L-glutamyl)-L-glutamate + cysteinylglycine
+_2.3.2.2k : L-glutamine + glutathione -> (5-L-glutamyl)-L-glutamine + cysteinylglycine
+_2.3.2.2l : L-proline + glutathione -> (5-L-glutamyl)-L-proline + cysteinylglycine
+_2.3.2.2m : L-tryptophan + glutathione -> (5-L-glutamyl)-L-tryptophan + cysteinylglycine
+_2.3.2.2n : L-phenylalanine + glutathione -> (5-L-glutamyl)-L-phenylalanine + cysteinylglycine
+_2.3.2.2o : L-tyrosine + glutathione -> (5-L-glutamyl)-L-tyrosine + cysteinylglycine
+_2.3.2.2p : L-histidine + glutathione -> (5-L-glutamyl)-L-histidine + cysteinylglycine
+_2.3.2.2q : L-valine + glutathione -> (5-L-glutamyl)-L-valine + cysteinylglycine
+_2.3.2.2r : L-isoleucine + glutathione -> (5-L-glutamyl)-L-isoleucine + cysteinylglycine
+_2.3.2.2s : L-leucine + glutathione -> (5-L-glutamyl)-L-leucine + cysteinylglycine
+_2.3.2.2t : L-methionine + glutathione -> (5-L-glutamyl)-L-methionine + cysteinylglycine
+3.5.2.9 : 5-oxoproline + 2 H2O + ATP -> L-glutamate + phosphate O4P + ADP
+_2.5.1.18 : glutathione -> R-S-glutathione
+_2.3.2.2u : R-S-glutathione + H2O -> R-S-cysteinylglycine + L-glutamate
+1.11.1.9 : H2O2 + 2 glutathione -> glutathione disulfide + 2 H2O
+# not pres ! would close g-glutamyl cycle ~~IMPORTANT, following 20 reactions not in sequence!!~~
+&6.3.2.2 : ATP + L-glutamate + L-cysteine -> ADP + diphosphate + L-gamma-glutamylcysteine
+&2.3.2.4a : (5-L-glutamyl)-L-alanine -> L-alanine + 5-oxoproline
+&2.3.2.4b : (5-L-glutamyl)-L-aspartate -> L-aspartate + 5-oxoproline
+&2.3.2.4c : (5-L-glutamyl)-L-arginine -> L-arginine + 5-oxoproline
+&2.3.2.4d : (5-L-glutamyl)-L-asparagine -> L-asparagine + 5-oxoproline
+&2.3.2.4e : (5-L-glutamyl)-L-lysine -> L-lysine + 5-oxoproline
+&2.3.2.4f : (5-L-glutamyl)-L-threonine -> L-threonine + 5-oxoproline
+&2.3.2.4g : (5-L-glutamyl)-L-serine -> L-serine + 5-oxoproline
+&2.3.2.4h : (5-L-glutamyl)-L-cysteine -> L-cysteine + 5-oxoproline
+&2.3.2.4i : (5-L-glutamyl)-L-glutamate -> L-glutamate + 5-oxoproline
+&2.3.2.4j : (5-L-glutamyl)-L-glutamine -> L-glutamine + 5-oxoproline
+&2.3.2.4k : (5-L-glutamyl)-L-proline -> L-proline + 5-oxoproline
+&2.3.2.4l : (5-L-glutamyl)-L-tryptophan -> L-tryptophan + 5-oxoproline
+&2.3.2.4m : (5-L-glutamyl)-L-phenylalanine -> L-phenylalanine + 5-oxoproline
+&2.3.2.4n : (5-L-glutamyl)-L-tyrosine -> L-tyrosine + 5-oxoproline
+&2.3.2.4o : (5-L-glutamyl)-L-histidine -> L-histidine + 5-oxoproline
+&2.3.2.4p : (5-L-glutamyl)-L-valine -> L-valine + 5-oxoproline
+&2.3.2.4q : (5-L-glutamyl)-L-isoleucine -> L-isoleucine + 5-oxoproline
+&2.3.2.4r : (5-L-glutamyl)-L-leucine -> L-leucine + 5-oxoproline
+&2.3.2.4s : (5-L-glutamyl)-L-methionine -> L-methionine + 5-oxoproline
+
+
+# Fructose and mannose metabolism
+4.1.2.13c : fructose-1-phosphate <-> dihydroxy-acetone phosphate + glyceraldehyde
+2.7.1.4 : fructose + ATP <-> fructose-6-phosphate + ADP
+5.3.1.8 : D-mannose-6-phosphate <-> fructose-6-phosphate
+5.4.2.8 : alpha-D-mannose 1-phosphate <-> D-mannose-6-phosphate
+2.7.7.22 : alpha-D-mannose 1-phosphate + GDP -> GDP-D-mannose + phosphate O4P
+2.7.7.13 : alpha-D-mannose 1-phosphate + GTP -> GDP-D-mannose + diphosphate
+4.2.1.47 : GDP-D-mannose -> H2O + GDP-4-dehydro-6-deoxy-D-mannose
+1.1.1.271 : NADP+ + GDP-L-fucose <-> NADPH + GDP-4-dehydro-6-deoxy-D-mannose + H+ 
+
+
+# Aminosugars metabolism
+2.6.1.16 : fructose-6-phosphate + L-glutamine <-> L-glutamate + D-glucosamine-6-phosphate
+5.4.2.10 : D-glucosamine-6-phosphate -> D-glucosamine 1-phosphate
+2.3.1.157 : D-glucosamine 1-phosphate + acetyl-CoA -> N-acetyl-glucosamine-1-phosphate + coenzyme A
+2.7.7.23 : N-acetyl-glucosamine-1-phosphate + UTP <-> UDP-N-acetyl-D-glucosamine + diphosphate
+2.5.1.7 : UDP-N-acetyl-D-glucosamine + phosphoenolpyruvate <-> UDP-GlcNAc-enolpyruvate + phosphate O4P
+_1.1.1.158 : NADP+ + H+ + UDP-N-acetylmuramate <-> NADPH + UDP-GlcNAc-enolpyruvate
+_5.1.3.8 : N-acetyl-D-glucosamine <-> N-acetyl-D-mannosamine
+_5.1.3.14a : N-acetyl-D-mannosamine + UTP <-> UDP-N-acetyl-D-glucosamine + diphosphate
+_5.1.3.14b : UDP-N-acetyl-D-mannosamine <-> UDP-N-acetyl-D-glucosamine
+
+
+# Peptidoglycan biosynthesis
+6.3.2.8 : L-alanine + UDP-N-acetylmuramate + ATP -> UDP-N-acetylmuramoyl-L-alanine + phosphate O4P + ADP
+6.3.2.9 : UDP-N-acetylmuramoyl-L-alanine + D-glutamate + ATP -> UDP-N-acetylmuramoyl-L-alanyl-D-glutamate + phosphate O4P + ADP
+6.3.2.13 : UDP-N-acetylmuramoyl-L-alanyl-D-glutamate + meso-diaminopimelate + ATP -> UDP-N-acetylmuramoyl-L-alanyl-D-glutamyl-meso-2,6-diaminoheptanedioate + phosphate O4P + ADP
+6.3.2.10a : UDP-N-acetylmuramoyl-L-alanyl-D-glutamyl-meso-2,6-diaminoheptanedioate + D-alanyl-D-alanine + ATP -> UDP-N-acetylmuramoyl-L-alanyl-D-glutamyl-meso-2,6-diaminoheptanedioate- D-alanyl-D-alanine + phosphate O4P + ADP
+2.7.8.13a : UDP-N-acetylmuramoyl-L-alanyl-D-glutamyl-meso-2,6-diaminoheptanedioate- D-alanyl-D-alanine + undecaprenyl phosphate -> undecaprenyl-diphospho-N-acetylmuramoyl-L-alanyl-D-glutamyl-meso-2,6-diaminopimeloyl-D-alanyl-D-alanine + UMP
+2.4.1.227a : undecaprenyl-diphospho-N-acetylmuramoyl-L-alanyl-D-glutamyl-meso-2,6-diaminopimeloyl-D-alanyl-D-alanine + UDP-N-acetyl-D-glucosamine -> undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutamyl-meso-2,6-diaminopimeloyl-D-alanyl-D-alanine + UDP
+_6.3.1.2b : undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutamyl-meso-2,6-diaminopimeloyl-D-alanyl-D-alanine + ATP + ammonia H3N -> undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutaminyl-meso-2,6-diaminopimeloyl-D-alanyl-D-alanine + ADP + phosphate O4P
+6.3.2.10b : UDP-N-acetylmuramoyl-L-alanyl-gamma-D-glutamyl-L-lysine + D-alanyl-D-alanine + ATP -> UDPMurAc(oyl-L-Ala-D-gamma-Glu-L-Lys-D-Ala-D-Ala) + phosphate O4P + ADP
+2.7.8.13b : UDPMurAc(oyl-L-Ala-D-gamma-Glu-L-Lys-D-Ala-D-Ala) + undecaprenyl phosphate -> MurAc(oyl-L-Ala-D-gamma-Glu-L-Lys-D-Ala-D-Ala)-diphospho-undecaprenol + UMP
+2.4.1.227b : MurAc(oyl-L-Ala-D-gamma-Glu-L-Lys-D-Ala-D-Ala)-diphospho-undecaprenol + UDP-N-acetyl-D-glucosamine -> undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-gamma-D-glutamyl-L-lysyl-D-alanyl-D-alanine + UDP
+_6.3.1.2c : undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-gamma-D-glutamyl-L-lysyl-D-alanyl-D-alanine + ATP + ammonia H3N -> undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-isoglutaminyl-L-lysyl-D-alanyl-D-alanine + ADP + phosphate O4P
+6.3.2.10c : UDP-N-acetylmuramoyl-L-alanyl-D-glutamyl-L-lysine + D-alanyl-D-alanine + ATP -> UDP-N-acetylmuramoyl-L-alanyl-D-glutamyl-L-lysyl-D-alanyl-D-alanine + phosphate O4P + ADP
+2.7.8.13c : UDP-N-acetylmuramoyl-L-alanyl-D-glutamyl-L-lysyl-D-alanyl-D-alanine + undecaprenyl phosphate -> undecaprenyl-diphospho-N-acetylmuramoyl-L-alanyl-D-glutamyl-L-lysyl-D-alanyl-D-alanine + UMP
+2.4.1.227c : undecaprenyl-diphospho-N-acetylmuramoyl-L-alanyl-D-glutamyl-L-lysyl-D-alanyl-D-alanine + UDP-N-acetyl-D-glucosamine -> undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutamyl-L-lysyl-D-alanyl-D-alanine + UDP
+_6.3.1.2d : undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutamyl-L-lysyl-D-alanyl-D-alanine + ATP + ammonia H3N -> undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutaminyl-L-lysyl-D-alanyl-D-alanine + ADP + phosphate O4P
+# not pres ! would complete peptidoglycan biosynthesis ~~IMPORTANT, following 3 reactions not in sequence!!~~
+&2.3.2.10a : undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutaminyl-meso-2,6-diaminopimeloyl-D-alanyl-D-alanine + glycyl-tRNAgly <-> undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutaminyl-meso-2,6-diaminopimeloyl-(glycyl)5-D-alanyl-D-alanine + tRNAgly
+&2.3.2.10b : undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-isoglutaminyl-L-lysyl-D-alanyl-D-alanine + glycyl-tRNAgly <-> undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-isoglutaminyl-L-lysyl-(glycyl)5-D-alanyl-D-alanine + tRNAgly
+&2.3.2.10c : undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutaminyl-L-lysyl-D-alanyl-D-alanine + glycyl-tRNAgly <-> undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutaminyl-L-lysyl-(glycyl)5-D-alanyl-D-alanine + tRNAgly
+6.3.2.4 : 2 D-alanine + ATP -> D-alanyl-D-alanine + phosphate O4P + ADP
+3.6.1.27 : undecaprenyl diphosphate + H2O -> undecaprenyl phosphate + phosphate O4P
+_peptidoglycan_syna : undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutaminyl-meso-2,6-diaminopimeloyl-(glycyl)5-D-alanyl-D-alanine -> peptidoglycan + undecaprenyl diphosphate
+_peptidoglycan_synb : undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-isoglutaminyl-L-lysyl-(glycyl)5-D-alanyl-D-alanine -> peptidoglycan + undecaprenyl diphosphate
+_peptidoglycan_sync : undecaprenyl-diphospho-N-acetylmuramoyl-(N-acetylglucosamine)-L-alanyl-D-glutaminyl-L-lysyl-(glycyl)5-D-alanyl-D-alanine -> peptidoglycan + undecaprenyl diphosphate
+3.4.16.4 : D-alanyl-D-alanine + H2O <-> 2 D-alanine
+# additional glycan biosynthesis
+2.3.1.129 : (R)-3-hydroxymyristoyl-ACP + UDP-N-acetyl-D-glucosamine -> UDP-3-O-(3-hydroxymyristoyl)-N-acetylglucosamine + an [acyl-carrier protein]
+
+
+# Starch and sucrose metabolism
+2.4.1.14 : fructose-6-phosphate + UDP-D-glucose <-> sucrose-6-phosphate + UDP
+_5.4.2.6 : beta-D-glucose 1-phosphate <-> beta-D-glucose 6-phosphate
+2.4.1.25 : maltotriose + maltose -> maltotetraose + beta-D-glucose
+_2.4.1.1 : a glycogen_n1 + phosphate O4P -> a glycogen_n + alpha-D-glucose 1-phosphate
+2.7.7.27 : alpha-D-glucose 1-phosphate + ATP -> ADP-D-glucose + diphosphate
+_a-glucansyn : 2 ADP-D-glucose -> a 1,4-alpha-D-glucan_n
+_2.4.1.21a : ADP-D-glucose + a 1,4-alpha-D-glucan_n -> ADP + a 1,4-alpha-D-glucan_n1
+_glycsyn : 2 ADP-D-glucose + a 1,4-alpha-D-glucan_n1 -> a glycogen_n
+_2.4.1.21b : ADP-D-glucose + a glycogen_n -> ADP + a glycogen_n1
+_2.4.1.18 : a glycogen_n1 + a 1,4-alpha-D-glucan_n <-> a glycogen_n + a 1,4-alpha-D-glucan_n1
+5.4.2.2 : alpha-D-glucose 1-phosphate <-> alpha-D-glucose 6-phosphate
+4.2.1.45 : CDP-D-glucose -> H2O + CDP-4-dehydro-6-deoxy-D-glucose
+_cellulosedeg : cellulose <-> 1,4-beta-D-glucan_n1
+_3.2.1.4 : 1,4-beta-D-glucan_n1 + H2O <-> 1,4-beta-D-glucan_n + cellobiose
+_3.2.1.21a : cellobiose <-> beta-D-glucose
+_3.2.1.21b : 1,4-beta-D-glucan_n <-> beta-D-glucose
+_2.4.1.213 : ADP-D-glucose + sn-glycerol-3-phosphate <-> 2-(beta-D-glucosyl)-sn-glycerol-3-phosphate + ADP
+3.1.3.69 : H2O + 2-(beta-D-glucosyl)-sn-glycerol-3-phosphate -> phosphate O4P + 2-(beta-D-glucosyl)-sn-glycerol
+
+
+# Biosynthesis of steroids
+# - NON-Mevalonate pathway - produces Isopentenyl-PP
+2.2.1.7 : pyruvate + D-glyceraldehyde-3-phosphate -> 1-deoxy-D-xylulose 5-phosphate + CO2
+1.1.1.267 : 2-C-methyl-D-erythritol-4-phosphate + NADP+ <-> 1-deoxy-D-xylulose 5-phosphate + NADPH + H+ 
+2.7.7.60 : 2-C-methyl-D-erythritol-4-phosphate + CTP -> 4-(cytidine 5'-diphospho)-2-C-methyl-D-erythritol + diphosphate
+2.7.1.148 : 4-(cytidine 5'-diphospho)-2-C-methyl-D-erythritol + ATP -> 2-phospho-4-(cytidine 5'-diphospho)-2-C-methyl-D-erythritol + ADP
+4.6.1.12 : 2-phospho-4-(cytidine 5'-diphospho)-2-C-methyl-D-erythritol -> 2-C-methyl-D-erythritol-2,4-cyclodiphosphate + CMP
+1.17.7.1 : (E)-4-hydroxy-3-methylbut 2-en-1-yl diphosphate + H2O + thioredoxin disulfide <-> 2-C-methyl-D-erythritol-2,4-cyclodiphosphate + thioredoxin
+1.17.1.2a : (E)-4-hydroxy-3-methylbut 2-en-1-yl diphosphate + NADPH + H+ -> isopentenyl diphosphate + NADP+ + H2O 
+1.17.1.2b : isopentenyl diphosphate + NADP+ + H2O -> (E)-4-hydroxy-3-methylbut 2-en-1-yl diphosphate + NADPH + H+ 
+# - Isopentenyl-PP to Squalene
+5.3.3.2 : isopentenyl diphosphate -> dimethylallyl diphosphate 
+2.5.1.29a : isopentenyl diphosphate + (E,E)-farnesyl diphosphate -> all-trans-geranyl-geranyl diphosphate + diphosphate
+_2.5.1.29b : dimethylallyl diphosphate + isopentenyl diphosphate -> geranyl diphosphate + diphosphate
+_2.5.1.29c : geranyl diphosphate + isopentenyl diphosphate -> (E,E)-farnesyl diphosphate + diphosphate
+_UbiQ : UQ + a menaquinone <-> all-trans-geranyl-geranyl diphosphate + isopentenyl diphosphate
+_2.5.1.21a : (E,E)-farnesyl diphosphate -> diphosphate + presqualene diphosphate
+_2.5.1.21b : presqualene diphosphate + NADPH + H+ -> squalene + diphosphate + NADP+ 
+# - Nonaprenyl-PP production
+2.5.1.85 : all-trans-geranyl-geranyl diphosphate + 5 isopentenyl diphosphate -> all-trans-nonaprenyl diphosphate + 5 diphosphate
+2.5.1.84 : geranyl diphosphate + 7 isopentenyl diphosphate -> all-trans-nonaprenyl diphosphate + 7 diphosphate
+# - Vit E production
+_1.3.1.83 : all-trans-geranyl-geranyl diphosphate + 3 H+ + 3 NADPH -> phytyl diphosphate + 3 NADP+ 
+_HPT : phytyl diphosphate + homogentisate -> 2-methyl-6-phytylquinol + diphosphate + CO2
+_PhytQnol : 2-methyl-6-phytylquinol + S-adenosyl-L-methionine -> 2,3-dimethyl-5-phytylquinol + S-adenosyl-L-homocysteine
+_VTE1a : 2,3-dimethyl-5-phytylquinol -> gamma-tocopherol
+_VTE1b : 2-methyl-6-phytylquinol -> delta-tocopherol
+_2.1.1.95a : S-adenosyl-L-methionine + gamma-tocopherol -> S-adenosyl-L-homocysteine + alpha-tocopherol
+_2.1.1.95b : S-adenosyl-L-methionine + delta-tocopherol -> S-adenosyl-L-homocysteine + beta-tocopherol
+_VitE : beta-tocopherol -> alpha-tocopherol
+_5.4.99.17 : squalene + H2O -> 22-hopanol
+
+
+
+# Lipoic acid metabolism
+_2.3.1.181a : octanoyl-[acyl-carrier protein] C8H15OSR + a protein -> a protein-N-6-octanoyl-lysine + an [acyl-carrier protein]
+_2.8.1.8a : a protein-N-6-octanoyl-lysine + 2 S0 + 2 S-adenosyl-L-methionine -> a protein-N-6-lipoyl-lysine + 2 L-methionine + 2 5'-deoxyadenosine
+_2.8.1.8b : octanoyl-[acyl-carrier protein] C8H15OSR + 2 S0 + 2 S-adenosyl-L-methionine -> lipoyl-[acyl carrier protein] C8H13OS3R + 2 L-methionine + 2 5'-deoxyadenosine
+_2.3.1.181b : lipoyl-[acyl carrier protein] C8H13OS3R + a protein -> a protein-N-6-lipoyl-lysine + an [acyl-carrier protein]
+_2.7.7.63a : ATP + lipoate -> diphosphate + lipoyl-AMP
+&transp_lipoate : lipoate_extrac -> lipoate
+_2.7.7.63b : lipoyl-AMP + a protein -> a protein-N-6-lipoyl-lysine + AMP
+
+
+# Carotenoid biosynthesis 
+_2.5.1.32 : 2 all-trans-geranyl-geranyl diphosphate -> phytoene + diphosphate
+1.3.5.5a : phytoene + thioredoxin disulfide <-> phytofluene + thioredoxin
+1.3.5.5b : phytofluene + thioredoxin disulfide <-> zeta-carotene + thioredoxin
+1.14.99.30a : zeta-carotene + O2 + thioredoxin disulfide -> neurosporene + 2 H2O + thioredoxin
+1.14.99.30b : O2 + thioredoxin disulfide + neurosporene -> 2 H2O + thioredoxin + trans-lycopene
+1.3.5.6a : zeta-carotene + O2 + thioredoxin -> neurosporene + 2 H2O + thioredoxin disulfide
+1.3.5.6b : O2 + thioredoxin + neurosporene -> 2 H2O + thioredoxin disulfide + trans-lycopene
+5.5.1.19a : trans-lycopene -> gamma-carotene
+5.5.1.19b : gamma-carotene -> beta-carotene
+1.14.13.129a : beta-carotene + NADH + H+ + O2 -> beta-cryptoxanthin + NAD+ + H2O
+1.14.13.129b : beta-cryptoxanthin + NADH + H+ + O2 -> zeaxanthin + NAD+ + H2O
+_CrtOa : beta-carotene -> echinenone
+_CrtOb : echinenone -> canthaxanthin
+_1.14.13.129c : echinenone + NADH + H+ + O2 -> 3-hydroxyechinenone + NAD+ + H2O
+&_1.14.13.129d : 3-hydroxyechinenone + NADH + H+ + O2 -> adonixanthin + NAD+ + H2O
+&_1.14.13.129e : canthaxanthin + NADH + H+ + O2 -> phoenicoxanthin + NAD+ + H2O
+&_1.14.13.129f : phoenicoxanthin + NADH + H+ + O2 -> astaxanthin + NAD+ + H2O
+_gCar : gamma-carotene <-> (2'S)-deoxymyxol 2'-(2,4-di-O-methyl-alpha-L-fucoside)
+_1.14.13.129g : (2'S)-deoxymyxol 2'-(2,4-di-O-methyl-alpha-L-fucoside) <-> (3R,2'S)-myxol 2'-(2,4-di-O-methyl-alpha-L-fucoside)
+
+
+# Nucleotide sugars metabolism - present? necessary?
+5.1.3.2a : UDP-D-glucose <-> UDP-galactose
+1.1.1.22 : UDP-D-glucose + H2O + 2 NAD+ -> UDP-D-glucuronate + 2 NADH + 2 H+
+5.1.3.2b : dTDP-D-glucose <-> dTDP-D-galactose
+2.7.7.33 : alpha-D-glucose 1-phosphate + CTP -> CDP-D-glucose + diphosphate
+4.2.1.46 : dTDP-D-glucose -> H2O + dTDP-4-dehydro-6-deoxy-D-glucose
+5.1.3.13a : dTDP-4-dehydro-6-deoxy-D-glucose -> dTDP-4-dehydro-6-deoxy-L-mannose
+5.1.3.13b : dTDP-4-dehydro-6-deoxy-D-glucose + GTP -> GDP-4-dehydro-6-deoxy-L-mannose + dTDP + phosphate O4P
+1.1.1.133a : NADP+ + dTDP-alpha-L-rhamnose <-> NADPH + dTDP-4-dehydro-6-deoxy-L-mannose + H+ 
+1.1.1.133b : NADP+ + GDP-6-deoxy-L-mannose <-> NADPH + GDP-4-dehydro-6-deoxy-L-mannose + H+ 
+
+# Propanoate metabolism - present?
+_1.2.1.3e : 2-propyn-1-al + NAD+ + H2O -> NADH + propynoate + H+ 
+
+# Thiamine metabolism - present?
+PYRIMSYN1-RXN : 5-aminoimidazole ribonucleotide <-> hydroxymethylpyrimidine
+2.5.1.3 : 4-methyl-5-(beta-hydroxyethyl)thiazole phosphate + 4-amino-5-hydroxymethyl-2-methylpyrimidine-pyrophosphate -> thiamine-phosphate + diphosphate
+2.7.1.49 : ATP + hydroxymethylpyrimidine <-> ADP + hydroxymethylpyrimidine phosphate
+2.7.4.7 : hydroxymethylpyrimidine phosphate + ATP <-> 4-amino-5-hydroxymethyl-2-methylpyrimidine-pyrophosphate + ADP
+2.7.4.16 : thiamine-phosphate + ATP -> thiamine diphosphate + ADP
+
+# Biotin metabolism - present?
+2.3.1.47 : pimeloyl-CoA + L-alanine -> CO2 + coenzyme A + 7-keto-8-aminopelargonate
+6.3.3.3 : CO2 + 7,8-diaminopelargonate + ATP -> dethiobiotin + phosphate O4P + ADP
+2.8.1.6 : dethiobiotin + 2 S-adenosyl-L-methionine + hydrogen sulfide H2S -> biotin + 2 5'-deoxyadenosine + 2 L-methionine
+6.3.4.15 : BCCP + biotin + ATP -> diphosphate + AMP + biotin-BCCP (monomer)
+RXN-7101 : 2 biotin-BCCP (monomer) <-> a biotin-BCCP (dimer)
+2.1.1.142 : cycloartenol + S-adenosyl-L-methionine -> (24R)-24-methylcycloarta-25-en-3-beta-ol + S-adenosyl-L-homocysteine
+
+# Penicillin and cephalosporin biosynthesis - mostly not present
+_3.5.2.6 : H2O + penicillin -> penicilloic acid
+_3.5.1.11 : penicillin + H2O -> 6-aminopenicillanate C8H12N2O3S + acetate
+
+# Terpenoid biosynthesis - mostly not present
+_2.5.1.31a : (E,E)-farnesyl diphosphate + isopentenyl diphosphate <-> all-trans-geranyl-geranyl diphosphate + diphosphate
+_2.5.1.31b : all-trans-geranyl-geranyl diphosphate + 7 isopentenyl diphosphate <-> di-trans,poly-cis-Undecaprenyl diphosphate + 7 diphosphate
+
+# Vitamin B6 metabolism - present?
+1.4.3.5a : O2 + pyridoxine-5'-phosphate -> H2O2 + pyridoxal 5'-phosphate
+1.4.3.5b : O2 + H2O + pyridoxamine 5'-phosphate -> ammonia H3N + H2O2 + pyridoxal 5'-phosphate
+1.4.3.5c : O2 + pyridoxine <-> H2O2 + pyridoxal
+1.4.3.5d : O2 + H2O + pyridoxamine <-> ammonia H3N + H2O2 + pyridoxal
+2.6.99.2 : 1-deoxy-D-xylulose 5-phosphate + 1-amino-propan-2-one-3-phosphate -> pyridoxine-5'-phosphate + phosphate O4P + 2 H2O
+_1.1.1.262 : O-phospho-4-hydroxy-L-threonine + NAD+ -> NADH + (2S)-2-amino-3-oxo-4-phosphonooxybutanoate + H+ 
+RXN-8447 : (2S)-2-amino-3-oxo-4-phosphonooxybutanoate + H+ <-> 1-amino-propan-2-one-3-phosphate + CO2
+4.2.3.1b : O-phospho-4-hydroxy-L-threonine + H2O -> phosphate O4P + 4-hydroxy-L-threonine
+_VitB6 : 4-hydroxy-L-threonine -> pyridoxine
+
+# Glycerophospholipid metabolism & Inositol phosphate metabolism & Glycerolipid metabolism - mostly not present
+1.1.5.3 : sn-glycerol-3-phosphate + a ubiquinone -> dihydroxy-acetone phosphate + a ubiquinol
+_2.3.1.15 : acyl-CoA + sn-glycerol 3-phosphate -> coenzyme A + 1-acyl-sn-glycerol 3-phosphate
+_2.3.1.51 : acyl-CoA + 1-acyl-sn-glycerol 3-phosphate -> coenzyme A + 1,2-diacyl-sn-glycerol 3-phosphate
+2.7.7.41 : CTP + an L-phosphatidate -> a CDP-diacylglycerol C14H19N3O15R1R2P2 + diphosphate
+_2.7.1.107 : ATP + 1,2-diacyl-sn-glycerol -> ADP + 1,2-diacyl-sn-glycerol 3-phosphate 
+2.7.8.5 : a CDP-diacylglycerol C14H19N3O15R1R2P2 + sn-glycerol-3-phosphate -> an L-1-phosphatidylglycerol-phosphate + CMP
+3.1.3.25 : D-myo-inositol (3)-monophosphate + H2O -> myo-inositol + phosphate O4P
+_2.7.1.30 : ATP + glycerol -> ADP + sn-glycerol 3-phosphate
+_1.1.1.6 : glycerol + NAD+ <-> dihydroxy-acetone + NADH + H+ 
+_1.1.9.4 : sn-glycerol-3-phosphate + a ubiquinone -> dihydroxy-acetone phosphate + a ubiquinol
+_2.4.1.157 : UDP-glucose + 1,2-diacyl-sn-glycerol -> UDP + 3-D-glucosyl-1,2-diacyl-sn-glycerol
+
+# rest of reactions with cognate genes
+3.1.4.- : 1-(1-Alkenyl)-sn-glycero-3-phosphoethanolamine + H2O <-> 1-(1-Alkenyl)-sn-glycerol + Ethanolamine phosphate 
+4.-.-.- : dTDP-(3R)-amino-3,6-dideoxy-D-glucose <-> dTDP-3-amino-4,6-deoxy-3,4-dehydroglucose + H2O
+6.3.4.- : formate + ATP + 1-(5'-Phosphoribosyl)-5-amino-4-imidazolecarboxamide <-> ADP + phosphate O4P + 1-(5'-Phosphoribosyl)-5-formamido-4-imidazolecarboxamide 
+4.2.-.- : N-Acetylmuramic acid 6-phosphate + H2O <-> N-Acetyl-D-glucosamine 6-phosphate + (R)-Lactate 
+_2.4.1.129 : [GlcNAc-(1-4)-Mur2Ac(oyl-L-Ala-gamma-D-Glu-L-Lys-D-Ala-D-Ala)]n-diphosphoundecaprenol + GlcNAc-(1-4)-Mur2Ac(oyl-L-Ala-gamma-D-Glu-L-Lys-D-Ala-D-Ala)-diphosphoundecaprenol -> [GlcNAc-(1-4)-Mur2Ac(oyl-L-Ala-gamma-D-Glu-L-Lys-D-Ala-D-Ala)]n+1-diphosphoundecaprenol + undecaprenyl diphosphate
+_3.4.15.6 : [L-Asp(4-L-Arg)]n + H2O -> [L-Asp(4-L-Arg)]n-1 + L-Asp(4-L-Arg)
+_1.13.11.43 : 1,2-bis(4-hydroxy-3-methoxyphenyl)ethylene + O2 -> 2 vanillin
+_1.1.1.31 : 3-hydroxy-2-methylpropanoate + NAD+ <-> 2-methyl-3-oxopropanoate + NADH + H+ 
+_3.1.1.45 : 4-carboxymethylenebut-2-en-4-olide + H2O <-> 4-oxohex-2-enedioate
+_2.3.1.183 : acetyl-CoA + phosphinothricin -> coenzyme A + N-acetylphosphinothricin
+_2.3.1.128 : acetyl-CoA + ribosomal-protein L-alanine -> coenzyme A + ribosomal-protein N-acetyl-L-alanine
+_1.20.4.1 : arsenate + glutaredoxin -> arsenite + glutaredoxin disulfide + H2O
+_6.2.1.3 : ATP + a long-chain carboxylic acid + CoA -> AMP + diphosphate + an acyl-CoA
+_2.7.13.3 : ATP + protein L-histidine -> ADP + protein N-phospho-L-histidine
+_1.1.1.219 : cis-3,4-leucopelargonidin + NADP+ <-> (+)-dihydrokaempferol + NADPH + H+ 
+_2.5.1.75 : dimethylallyl diphosphate + tRNA -> diphosphate + tRNA containing 6-dimethylallyladenosine
+_2.4.1.83 : GDP-mannose + dolichyl phosphate -> GDP + dolichyl D-mannosyl phosphate
+_2.5.1.72 : glycerone phosphate + iminosuccinate -> pyridine-2,3-dicarboxylate + 2 H2O + phosphate O4P
+_1.16.1.1 : Hg + NADP+ + H+ <-> Hg2+ + NADPH 
+_1.14.19.3 : linoleoyl-CoA + AH2 + O2 -> gamma-linolenoyl-CoA + A + 2 H2O
+_3.1.1.29 : N-substituted aminoacyl-tRNA + H2O -> N-substituted amino acid + tRNA
+_2.6.1.17 : N-succinyl-L-2,6-diaminoheptanedioate + 2-ketoglutarate <-> N-succinyl-L-2-amino-6-oxoheptanedioate + L-glutamate
+_3.1.3.48 : protein tyrosine phosphate + H2O -> protein tyrosine + phosphate O4P
+_3.5.5.7 : acrylonitrile + 2 H2O -> acrylate + ammonia H3N
+_1.1.1.284a : S-(hydroxymethyl)glutathione + NAD+ -> S-formylglutathione + NADH + H+ 
+_1.1.1.284b : S-(hydroxymethyl)glutathione + NADP+ -> S-formylglutathione + NADPH + H+ 
+_3.1.2.12 : S-formylglutathione + H2O -> glutathione + formate
+_2.1.1.72 : S-adenosyl-L-methionine + DNA adenine -> S-adenosyl-L-homocysteine + DNA 6-methylaminopurine
+_2.1.1.61 : S-adenosyl-L-methionine + tRNA -> S-adenosyl-L-homocysteine + tRNA containing 5-methylaminomethyl-2-thiouridylate 
+_2.1.1.31 : S-adenosyl-L-methionine + tRNA -> S-adenosyl-L-homocysteine + tRNA containing N1-methylguanine 
+_2.1.1.33 : S-adenosyl-L-methionine + tRNA -> S-adenosyl-L-homocysteine + tRNA containing N7-methylguanine 
+_3.1.1.3 : triacylglycerol + H2O -> diacylglycerol + a carboxylate
+_5.4.99.12 : tRNA uridine -> tRNA pseudouridine
+_2.4.1.182 : UDP-2,3-bis(3-hydroxytetradecanoyl)glucosamine + 2,3-bis(3-hydroxytetradecanoyl)-beta-D-glucosaminyl 1-phosphate -> UDP + 2,3-bis(3-hydroxytetradecanoyl)-D-glucosaminyl-(1-6)-beta-D-2,3- bis(3-hydroxytetradecanoyl)-beta-D-glucosaminyl 1-phosphate 
+_2.4.1.80 : UDP-glucose + an N-acylsphingosine -> UDP + a D-glucosyl-N-acylsphingosine
+_3.1.3.71 : (2R)-2-phospho-3-sulfolactate + H2O -> (2R)-3-sulfolactate + phosphate O4P
+_6.3.4.18 : ATP + 5-amino-1-(5-phospho-D-ribosyl)imidazole + HCO3- -> ADP + phosphate O4P + 5-carboxyamino-1-(5-phospho-D-ribosyl)imidazole
+
+# Butanoate metabolism - not present
+&1.1.1.35 : (S)-3-hydroxybutanoyl-CoA + NAD+ <-> acetoacetyl-CoA + NADH + H+ 
+&1.1.1.157 : (S)-3-hydroxybutanoyl-CoA + NADP+ <-> acetoacetyl-CoA + NADPH + H+ 
+&4.2.1.17 : (S)-3-hydroxybutanoyl-CoA <-> crotonoyl-CoA + H2O
+&1.3.99.2 : butanoyl-CoA + NADP+ <-> crotonoyl-CoA + NADPH + H+
+&1.3.1.44 : butanoyl-CoA + NAD+ <-> crotonoyl-CoA + NADH + H+ 
+&1.2.1.57a : butanoyl-CoA + NADH + H+ -> butanal + coenzyme A + NAD+ 
+&1.2.1.57b : butanoyl-CoA + NADPH + H+ -> butanal + coenzyme A + NADP+ 
+&1.2.1.10 : butanoyl-CoA + NADH + H+ -> butanal + coenzyme A + NAD+ 
+&1.1.1.-a : butanal + NADH + H+ -> 1-butanol + NAD+ 
+&1.1.1.-b : butanal + NADPH + H+ -> 1-butanol + NADP+ 
+
+# Heptadecane - present?
+#&sll0209 is already included as &3.1.2.14g reaction (releases ACP and the octadecanoic acid)
+4.1.99.5 : octadecanoic acid + CO -> heptadecane
+
+# Glucuronic acid - not present 
+&2.7.7.9 : UTP + alpha-D-glucose 1-phosphate -> diphosphate + UDP-D-glucose
+# in "Nucleotide sugars": 1.1.1.22 : UDP-D-glucose + H2O + 2 NAD+ + H+ -> UDP-D-glucuronate + 2 NADH
+&2.7.7.44 : diphosphate + UDP-D-glucuronate -> UTP + 1-phospho-alpha-D-glucuronate
+&2.7.1.43 : ADP + 1-phospho-alpha-D-glucuronate -> ATP + D-glucuronate
+&2.4.1.17 : UDP-D-glucuronate + NAD+ + H+ -> UDP + beta-D-glucuronoside + NADH 
+&3.2.1.31 : beta-D-glucuronoside + H2O -> D-glucuronate + H+
+&EPS_sample : 0.75 D-glucuronate + 0.04 beta-D-glucose + 0.21 D-ribose-5-phosphate -> EPS
+
+
+###
+# BIOMASS out of amino acids, nucleic acids, lipids and antenna proteins
+Alabm : L-alanine -> Ala
+Aspbm : L-aspartate -> Asp
+Argbm : L-arginine -> Arg
+Asnbm : L-asparagine -> Asn
+Lysbm : L-lysine -> Lys
+Thrbm : L-threonine -> Thr
+Serbm : L-serine -> Ser
+Cysbm : L-cysteine -> Cys
+Glybm : glycine -> Gly
+Glubm : L-glutamate -> Glu
+Glnbm : L-glutamine -> Gln
+Probm : L-proline -> Pro
+Trpbm : L-tryptophan -> Trp
+Phebm : L-phenylalanine -> Phe
+Tyrbm : L-tyrosine -> Tyr
+Hisbm : L-histidine -> His
+Valbm : L-valine -> Val
+Ilebm : L-isoleucine -> Ile
+Leubm : L-leucine -> Leu
+Metbm : L-methionine -> Met
+
+dATP : dATP -> dATPbm
+dGTP : dGTP -> dGTPbm
+dTTP : dTTP -> dTTPbm
+dUTP : dUTP -> dUTPbm
+dCTP : dCTP -> dCTPbm
+
+AMP : AMP -> AMPbm
+UMP : UMP -> UMPbm
+CMP : CMP -> CMPbm
+GMP : GMP -> GMPbm
+
+8C-lipidbm : octanoic acid -> 8C-lipidbm
+10C-lipidbm : decanoic acid -> 10C-lipidbm
+12C-lipidbm : dodecanoic acid -> 12C-lipidbm
+14C-lipidbm : tetradecanoic acid -> 14C-lipidbm
+16C-lipidbm : hexadecanoic acid -> 16C-lipidbm
+18C-lipidbm : octadecanoic acid -> 18C-lipidbm
+(9Z)16C-lipidbm : (9Z)-hexadecanoic acid -> (9Z)16C-lipidbm
+(9Z)18C-lipidbm : (9Z)-octadecanoic acid -> (9Z)18C-lipidbm
+(9Z,12Z)18C-lipidbm : (9Z,12Z)-octadecanoic acid -> (9Z,12Z)18C-lipidbm
+(9Z,12Z,15Z)18C-lipidbm : (9Z,12Z,15Z)-octadecanoic acid -> (9Z,12Z,15Z)18C-lipidbm
+(6Z,9Z)18C-lipidbm : (6Z,9Z)-octadecanoic acid -> (6Z,9Z)18C-lipidbm
+(6Z,9Z,12Z)18C-lipidbm : (6Z,9Z,12Z)-octadecanoic acid -> (6Z,9Z,12Z)18C-lipidbm
+(6Z,9Z,12Z,15Z)18C-lipidbm : (6Z,9Z,12Z,15Z)-octadecanoic acid -> (6Z,9Z,12Z,15Z)18C-lipidbm
+
+hemebm : heme a -> hemebm
+PhCybibm : (3Z)-phycocyanobilin -> PhCybibm
+Bilibm : bilirubin -> Bilibm
+BacChlabm : Zn-Bacterio-chlorophyll a -> BacChlabm
+BacChlsbm : bacterio-chlorophylls -> BacChlsbm
+BacPheobm : bacterio-pheophytins -> BacPheobm
+Chlabm : chlorophyll a -> Chlabm
+Chlbbm : chlorophyll b -> Chlbbm
+Pheobm : pheophytins -> Pheobm
+CobIIbm : cob(II)yrinate a,c-diamide -> CobIIbm
+B12bm : coenzyme B12 -> B12bm
+
+Carotenebm : trans-lycopene -> Lycopbm
+
+PepGlycbm : peptidoglycan -> PepGlycbm
+Glycbm : a glycogen_n1 -> Glycbm
+Squalbm : squalene -> Squalbm
+aTphbm : alpha-tocopherol -> aTphbm
+PLipLysbm : a protein-N-6-lipoyl-lysine -> PLipLysbm
+
+Cxntbm : canthaxanthin -> Cxntbm
+3hxcbm : 3-hydroxyechinenone -> 3hxcbm
+Adnxbm : adonixanthin -> Adnxbm
+Astxbm : astaxanthin -> Astxbm
+
+ATPbm : ATP -> ATPbm
+ADPbm : ADP -> ADPbm
+
+Biomass : 0.499149 Ala + 0.28742 Arg + 0.234232 Asp + 0.234232 Asn + 0.088988 Cys + 0.255712 Gln + 0.255712 Glu + 0.595297 Gly + 0.092056 His + 0.282306 Ile + 0.437778 Leu + 0.333448 Lys + 0.149336 Met + 0.180021 Phe + 0.214798 Pro + 0.209684 Ser + 0.246506 Thr + 0.055234 Trp + 0.133993 Tyr + 0.411184 Val + 0.024150597 dATPbm + 0.024150597 dTTPbm + 0.021729829 dGTPbm + 0.021729829 dCTPbm + 0.140389293 AMPbm + 0.140389293 UMPbm + 0.123745851 GMPbm + 0.123745851 CMPbm + 0.206837179 16C-lipidbm + 0.015734119 (9Z)16C-lipidbm + 0.003517764 18C-lipidbm + 0.031885959 (9Z)18C-lipidbm + 0.035683674 (9Z,12Z)18C-lipidbm + 0.017971092 (9Z,12Z,15Z)18C-lipidbm + 0.050319059 (6Z,9Z,12Z)18C-lipidbm + 0.014481787 (6Z,9Z,12Z,15Z)18C-lipidbm + 0.027281834 Chlabm + 0.00820225 Lycopbm + 0.014506173 Glycbm + 59.28 ATP -> BM + 59.28 ADP + 59.28 phosphate O4P
+
+_Growth : BM -> BM_out
+###
+
+# SPECIAL
+# - heterotrophic growth
+TRANS-RXN59G-152 : beta-D-glucose_extrac + H+_extrac -> beta-D-glucose + H+
+CO2out : CO2 -> CO2_extrac
+
+# - autotrophic growth
+_lightII : photonII_extrac -> photonII
+_lightI : photonI_extrac -> photonI
+4.1.1.39 : D-ribulose-1,5-bisphosphate + CO2 + H2O -> 2 3-phosphoglycerate + 2 H+
+CO2in : CO2_extrac <-> CO2
+4.2.1.1b : CO2 + H2O <-> HCO3- + H+
+_H2CO3transport : H2CO3_extrac <-> H2CO3
+_H2CO3desprot : H2CO3 <-> HCO3-
+
+# - maintenance
+NADHmain : NADH -> NAD+ + H+ 
+NADPHmain : NADPH -> NADP+ + H+ 
+
+# - transport
+# --- nitrogen transport
+nitrate TRANS-RXN59G-237 : nitrate NO3_extrac + ATP + H2O -> nitrate NO3 + ADP + phosphate O4P
+nitrite TRANS-RXN59G-238 : nitrite NO2_extrac + ATP + H2O -> nitrite NO2 + ADP + phosphate O4P
+ammonia TRANS-RXN59G-0 : NH4+_extrac + methylamine_extrac -> NH4+ + methylamine
+ammonia TRANS-RXN59G-178 : NH4+_extrac + H+_extrac <-> NH4+ + H+
+_ammonia : ammonia H3N <-> NH4+
+urea TRANS-RXN59G-410 : urea_extrac + ATP + H2O -> urea + ADP + phosphate O4P
+
+# --- sulfur transport
+sulfate TRANS-RXN59G-407 : sulfate O4S_extrac <-> sulfate O4S
+_3.6.3.25a : ATP + H2O + sulfate O4S_extrac -> ADP + phosphate O4P + sulfate O4S
+_3.6.3.25b : ATP + H2O + thiosulfate_extrac -> ADP + phosphate O4P + thiosulfate
+sulfite TRANSP : sulfite O3S_extrac -> sulfite O3S
+sulfide TRANSP : hydrogen sulfide H2S_extrac -> hydrogen sulfide H2S
+cysteine TRANSP : L-cysteine_extrac -> L-cysteine
+methionine TRANSP : L-methionine_extrac -> L-methionine
+glutathione TRANSP : glutathione_extrac -> glutathione
+
+# --- phosphate transport
+Phosphate TRANS-RXN59G-90 : phosphate O4P_extrac + H+_extrac -> phosphate O4P + H+
+_3.6.3.27 : ATP + H2O + phosphate O4P_extrac -> ADP + 2 phosphate O4P
+_Phosphate_out : phosphate O4P -> phosphate O4P_extrac
+
+# --- metals transport
+iron TRANS-RXN59G-711 : Fe2+_extrac -> Fe2+
+_3.6.3.30 : ATP + H2O + Fe3+_extrac -> ADP + phosphate O4P + Fe3+
+_3.6.3.34 : ATP + H2O + iron chelate_extrac -> ADP + phosphate O4P + iron chelate
+magnesium TRANS-RXN59G-340 : Mg2+_extrac + ATP + H2O -> Mg2+ + ADP + phosphate O4P
+magnesium TRANS-RXN59G-53 : Mg2+_extrac <-> Mg2+
+zinc TRANS-RXN59G-813 : Zn2+_extrac + ATP + H2O -> Zn2+ + ADP + phosphate O4P
+zinc TRANS-RXN59G-228 : Zn2+ <-> Zn2+_extrac
+_3.6.3.5 : ATP + H2O + Zn2+ -> ADP + phosphate O4P + Zn2+_extrac
+cobalt TRANS-RXN59G-71 : Co2+_extrac + ATP + H2O -> Co2+ + ADP + phosphate O4P
+potassium 3.6.3.12 : K+_extrac + ATP + H2O -> K+ + ADP + phosphate O4P
+potassium TRANS-RXN59G-35 : K+_extrac -> K+
+chloride TRANS-RXN59G-171 : chloride_extrac -> chloride
+sodium TRANS-RXN59G-47 : Na+_extrac + H+ -> Na+ + H+_extrac
+calcium TRANS-RXN59G-708 : Ca2+_extrac + H+ -> Ca2+ + H+_extrac
+manganese _Mn transport : Mn2+_extrac + ATP + H2O -> Mn2+ + ADP + phosphate O4P
+_3.6.3.3 : ATP + H2O + Cd2+ -> ADP + phosphate O4P + Cd2+_extrac
+_3.6.3.4 : ATP + H2O + Cu2+ -> ADP + phosphate O4P + Cu2+_extrac
+_3.6.3.16 : ATP + H2O + arsenite -> ADP + phosphate O4P + arsenite_extrac
+
+# --- others (transport)
+H2O : H2O_extrac <-> H2O
+PROTONS : H+_extrac <-> H+
+_COtransp : CO_extrac <-> CO
+_H2O2transp : H2O2_extrac <-> H2O2
+_O2in : O2_extrac -> O2
+_O2out : O2 -> O2_extrac
+_H2 : H2 -> H2_extrac
+
+
+# - generic reactions
+_an [acyl-carrier protein] : an [acyl-carrier protein]_extrac <-> an [acyl-carrier protein]
+_a protein : Ala + Asp + Arg + Asn + Lys + Thr + Ser + Cys + Gly + Glu + Gln + Pro + Trp + Phe + Tyr + His + Val + Ile + Leu + Met <-> a protein 
+_a protein disulfide R1Protein2R2R3S2 : a protein + 2 hydrogen sulfide H2S <-> a protein disulfide
+_a protein dithiol H2R1Protein2R2R3S2 : a protein disulfide + thioredoxin <-> a protein dithiol + thioredoxin disulfide
+_3.1.3.16 : a phosphoprotein + H2O <-> a protein + phosphate O4P
+_2.7.11.1 : ATP + a protein -> ADP + a phosphoprotein
+
+_RNAout : RNAn1 -> RNAn1_out
+_DNAout : DNAn1 -> DNAn1_out
+_glycout : a glycogen_n1 -> a glycogen_n1_out
+
+_PPPi : 2 PPPi + H2O -> 3 diphosphate 
+_glycolaldehyde : glycolaldehyde -> glycolaldehyde_extrac
+
+#_glycin : a glycogen_n1_out -> a glycogen_n1
+
+-CONSTRAINTS
+# growth units are h^-1
+# all other units should be mmol/gDCW/h
+# carbon input normalized: input flux/number C
+
+#### GROWTH CONDITIONS ####
+
+%
+## HETEROTROPHIC ##
+# -- mean specific glucose consumtion rate 0.5 mmole/g.h (0.5/6 carbons= 0.0833)
+# -- 3,4 mmole/g.h --> 3.4/6 = 0.566666667
+TRANS-RXN59G-152 [0, 0.567]
+CO2out [0, 98]
+4.1.1.39 [0, 0]
+CO2in [0, 0]
+4.2.1.1b [-10, 10]
+_H2CO3transport [0, 0]
+
+# no dark heterotrophic
+&1.8.7.2 [0, 100]
+
+# following for dark heterotrophic:
+_lightI [0, 0]
+_lightII [0, 0]
+&1.8.7.2 [-1, 1]
+
+# - following for dark anoxic fermentation
+_O2in [0, 0]
+_H2O2transp [0, 0]
+%
+
+## AUTOTROPHIC ### -- theoretical values:
+#_lightI [0, 41563.26]
+#_lightII [0, 41563.26]
+# -- for a doubling time of 8 hours, a 0.09 specific growth is needed,
+# -- values resulting from the inverse optimization of light uptake:
+_lightII [0, 23.48]
+_lightI [0, 23.48]
+CO2in [0, 1.7]
+_H2CO3transport [0, 1.7]
+4.2.1.1b [-10, 10]
+TRANS-RXN59G-152 [0, 0]
+&1.8.7.2 [0, 100]
+
+# special anoxic conditions
+#_O2in [0, 0]
+#_H2O2transp [-100, 0]
+
+%
+## MIXOTROPHIC ##
+_lightII [0, 23.48]
+_lightI [0, 23.48]
+TRANS-RXN59G-152 [0.01, 0.2835]
+CO2in [0, 0.85]
+_H2CO3transport [0, 0.85]
+4.2.1.1b [-10, 10]
+&1.8.7.2 [0, 100]
+%
+
+#### MAINTENANCE CONSTRAINTS (always switched on)  ####
+
+NADHmain [0.5, 1000]
+NADPHmain [0.5, 1000]
+
+
+#### TRANSPORT CONSTRAINTS ####
+
+# nitrogen transport
+nitrate TRANS-RXN59G-237 [-1000, 1000]
+nitrite TRANS-RXN59G-238 [0, 0]
+ammonia TRANS-RXN59G-0 [0, 0]
+ammonia TRANS-RXN59G-178 [0, 0]
+urea TRANS-RXN59G-410 [0, 0]
+
+# sulfur transport
+sulfate TRANS-RXN59G-407 [-104, 104]
+_3.6.3.25a [0, 0]
+_3.6.3.25b [0, 0]
+sulfite TRANSP [0, 0]
+sulfide TRANSP [0, 0]
+cysteine TRANSP [0, 0]
+methionine TRANSP [0, 0]
+glutathione TRANSP [0, 0]
+
+# phosphate transport
+Phosphate TRANS-RXN59G-90 [0, 1000]
+_3.6.3.27 [0, 1000]
+_Phosphate_out [0, 100]
+
+# others (transport)
+H2O [-500, 500]
+_COtransp [-10, 10]
+
+# shut down transport for Glu and Gln
+transport TRANS-RXN59G-639 [0, 0]
+transport TRANS-RXN59G-245 [0, 0]
+
+-EXTERNAL METABOLITES
+BM_out
+
+photonII_extrac
+photonI_extrac
+O2_extrac
+H2O2_extrac
+
+urea_extrac
+H2CO3_extrac
+glycolaldehyde_extrac
+an [acyl-carrier protein]_extrac
+Fe2+_extrac
+Mg2+_extrac
+Zn2+_extrac
+Co2+_extrac
+CO_extrac
+arsenite_extrac
+Cd2+_extrac
+Cu2+_extrac
+Fe3+_extrac
+iron chelate_extrac
+
+tRNAala
+tRNAasp
+tRNAarg
+tRNAasn
+tRNAlys
+tRNAthr
+tRNAser
+tRNAcys
+tRNAgly
+tRNAGlu
+tRNApro
+tRNAtrp
+tRNAphe
+tRNAtyr
+tRNAhis
+tRNAval
+tRNAile
+tRNAleu
+tRNAmet
+
+#DNAn
+#RNAn
+RNAn1_out
+DNAn1_out
+a glycogen_n1_out
+lipoate_extrac
+methylamine_extrac
+
+L-glutamate_extrac
+L-glutamine_extrac
+nitrate NO3_extrac
+nitrite NO2_extrac
+sulfate O4S_extrac
+thiosulfate_extrac
+NH4+_extrac
+
+phosphate O4P_extrac
+CO2_extrac
+beta-D-glucose_extrac
+H2O_extrac
+H+_extrac
+K+_extrac
+chloride_extrac
+Na+_extrac
+Ca2+_extrac
+Mn2+_extrac
+H2_extrac
+ethanol_extrac
+obj_extrac
+
+L-cysteine_extrac
+L-methionine_extrac
+glutathione_extrac
+hydrogen sulfide H2S_extrac
+sulfite O3S_extrac
+
+-OBJ
+_Growth 1 1
+
+-DESIGNOBJ
+_H2 1 1
