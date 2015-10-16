@@ -250,38 +250,38 @@ class FBA:
         results=[]
         for i in range(len(self.reacs)):
             reac=self.reacs[i]
-            if '_transp' in reac.name: # if it's a transport reaction -> pass
-                pass
+            if reac.pathway == "_TRANSPORT_": # if it's a transport reaction -> pass
+                continue
+
+            if reac.name == obj_name: # if it's the objective function -> calculate only the design objective
+                Z = 0
+                stat1 = 'main objective deleted'
+                constraints = self.constr[i]
+                self.constr[i]=(0, 0)
+                self.obj = design_obj
+                self.fba()
+                des_Z = self.Z
+                stat2 = self.lp.status
             else:
-                if reac.name == obj_name: # if it's the objective function -> calculate only the design objective
-                    Z = 0
-                    stat1 = 'main objective deleted'
-                    constraints = self.constr[i]
-                    self.constr[i]=(0, 0)
-                    self.obj = design_obj
-                    self.fba()
-                    des_Z = self.Z
-                    stat2 = self.lp.status
+                constraints = self.constr[i]
+                self.constr[i]=(0, 0)
+                self.fba()
+                Z = self.Z
+                stat1 = self.lp.status
+                if reac.name == design_obj_name: # if it's the design objective function -> pass the second part
+                    des_Z = 0
+                    stat2 = 'design objective deleted'
                 else:
-                    constraints = self.constr[i]
-                    self.constr[i]=(0, 0)
+                    constr = self.constr[self.reac_names.index(obj_name)]
+                    self.obj = design_obj
+                    self.constr[self.reac_names.index(obj_name)] = (Z, Z)
                     self.fba()
-                    Z = self.Z
-                    stat1 = self.lp.status
-                    if reac.name == design_obj_name: # if it's the design objective function -> pass the second part
-                        des_Z = 0
-                        stat2 = 'design objective deleted'
-                    else:
-                        constr = self.constr[self.reac_names.index(obj_name)]
-                        self.obj = design_obj
-                        self.constr[self.reac_names.index(obj_name)] = (Z, Z)
-                        self.fba()
-                        des_Z= self.Z
-                        stat2 = self.lp.status
-                        self.constr[self.reac_names.index(obj_name)] = constr
-                results.append([reac.name, round(Z,9), stat1, round(des_Z,9), stat2])
-                self.constr[i] = constraints
-                self.obj = obj
+                    des_Z= self.Z
+                    stat2 = self.lp.status
+                    self.constr[self.reac_names.index(obj_name)] = constr
+            results.append([reac.name, round(Z,9), stat1, round(des_Z,9), stat2])
+            self.constr[i] = constraints
+            self.obj = obj
         return results
 
     def max_min(self, ii, fixobj=0.5):

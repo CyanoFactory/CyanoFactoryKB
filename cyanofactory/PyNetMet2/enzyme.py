@@ -33,7 +33,7 @@ class Enzyme(object):
             return
 
         # Tokenize
-        line = re.split("\s+", linea)
+        line = re.split("\s+", str(linea))
 
         # Entry name
         name = list(takewhile(lambda x: not x.endswith(":"), line))
@@ -169,12 +169,6 @@ class Enzyme(object):
     def issues(self):
         return len(self.issues_info) > 0
 
-    def __repr__(self):
-        """
-        Returns the reaction in OptGene format.
-        """
-        return unicode(self).encode("utf-8")
-
     def __unicode__(self):
         """
         Returns the reaction in OptGene format.
@@ -202,7 +196,7 @@ class Enzyme(object):
         by the number.
         """
         if not nname:
-            nname = self.name + "*"+unicode(num)
+            nname = self.name + "*"+num
         if num > 0:
             nre = self.copy()
         elif num < 0:
@@ -246,7 +240,7 @@ class Enzyme(object):
                 stoic_cata = other.stoic_n(sub)
             ncoef = stoic_s + stoic_o - stoic_el - stoic_cata
             if ncoef > 0 :
-                to_add.append(unicode(ncoef) + " " + sub)
+                to_add.append(ncoef + " " + sub)
         stri_reac += " + ".join(to_add)
         # Reversibility
         if not self.reversible or not other.reversible:
@@ -271,7 +265,7 @@ class Enzyme(object):
                 stoic_cata = self.stoic_n(prod)
             ncoef = stoic_s + stoic_o - stoic_el - stoic_cata
             if ncoef > 0 :
-                to_add.append(unicode(ncoef) + " " + prod)
+                to_add.append(ncoef + " " + prod)
         stri_reac += " + ".join(to_add)
         enz = Enzyme(stri_reac)
         if len(mets_el):
@@ -440,7 +434,7 @@ class Enzyme(object):
         rev = self.reversible
         stri = name + " : "
         for i in range(len(sustr)):
-            stri += unicode(stoic[0][i]) + " " + sustr[i] + " + "
+            stri += stoic[0][i] + " " + sustr[i] + " + "
         if len(sustr) > 0:
             stri = stri[:len(stri)-2]
         if rev:
@@ -448,7 +442,7 @@ class Enzyme(object):
         else:
             stri += " -> "
         for i in range(len(prods)):
-            stri += unicode(stoic[1][i]) + " " + prods[i] + " + "
+            stri += stoic[1][i] + " " + prods[i] + " + "
         if len(prods) > 0:
             stri = stri[:len(stri)-2]
         return Enzyme(stri)

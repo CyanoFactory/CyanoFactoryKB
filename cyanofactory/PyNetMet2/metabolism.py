@@ -22,6 +22,7 @@
 from __future__ import print_function
 
 from codecs import open
+import os
 from .network import *
 from .enzyme import *
 from xml.dom.minidom import parseString
@@ -34,14 +35,17 @@ class Metabolism(object):
         metabolites and a network).
     """
 
-    def __init__(self, filein, filetype="opt", reactions=list(), constraints=list(),
+    def __init__(self, filein, filetype="auto", reactions=list(), constraints=list(),
                                      external=list(), objective=list(), design_objective=list(), fromfile=True):
-        if fromfile and filetype == "opt":
-            [reactions, constraints, external, objective, design_objective] = \
-                                                       self.prepare_opt(filein)
-        elif fromfile and filetype == "sbml":
-            [reactions, constraints, external, objective] = \
-                                                      self.prepare_sbml(filein)
+        if fromfile:
+            if filetype == "auto":
+                filetype = self.autodetect_format(filein)
+
+            if filetype == "opt":
+                [reactions, constraints, external, objective, design_objective] = self.prepare_opt(filein)
+            elif filetype == "sbml":
+                [reactions, constraints, external, objective] = self.prepare_sbml(filein)
+
         self.file_name = filein
         self.constraints = constraints
         self.external = external
@@ -348,7 +352,7 @@ class Metabolism(object):
         return self.enzymes[idx]
 
     def get_reaction_with_pathway(self, pathway_name):
-        return filter(lambda x: x.pathway == pathway_name, self.enzymes)
+        return list(filter(lambda x: x.pathway == pathway_name, self.enzymes))
 
     def rename_reaction(self, reac_from, reac_to, no_update=False):
         reac = self.get_reaction(reac_from)
@@ -380,8 +384,8 @@ class Metabolism(object):
         if idx is None:
             raise ValueError("Reaction not in model: " + name)
 
-        self.obj = filter(lambda x: x[0] != name, self.obj)
-        self.design_obj = filter(lambda x: x[0] != name, self.obj)
+        self.obj = list(filter(lambda x: x[0] != name, self.obj))
+        self.design_obj = list(filter(lambda x: x[0] != name, self.obj))
 
         self.pop(idx)
 
@@ -441,9 +445,23 @@ class Metabolism(object):
         if not self.has_metabolite(name):
             raise ValueError("Metabolite not in model: " + name)
 
-        self.external = filter(lambda x: x[0] == "#" or x != name, self.external)
+        self.external = list(filter(lambda x: x[0] == "#" or x != name, self.external))
 
         self.calcs()
+
+    def autodetect_format(self, infile):
+        if isinstance(infile, six.string_types):
+            with open(infile, encoding='utf-8') as f:
+                if f.readline().startswith("<?xml"):
+                    return "sbml"
+                return "opt"
+        else:
+            try:
+                if infile.readline().startswith("<?xml"):
+                    return "sbml"
+                return "opt"
+            finally:
+                infile.seek(0)
 
     def prepare_opt(self, infile):
         if isinstance(infile, six.string_types):
@@ -556,9 +574,9 @@ class Metabolism(object):
            for j in range(len(reacs)):
               spe = reacs[j].getElementsByTagName('speciesReference')
               for k in range(len(spe)):
-                 kk = unicode(spe[k]._attrs["species"].value)
+                 kk = spe[k]._attrs["species"].value
                  try:
-                    stoic = unicode(spe[k]._attrs["stoichiometry"].value)
+                    stoic = spe[k]._attrs["stoichiometry"].value
                  except:
                     stoic = " 1 "
                  sustrate += " + "+str(float(stoic))+" "+kk.replace(" ", "")
@@ -566,9 +584,9 @@ class Metabolism(object):
            for j in range(len(prods)):
               spe=prods[j].getElementsByTagName('speciesReference')
               for k in range(len(spe)):
-                 kk = unicode(spe[k]._attrs["species"].value)
+                 kk = spe[k]._attrs["species"].value
                  try:
-                    stoic = unicode(spe[k]._attrs["stoichiometry"].value)
+                    stoic = spe[k]._attrs["stoichiometry"].value
                  except:
                     stoic = " 1 "
                  product += " + "+str(float(stoic))+" "+kk.replace(" ", "")
@@ -636,7 +654,7 @@ class Metabolism(object):
                 if pathname is not None:
                     print("# " + pathname, file=fil)
                 for reac in self.pathways[ii]:
-                    fil.write(unicode(self.enzymes[reac]))
+                    fil.write(self.enzymes[reac])
                     fil.write("\n")
             print("", file=fil)
             print("-CONSTRAINTS", file=fil)
@@ -673,15 +691,18 @@ class Metabolism(object):
             if printgenes:
                 enzs = dic_genes.keys()
             print('<?xml version="1.0" encoding="utf-8"?>', file=fil)
-            print('<sbml xmlns="http://www.sbml.org/sbml/level2" xmlns:sbml="http://www.sbml.org/sbml/level2" version="1" level="2" xmlns:html = "http://www.w3.org/1999/xhtml">', file=fil)
-            print('<model id="%s" name="%s" >' % (self.file_name,self.file_name), file=fil)
+            file_name_only = os.path.splitext(os.path.basename(self.file_name))[0]
+            print('<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core" version="1" level="3" xmlns:xhtml="http://www.w3.org/1999/xhtml">', file=fil)
+            print('<model id="%s" name="%s" >' % (file_name_only, file_name_only), file=fil)
             tab = "    "
             print("<notes>", file=fil)
-            print(tab+"<p>Generated by PyNetMet tools. INTERTECH@UPV</p>", file=fil)
+            print(tab+"<xhtml:body>", file=fil)
+            print(tab*2+"<xhtml:p>Generated by PyNetMet tools. INTERTECH@UPV</xhtml:p>", file=fil)
+            print(tab+"</xhtml:body>", file=fil)
             print("</notes>", file=fil)
             print("<listOfCompartments>", file=fil)
-            print(tab+'<compartment id="Extra_cellular" />', file=fil)
-            print(tab+'<compartment id="Cytosol" outside="Extra_cellular" />', file=fil)
+            print(tab+'<compartment id="Extra_cellular" constant="false"/>', file=fil)
+            print(tab+'<compartment id="Cytosol" constant="false"/>', file=fil)
             print("</listOfCompartments>", file=fil)
             print("<listOfSpecies>", file=fil)
             exts = set(self.external) | set(self.external_in)
@@ -694,32 +715,37 @@ class Metabolism(object):
                 else:
                     bcon = "false"
                     comp = "Cytosol"
-                print(tab+'<species id="%s" name="%s" boundaryCondition="%s" compartment="%s" />'%(met,met,bcon,comp), file=fil)
+                print(tab+'<species id="%s" name="%s" boundaryCondition="%s" compartment="%s" constant="false" hasOnlySubstanceUnits="false"/>'%(met,met,bcon,comp), file=fil)
             print("</listOfSpecies>", file=fil)
             print("<listOfReactions>", file=fil)
             objs = [ele[0] for ele in self.obj]
             for ii,enzy in enumerate(self.enzymes):
+                if enzy.pathway == "_TRANSPORT_":
+                    continue
                 if enzy.reversible:
                     rev = "true"
                 else:
                     rev = "false"
-                print(tab+'<reaction id="%s" name="%s" reversible="%s">'%(enzy.name,enzy.name,rev), file=fil)
+                print(tab+'<reaction id="%s" name="%s" reversible="%s" fast="false">'%(enzy.name,enzy.name,rev), file=fil)
                 if printgenes:
                     print(2*tab+'<notes>', file=fil)
+                    print(3*tab+'</xhtml:body>', file=fil)
                     if enzy.name in enzs:
                         assoc = "Genes : "+", ".join(dic_genes[enzy.name])
                     else:
                         assoc = "No known genes."
-                    print(3*tab+'<p>'+assoc+'</p>', file=fil)
+                    print(4*tab+'<xhtml:p>'+assoc+'</xhtml:p>', file=fil)
+                    print(3*tab+'</xhtml:body>', file=fil)
                     print(2*tab+'</notes>', file=fil)
                 print(2*tab+"<listOfReactants>", file=fil)
                 for met in enzy.substrates:
-                    print(3*tab+'<speciesReference species="%s" stoichiometry="%s"/>'%(met,str(enzy.stoic_n(met))), file=fil)
+                    print(3*tab+'<speciesReference species="%s" stoichiometry="%s" constant="false"/>'%(met,str(enzy.stoic_n(met))), file=fil)
                 print(2*tab+"</listOfReactants>", file=fil)
                 print(2*tab+"<listOfProducts>", file=fil)
                 for met in enzy.products:
-                    print(3*tab+'<speciesReference species="%s" stoichiometry="%s"/>'%(met,str(enzy.stoic_n(met))), file=fil)
+                    print(3*tab+'<speciesReference species="%s" stoichiometry="%s" constant="false"/>'%(met,str(enzy.stoic_n(met))), file=fil)
                 print(2*tab+"</listOfProducts>", file=fil)
+
                 [lb, ub] = enzy.constraint
                 obj = False
                 if enzy.name in objs:
@@ -729,19 +755,19 @@ class Metabolism(object):
                     print(2*tab+"<kineticLaw>", file=fil)
                     print(3*tab+"<listOfParameters>", file=fil)
                     if lb != None and ub != None:
-                        print(4*tab+'<parameter id="LOWER_BOUND" value="%s"/>'%str(lb), file=fil)
-                        print(4*tab+'<parameter id="UPPER_BOUND" value="%s"/>'%str(ub), file=fil)
+                        print(4*tab+'<parameter id="LOWER_BOUND" value="%s" constant="false"/>'%str(lb), file=fil)
+                        print(4*tab+'<parameter id="UPPER_BOUND" value="%s" constant="false"/>'%str(ub), file=fil)
                     elif alllimits:
                         if lb == None:
                             lb = -99999999.
                         if ub == None:
                             ub = 99999999.
-                        print(4*tab+'<parameter id="LOWER_BOUND" value="%s"/>'%str(lb), file=fil)
-                        print(4*tab+'<parameter id="UPPER_BOUND" value="%s"/>'%str(ub), file=fil)
+                        print(4*tab+'<parameter id="LOWER_BOUND" value="%s" constant="false"/>'%str(lb), file=fil)
+                        print(4*tab+'<parameter id="UPPER_BOUND" value="%s" constant="false"/>'%str(ub), file=fil)
                     if obj:
-                        print(4*tab+'<parameter id= "OBJECTIVE_COEFFICIENT" value="%s"/>'%self.obj[iobj][1], file=fil)
+                        print(4*tab+'<parameter id= "OBJECTIVE_COEFFICIENT" value="%s" constant="false"/>'%self.obj[iobj][1], file=fil)
                     elif allobjs:
-                        print(4*tab+'<parameter id= "OBJECTIVE_COEFFICIENT" value="0.0"/>', file=fil)
+                        print(4*tab+'<parameter id= "OBJECTIVE_COEFFICIENT" value="0.0" constant="false"/>', file=fil)
                     print(3*tab+"</listOfParameters>", file=fil)
                     print(2*tab+"</kineticLaw>", file=fil)
                 print(tab+'</reaction>', file=fil)
@@ -833,7 +859,7 @@ class Metabolism(object):
         topop=list(set(topop))
         self.pathnames.pop(self.pathnames.index("_TRANSPORT_"))
         topop.sort(reverse=True)
-        poped = [unicode(self.enzymes.pop(ele)) for ele in topop]
+        poped = [self.enzymes.pop(ele) for ele in topop]
         self.poped = poped
         self.calcs()
 
