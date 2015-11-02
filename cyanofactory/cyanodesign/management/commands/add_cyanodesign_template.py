@@ -39,11 +39,15 @@ class Command(BaseCommand):
         if len(args) > 0:
             m = Metabolism(args[0])
             j = JsonModel.from_model(m)
+        else:
+            return
         
         try:
-            DesignTemplate.objects.get(name=options["name"])
+            dt = DesignTemplate.objects.get(name=options["name"])
+            print("Updating existing template " + dt.name)
         except ObjectDoesNotExist:
             dt = DesignTemplate(name=options["name"])
+            print("Creating new template " + dt.name)
 
         dt.description = options["description"]
         dt.filename = os.path.basename(args[0])

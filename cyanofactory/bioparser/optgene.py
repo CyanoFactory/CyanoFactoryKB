@@ -452,7 +452,7 @@ class OptGeneParser(object):
 
     def parse(self):
         for line_no, line in enumerate(self._file, start=1):
-            line = line.strip()
+            line = line.decode("utf-8").strip()
             if len(line) == 0:
                 continue
 

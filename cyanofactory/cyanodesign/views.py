@@ -11,11 +11,12 @@ import tempfile
 from crispy_forms.utils import render_crispy_form
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
+from django.db.transaction import atomic
 from django.http.response import HttpResponse, HttpResponseBadRequest
 from django.template.context import RequestContext
 from django.views.decorators.csrf import ensure_csrf_cookie
 from jsonview.decorators import json_view
-from cyano.decorators import ajax_required, permission_required
+from cyano.decorators import ajax_required, permission_required, global_permission_required
 from PyNetMet2.metabolism import Metabolism
 from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error
 from cyanodesign.forms import UploadModelForm, ModelFromTemplateForm, SaveModelAsForm, SaveModelForm
@@ -27,16 +28,9 @@ import networkx as nx
 from networkx.readwrite import json_graph
 import pygraphviz
 import json
+from jsonview.exceptions import BadRequest
 
-# via https://stackoverflow.com/questions/1960516
-class _DecimalEncoder(json.JSONEncoder):
-    def default(self, o):
-        import decimal
-        if isinstance(o, decimal.Decimal):
-            return float(o)
-        return super(_DecimalEncoder, self).default(o)
-
-@permission_required("access_cyanodesign")
+@global_permission_required("access_cyanodesign")
 def index(request):
     upload_form = UploadModelForm(None)
 
@@ -54,7 +48,7 @@ def index(request):
 
 
 @ensure_csrf_cookie
-@permission_required("access_cyanodesign")
+@global_permission_required("access_cyanodesign")
 def design(request, pk):
     try:
         item = DesignModel.objects.get(user=request.user.profile, pk=pk)
@@ -81,28 +75,28 @@ def design(request, pk):
 
     return render_queryset_to_response(request, template="cyanodesign/design.html", data=data)
 
-
 @ajax_required
-@permission_required("access_cyanodesign")
+@global_permission_required("access_cyanodesign")
+@json_view
 def get_reactions(request, pk):
     try:
         item = DesignModel.objects.get(user=request.user.profile, pk=pk)
     except ObjectDoesNotExist:
-        return HttpResponseBadRequest("Bad Model")
+        return BadRequest("Bad Model")
 
     try:
         revision = request.GET["revision"]
         try:
             revision = Revision.objects.get(model=item, pk=revision)
         except ObjectDoesNotExist:
-            return HttpResponseBadRequest("Bad Revision")
+            return BadRequest("Bad Revision")
     except KeyError:
         revision = item.get_latest_revision()
 
-    return HttpResponse(json.dumps(revision.content, cls=_DecimalEncoder), content_type="application/json")
+    return revision.content
 
 
-@permission_required("access_cyanodesign")
+@global_permission_required("access_cyanodesign")
 def simulate(request, pk):
     if not all(x in request.POST for x in ["changes", "objectives", "display", "auto_flux"]):
         return HttpResponseBadRequest("Request incomplete")
@@ -161,7 +155,7 @@ def simulate(request, pk):
             else:
                 raise ValueError("No objective specified")
     except ValueError as e:
-        return HttpResponseBadRequest("Model error: " + e.message)
+        return HttpResponseBadRequest("Model error: " + str(e))
 
     display = filter(lambda x: not len(x) == 0, display)
 
@@ -174,7 +168,7 @@ def simulate(request, pk):
     try:
        fba = org.fba()
     except ValueError as e:
-        return HttpResponseBadRequest("FBA error: " + e.message)
+        return HttpResponseBadRequest("FBA error: " + str(e))
 
     if dry_run:
         return HttpResponse(
@@ -184,7 +178,7 @@ def simulate(request, pk):
     full_g, nodeIDs = calc_reactions(org, fba)
 
     display = json.loads(request.POST["display"])
-    display = filter(lambda x: len(x) > 0 and org.has_reaction(x), display)
+    display = list(filter(lambda x: len(x) > 0 and org.has_reaction(x), display))
 
     dflux = {}
     for reac, flux in zip(map(lambda x: x.name, fba.reacs), fba.flux):
@@ -204,7 +198,7 @@ def simulate(request, pk):
         for reac in all_edges:
             flux.append([reac, dflux[reac]])
         flux = sorted(flux, key=lambda x: -x[1])
-        display = map(lambda x: x[0], flux[:30])
+        display = list(map(lambda x: x[0], flux[:30]))
     else:
         full_g.remove_edges_from(full_g.in_edges(nodeIDs[org.obj[0][0]]) + full_g.out_edges(nodeIDs[org.obj[0][0]]))
 
@@ -216,12 +210,12 @@ def simulate(request, pk):
     graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
     graph.node_attr.update(style="filled", colorscheme="pastel19")
     outgraph = str(graph.to_string())
-    outgraph = graph.pygraphviz.AGraph(outgraph)
+    outgraph = pygraphviz.AGraph(outgraph)
     outgraph = outgraph.draw(format="svg", prog="dot")
 
     if output_format == "json":
         return HttpResponse(json.dumps(
-            {"graph": outgraph,
+            {"graph": outgraph.decode("utf-8"),
             "solution": fba.get_status(),
             "flux": dflux
             }),
@@ -229,14 +223,14 @@ def simulate(request, pk):
         )
     elif output_format == "png":
         import wand.image
-        with wand.image.Image(blob=outgraph, format="svg") as image:
+        with wand.image.Image(blob=outgraph.decode("utf-8"), format="svg") as image:
             png_image = image.make_blob("png")
 
         r = HttpResponse(png_image, content_type="image/png")
         r['Content-Disposition'] = 'attachment; filename={}.png'.format(model.filename)
         return r
     elif output_format == "svg":
-        r = HttpResponse(outgraph, content_type="image/svg+xml")
+        r = HttpResponse(outgraph.decode("utf-8"), content_type="image/svg+xml")
         r['Content-Disposition'] = 'attachment; filename={}.svg'.format(model.filename)
         return r
     elif output_format == "csv":
@@ -244,7 +238,7 @@ def simulate(request, pk):
         for reac, flux in zip(fba.reacs, fba.flux):
             s.write(reac.name)
             s.write("\t")
-            s.write(flux)
+            s.write(str(flux))
             s.write("\r\n")
         r = HttpResponse(s.getvalue(), content_type="text/csv")
         r['Content-Disposition'] = 'attachment; filename={}.csv'.format(model.filename)
@@ -253,7 +247,7 @@ def simulate(request, pk):
         return HttpResponseBadRequest("Unknown format")
 
 
-@permission_required("access_cyanodesign")
+@global_permission_required("access_cyanodesign")
 def export(request, pk):
     form = request.GET.get("format", "bioopt")
 
@@ -274,8 +268,7 @@ def export(request, pk):
 
     response = HttpResponse(
         ss.getvalue(),
-        mimetype="application/x-bioopt; charset=UTF-8",
-        content_type="application/x-bioopt; charset=UTF-8"
+        content_type="application/x-bioopt" if form=="bioopt" else "application/sbml+xml"
     )
 
     ss.close()
@@ -286,22 +279,23 @@ def export(request, pk):
 
 
 @ajax_required
-@permission_required("access_cyanodesign")
+@global_permission_required("access_cyanodesign")
+@json_view
 def save(request, pk):
     if not all(x in request.POST for x in ["changes", "objectives"]):
-        return HttpResponseBadRequest("Request incomplete")
+        return BadRequest("Request incomplete")
 
     try:
         model = DesignModel.objects.get(user=request.user.profile, pk=pk)
     except ObjectDoesNotExist:
-        return HttpResponseBadRequest("Bad Model")
+        return BadRequest("Bad Model")
 
     try:
         revision = request.POST["revision"]
         try:
             revision = Revision.objects.get(model=model, pk=revision)
         except ObjectDoesNotExist:
-            return HttpResponseBadRequest("Bad Revision")
+            return BadRequest("Bad Revision")
     except KeyError:
         revision = model.get_latest_revision()
 
@@ -311,7 +305,7 @@ def save(request, pk):
         changes = json.loads(request.POST["changes"])
         objectives = json.loads(request.POST["objectives"])
     except ValueError:
-        return HttpResponseBadRequest("Invalid JSON data")
+        return BadRequest("Invalid JSON data")
 
     summary = request.POST.get("summary")
 
@@ -331,7 +325,7 @@ def save(request, pk):
 
                     org.objectives.append(JsonModel.Objective(**obj))
     except ValueError as e:
-        return HttpResponseBadRequest("Model error: " + e.message)
+        return BadRequest("Model error: " + e.message)
 
     Revision(
         model=model,
@@ -340,10 +334,10 @@ def save(request, pk):
         reason=summary
     ).save()
 
-    return HttpResponse("OK")
+    return {}
 
 
-@permission_required("access_cyanodesign")
+@global_permission_required("access_cyanodesign")
 @json_view
 def save_as(request, pk):
     if request.method == 'POST':
@@ -376,10 +370,11 @@ def save_as(request, pk):
             form_html = render_crispy_form(form, context=RequestContext(request))
             return {'success': False, 'form_html': form_html}
 
-    return HttpResponseBadRequest()
+    return BadRequest()
 
-@permission_required("access_cyanodesign")
+@global_permission_required("access_cyanodesign")
 @json_view
+@atomic
 def upload(request, pk):
     data = {}
 
@@ -392,23 +387,17 @@ def upload(request, pk):
                 name = form.cleaned_data.get('name')
 
                 #save to temporary file
-                filename = request.FILES['file'].name
+                freq = request.FILES['file']
+                filename = freq.name
 
                 ss = StringIO()
-
-                with tempfile.NamedTemporaryFile(delete=False) as fid:
-                    path = fid.name
-
-                    for chunk in request.FILES['file'].chunks():
-                        ss.write(chunk)
-                        fid.write(chunk)
+                for chunk in freq.chunks():
+                    ss.write(chunk.decode("utf-8"))
 
                 try:
-                    model = Metabolism(path)
+                    model = Metabolism(ss)
                 except:
                     return HttpResponseBadRequest("Bad Model")
-                finally:
-                    os.remove(path)
 
                 dm = DesignModel.objects.create(
                     user=request.user.profile,
@@ -417,9 +406,14 @@ def upload(request, pk):
                     content=ss.getvalue()
                 )
 
+                try:
+                    jm = JsonModel.from_model(model).to_json()
+                except ValueError:
+                    return BadRequest(str(ValueError))
+
                 Revision(
                     model=dm,
-                    content=JsonModel.from_model(model).to_json(),
+                    content=jm,
                     reason="Initial version"
                 ).save()
 
@@ -458,20 +452,21 @@ def upload(request, pk):
 
     return HttpResponseBadRequest()
 
-@permission_required("access_cyanodesign")
+@global_permission_required("access_cyanodesign")
 @ajax_required
+@json_view
 def delete(request):
     pk = request.POST.get("id", 0)
 
     try:
         DesignModel.objects.get(user=request.user.profile, pk=pk).delete()
     except ObjectDoesNotExist:
-        return HttpResponseBadRequest("Bad Model")
+        return BadRequest("Bad Model")
 
-    return HttpResponse("ok")
+    return {}
 
 
-@permission_required("access_cyanodesign")
+@global_permission_required("access_cyanodesign")
 def history(request, pk):
     try:
         model = DesignModel.objects.get(user=request.user.profile, pk=pk)

@@ -50,12 +50,15 @@ class UploadModelForm(forms.Form):
         )
 
     def clean_file(self):
-        f = self.cleaned_data['file']
+        #from PyNetMet2.metabolism import Metabolism
 
-        o = OptGeneParser(f)
+        #f = self.cleaned_data['file']
+
+        #o = Metabolism(f)
 
         #if len(o.errors) > 0:
         #    raise ValidationError(", ".join(o.errors))
+        pass
 
 
 class ModelFromTemplateForm(forms.Form):

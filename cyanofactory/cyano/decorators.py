@@ -174,7 +174,7 @@ def permission_required(permission):
                     # Has permission
                     return function(request, *args, **kw)
             else:
-                raise ValueError("Species required for permission check")
+                raise ValueError("Species required for permission check. Use global_permission_required to check for global permissions.")
 
             # No perm fallthrough
             msg = "You need permission \"{}\" to access ".format(permission)

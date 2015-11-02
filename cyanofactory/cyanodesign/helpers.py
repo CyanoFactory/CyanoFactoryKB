@@ -191,7 +191,7 @@ def get_selected_reaction(jsonGraph, nodeDic, reacIDs, org):
     for reac in reacIDs:
         metabolites += org.get_reaction(reac).metabolites
 
-    met_ids = map(lambda x: nodeDic[x], metabolites)
+    met_ids = list(map(lambda x: nodeDic[x], metabolites))
     g = json_graph.node_link_graph(jsonGraph)
 
     g.remove_edges_from(filter(lambda x: g.get_edge_data(*x)["object"].name not in reacIDs, g.edges(met_ids)))
@@ -215,7 +215,7 @@ def calc_reactions(org, fluxResults):
         if not reaction.name.endswith("_transp"):
             changeDic[reaction.name] = float('%.3g' % flux)
 
-    vList = changeDic.values()
+    vList = list(changeDic.values())
 
     for i in range(len(vList)):
         vList[i] = math.sqrt(math.pow(vList[i], 2))

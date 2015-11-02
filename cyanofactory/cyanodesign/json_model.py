@@ -35,10 +35,7 @@ class JsonModel(object):
                     out.update({i: self.__dict__[i]})
             return out
 
-        def __repr__(self):
-            return unicode(self).encode("utf-8")
-
-        def __unicode__(self):
+        def __str__(self):
             return u"{} {}".format(self.stoichiometry, self.name)
 
     class Reaction(object):
@@ -54,9 +51,9 @@ class JsonModel(object):
 
             self.__dict__.update(**kwargs)
             if "substrates" in kwargs:
-                self.substrates = map(lambda x: JsonModel.Compound(**x), kwargs["substrates"])
+                self.substrates = list(map(lambda x: JsonModel.Compound(**x), kwargs["substrates"]))
             if "products" in kwargs:
-                self.products = map(lambda x: JsonModel.Compound(**x), kwargs["products"])
+                self.products = list(map(lambda x: JsonModel.Compound(**x), kwargs["products"]))
 
             if len(self.constraints) not in [0, 2]:
                 raise ValueError("Bad constraints")
@@ -82,15 +79,12 @@ class JsonModel(object):
                         out.update({i: self.__dict__[i]})
             return out
 
-        def __repr__(self):
-            return unicode(self).encode("utf-8")
-
-        def __unicode__(self):
+        def __str__(self):
             return u"{} : {} {} {}".format(
                 self.name,
-                u" + ".join([unicode(x) for x in self.substrates]),
+                u" + ".join([str(x) for x in self.substrates]),
                 u"<->" if self.reversible else "->",
-                u" + ".join([unicode(x) for x in self.products])
+                u" + ".join([str(x) for x in self.products])
             )
 
     class Metabolite(object):
@@ -112,10 +106,7 @@ class JsonModel(object):
                     out.update({i: self.__dict__[i]})
             return out
 
-        def __repr__(self):
-            return unicode(self).encode("utf-8")
-
-        def __unicode__(self):
+        def __str__(self):
             return self.name
 
     class Objective(object):
@@ -136,10 +127,7 @@ class JsonModel(object):
                 out.update({i: self.__dict__[i]})
             return out
 
-        def __repr__(self):
-            return unicode(self).encode("utf-8")
-
-        def __unicode__(self):
+        def __str__(self):
             return u"{} {}".format(self.name, 1 if self.maximize else -1)
 
     def __init__(self):
@@ -192,16 +180,22 @@ class JsonModel(object):
             )
 
         for obj in model.obj:
-            this.objectives.append(
-                JsonModel.Objective(name=obj[0],
-                                    maximize=obj[1] == "1")
-            )
+            try:
+                this.objectives.append(
+                    JsonModel.Objective(name=obj[0],
+                                        maximize=int(float(obj[1])) == 1)
+                )
+            except ValueError:
+                raise ValueError("Bad objective")
 
         for obj in model.design_obj:
-            this.design_objectives.append(
-                JsonModel.Objective(name=obj[0],
-                                    maximize=obj[1] == "1")
-            )
+            try:
+                this.design_objectives.append(
+                    JsonModel.Objective(name=obj[0],
+                                        maximize=int(float(obj[1])) == 1)
+                )
+            except ValueError:
+                raise ValueError("Bad objective")
 
         return this
 
@@ -215,7 +209,7 @@ class JsonModel(object):
             if reac.disabled:
                 continue
 
-            enz = Enzyme(unicode(reac))
+            enz = Enzyme(reac)
             enz.pathway = reac.pathway
 
             reactions.append(enz)

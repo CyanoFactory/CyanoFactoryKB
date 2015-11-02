@@ -263,3 +263,5 @@ REST_FRAMEWORK = {
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
 GUARDIAN_MONKEY_PATCH = False
+
+JSON_OPTIONS = {"cls": "cyano.json_encoder.DecimalEncoder"}

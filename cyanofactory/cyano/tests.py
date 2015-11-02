@@ -100,7 +100,7 @@ class CyanoBaseTest(TestCase):
                 if "login" in response._headers["location"][1]:
                     print("Login required.")
 
-        self.assertEqual(response.status_code, status, "\nURL: {}\nStatus {} (expected: {})".format(url, response.status_code, status))
+        self.assertEqual(response.status_code, status, "\nURL: {}\nStatus {} (expected: {}) {}".format(url, response.status_code, status, response.content))
             
         self.assertTrue(response["content-type"].startswith(mimetype), "Mimetype {} (expected: {})".format(response["content-type"], mimetype))     
         return response
@@ -110,7 +110,7 @@ class CyanoBaseTest(TestCase):
         if url[0] != "/":
             url = "/" + url
         response = self.client.post(url, params, HTTP_X_REQUESTED_WITH='XMLHttpRequest' if ajax else "")
-        self.assertEqual(response.status_code, status, "\nURL: {}\nStatus {} (expected: {})".format(url, response.status_code, status))
+        self.assertEqual(response.status_code, status, "\nURL: {}\nStatus {} (expected: {}) {}".format(url, response.status_code, status, response.content))
         self.assertTrue(response["content-type"].startswith(mimetype), "Mimetype {} (expected: {})".format(response["content-type"], mimetype))
         return response
 
@@ -118,9 +118,10 @@ class CyanoBaseTest(TestCase):
         """Fail if result code is not 200"""
         return self.GET(url, params=data, status=200, follow=follow, mimetype=mimetype, ajax=ajax)
     
-    def assertPOSTOK(self, url, data={}, follow=False, ajax=False):
+    def assertPOSTOK(self, url, data={}, follow=False, mimetype=None, ajax=False):
         """Fail if result code is not 200"""
-        mimetype = "application/json" if ajax else "text/html"
+        if mimetype is None:
+            mimetype = "application/json" if ajax else "text/html"
 
         return self.POST(url, params=data, status=200, ajax=ajax, mimetype=mimetype)
 

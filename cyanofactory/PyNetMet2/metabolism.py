@@ -16,7 +16,7 @@
 #    along with PyNetMet.  If not, see <http://www.gnu.org/licenses/>.
 #
 #    
-#    Please, cite us in your reasearch!
+#    Please, cite us in your research!
 #
 
 from __future__ import print_function
@@ -537,11 +537,10 @@ class Metabolism(object):
         specie = {}
         externals = []
         for i in range(len(species)):
-           name = species[i]._attrs["name"].value.replace(":", ";")
            try:
-               iddd = species[i]._attrs["id"].value
+               iddd = species[i]._attrs["name"].value
            except:
-               iddd = name
+               iddd = species[i]._attrs["id"].value
            try:
                bcon = species[i]._attrs["boundaryCondition"].value
            except:
@@ -550,7 +549,7 @@ class Metabolism(object):
               compart = species[i]._attrs["compartment"].value
            except:
               compart = ""
-           specie[iddd] = (name, compart)
+           specie[iddd] = (iddd, compart)
            if bcon == "true":
                externals.append(iddd)
         # Prepares reactions in optgene format
@@ -562,14 +561,13 @@ class Metabolism(object):
            prods = reactions[i].getElementsByTagName('listOfProducts')
            params = reactions[i].getElementsByTagName('parameter')
            try:
-              reacname = reactions[i]._attrs["id"].value
-           except:
               reacname = reactions[i]._attrs["name"].value
+           except:
+              reacname = reactions[i]._attrs["id"].value
            try:
               rever = reactions[i]._attrs["reversible"].value
            except:
               rever = "true"
-           rever = rever.replace(" ","")
            sustrate = ""
            for j in range(len(reacs)):
               spe = reacs[j].getElementsByTagName('speciesReference')
@@ -579,7 +577,7 @@ class Metabolism(object):
                     stoic = spe[k]._attrs["stoichiometry"].value
                  except:
                     stoic = " 1 "
-                 sustrate += " + "+str(float(stoic))+" "+kk.replace(" ", "")
+                 sustrate += " + "+str(float(stoic))+" "+kk
            product = ""
            for j in range(len(prods)):
               spe=prods[j].getElementsByTagName('speciesReference')
@@ -589,7 +587,7 @@ class Metabolism(object):
                     stoic = spe[k]._attrs["stoichiometry"].value
                  except:
                     stoic = " 1 "
-                 product += " + "+str(float(stoic))+" "+kk.replace(" ", "")
+                 product += " + "+str(float(stoic))+" "+kk
            stri = ""
            sustrate = sustrate[3:len(sustrate)]
            product = product[3:len(product)]
@@ -597,7 +595,7 @@ class Metabolism(object):
               reacao = sustrate + " -> " + product
            else:
               reacao = sustrate + " <-> " + product
-           reacao = reacname.replace(" ", "") + " : " + reacao
+           reacao = reacname + " : " + reacao
            reacts.append(reacao)
            try:
               lbound = [ele._attrs["value"].value for ele in params \
@@ -634,8 +632,8 @@ class Metabolism(object):
         self.dic_specie = specie
         return [reacts, constrs, externals, objs]
 
-    def dump(self, fileout="model.txt", filetype="opt", printgenes = False, \
-             dic_genes = {}, alllimits=False, allobjs=False):
+    def dump(self, fileout="model.txt", filetype="opt", printgenes=False, \
+             dic_genes={}, alllimits=False, allobjs=False):
         """
         Creates an OptGene or SBML file with the metabolism.
         (Reactions, Constraints, External Metabolites and Objective).
@@ -654,7 +652,7 @@ class Metabolism(object):
                 if pathname is not None:
                     print("# " + pathname, file=fil)
                 for reac in self.pathways[ii]:
-                    fil.write(self.enzymes[reac])
+                    fil.write(str(self.enzymes[reac]))
                     fil.write("\n")
             print("", file=fil)
             print("-CONSTRAINTS", file=fil)
@@ -688,12 +686,22 @@ class Metabolism(object):
                     print(obj[0] + " 1 " + str(obj[1]), file=fil)
 
         elif filetype == "sbml":
+            def create_sid(name):
+                name = re.sub('[^0-9a-zA-Z]+', '_', name)
+                if len(name) > 0 and name[0].isdigit():
+                    name = "_" + name
+                return name
+
+            def create_name(name):
+                name = re.sub('[&"]+', '_', name)
+                return name
+
             if printgenes:
                 enzs = dic_genes.keys()
             print('<?xml version="1.0" encoding="utf-8"?>', file=fil)
             file_name_only = os.path.splitext(os.path.basename(self.file_name))[0]
             print('<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core" version="1" level="3" xmlns:xhtml="http://www.w3.org/1999/xhtml">', file=fil)
-            print('<model id="%s" name="%s" >' % (file_name_only, file_name_only), file=fil)
+            print('<model id="%s" name="%s" >' % (create_sid(file_name_only), create_name(file_name_only)), file=fil)
             tab = "    "
             print("<notes>", file=fil)
             print(tab+"<xhtml:body>", file=fil)
@@ -715,7 +723,7 @@ class Metabolism(object):
                 else:
                     bcon = "false"
                     comp = "Cytosol"
-                print(tab+'<species id="%s" name="%s" boundaryCondition="%s" compartment="%s" constant="false" hasOnlySubstanceUnits="false"/>'%(met,met,bcon,comp), file=fil)
+                print(tab+'<species id="%s" name="%s" boundaryCondition="%s" compartment="%s" constant="false" hasOnlySubstanceUnits="false"/>'%(create_sid(met),create_name(met),bcon,comp), file=fil)
             print("</listOfSpecies>", file=fil)
             print("<listOfReactions>", file=fil)
             objs = [ele[0] for ele in self.obj]
@@ -726,10 +734,10 @@ class Metabolism(object):
                     rev = "true"
                 else:
                     rev = "false"
-                print(tab+'<reaction id="%s" name="%s" reversible="%s" fast="false">'%(enzy.name,enzy.name,rev), file=fil)
+                print(tab+'<reaction id="%s" name="%s" reversible="%s" fast="false">'%(create_sid(enzy.name),create_name(enzy.name),rev), file=fil)
                 if printgenes:
                     print(2*tab+'<notes>', file=fil)
-                    print(3*tab+'</xhtml:body>', file=fil)
+                    print(3*tab+'<xhtml:body>', file=fil)
                     if enzy.name in enzs:
                         assoc = "Genes : "+", ".join(dic_genes[enzy.name])
                     else:

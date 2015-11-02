@@ -8,11 +8,11 @@ from django.views.decorators.http import require_POST
 from jsonview.decorators import json_view
 
 import kegg.models as models
-from kegg.helpers import get_reaction_map, request_extract, items_to_quoted_string
+from kegg.helpers import get_reaction_map, request_extract
 from cyano.decorators import ajax_required, global_permission_required
 from cyano.helpers import render_queryset_to_response
 from django.core.exceptions import ObjectDoesNotExist
-from django.http.response import HttpResponse, HttpResponseBadRequest
+from django.http.response import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.db.models.query_utils import Q
 from jsonview.exceptions import BadRequest

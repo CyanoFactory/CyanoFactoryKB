@@ -147,8 +147,8 @@ $(document).ready(function() {
                         Export model <span class="caret"></span>
                     </a>
                     <ul class="dropdown-menu" role="menu">
-                    <li><a id="export-csv" href="{% url "cyano-design-export" pk=object.pk %}?format=bioopt">As BioOpt file</a></li>
-                    <li><a id="export-png" href="{% url "cyano-design-export" pk=object.pk %}?format=sbml">As SBML file</a></li>
+                    <li><a id="export-bioopt" href="{% url "cyano-design-export" pk=object.pk %}?format=bioopt">As BioOpt file</a></li>
+                    <li><a id="export-sbml" href="{% url "cyano-design-export" pk=object.pk %}?format=sbml">As SBML file</a></li>
                     </ul>
                 </div>
                 <a class='btn btn-default btn-xs delete-button' href="#">Delete model</a>
@@ -165,8 +165,8 @@ $(document).ready(function() {
     Create new model <span class="caret"></span>
     </button>
     <ul class="dropdown-menu" role="menu">
-    <li><a id="export-csv" href="#" data-toggle="modal" data-target="#dialog-create">Upload your own model</a></li>
-    <li><a id="export-png" href="#" data-toggle="modal" data-target="#dialog-template">Create from template</a></li>
+    <li><a id="create-model" href="#" data-toggle="modal" data-target="#dialog-create">Upload your own model</a></li>
+    <li><a id="create-template" href="#" data-toggle="modal" data-target="#dialog-template">Create from template</a></li>
     </ul>
 </div>
 
