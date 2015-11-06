@@ -17,6 +17,8 @@ import itertools
 import json
 import math
 import re
+from typing import List
+
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db.models.aggregates import Count
@@ -503,6 +505,14 @@ class UserProfile(Model):
     country = CharField(max_length=255, blank=True, default='', verbose_name='Country')
     force_password_change = BooleanField(default=False)
 
+    @staticmethod
+    def get_profile(user: User):
+        if not user.is_authenticated():
+            # Special handling for guests
+            return UserProfile.objects.get(user__username="guest")
+        else:
+            return user.profile
+
     def get_name(self):
         return self.user.first_name + " " + self.user.last_name
 
@@ -559,7 +569,7 @@ class UserProfile(Model):
             finally:
                 obj.__class__ = old_cls
 
-    def has_perm(self, permission, obj=None):
+    def has_perm(self, permission: str, obj=None) -> bool:
         """
         Improved perm check respecting all groups
         """
@@ -572,7 +582,7 @@ class UserProfile(Model):
         else:
             return self.has_perms(permission, Entry.objects.filter(pk=obj.pk)).count() == 1
 
-    def has_perms(self, permission, objs):
+    def has_perms(self, permission: str, objs):
         """
         Mass perm check on objs.
         Returns objects user has perms on.

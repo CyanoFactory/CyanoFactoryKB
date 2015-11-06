@@ -59,16 +59,26 @@ $(document).ready(function() {
                 "orderable": false,
                 "data": function (rowData, type, set, meta) {
                     var tag = "<a class='btn btn-default btn-xs'></a>";
-                    var edit = $(tag).attr("href", rowData["web_url"] + "/edit").text("Edit");
-                    var del = $(tag)
+                    var edit = $();
+                    {% if can_write %}
+                    edit = $(tag).attr("href", rowData["web_url"] + "/edit").text("Edit");
+                    {% endif %}
+
+                    var del = $();
+                    {% if can_delete %}
+                    del = $(tag)
                             .attr("href", rowData["web_url"] + "/delete")
                             .attr("data-toggle", "modal")
                             .attr("data-target", "#delete-form")
                             .data("toggle", "modal")
                             .data("target", "#delete-form")
                             .text("Delete");
+                    {% endif %}
 
-                    var basket = $($("#basket_list").text());
+                    var basket = $();
+                    {% if request.user.is_authenticated %}
+                    basket = $($("#basket_list").text());
+                    {% endif %}
 
                     var item = $("<div></div>").addClass("btn-group").attr("role", "group").append(basket).append(edit).append(del);
 
@@ -258,9 +268,7 @@ div#users-contain table td, div#users-contain table th { border: 1px solid #eee;
 	<tr>
 		<th>WID</th>
 		<th>Name</th>
-		{% if not request.user.is_anonymous %}
 		<th>&nbsp;</th>
-		{% endif %}
 	</tr>
 </thead>
 <tbody>

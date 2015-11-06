@@ -22,7 +22,7 @@ import os
 import re
 from django.contrib.contenttypes.models import ContentType
 from haystack.models import SearchResult
-from openpyxl.styles.numbers import NumberFormat
+from openpyxl.styles import numbers as NumberFormat
 import settings
 import sys
 import tempfile

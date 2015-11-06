@@ -9,6 +9,7 @@ from io import StringIO
 import os
 import tempfile
 from crispy_forms.utils import render_crispy_form
+from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.transaction import atomic
@@ -19,6 +20,7 @@ from jsonview.decorators import json_view
 from cyano.decorators import ajax_required, permission_required, global_permission_required
 from PyNetMet2.metabolism import Metabolism
 from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error
+from cyano.models import UserProfile
 from cyanodesign.forms import UploadModelForm, ModelFromTemplateForm, SaveModelAsForm, SaveModelForm
 from cyanodesign.helpers import model_from_string, apply_commandlist, calc_reactions, get_selected_reaction, \
     compress_command_list
@@ -37,7 +39,7 @@ def index(request):
     templates = DesignTemplate.objects.values_list("pk", "name")
     template_form = ModelFromTemplateForm(choices=templates)
 
-    models = DesignModel.objects.filter(user=request.user.profile)
+    models = DesignModel.objects.filter(user=UserProfile.get_profile(request.user))
 
     return render_queryset_to_response(
         request,
@@ -51,7 +53,7 @@ def index(request):
 @global_permission_required("access_cyanodesign")
 def design(request, pk):
     try:
-        item = DesignModel.objects.get(user=request.user.profile, pk=pk)
+        item = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
         current = item.get_latest_revision()
     except ObjectDoesNotExist:
         return render_queryset_to_response_error(request, error=404, msg="Model not found")
@@ -80,7 +82,7 @@ def design(request, pk):
 @json_view
 def get_reactions(request, pk):
     try:
-        item = DesignModel.objects.get(user=request.user.profile, pk=pk)
+        item = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
     except ObjectDoesNotExist:
         return BadRequest("Bad Model")
 
@@ -105,7 +107,7 @@ def simulate(request, pk):
     dry_run = request.POST.get("dry_run", False)
 
     try:
-        model = DesignModel.objects.get(user=request.user.profile, pk=pk)
+        model = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
 
@@ -255,7 +257,7 @@ def export(request, pk):
         return HttpResponseBadRequest("Bad format")
 
     try:
-        model = DesignModel.objects.get(user=request.user.profile, pk=pk)
+        model = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
         content = model.get_latest_revision().content
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
@@ -278,6 +280,7 @@ def export(request, pk):
     return response
 
 
+@login_required
 @ajax_required
 @global_permission_required("access_cyanodesign")
 @json_view
@@ -286,7 +289,7 @@ def save(request, pk):
         return BadRequest("Request incomplete")
 
     try:
-        model = DesignModel.objects.get(user=request.user.profile, pk=pk)
+        model = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
     except ObjectDoesNotExist:
         return BadRequest("Bad Model")
 
@@ -337,6 +340,7 @@ def save(request, pk):
     return {}
 
 
+@login_required
 @global_permission_required("access_cyanodesign")
 @json_view
 def save_as(request, pk):
@@ -351,7 +355,7 @@ def save_as(request, pk):
             request.POST["summary"] = summary
             save(request, pk)
     
-            model = DesignModel.objects.get(user=request.user.profile, pk=pk)
+            model = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
 
             dm = DesignModel.objects.create(
                 user=request.user.profile,
@@ -372,6 +376,7 @@ def save_as(request, pk):
 
     return BadRequest()
 
+@login_required
 @global_permission_required("access_cyanodesign")
 @json_view
 @atomic
@@ -433,7 +438,7 @@ def upload(request, pk):
                 template = DesignTemplate.objects.get(pk=choice)
 
                 dm = DesignModel.objects.create(
-                    user=request.user.profile,
+                    user=UserProfile.get_profile(request.user),
                     name=name,
                     filename=template.filename,
                     content=""
@@ -452,6 +457,8 @@ def upload(request, pk):
 
     return HttpResponseBadRequest()
 
+
+@login_required
 @global_permission_required("access_cyanodesign")
 @ajax_required
 @json_view
@@ -459,7 +466,7 @@ def delete(request):
     pk = request.POST.get("id", 0)
 
     try:
-        DesignModel.objects.get(user=request.user.profile, pk=pk).delete()
+        DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk).delete()
     except ObjectDoesNotExist:
         return BadRequest("Bad Model")
 
@@ -469,7 +476,7 @@ def delete(request):
 @global_permission_required("access_cyanodesign")
 def history(request, pk):
     try:
-        model = DesignModel.objects.get(user=request.user.profile, pk=pk)
+        model = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
         revisions = model.revisions.all()
     except ObjectDoesNotExist:
         return render_queryset_to_response_error(request, error=404, msg="Model not found")

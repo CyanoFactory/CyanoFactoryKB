@@ -57,6 +57,7 @@ from rest_framework import generics, filters, permissions, pagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 import cyano.serializers as cserializers
+import cyano.filters as cfilters
 
 @redirect_api_request('cyano-api-index')
 def index(request):
@@ -236,11 +237,12 @@ def search_google(request, species, query):
             'engine': 'google',
             })
 
+
 @redirect_api_request('cyano-api-list', ["species_wid", "model_type"])
 @global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
-def listing(request, species, model):
+def listing(request, species: cmodels.Species, model: cmodels.Entry):
     from itertools import groupby
     from collections import OrderedDict
 
@@ -354,6 +356,8 @@ def listing(request, species, model):
             'groups': groups,
             'facet_fields': facet_fields,
             'baskets': baskets,
+            'can_write': cmodels.UserProfile.get_profile(request.user).has_perm(perm.WRITE_NORMAL, species),
+            'can_delete': cmodels.UserProfile.get_profile(request.user).has_perm(perm.WRITE_DELETE, species)
         }
     )
 
@@ -471,7 +475,7 @@ class ApiEntryList(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         self.species = self.get_species(kwargs.get("species_wid"))
         self.model_type = kwargs.get("model_type")
-
+        self.filter_class = chelpers.getFilter(self.model_type)
         return super().get(request, *args, **kwargs)
 
 

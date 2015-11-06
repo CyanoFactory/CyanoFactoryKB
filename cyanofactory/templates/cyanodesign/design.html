@@ -1526,6 +1526,13 @@ svg text
 
 {% block content %}
 
+{% if not request.user.is_authenticated %}
+<div class="alert alert-info" role="alert">
+        <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+        <span class="sr-only">Info:</span>You are not logged in. Making permanent changes to models or uploading new ones is disabled.</div>
+</div>
+{% endif %}
+
 {% if revision %}
 <div class="alert alert-info" role="alert">
 Viewing old model from {{ revision.date }}. Simulating and saving will be based on this old version of the model.
@@ -1850,9 +1857,10 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
     </div>
 </div>
 
-
+{% if request.user.is_authenticated %}
 <input type="submit" id="design-save" class="btn btn-primary" value="Save">
 <input type="submit" id="design-saveas" class="btn btn-primary" value="Save As">
+{% endif %}
 
 <form method="post" action="{% url "cyano-design-simulate" pk=pk %}" id="submit-form">
 {% csrf_token %}
