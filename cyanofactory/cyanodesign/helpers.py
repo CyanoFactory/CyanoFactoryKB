@@ -194,7 +194,7 @@ def get_selected_reaction(jsonGraph, nodeDic, reacIDs, org):
     met_ids = list(map(lambda x: nodeDic[x], metabolites))
     g = json_graph.node_link_graph(jsonGraph)
 
-    g.remove_edges_from(filter(lambda x: g.get_edge_data(*x)["object"].name not in reacIDs, g.edges(met_ids)))
+    g.remove_edges_from(list(filter(lambda x: g.get_edge_data(*x)["object"].name not in reacIDs, g.edges(met_ids))))
 
     # Get products/substrates directly connected to filter
     #reacIDs += flatten(g.in_edges(reacIDs)) + flatten(g.out_edges(reacIDs))
