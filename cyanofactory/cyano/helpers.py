@@ -549,7 +549,6 @@ def render_queryset_to_response(request=[], queryset=None, models=[], template='
                 raise ValueError("Creating PDF failed")
 
             response = HttpResponse(stdin,
-                                    mimetype='application/pdf',
                                     content_type='application/pdf')
             response['Content-Disposition'] = "attachment; filename=data.pdf"
         elif outformat == "fasta":
