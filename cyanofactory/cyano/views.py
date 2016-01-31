@@ -777,7 +777,7 @@ def history_detail(request, species, model, item, detail_id):
 @global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.WRITE_NORMAL)
-def add(request, species=None, model=None):
+def add(request, species, model=None):
     return edit(request, species=species, model=model, action='add')
 
 
@@ -1036,6 +1036,7 @@ def importData(request, species):
 
 
 @global_permission_required(perm.ACCESS_SPECIES)
+@global_permission_required(perm.CREATE_SPECIES)
 @resolve_to_objects
 @atomic
 def importSpeciesData(request):

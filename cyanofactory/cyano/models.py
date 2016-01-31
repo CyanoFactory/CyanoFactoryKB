@@ -71,7 +71,7 @@ PermissionEnum = enum(
     WRITE_DELETE="delete_entry",
     WRITE_PERMISSION="edit_permission",
     ACCESS_SPECIES="access_species",
-    CREATE_MUTANT="create_mutant",
+    CREATE_SPECIES="create_mutant",
     ACCESS_SBGN="access_sbgn"
 )
 

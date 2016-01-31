@@ -89,7 +89,6 @@ urlpatterns += cyano_pattern("user/", views.users, root=True, species=True, not_
 urlpatterns += cyano_pattern("tutorial/", views.tutorial, root=True, species=True, not_found=True)
 urlpatterns += cyano_pattern("jobs/", views.jobs, root=True, species=True, not_found=True)
 urlpatterns += cyano_pattern("search/", views.search, root=True, species=True, not_found=True)
-urlpatterns += cyano_pattern(r"(?P<model_type>Species)/add/", views.add, root=True, not_found=True)
 urlpatterns += cyano_pattern("add/", views.add, model_type=True, not_found=True)
 urlpatterns += cyano_pattern("delete/", views.delete, species=True, item=True, not_found=True)
 urlpatterns += cyano_pattern("edit/", views.edit, species=True, item=True, not_found=True)
