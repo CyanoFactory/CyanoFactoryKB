@@ -20,7 +20,7 @@ class GlobalPermission(models.Model):
 class EcNumber(models.Model):
     name = models.CharField(max_length=255, blank=False, null=False)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
@@ -30,7 +30,7 @@ class Map(models.Model):
     overview = models.BooleanField(default=False, null=False, verbose_name='Is an overview pathway map')
     ec_numbers = ManyToManyField(EcNumber, verbose_name='Ec numbers belonging to this map')
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 

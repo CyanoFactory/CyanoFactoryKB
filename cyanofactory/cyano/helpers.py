@@ -614,7 +614,7 @@ def render_queryset_to_response_error(request = [], queryset = None, model = Non
     if _format == "json":
         objects = []
         
-        now = datetime.datetime.now(tzlocal())
+        now = datetime.datetime.now()
         json_data = OrderedDict()
         json_data['title'] = 'CyanoFactory KB'
         json_data['time'] = str(now.isoformat())
@@ -625,10 +625,9 @@ def render_queryset_to_response_error(request = [], queryset = None, model = Non
         json_data['result'] = {"code": error, "type": data["type"], "message": msg, "success": False}
         json_data['data'] = objects
         response = response(
-            json.dumps(json_data, indent=2, ensure_ascii=False, encoding='utf-8'),
-            mimetype = "application/json; charset=UTF-8",
-            content_type = "application/json; charset=UTF-8",
-            status = error)
+            json.dumps(json_data, indent=2, ensure_ascii=False),
+            content_type="application/json; charset=UTF-8",
+            status=error)
         return response
         
     c = RequestContext(request, data)
@@ -962,7 +961,7 @@ def format_value_excel(obj, field, depth = 0):
             subobjs = value.all()
             value = []
             for subobj in subobjs:
-                value.append(unicode(subobj))
+                value.append(subobj)
             if depth == 0:
                 value = ', '.join(value)
         else:
@@ -1612,11 +1611,11 @@ def convert_modelobject_to_stdobject(obj, is_user_anonymous=False, ancestors = [
         elif field.choices is not None and len(field.choices) > 0:
             choices = [x[0] for x in field.choices]
             if model_val in choices:
-                stdobj_val = unicode(field.choices[choices.index(model_val)][1])
+                stdobj_val = field.choices[choices.index(model_val)][1]
             else:
-                stdobj_val = unicode(model_val)
+                stdobj_val = model_val
         else:
-            stdobj_val = unicode(model_val)
+            stdobj_val = model_val
             
         objDict[field.name] = stdobj_val
     
@@ -1636,12 +1635,12 @@ def convert_modelobject_to_xml(obj, xml_doc, is_user_anonymous, ancestors = []):
     xml_obj = xml_doc.createElement('object')
     
     if issubclass(model, cmodels.Entry) and len(ancestors) > 0:
-        xml_obj.appendChild(xml_doc.createTextNode(unicode(obj.wid)))
+        xml_obj.appendChild(xml_doc.createTextNode((obj.wid)))
         return xml_obj
     
     xml_field = xml_doc.createElement('field')
     xml_field.setAttribute('name', 'model')
-    xml_field.appendChild(xml_doc.createTextNode(unicode(model.__name__)))
+    xml_field.appendChild(xml_doc.createTextNode(model.__name__))
     xml_obj.appendChild(xml_field)
     
     if issubclass(model, cmodels.Entry):
@@ -1663,31 +1662,31 @@ def convert_modelobject_to_xml(obj, xml_doc, is_user_anonymous, ancestors = []):
                 pass
             else:
                 if issubclass(field.rel.to, cmodels.Entry):
-                    xml_field.appendChild(xml_doc.createTextNode(unicode(model_val.wid)))
+                    xml_field.appendChild(xml_doc.createTextNode(model_val.wid))
                 elif issubclass(field.rel.to, cmodels.RevisionDetail):
                     doc = xml_doc.createElement("user")
-                    doc.appendChild(xml_doc.createTextNode(unicode(model_val.user.user.username)))
+                    doc.appendChild(xml_doc.createTextNode(model_val.user.user.username))
                     xml_field.appendChild(doc)
                     doc = xml_doc.createElement("date")
-                    doc.appendChild(xml_doc.createTextNode(unicode(model_val.date)))
+                    doc.appendChild(xml_doc.createTextNode(model_val.date))
                     xml_field.appendChild(doc)
                     doc = xml_doc.createElement("reason")
-                    doc.appendChild(xml_doc.createTextNode(unicode(model_val.reason)))
+                    doc.appendChild(xml_doc.createTextNode(model_val.reason))
                     xml_field.appendChild(doc)
                 elif issubclass(field.rel.to, cmodels.UserProfile):
-                    xml_field.appendChild(xml_doc.createTextNode(unicode(model_val.user.username)))
+                    xml_field.appendChild(xml_doc.createTextNode(model_val.user.username))
                 else:
                     xml_field.appendChild(convert_modelobject_to_xml(model_val, xml_doc, is_user_anonymous, ancestors + [obj]))
         elif isinstance(field, ManyToManyField):
             if issubclass(field.rel.to, cmodels.Entry):
                 for model_subval in model_val.all():
                     doc = xml_doc.createElement('object')
-                    doc.appendChild(xml_doc.createTextNode(unicode(model_subval.wid)))
+                    doc.appendChild(xml_doc.createTextNode(model_subval.wid))
                     xml_field.appendChild(doc)
             elif issubclass(field.rel.to, cmodels.UserProfile):
                 for model_subval in model_val.all():
                     doc = xml_doc.createElement('object')
-                    doc.appendChild(xml_doc.createTextNode(unicode(model_subval.user.username)))
+                    doc.appendChild(xml_doc.createTextNode(model_subval.user.username))
                     xml_field.appendChild(doc)
             else:
                 for model_subval in model_val.all():
@@ -1695,11 +1694,11 @@ def convert_modelobject_to_xml(obj, xml_doc, is_user_anonymous, ancestors = []):
         elif field.choices is not None and len(field.choices) > 0:
             choices = [x[0] for x in field.choices]
             if model_val in choices:
-                xml_field.appendChild(xml_doc.createTextNode(unicode(field.choices[choices.index(model_val)][1])))
+                xml_field.appendChild(xml_doc.createTextNode(field.choices[choices.index(model_val)][1]))
             else:
-                xml_field.appendChild(xml_doc.createTextNode(unicode(model_val)))
+                xml_field.appendChild(xml_doc.createTextNode(model_val))
         else:
-            xml_field.appendChild(xml_doc.createTextNode(unicode(model_val)))
+            xml_field.appendChild(xml_doc.createTextNode(model_val))
             
     for field in model._meta.get_all_related_objects() + model._meta.get_all_related_many_to_many_objects():
         if field.get_accessor_name() == '+':

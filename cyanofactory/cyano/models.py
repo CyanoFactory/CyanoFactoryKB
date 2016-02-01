@@ -486,7 +486,7 @@ class GroupProfile(Model):
 
         return objs.model.objects.filter(pk__in=all_perms)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.group.name
 
 
@@ -614,7 +614,7 @@ class UserProfile(Model):
 
         return obj_with_user_perms | obj_with_group_perms
 
-    def __unicode__(self):
+    def __str__(self):
         return self.user.username
 
     class Meta:
@@ -668,7 +668,7 @@ class TableMeta(Model):
         cache_model_type = Cache.try_get(model_type_key, lambda: TableMeta.objects.get(pk = pk))
         return cache_model_type
 
-    def __unicode__(self):
+    def __str__(self):
         return self.table_name + " - " + self.model_name
 
 class RevisionDetail(Model):
@@ -695,7 +695,7 @@ class Revision(Model):
     action = CharField(max_length=1, choices=CHOICES_DBOPERATION)
     new_data = TextField(blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return str(self.current)
 
     class Meta:
@@ -714,13 +714,13 @@ class Evidence(Model):
 
     species_component = ManyToManyField('SpeciesComponent', blank=True, verbose_name='Species component', related_name='+')
 
-    def __unicode__(self):
+    def __str__(self):
         arr = []
         for field in self.__class__._meta.fields:
             if not field.auto_created and getattr(self, field.name) is not None and not (isinstance(getattr(self, field.name), (str, unicode, )) and getattr(self, field.name) == ''):
-                arr.append('%s: %s' % (field.name, unicode(getattr(self, field.name))))
+                arr.append('%s: %s' % (field.name, getattr(self, field.name)))
         for field in self.__class__._meta.many_to_many:
-            arr.append('%s: %s' % (field.name, unicode(getattr(self, field.name).all())))
+            arr.append('%s: %s' % (field.name, getattr(self, field.name).all()))
         return ', '.join(arr)
 
     class Meta:
@@ -740,21 +740,21 @@ class EntryDataQuerySet(QuerySet):
 class EntryData(Model):
     objects = EntryDataQuerySet.as_manager()
 
-    def __unicode__(self):
+    def __str__(self):
         arr = []
-        txt = unicode('')
+        txt = ''
         nFields = 0
         for field in self.__class__._meta.fields:
             if not field.auto_created:
                 nFields += 1
                 try:
-                    txt = unicode(getattr(self, field.name))
+                    txt = getattr(self, field.name)
                     arr.append('%s: %s' % (field.name, txt))
                 except ObjectDoesNotExist:
                     pass
         for field in self.__class__._meta.many_to_many:
             nFields += 1
-            txt = unicode(getattr(self, field.name).all())
+            txt = getattr(self, field.name).all()
             arr.append('%s: %s' % (field.name, txt))
 
         if nFields == 1:
@@ -1212,7 +1212,7 @@ class Entry(AbstractEntry):
     synonyms = ManyToManyField(Synonym, blank=True, related_name='entry', verbose_name='Synonyms')
     comments = TextField(blank=True, default='', verbose_name='Comments')
 
-    def __unicode__(self):
+    def __str__(self):
         return self.wid
 
     def natural_key(self):
@@ -2580,7 +2580,7 @@ class FeaturePosition(EntryData):
 
         seq = chromosome.sequence[self.coordinate - 1:self.coordinate - 1 + self.length]
         if self.direction == 'r':
-            seq = unicode(Seq(seq, IUPAC.ambiguous_dna).reverse_complement())
+            seq = str(Seq(seq, IUPAC.ambiguous_dna).reverse_complement())
         return seq
 
     def get_genes(self):
@@ -5402,7 +5402,7 @@ class Basket(Model):
     user = ForeignKey(UserProfile, related_name = 'baskets', verbose_name = "Users baskets")
     name = CharField(max_length=255, blank=False, default='', verbose_name = "Basket name")
     
-    def __unicode__(self):
+    def __str__(self):
         return self.name + " " + str(self.components.all())
 
 class BasketComponent(Model):
@@ -5410,7 +5410,7 @@ class BasketComponent(Model):
     component = ForeignKey(SpeciesComponent, related_name = "+", verbose_name = "component")
     species = ForeignKey(Species, related_name = "+", verbose_name = "Species component belongs to")
 
-    def __unicode__(self):
+    def __str__(self):
         return str(self.component)
 
 #http://isoelectric.ovh.org/files/practise-isoelectric-point.html
