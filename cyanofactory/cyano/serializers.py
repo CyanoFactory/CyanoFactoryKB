@@ -194,6 +194,12 @@ class Metabolite(SpeciesComponent):
         fields = cmodels.Metabolite._meta.field_list + SpeciesComponent.Meta.fields
 
 
+class Note(SpeciesComponent):
+    class Meta:
+        model = cmodels.Note
+        fields = cmodels.Note._meta.field_list + SpeciesComponent.Meta.fields
+
+
 class Parameter(SpeciesComponent):
     class Meta:
         model = cmodels.Parameter

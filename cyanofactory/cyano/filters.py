@@ -69,6 +69,12 @@ class Metabolite(SpeciesComponent):
         fields = cmodels.Metabolite._meta.field_list + SpeciesComponent.Meta.fields
 
 
+class Note(SpeciesComponent):
+    class Meta:
+        model = cmodels.Note
+        fields = cmodels.Note._meta.field_list + SpeciesComponent.Meta.fields
+
+
 class Parameter(SpeciesComponent):
     state = django_filters.CharFilter(name="state__wid")
     process = django_filters.CharFilter(name="process__wid")
