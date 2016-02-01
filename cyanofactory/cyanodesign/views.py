@@ -225,7 +225,7 @@ def simulate(request, pk):
         )
     elif output_format == "png":
         import wand.image
-        with wand.image.Image(blob=outgraph.decode("utf-8"), format="svg") as image:
+        with wand.image.Image(blob=outgraph, format="svg") as image:
             png_image = image.make_blob("png")
 
         r = HttpResponse(png_image, content_type="image/png")
