@@ -1,3 +1,4 @@
+import ssl
 from urllib.error import HTTPError
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.shortcuts import render_to_response
@@ -63,10 +64,14 @@ def dbxref(request, source, xid):
     )
 
     try:
-        res = urlopen(req)
+        context = ssl._create_unverified_context()
+        res = urlopen(req, context=context)
         do_error = False
-        res = res.readall().decode("utf-8")
-        urls = list(map(lambda x: x["$"], filter(lambda x: not x.get("@deprecated", False) and x.get("@type") == "URL", json.loads(res)["uri"])))
+        res = res.read().decode("utf-8")
+        j = json.loads(res)["uri"]
+        if not isinstance(j, list):
+            j = [j]
+        urls = list(map(lambda x: x["$"], filter(lambda x: not x.get("@deprecated", False) and x.get("@type") == "URL", j)))
 
     except HTTPError:
         do_error = True
