@@ -169,6 +169,9 @@ class Enzyme(object):
     def issues(self):
         return len(self.issues_info) > 0
 
+    def __str__(self):
+        return self.__unicode__()
+
     def __unicode__(self):
         """
         Returns the reaction in OptGene format.
