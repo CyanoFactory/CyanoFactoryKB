@@ -62,7 +62,7 @@ def apply_commandlist(model, commandlist):
                     pass
 
                 try:
-                    enzyme.constraint = obj["constraints"]
+                    enzyme.constraints = obj["constraints"]
                 except KeyError:
                     pass
 
