@@ -733,6 +733,8 @@ class CyanoCreateTest(CyanoBaseTest):
     def test_create_species(self):
         """Create a new species via the webinterface"""
         # Form validation logic tested below
+        self.user.profile.assign_perm(P.CREATE_SPECIES)
+
         with self.assertTemplateUsed("cyano/importSpeciesForm.html"):
             data = {
                 'new_species': "New Species",

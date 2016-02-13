@@ -37,7 +37,13 @@ Last updated: 2012-07-17
 </div>
 {% endif %}
 
+<div class="alert alert-info" role="alert">
+        <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+        <span class="sr-only">Info:</span>The way how to log in changed! You can now specify username <b>or</b> mail address.
+</div>
+
 <div class="col-md-6">
+
 {{ form|crispy }}
 
 <input type="hidden" name="next" value="{{ next }}" />

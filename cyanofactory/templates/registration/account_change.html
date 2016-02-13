@@ -1,0 +1,31 @@
+{% extends "cyano/base.html" %}
+
+{% load crispy_forms_tags %}
+
+{% block head_title %}{{ block.super }} :: Change account information{% endblock %}
+{% block page_title %}Change account information{% endblock %}
+{% block action_icons %}{% endblock %}
+
+{% block content %}
+
+<form method="post">{% csrf_token %}
+<div class="col-md-6">
+{% if success %}
+<div class="alert alert-info" role="alert">
+        <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
+        <span class="sr-only">Info:</span> Changes applied successfully.
+</div>
+{% endif %}
+
+<p>
+Change any information of your account and reenter your password to verify the change.
+</p>
+
+{% crispy form %}
+
+<button type="submit" value="Change account information" class="btn btn-primary" id="submit">Save changes</button>
+
+</div>
+</form>
+
+{% endblock %}

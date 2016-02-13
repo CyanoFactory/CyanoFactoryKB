@@ -74,7 +74,9 @@ urlpatterns += patterns('cyano.views',
 
 urlpatterns += cyano_pattern("login/", views.login, name="login", root=True, species=True, not_found=True)
 urlpatterns += cyano_pattern("logout/", views.logout, name="logout", root=True, species=True, not_found=True)
+urlpatterns += cyano_pattern("register/", views.register, name="register", root=True, not_found=True)
 urlpatterns += cyano_pattern("sbgn/", views.sbgn, root=True, not_found=True)
+urlpatterns += cyano_pattern("account/edit/", views.account_change, name="account_change", root=True, species=True, not_found=True)
 urlpatterns += cyano_pattern("account/password_change_required/", views.password_change_required, name="password_change_required", root=True, not_found=True)
 urlpatterns += cyano_pattern("license/", views.licensing, name="license", root=True, species=True, not_found=True)
 urlpatterns += cyano_pattern("basket/", views.basket, name="cyano-basket", root=True, species=True, not_found=True)

@@ -38,13 +38,13 @@ from django.db.models import Count
 from django.db.models.fields import BooleanField, NullBooleanField, AutoField, BigIntegerField, DecimalField, FloatField, IntegerField, PositiveIntegerField, PositiveSmallIntegerField, SmallIntegerField
 from django.db.models.fields.related import ManyToManyField, ForeignKey
 from django.db.models.query import EmptyQuerySet
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.utils.text import capfirst
 
 from haystack.query import SearchQuerySet
 
 from cyano.forms import ExportDataForm, ImportDataForm, ImportSpeciesForm, DeleteForm, CreateBasketForm, \
-    RenameBasketForm
+    RenameBasketForm, LoginForm, ChangeProfileForm, CreateProfileForm
 import cyano.helpers as chelpers
 import cyano.models as cmodels
 from cyano.models import PermissionEnum as perm
@@ -1121,7 +1121,7 @@ def login(request, species=None, message=None, error=200, force_next=None, requi
     if force_next:
         context['next'] = force_next
 
-    response = djlogin(request, extra_context=context)
+    response = djlogin(request, extra_context=context, authentication_form=LoginForm)
 
     if response.status_code != 302:
         response.status_code = error
@@ -1670,3 +1670,40 @@ def global_permission(request):
         request,
         template="cyano/global_permission.html",
         data=data)
+
+
+@login_required
+@resolve_to_objects
+def account_change(request, species=None):
+    success = False
+    if request.method == 'POST':
+        form = ChangeProfileForm(request, request.POST)
+
+        if form.is_valid():
+            form.save()
+            success = True
+    else:
+        form = ChangeProfileForm(request)
+
+    return chelpers.render_queryset_to_response(
+        request,
+        template="registration/account_change.html",
+        data={"form": form, "success": success}
+    )
+
+
+def register(request):
+    if request.method == 'POST':
+        form = CreateProfileForm(request.POST)
+
+        if form.is_valid():
+            form.save(request)
+            return redirect("cyano.views.index")
+    else:
+        form = CreateProfileForm()
+
+    return chelpers.render_queryset_to_response(
+        request,
+        template="registration/register.html",
+        data={"form": form}
+    )
