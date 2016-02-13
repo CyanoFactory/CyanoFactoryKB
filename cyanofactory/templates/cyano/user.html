@@ -50,6 +50,7 @@ Released under the MIT license
 </table>
 </div>
 
+{% if request.user == user or request.user.profile.is_admin %}
 <div class="panel panel-default">
 <table class="table table-striped">
     <thead>
@@ -59,24 +60,13 @@ Released under the MIT license
     </thead>
 	<tbody>
 		<tr>
-			<th>Website</th>
-			<td><a href="{{ profile.get_website }}">{{ profile.website }}</a></td>
-		</tr>
-		<tr>
 			<th>Email</th>
 			<td><a href="mailto:{{ user.email }}">{{ user.email }}</a></td>
-		</tr>
-		<tr>
-			<th>Phone</th>
-			<td>{{ profile.phone }}</td>
-		</tr>
-		<tr>
-			<th>Address</th>
-			<td>{{ profile.address }}, {{ profile.city }} {{ profile.state }} {{ profile.zip }} {{ profile.country }}</td>
 		</tr>
 	</tbody>
 </table>
 </div>
+{% endif %}
 
 <div class="panel panel-default">
 <table class="table table-striped">
