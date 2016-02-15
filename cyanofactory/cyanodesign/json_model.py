@@ -349,7 +349,7 @@ class JsonModel(object):
                 if metabolite.name == name:
                     raise ValueError("Metabolite in use: " + name)
 
-        self.metabolites = filter(lambda x: x.name != name, self.metabolites)
+        self.metabolites = list(filter(lambda x: x.name != name, self.metabolites))
 
     @staticmethod
     def check_metabolite_name(name):

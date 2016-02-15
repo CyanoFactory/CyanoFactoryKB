@@ -151,6 +151,9 @@ def compress_command_list(commandlist):
                     if last_command["object"].get("name", last_command["name"]) == name:
                         # Merge with previous
                         pending_commands[-1]["object"].update(command["object"])
+                        # If previous was an add update the name
+                        if pending_commands[-1]["op"] == "add":
+                            pending_commands[-1]["name"] = command["object"]["name"]
                     else:
                         new_commandlist += pending_commands
                         pending_commands = []
