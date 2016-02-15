@@ -328,7 +328,7 @@ def save(request, pk):
 
                     org.objectives.append(JsonModel.Objective(**obj))
     except ValueError as e:
-        return BadRequest("Model error: " + e.message)
+        return BadRequest("Model error: " + str(e))
 
     Revision(
         model=model,
