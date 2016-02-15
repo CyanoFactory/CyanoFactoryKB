@@ -514,7 +514,15 @@ class UserProfile(Model):
             return user.profile
 
     def get_name(self):
-        return self.user.first_name + " " + self.user.last_name
+        if len(self.user.first_name) > 0:
+            name = self.user.first_name
+            if len(self.user.last_name) > 0:
+                name += " " + self.user.last_name
+        elif len(self.user.last_name) > 0:
+            name = self.user.last_name
+        else:
+            name = self.user.username
+        return name
 
     def get_website(self):
         if not self.website.startswith("http://") and not self.website.startswith("https://"):
