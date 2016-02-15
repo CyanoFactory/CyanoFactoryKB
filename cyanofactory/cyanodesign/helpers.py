@@ -157,8 +157,12 @@ def compress_command_list(commandlist):
                 elif op == "delete":
                     # Remove all previous instances and take name of first
                     command["name"] = pending_commands[0]["name"]
+                    # If first command was an "add" the item was created and just deleted
+                    # can be removed completely
+                    if pending_commands[0]["op"] != "add":
+                        new_commandlist.append(command)
+
                     pending_commands = []
-                    new_commandlist.append(command)
             else:
                 new_commandlist += pending_commands
                 pending_commands = []
