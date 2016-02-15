@@ -400,12 +400,19 @@ def upload(request, pk):
 
                 ss = StringIO()
                 for chunk in freq.chunks():
-                    ss.write(chunk.decode("utf-8"))
+                    try:
+                        ss.write(chunk.decode("utf-8"))
+                    except UnicodeDecodeError:
+                        form.add_error("file", "File does not have UTF-8 encoding")
+                        form_html = render_crispy_form(form, context=request)
+                        return {'success': False, 'form_html': form_html}
 
                 try:
                     model = Metabolism(ss)
                 except:
-                    return HttpResponseBadRequest("Bad Model")
+                    form.add_error("file", "Not a valid model")
+                    form_html = render_crispy_form(form, context=request)
+                    return {'success': False, 'form_html': form_html}
 
                 dm = DesignModel.objects.create(
                     user=request.user.profile,
@@ -458,7 +465,7 @@ def upload(request, pk):
                 form_html = render_crispy_form(form, context=request)
                 return {'success': False, 'form_html': form_html}
 
-    return HttpResponseBadRequest()
+    return BadRequest()
 
 
 @login_required
