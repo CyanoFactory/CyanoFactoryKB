@@ -424,7 +424,7 @@ def upload(request, pk):
 
                 return {'success': True}
             else:
-                form_html = render_crispy_form(form, context=RequestContext(request))
+                form_html = render_crispy_form(form, context=request)
                 return {'success': False, 'form_html': form_html}
         if pk == "2":
             # from template
@@ -452,7 +452,7 @@ def upload(request, pk):
 
                 return {'success': True}
             else:
-                form_html = render_crispy_form(form, context=RequestContext(request))
+                form_html = render_crispy_form(form, context=request)
                 return {'success': False, 'form_html': form_html}
 
     return HttpResponseBadRequest()

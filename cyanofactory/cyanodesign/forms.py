@@ -25,7 +25,7 @@ class UploadModelForm(forms.Form):
         required=True,
         widget=forms.ClearableFileInput,
         label="Model File",
-        help_text="Please provide a model in BioOpt format."
+        help_text="Please provide a model in BioOpt or SBML format."
     )
     
     def __init__(self, *args, **kwargs):
