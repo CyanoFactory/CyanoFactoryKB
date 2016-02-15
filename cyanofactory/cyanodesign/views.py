@@ -286,19 +286,19 @@ def export(request, pk):
 @json_view
 def save(request, pk):
     if not all(x in request.POST for x in ["changes", "objectives"]):
-        return BadRequest("Request incomplete")
+        raise BadRequest("Request incomplete")
 
     try:
         model = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
     except ObjectDoesNotExist:
-        return BadRequest("Bad Model")
+        raise BadRequest("Bad Model")
 
     try:
         revision = request.POST["revision"]
         try:
             revision = Revision.objects.get(model=model, pk=revision)
         except ObjectDoesNotExist:
-            return BadRequest("Bad Revision")
+            raise BadRequest("Bad Revision")
     except KeyError:
         revision = model.get_latest_revision()
 
@@ -324,11 +324,14 @@ def save(request, pk):
                 if len(obj["name"]) > 0:
                     obj_reac = org.get_reaction(obj["name"])
                     if obj_reac is None:
-                        raise ValueError("Objective not in model: " + obj["name"])
+                        raise BadRequest("Objective not in model: " + obj["name"])
 
                     org.objectives.append(JsonModel.Objective(**obj))
     except ValueError as e:
-        return BadRequest("Model error: " + str(e))
+        raise BadRequest("Model error: " + str(e))
+
+    if len(changes) == 0:
+        raise BadRequest("Model not saved: No changes found")
 
     Revision(
         model=model,

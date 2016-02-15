@@ -646,10 +646,12 @@ Released under the MIT license
                 }
                 $("#dialog-save-model").modal("hide");
                 endRequest($("#dialog-save-model").find(".modal-content"));
+                $("#simulation-result").html("")
                 command_list = [];
             }).error(function(x) {
+                $("#dialog-save-model").modal("hide");
                 $("#visual").hide();
-                notifyError(x.responseText);
+                notifyError(JSON.parse(x.responseText)["message"]);
                 endRequest($("#dialog-save-model").find(".modal-content"));
             });
         });
