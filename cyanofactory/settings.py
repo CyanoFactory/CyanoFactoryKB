@@ -168,7 +168,6 @@ AUTHENTICATION_BACKENDS = (
 )
 
 ANONYMOUS_USER_ID = -1
-GUARDIAN_GET_INIT_ANONYMOUS_USER = 'cyano.models.get_anonymous_user_instance'
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
