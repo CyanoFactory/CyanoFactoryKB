@@ -9,8 +9,8 @@ from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Group
 
-from autocreateuser import Command as create_user
-from autocreategroups import Command as create_groups
+from .autocreateuser import Command as create_user
+from .autocreategroups import Command as create_groups
 
 class Command(BaseCommand):
     def handle(self, *args, **options):

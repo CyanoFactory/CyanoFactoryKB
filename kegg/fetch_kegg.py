@@ -3,10 +3,11 @@ Downloads all pathway image maps and there images from KEGG
 """
 
 import re
-import urllib2
+from urllib.request import urlopen
+from urllib.error import HTTPError
 
-response = urllib2.urlopen('http://www.kegg.jp/kegg-bin/download_htext?htext=br08901.keg&format=htext&filedir=')
-html = response.read()
+response = urlopen('http://www.kegg.jp/kegg-bin/download_htext?htext=br08901.keg&format=htext&filedir=')
+html = response.read().decode("utf-8")
 
 # Find all map ids
 m = re.findall(r'(?<=\s)([0-9]{5})(?=\s)', html)
@@ -17,11 +18,13 @@ for i, match in enumerate(m):
     image = "map{}.png".format(match)
     site = "map{}.html".format(match)
     
-    response = urllib2.urlopen('http://www.kegg.jp/kegg-bin/show_pathway?map' + match)
+    response = urlopen('http://www.kegg.jp/kegg-bin/show_pathway?map' + match)
     
     print_map = 0
     with open("fetch/" + site, "w") as kegg:
         for line in response:
+            line = line.decode("utf-8")
+
             if line.startswith("<img"):
                 last_image = line.strip()
             
@@ -47,5 +50,8 @@ for i, match in enumerate(m):
     # to handle the 1% corner cases correctly
     with open("fetch/" + image, "wb") as imgout:
         download_image = re.search(r'(?<=src\=")(.*?)(?=")', download_image).group(1)
-        imgdl = urllib2.urlopen('http://www.kegg.jp' + download_image)
-        imgout.write(imgdl.read())
+        try:
+            imgdl = urlopen('http://www.kegg.jp' + download_image)
+            imgout.write(imgdl.read())
+        except HTTPError:
+            print("Download failed for {}".format('http://www.kegg.jp' + download_image))

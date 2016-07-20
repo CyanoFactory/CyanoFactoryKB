@@ -1,7 +1,6 @@
 #!/bin/bash
 echo "Cyanofactory KB Initial Import script"
 
-python manage.py syncdb
 python manage.py migrate
 python manage.py loaddata boehringer/fixtures/boehringer.json
 python manage.py autocreateinitial

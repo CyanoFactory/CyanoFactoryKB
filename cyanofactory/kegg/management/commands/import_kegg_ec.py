@@ -44,7 +44,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # [:-5] removes extension
-        html_files = map(lambda y: y[:-5], filter(lambda y: y.endswith(".html"), os.listdir("../kegg/fetch")))
+        html_files = list(map(lambda y: y[:-5], filter(lambda y: y.endswith(".html"), os.listdir("../kegg/fetch"))))
         
         html_files_count = len(html_files)
         
