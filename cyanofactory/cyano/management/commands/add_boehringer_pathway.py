@@ -5,7 +5,7 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
-from cyano_command import CyanoCommand
+from .cyano_command import CyanoCommand
 from cyano.models import Pathway
 
 class Command(CyanoCommand):

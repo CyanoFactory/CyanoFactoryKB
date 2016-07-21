@@ -5,7 +5,7 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
-from cyano_command import CyanoCommand
+from .cyano_command import CyanoCommand
 from cyano.tasks import sbml
 from django.core.management.base import BaseCommand
 

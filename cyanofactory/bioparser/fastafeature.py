@@ -10,7 +10,7 @@ from Bio import SeqIO
 import cyano.models as cmodels
 from cyano.helpers import slugify
 from cyano.models import NUCLEOTIDE_SUBSTITUTION
-from bioparser import BioParser
+from .bioparser import BioParser
 from django.db.transaction import atomic
 
 class FastaFeature(BioParser):

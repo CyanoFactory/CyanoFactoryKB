@@ -7,7 +7,7 @@ Released under the MIT license
 
 from optparse import make_option
 from cyano.tasks import fastafeature
-from cyano_command import CyanoCommand
+from .cyano_command import CyanoCommand
 from django.core.management.base import BaseCommand
 
 class Command(BaseCommand):

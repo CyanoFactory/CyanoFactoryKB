@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 
 import cyano.models as cmodels
 from cyano.helpers import slugify
-from bioparser import BioParser
+from .bioparser import BioParser
 from django.db.transaction import atomic
 
 

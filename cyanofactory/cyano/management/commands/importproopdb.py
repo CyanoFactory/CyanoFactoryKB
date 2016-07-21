@@ -10,7 +10,7 @@ Released under the MIT license
 # Taboada B., Ciria R., Martinez-Guerrer C.E., Merino E., 2012, ProOpDB:
 # Prokaryotic Operon DataBase, Nucleic Acids Research, 40(D1), D627-D631
 
-from cyano_command import CyanoCommand
+from .cyano_command import CyanoCommand
 from cyano.tasks import proopdb
 from django.core.management.base import BaseCommand
     

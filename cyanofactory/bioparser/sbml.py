@@ -5,7 +5,7 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
-from bioparser import BioParser
+from .bioparser import BioParser
 from django.db.transaction import atomic
 from libsbml import SBMLReader
 from cyano.helpers import slugify
@@ -19,9 +19,9 @@ class SBML(BioParser):
         self.reader = SBMLReader()
         self.document = self.reader.readSBMLFromString("".join(line for line in handle))
         self.model = self.document.getModel()
-        self.compartments = map(lambda i: self.model.getCompartment(i), range(len(self.model.getListOfCompartments())))
-        self.sbml_species = map(lambda i: self.model.getSpecies(i), range(len(self.model.getListOfSpecies())))
-        self.reactions = map(lambda i: self.model.getReaction(i), range(len(self.model.getListOfReactions())))
+        self.compartments = list(map(lambda i: self.model.getCompartment(i), range(len(self.model.getListOfCompartments()))))
+        self.sbml_species = list(map(lambda i: self.model.getSpecies(i), range(len(self.model.getListOfSpecies()))))
+        self.reactions = list(map(lambda i: self.model.getReaction(i), range(len(self.model.getListOfReactions()))))
 
     @atomic
     def apply(self):

@@ -13,7 +13,7 @@ Released under the MIT license
 from django.core.exceptions import ObjectDoesNotExist
 
 import cyano.models as cmodels
-from bioparser import BioParser
+from .bioparser import BioParser
 from django.db.transaction import atomic
 from collections import OrderedDict
     

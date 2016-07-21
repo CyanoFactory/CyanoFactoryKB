@@ -2099,6 +2099,12 @@ def format_sequence_as_html(species, sequence, lineLen=60, seq_offset=0, show_pr
 
     nums = range(1, len(sequence), lineLen)
 
+    if show_protein_seq:
+        gap_nums = []
+        for n in nums:
+            gap_nums += [n, ""]
+        nums = gap_nums
+
     c = Context({'sequence': zip(line, prot_line), 'protein_sequence': prot_line, 'numbers': nums, 'line_length': lineLen, 'sequence_length': len(sequence), 'sequence_offset': seq_offset})
     template = loader.get_template("cyano/fields/sequence.html")
     rendered = template.render(c)

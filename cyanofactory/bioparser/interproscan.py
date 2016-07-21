@@ -6,7 +6,7 @@ Released under the MIT license
 """
 import cyano.models as cmodels
 from cyano.helpers import slugify
-from bioparser import BioParser
+from .bioparser import BioParser
 from django.db.transaction import atomic
 from django.core.exceptions import ObjectDoesNotExist
 

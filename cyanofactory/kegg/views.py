@@ -16,7 +16,7 @@ from django.http.response import HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.db.models.query_utils import Q
 from jsonview.exceptions import BadRequest
-
+from functools import reduce
 
 @global_permission_required("access_kegg")
 def index(request):

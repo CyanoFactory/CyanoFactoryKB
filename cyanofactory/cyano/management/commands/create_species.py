@@ -9,7 +9,7 @@ from optparse import make_option
 
 from django.core.management.base import CommandError
 
-from cyano_command import CyanoCommand
+from .cyano_command import CyanoCommand
 
 class Command(CyanoCommand):
     help = 'Creates a new species'

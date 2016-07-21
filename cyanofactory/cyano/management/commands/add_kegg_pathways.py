@@ -1,5 +1,5 @@
 from cyano.models import Pathway
-from cyano_command import CyanoCommand
+from .cyano_command import CyanoCommand
 
 class Command(CyanoCommand):
     help = 'Takes the data from the Kegg tables and registers it with the species'

@@ -6,7 +6,7 @@ Released under the MIT license
 """
 
 from cyano.tasks import interproscan
-from cyano_command import CyanoCommand
+from .cyano_command import CyanoCommand
 from django.core.management.base import BaseCommand
 
 

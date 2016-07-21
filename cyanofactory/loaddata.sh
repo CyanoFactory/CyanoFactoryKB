@@ -6,6 +6,10 @@ python manage.py loaddata boehringer/fixtures/boehringer.json
 python manage.py autocreateinitial
 python manage.py create_meta
 
+pushd ../kegg
+python fetch_kegg.py
+popd
+
 python manage.py import_kegg_ec
 
 python manage.py create_species --wid=Synechocystis --name="Synechocystis sp. PCC 6803" --reason="Create Synechocystis"
