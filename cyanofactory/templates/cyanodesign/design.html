@@ -17,7 +17,6 @@ Released under the MIT license
 
 {% block head_title %}{{ block.super }} :: CyanoDesign{% endblock %}
 {% block page_title %}CyanoDesign &ndash; {{ name }}{% endblock %}
-
 {% block head %}
 {{ block.super }}
 <script src="{% get_static_prefix %}cyanointeraction/d3/d3.v3.min.js"></script>
@@ -1431,6 +1430,101 @@ Released under the MIT license
         $("#metabolite_regex").click(function() {
             datatable_metabolites.search("", $(this).prop("checked"), true).draw();
         });
+
+        $("#create-enzyme-bulk-button").click(function() {
+            $("#enzyme-bulkdata").val("");
+            $("#dialog-reaction-bulkadd").modal("show");
+        });
+
+        $("#enzyme-bulkdata").keyup(function() {
+            var lines = $("#enzyme-bulkdata").val().split(/\r*\n/);
+
+            $("#enzyme-bulkadd-preview").empty();
+            lines.forEach(function(line) {
+                var e;
+                try {
+                    e = Enzyme.fromBioOptString(line).toString();
+                } catch (err) {
+                    e = err["enzyme"].toString() + " Error: " + err["message"];
+                }
+                if (e !== 'undefined') {
+                    $("<div>").text(e).appendTo($("#enzyme-bulkadd-preview"));
+                }
+            });
+        });
+
+        $("#dialog-reaction-bulkadd").on("click", ".btn-primary", function(event) {
+            var lines = $("#enzyme-bulkdata").val().split(/\r*\n/);
+
+            $("#enzyme-bulkadd-preview").empty();
+            lines.forEach(function(line) {
+                try {
+                    var mlen = Metabolite.metabolites.length;
+                    var reaction = Enzyme.fromBioOptString(line);
+
+                    Metabolite.fromReaction(reaction);
+                    if (Metabolite.metabolites.length > mlen) {
+                        Metabolite.metabolites.slice(mlen).forEach(function (metabolite) {
+                            command_list.push({
+                                "type": "metabolite",
+                                "op": "add",
+                                "name": metabolite.name,
+                                "object": {
+                                    "name": metabolite.name,
+                                    "external": metabolite.external
+                                }
+                            });
+
+                            datatable_metabolites.row.add(metabolite);
+                        });
+                    }
+
+                    reaction.convertToFloat();
+
+                    var command = {
+                        "type": "reaction",
+                        "name": reaction.name,
+                        "object": jQuery.extend(true, {}, reaction)
+                    };
+
+                    if (Enzyme.indexByName(reaction.name) != -1) {
+                        // Reaction exists
+                        var orig_enzyme = Enzyme.enzymes[Enzyme.indexByName(reaction.name)];
+
+                        orig_enzyme.name = reaction.name;
+                        orig_enzyme.substrates = reaction.substrates;
+                        orig_enzyme.products = reaction.products;
+                        orig_enzyme.reversible = reaction.reversible;
+
+                        command["op"] = "edit";
+                    } else {
+
+                        Enzyme.enzymes.push(reaction);
+
+                        datatable_enzymes.row.add(reaction);
+
+                        command["op"] = "add";
+                    }
+
+                    command_list.push(command);
+
+                    reaction.updateMetaboliteReference().forEach(function(m) {
+                        m.invalidate();
+                    });
+                    reaction.invalidate();
+                } catch (err) {
+
+                }
+            });
+
+            datatable_metabolites.sort();
+            datatable_metabolites.draw();
+
+            datatable_enzymes.sort();
+            datatable_enzymes.draw();
+
+            $("#dialog-reaction-bulkadd").modal("hide");
+        });
     });
 </script>
 
@@ -1564,9 +1658,18 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
             </thead>
         </table>
 
-        <button type="button" class="btn btn-primary create-enzyme-button">
-        Create new reaction
-        </button>
+        <div class="btn-group">
+            <button type="button" class="btn btn-primary create-enzyme-button">
+            Create new reaction
+            </button>
+            <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                <span class="caret"></span>
+                <span class="sr-only">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu">
+                <li><a href="#" id="create-enzyme-bulk-button">Bulk add reactions</a></li>
+            </ul>
+        </div>
         <button type="button" class="btn btn-primary create-metabolite-button">
         Create new metabolite
         </button>
@@ -1714,6 +1817,37 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
                                 <label class="control-label" for="constrained-max">Max</label>
                                 <input name="constrained_max" id="constrained-max" class="form-control" type="text">
                             </div>
+                        </div>
+                    </fieldset>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary">Save changes</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="dialog-reaction-bulkadd" tabindex="-1" role="dialog" aria-labelledby="dialog-reaction-bulkadd-label"
+     aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                        aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="dialog-reaction-bulkadd-label">Bulk add reactions</h4>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <fieldset>
+                        Enter reactions in BioOpt format for adding them to the model. Constraints can be put after the reactions.<br>
+                        <div class="form-group">
+                            <label class="control-label" for="enzyme-bulkdata">BioOpt data:</label>
+                            <textarea class="form-control" id="enzyme-bulkdata" placeholder="reac1: a + 2 b -> 3.5 c [-1, 1]" rows="5"></textarea>
+                        </div>
+                        <div class="form-group" id="enzyme-bulkadd-preview">
+
                         </div>
                     </fieldset>
                 </form>

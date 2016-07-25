@@ -26,9 +26,9 @@ var Enzyme = (function() {
         if (this.disabled) {
             element.addClass("cyano-reaction-disabled");
         }
-        element.append(this.substrates.map(Enzyme.compoundToString).join(" + "));
+        element.append(this.substrates.map(Enzyme.compoundToHTML).join(" + "));
         element.append(this.reversible ? " &harr; " : " &rarr; ");
-        element.append(this.products.map(Enzyme.compoundToString).join(" + "));
+        element.append(this.products.map(Enzyme.compoundToHTML).join(" + "));
 
         element.append("</div>");
         element.appendTo(outer);
@@ -178,7 +178,7 @@ Enzyme.getPathways = function() {
 	return r.sort();
 };
 
-Enzyme.compoundToString = function(compound) {
+Enzyme.compoundToHTML = function(compound) {
     var amount = compound.stoichiometry + " ";
     var name = $("<span>").addClass("cyano-metabolite").text(compound.name);
 
@@ -189,12 +189,140 @@ Enzyme.compoundToString = function(compound) {
     return amount + name.wrap("<p>").parent().html();
 };
 
+Enzyme.compoundToString = function(compound) {
+    return compound.stoichiometry  + " " + compound.name;
+};
+
 Enzyme.fromReaction = function(value) {
     var enzyme = new Enzyme(value.name);
 
     for (var key in value) {
         enzyme[key] = value[key];
     }
+
+    return enzyme;
+};
+
+Enzyme.fromBioOptString = function(value) {
+    var takeWhile = function(predicate, iterable, inclusive) {
+        var arr = [];
+        iterable.every(function(x) {
+            if (predicate(x)) {
+                arr.push(x);
+            } else {
+                if (inclusive) {
+                    arr.push(x);
+                }
+                return false;
+            }
+
+            return true;
+        });
+
+        return [arr, iterable.slice(arr.length)];
+    };
+
+    var enzyme = new Enzyme();
+
+    var line = value.split(/\s+/g);
+
+    var res = takeWhile(function(x) { return x.indexOf(":") != x.length - 1 }, line, true);
+
+    enzyme.name = res[0].join(" ").slice(0, -1).trim();
+    line = res[1];
+
+    if (line.length == 0) {
+        throw {"enzyme": enzyme, "message": "Invalid reaction"};
+    }
+
+    var reactants = []
+    var arrow = ""
+    var products = []
+    var state = 0
+
+    while (line.length > 0) {
+        var value = 1;
+
+        if (line[0].indexOf("/") != -1) {
+            var fl = line[0].split(/\//g);
+            value = +(fl[0])/+(fl[1]);
+            if (isNaN(value)) {
+                value = 1;
+            } else {
+                line = line.slice(1);
+            }
+        } else {
+            value = +(line[0]);
+            if (isNaN(value)) {
+                value = 1;
+            } else {
+                line = line.slice(1);
+            }
+        }
+
+        // Identifier...
+        res = takeWhile(function(x) { return x != "+" && x != "->" && x != "<->" }, line, false);
+        // Parser is now on +, -> or <-> or EOL
+        var mname = res[0].join(" ");
+        line = res[1];
+        // Test if there a multiple operators and reject them
+        res = takeWhile(function(x) { return x == "+" && x == "->" && x == "<->" }, line, false)
+
+        // Parser is now on the next metabolite (number or name) or EOL
+        if (res[0].length > 0) {
+            if (res[0].length > 1) {
+                throw {"enzyme": enzyme, message: "-> or <-> not allowed in names"};
+            }
+            // iname += ops[:-1]
+            // line.insert(0, ops[-1])
+            // Push operator back in line
+            // line.insert(0, ops[-1])
+        }
+
+        // Continue with old line, was just sanity check
+        if (mname.length == 0) {
+            throw {"enzyme": enzyme, message: "Invalid reaction"};
+        }
+
+        var target;
+        if (state == 0) {
+            target = enzyme.substrates;
+        } else {
+            target = enzyme.products;
+        }
+
+        target.push({"stoichiometry": value, "name": mname})
+
+        if (line.length == 0) {
+            break;
+        }
+
+        if (line[0] == "->" || line[0] == "<->") {
+            if (arrow != "") {
+                throw {"enzyme": enzyme, message: "More then one reaction arrow"};
+            }
+
+            arrow = line[0]
+            state = 1;
+        }
+
+        // Remove the operator
+        line = line.slice(1);
+    };
+
+    if (arrow == "") {
+        throw {"enzyme": enzyme, message: "No arrow found"};
+    }
+
+    if (enzyme.substrates.length == 0) {
+        throw {"enzyme": enzyme, message: "No substrates found"};
+    }
+
+    if (enzyme.products.length == 0) {
+        throw {"enzyme": enzyme, message: "No products found"};
+    }
+
+    enzyme.reversible = arrow == "<->";
 
     return enzyme;
 };
@@ -308,9 +436,9 @@ Metabolite.instanceByName = function(value) {
 
 Metabolite.fromReaction = function(reaction) {
     var metabolite_fn = function(value) {
-        var idx = Metabolite.indexByName(value);
+        var idx = Metabolite.indexByName(value.name);
         if (idx == -1) {
-            Metabolite.metabolites.push(new Metabolite(value, false));
+            Metabolite.metabolites.push(new Metabolite(value.name, false));
         }
     };
 
