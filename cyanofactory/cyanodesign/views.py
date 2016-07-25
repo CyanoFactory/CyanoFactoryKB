@@ -208,7 +208,8 @@ def simulate(request, pk):
 
     g = get_selected_reaction(json_graph.node_link_data(full_g), nodeIDs, display, org)
 
-    graph = nx.to_agraph(g)
+    # Work around a bug in nx 1.11 breaking nx.to_agraph function
+    graph = nx.drawing.nx_agraph.to_agraph(g)
     graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
     graph.node_attr.update(style="filled", colorscheme="pastel19")
     outgraph = str(graph.to_string())
