@@ -39,7 +39,9 @@ def stats(lista):
     s = (sum(s2)/(N-1.))**.5
     return [xmed, s]
 
+from .util import python_2_unicode_compatible
 
+@python_2_unicode_compatible
 class Network:
     def __init__(self, M, names=[]):
         """ This defines a directed network network object, or undirected if M
@@ -118,14 +120,14 @@ class Network:
         self.Cis = Cis
         self.kis = kis
 
-    def __repr__(self):
+    def __str__(self):
         if self.directed:
-            dire = "Directed"
+            dire = u"Directed"
             nlinks = self.nlinks
         else:
-            dire = "Undirected"
+            dire = u"Undirected"
             nlinks = self.nlinks / 2
-        repre = "%s Network with:\n %f Nodes \n %f Links" % (dire, self.nnodes,
+        repre = u"%s Network with:\n %f Nodes \n %f Links" % (dire, self.nnodes,
                                                           nlinks)
         return repre
 
@@ -409,3 +411,4 @@ class Network:
         disc_comps = [list(ele) for ele in disc_comps]
         self.disc_comps = disc_comps
 
+    __repr__ = __str__

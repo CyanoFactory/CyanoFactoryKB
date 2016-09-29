@@ -19,7 +19,9 @@
 #    
 #    Please, cite us in your research!
 #
+from .util import python_2_unicode_compatible
 
+@python_2_unicode_compatible
 class Enzyme(object):
     '''
     This class defines a chemical reaction object. The input should be an
@@ -170,9 +172,6 @@ class Enzyme(object):
         return len(self.issues_info) > 0
 
     def __str__(self):
-        return self.__unicode__()
-
-    def __unicode__(self):
         """
         Returns the reaction in OptGene format.
         """
@@ -185,9 +184,9 @@ class Enzyme(object):
                 if stoic == int(stoic):
                     stoic = int(stoic)
 
-                return "%s %s" % (stoic, metabolite)
+                return u"%s %s" % (stoic, metabolite)
 
-        return "{} : {} {} {}".format(
+        return u"{} : {} {} {}".format(
             self.name,
             " + ".join(map(reac_printer, zip(self.stoic[0], self.substrates))),
             "<->" if self.reversible else "->",
@@ -488,3 +487,5 @@ class Enzyme(object):
             return self.stoic[1][self.products.index(met)]
         else:
             raise ValueError("Metabolite " + met + " not in the reaction!")
+
+    __repr__ = __str__

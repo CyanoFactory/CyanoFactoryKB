@@ -28,7 +28,9 @@ from .enzyme import *
 from xml.dom.minidom import parseString
 import re
 import six
+from .util import python_2_unicode_compatible
 
+@python_2_unicode_compatible
 class Metabolism(object):
     """
         This class defines a metabolism object (set of chemical reactions,
@@ -131,12 +133,12 @@ class Metabolism(object):
         # Most attributes calculated in the calcs routine.
         self.calcs()
 
-    def __repr__(self):
+    def __str__(self):
         """
         Show number of reactions and metabolites in the metabolism.
         """
-        aa = "# Reactions:" + str(len(self.enzymes)) + "\n"
-        aa += "# Metabolites:" + str(len(self.mets)) + "\n"
+        aa = u"# Reactions:" + str(len(self.enzymes)) + u"\n"
+        aa += u"# Metabolites:" + str(len(self.mets)) + u"\n"
         return aa
 
     def calcs(self):
@@ -982,3 +984,4 @@ class Metabolism(object):
         print(" ", file=probs)
         probs.close()
 
+    __repr__ = __str__

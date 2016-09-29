@@ -21,6 +21,9 @@
 
 import glpk
 
+from .util import python_2_unicode_compatible
+
+@python_2_unicode_compatible
 class FBA:
     """
     This class perform FBA analysis for a metabolism object.
@@ -91,20 +94,20 @@ class FBA:
         self.design_obj = org.design_obj
         self.fba()
 
-    def __repr__(self, keyz=lambda x:x[1], rev=False):
+    def __str__(self, keyz=lambda x:x[1], rev=False):
         fluxes =[(self.lp.cols[ii].name, self.lp.cols[ii].value) for ii in \
                                                            range(len(self.reacs))]
         fluxes = sorted(fluxes, key=keyz, reverse=rev)
-        stri = ""
+        stri = u""
         for ele in fluxes:
-            stri += "%30s ---->  %9.9f  \n" % ele
-        stri += "\nFlux on objective                   : %9.9f \n" % self.lp.obj.value
+            stri += u"%30s ---->  %9.9f  \n" % ele
+        stri += u"\nFlux on objective                   : %9.9f \n" % self.lp.obj.value
         fluxes = [ele[1] for ele in fluxes]
         no_flux = len(list(filter(lambda x:abs(x)<self.eps,fluxes)))
         wi_flux = len(fluxes)-no_flux
-        stri += "Reactions with flux    (flux>eps)   : %i \n"%wi_flux
-        stri += "Reactions without flux (flux<eps)   : %i \n"%no_flux
-        stri += "Solution status: " + self.get_status()
+        stri += u"Reactions with flux    (flux>eps)   : %i \n"%wi_flux
+        stri += u"Reactions without flux (flux<eps)   : %i \n"%no_flux
+        stri += u"Solution status: " + self.get_status()
         return stri
 
     def __sub__(self, other, keyz=lambda x:x[3], rev=False):
@@ -284,6 +287,34 @@ class FBA:
             self.obj = obj
         return results
 
+    def design_fba(self, units):
+        saved_constr = []
+        saved_obj = self.obj[:]
+        all_flux = []
+
+        for obj in self.obj:
+            iobj = self.reac_names.index(obj[0])
+            saved_constr.append(self.constr[iobj][:])
+
+        self.obj = self.design_obj
+
+        for unit in units:
+            for obj in saved_obj:
+                iobj = self.reac_names.index(obj[0])
+                self.constr[iobj] = [unit, unit]
+
+            self.fba()
+            
+            all_flux.append(self.flux)
+
+        # Restore previous settings
+        self.obj = saved_obj
+        for i, obj in enumerate(self.obj):
+            iobj = self.reac_names.index(obj[0])
+            self.constr[iobj] = saved_constr[i]
+
+        return all_flux
+
     def max_min(self, ii, fixobj=0.5):
         """
         Checks the maximum and minimum flux in each reaction if set as objective
@@ -408,3 +439,5 @@ class FBA:
             return "Unbound (check constraints)"
         else:
             return "Unknown Error"
+
+    __repr__ = __str__
