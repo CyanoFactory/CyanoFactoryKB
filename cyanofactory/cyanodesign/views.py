@@ -100,7 +100,7 @@ def get_reactions(request, pk):
 
 @global_permission_required("access_cyanodesign")
 def simulate(request, pk):
-    if not all(x in request.POST for x in ["changes", "objectives", "display", "auto_flux"]):
+    if not all(x in request.POST for x in ["changes", "objectives", "display", "auto_flux", "type"]):
         return HttpResponseBadRequest("Request incomplete")
 
     output_format = request.POST.get("format", "json")
@@ -127,6 +127,7 @@ def simulate(request, pk):
         objectives = json.loads(request.POST["objectives"])
         display = json.loads(request.POST["display"])
         auto_flux = json.loads(request.POST["auto_flux"])
+        simtype = json.loads(request.POST["type"])
     except ValueError:
         return HttpResponseBadRequest("Invalid JSON data")
 
@@ -134,6 +135,9 @@ def simulate(request, pk):
         auto_flux = bool(auto_flux)
     except ValueError:
         return HttpResponseBadRequest("Invalid data type")
+
+    if str(simtype) != "fba":
+        return HttpResponseBadRequest("Unsupported simulation type: {}".format(simtype))
 
     try:
         apply_commandlist(org, changes)
@@ -409,7 +413,11 @@ def upload(request, pk):
                         return {'success': False, 'form_html': form_html}
 
                 try:
+                    ss.seek(0)
                     model = Metabolism(ss)
+
+                    if len(model.reactions) == 0 or len(model.mets) == 0:
+                        raise ValueError("Model is empty")
                 except:
                     form.add_error("file", "Not a valid model")
                     form_html = render_crispy_form(form, context=request)
