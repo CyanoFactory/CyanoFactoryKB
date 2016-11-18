@@ -16,7 +16,6 @@ import json
 
 import math
 import os
-from crispy_forms.utils import render_crispy_form
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.template.context import Context, RequestContext
@@ -1582,7 +1581,7 @@ def basket_create(request):
 
             return {'success': True}
         else:
-            form_html = render_crispy_form(form, context=RequestContext(request))
+            form_html = chelpers.render_crispy_form(form, context=request)
             return {'success': False, 'form_html': form_html}
 
     return HttpResponseBadRequest()
@@ -1607,7 +1606,7 @@ def basket_rename(request, basket_id):
 
             return {'success': True}
         else:
-            form_html = render_crispy_form(form, context=RequestContext(request))
+            form_html = chelpers.render_crispy_form(form, context=request)
             return {'success': False, 'form_html': form_html}
 
     return HttpResponseBadRequest()

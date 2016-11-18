@@ -2468,3 +2468,11 @@ def get_global_permissions():
     from kegg.models import GlobalPermission as kg
 
     return cg._meta.permissions + cdg._meta.permissions + bg._meta.permissions + kg._meta.permissions
+
+
+def render_crispy_form(form, helper=None, context=None):
+    from crispy_forms.utils import render_crispy_form
+    from django.core.context_processors import csrf
+    ctx = {}
+    ctx.update(csrf(context))
+    return render_crispy_form(form, helper=helper, context=ctx)

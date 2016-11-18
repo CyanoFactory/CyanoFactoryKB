@@ -8,7 +8,6 @@ Released under the MIT license
 from io import StringIO
 import os
 import tempfile
-from crispy_forms.utils import render_crispy_form
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
@@ -19,7 +18,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from jsonview.decorators import json_view
 from cyano.decorators import ajax_required, permission_required, global_permission_required
 from PyNetMet2.metabolism import Metabolism
-from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error
+from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error, render_crispy_form
 from cyano.models import UserProfile
 from cyanodesign.forms import UploadModelForm, ModelFromTemplateForm, SaveModelAsForm, SaveModelForm
 from cyanodesign.helpers import model_from_string, apply_commandlist, calc_reactions, get_selected_reaction, \
@@ -379,7 +378,7 @@ def save_as(request, pk):
 
             return {'success': True, 'url': reverse("cyano-design-design", kwargs={"pk":dm.pk})}
         else:
-            form_html = render_crispy_form(form, context=RequestContext(request))
+            form_html = render_crispy_form(form, context=request)
             return {'success': False, 'form_html': form_html}
 
     return BadRequest()
@@ -416,7 +415,7 @@ def upload(request, pk):
                     ss.seek(0)
                     model = Metabolism(ss)
 
-                    if len(model.reactions) == 0 or len(model.mets) == 0:
+                    if len(model.enzymes) == 0 or len(model.mets) == 0:
                         raise ValueError("Model is empty")
                 except:
                     form.add_error("file", "Not a valid model")
