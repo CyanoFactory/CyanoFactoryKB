@@ -99,7 +99,7 @@ def get_reactions(request, pk):
 
 @global_permission_required("access_cyanodesign")
 def simulate(request, pk):
-    if not all(x in request.POST for x in ["changes", "objectives", "display", "auto_flux", "type"]):
+    if not all(x in request.POST for x in ["changes", "objectives", "design_objectives", "display", "auto_flux", "type"]):
         return HttpResponseBadRequest("Request incomplete")
 
     output_format = request.POST.get("format", "json")
@@ -124,6 +124,7 @@ def simulate(request, pk):
     try:
         changes = json.loads(request.POST["changes"])
         objectives = json.loads(request.POST["objectives"])
+        design_objectives = json.loads(request.POST["design_objectives"])
         display = json.loads(request.POST["display"])
         auto_flux = json.loads(request.POST["auto_flux"])
         simtype = json.loads(request.POST["type"])
@@ -135,7 +136,7 @@ def simulate(request, pk):
     except ValueError:
         return HttpResponseBadRequest("Invalid data type")
 
-    if str(simtype) != "fba":
+    if str(simtype) not in ["fba", "mba"]:
         return HttpResponseBadRequest("Unsupported simulation type: {}".format(simtype))
 
     try:
@@ -148,109 +149,129 @@ def simulate(request, pk):
             raise ValueError("No objective specified")
         org.objectives = []
         for obj in objectives:
-            if len(obj["name"]) > 0:
+            obj_reac = org.get_reaction(obj["name"])
+            if obj_reac is None:
+                raise ValueError("Objective not in model: " + obj["name"])
+
+            if obj_reac.disabled:
+                return HttpResponseBadRequest("Objective disabled: " + obj_reac.name)
+
+            org.objectives.append(JsonModel.Objective(**obj))
+
+        if simtype == "mba":
+            org.design_objectives = []
+            for obj in design_objectives:
                 obj_reac = org.get_reaction(obj["name"])
                 if obj_reac is None:
-                    raise ValueError("Objective not in model: " + obj["name"])
+                    raise ValueError("Design objective not in model: " + obj["name"])
 
                 if obj_reac.disabled:
-                    return HttpResponseBadRequest("Objective disabled: " + obj_reac.name)
+                    return HttpResponseBadRequest("Design objective disabled: " + obj_reac.name)
 
-                org.objectives.append(JsonModel.Objective(**obj))
-            else:
-                raise ValueError("No objective specified")
+                org.design_objectives.append(JsonModel.Objective(**obj))
+
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + str(e))
-
-    display = filter(lambda x: not len(x) == 0, display)
-
-    for item in display:
-        if not org.has_reaction(item):
-            return HttpResponseBadRequest("Unknown reaction in display list: " + item)
 
     org = org.to_model()
 
     try:
-       fba = org.fba()
+        fba = org.fba()
     except ValueError as e:
         return HttpResponseBadRequest("FBA error: " + str(e))
 
-    if dry_run:
-        return HttpResponse(
-            json.dumps({"solution": fba.get_status()}),
-            content_type="application/json")
+    if simtype == "fba":
+        if dry_run:
+            return HttpResponse(
+                json.dumps({"solution": fba.get_status()}),
+                content_type="application/json")
 
-    full_g, nodeIDs = calc_reactions(org, fba)
+        full_g, nodeIDs = calc_reactions(org, fba)
 
-    display = json.loads(request.POST["display"])
-    display = list(filter(lambda x: len(x) > 0 and org.has_reaction(x), display))
+        display = json.loads(request.POST["display"])
+        display = list(filter(lambda x: len(x) > 0 and org.has_reaction(x), display))
 
-    dflux = {}
-    for reac, flux in zip(map(lambda x: x.name, fba.reacs), fba.flux):
-        dflux[reac] = flux
+        dflux = {}
+        for reac, flux in zip(map(lambda x: x.name, fba.reacs), fba.flux):
+            dflux[reac] = flux
 
-    # Auto filter by FBA
-    if auto_flux:
-        if len(full_g.edges()) <= 30:
-            full_eg = full_g
+        # Auto filter by FBA
+        if auto_flux:
+            if len(full_g.edges()) <= 30:
+                full_eg = full_g
+            else:
+                full_eg = nx.ego_graph(full_g.reverse(), nodeIDs[org.obj[0][0]], radius=3, center=False, undirected=False)
+
+            full_g.remove_edges_from(full_g.in_edges(nodeIDs[org.obj[0][0]]) + full_g.out_edges(nodeIDs[org.obj[0][0]]))
+            all_edges = map(lambda x: full_eg.get_edge_data(*x)["object"].name, full_eg.edges())
+            # Get fluxes of "edges"
+            flux = []
+            for reac in all_edges:
+                flux.append([reac, dflux[reac]])
+            flux = sorted(flux, key=lambda x: -x[1])
+            display = list(map(lambda x: x[0], flux[:30]))
         else:
-            full_eg = nx.ego_graph(full_g.reverse(), nodeIDs[org.obj[0][0]], radius=3, center=False, undirected=False)
+            full_g.remove_edges_from(full_g.in_edges(nodeIDs[org.obj[0][0]]) + full_g.out_edges(nodeIDs[org.obj[0][0]]))
 
-        full_g.remove_edges_from(full_g.in_edges(nodeIDs[org.obj[0][0]]) + full_g.out_edges(nodeIDs[org.obj[0][0]]))
-        all_edges = map(lambda x: full_eg.get_edge_data(*x)["object"].name, full_eg.edges())
-        # Get fluxes of "edges"
-        flux = []
-        for reac in all_edges:
-            flux.append([reac, dflux[reac]])
-        flux = sorted(flux, key=lambda x: -x[1])
-        display = list(map(lambda x: x[0], flux[:30]))
-    else:
-        full_g.remove_edges_from(full_g.in_edges(nodeIDs[org.obj[0][0]]) + full_g.out_edges(nodeIDs[org.obj[0][0]]))
+        display.append(org.obj[0][0])
 
-    display.append(org.obj[0][0])
+        g = get_selected_reaction(json_graph.node_link_data(full_g), nodeIDs, display, org)
 
-    g = get_selected_reaction(json_graph.node_link_data(full_g), nodeIDs, display, org)
+        # Work around a bug in nx 1.11 breaking nx.to_agraph function
+        graph = nx.drawing.nx_agraph.to_agraph(g)
+        graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
+        graph.node_attr.update(style="filled", colorscheme="pastel19")
+        outgraph = str(graph.to_string())
+        outgraph = pygraphviz.AGraph(outgraph)
+        outgraph = outgraph.draw(format="svg", prog="dot")
 
-    # Work around a bug in nx 1.11 breaking nx.to_agraph function
-    graph = nx.drawing.nx_agraph.to_agraph(g)
-    graph.graph_attr.update(splines=True, overlap=False, rankdir="LR")
-    graph.node_attr.update(style="filled", colorscheme="pastel19")
-    outgraph = str(graph.to_string())
-    outgraph = pygraphviz.AGraph(outgraph)
-    outgraph = outgraph.draw(format="svg", prog="dot")
+        if output_format == "json":
+            return HttpResponse(json.dumps(
+                {"graph": outgraph.decode("utf-8"),
+                "solution": fba.get_status(),
+                "flux": dflux
+                }),
+                content_type="application/json"
+            )
+        elif output_format == "png":
+            import wand.image
+            with wand.image.Image(blob=outgraph, format="svg") as image:
+                png_image = image.make_blob("png")
 
-    if output_format == "json":
-        return HttpResponse(json.dumps(
-            {"graph": outgraph.decode("utf-8"),
-            "solution": fba.get_status(),
-            "flux": dflux
-            }),
-            content_type="application/json"
-        )
-    elif output_format == "png":
-        import wand.image
-        with wand.image.Image(blob=outgraph, format="svg") as image:
-            png_image = image.make_blob("png")
+            r = HttpResponse(png_image, content_type="image/png")
+            r['Content-Disposition'] = 'attachment; filename={}.png'.format(model.filename)
+            return r
+        elif output_format == "svg":
+            r = HttpResponse(outgraph.decode("utf-8"), content_type="image/svg+xml")
+            r['Content-Disposition'] = 'attachment; filename={}.svg'.format(model.filename)
+            return r
+        elif output_format == "csv":
+            s = StringIO()
+            for reac, flux in zip(fba.reacs, fba.flux):
+                s.write(reac.name)
+                s.write("\t")
+                s.write(str(flux))
+                s.write("\r\n")
+            r = HttpResponse(s.getvalue(), content_type="text/csv")
+            r['Content-Disposition'] = 'attachment; filename={}.csv'.format(model.filename)
+            return r
+        else:
+            return HttpResponseBadRequest("Unknown format")
+    else:  # mba
+        design_result = fba.design_fba([0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1])
+        dflux = [list(x[fba.reac_names.index(fba.obj[0][0])] for x in design_result),
+                 list(x[fba.reac_names.index(fba.design_obj[0][0])] for x in design_result)]
 
-        r = HttpResponse(png_image, content_type="image/png")
-        r['Content-Disposition'] = 'attachment; filename={}.png'.format(model.filename)
-        return r
-    elif output_format == "svg":
-        r = HttpResponse(outgraph.decode("utf-8"), content_type="image/svg+xml")
-        r['Content-Disposition'] = 'attachment; filename={}.svg'.format(model.filename)
-        return r
-    elif output_format == "csv":
-        s = StringIO()
-        for reac, flux in zip(fba.reacs, fba.flux):
-            s.write(reac.name)
-            s.write("\t")
-            s.write(str(flux))
-            s.write("\r\n")
-        r = HttpResponse(s.getvalue(), content_type="text/csv")
-        r['Content-Disposition'] = 'attachment; filename={}.csv'.format(model.filename)
-        return r
-    else:
-        return HttpResponseBadRequest("Unknown format")
+        if output_format == "json":
+            return HttpResponse(json.dumps(
+                {
+                "solution": fba.get_status(),
+                "flux": dflux
+                }),
+                content_type="application/json"
+            )
+        else:
+            return HttpResponseBadRequest("Unknown format")
 
 
 @global_permission_required("access_cyanodesign")

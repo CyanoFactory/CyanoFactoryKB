@@ -19,7 +19,9 @@ Released under the MIT license
 {% block page_title %}CyanoDesign &ndash; {{ name }}{% endblock %}
 {% block head %}
 {{ block.super }}
-<script src="{% get_static_prefix %}cyanointeraction/d3/d3.v3.min.js"></script>
+<script src="{% get_static_prefix %}cyanodesign/js/d3.v3.js"></script>
+<link href="{% get_static_prefix %}cyanodesign/css/c3.css" rel="stylesheet" type="text/css">
+<script src="{% get_static_prefix %}cyanodesign/js/c3.js"></script>
 <script src="{% get_static_prefix %}cyano/js/viz.js"></script>
 <script type="text/javascript" src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
 <script src="{% get_static_prefix %}cyanodesign/js/enzyme.js"></script>
@@ -31,6 +33,7 @@ Released under the MIT license
     var dialog_enzyme;
     var dialog_metabolite_add;
     var cyano_design_objective_select;
+    var cyano_design_design_objective_select;
     var design_objective_visible_combobox;
     var constraints_div;
     var create_new_enzyme = false;
@@ -110,6 +113,7 @@ Released under the MIT license
         dialog_enzyme = $("#dialog-reaction");
         dialog_metabolite_add = $("#dialog-add-metabolite");
         cyano_design_objective_select = $("#cyano-design-objective-select");
+        cyano_design_design_objective_select = $("#cyano-design-design-objective-select");
         design_objective_visible_combobox = $("#design-objective-visible-combobox");
         constraints_div = $("#constraints-min-max");
         table_enzymes = $('#cyano-enzyme-list');
@@ -519,6 +523,11 @@ Released under the MIT license
                     "name": cyano_design_objective_select.val(),
                     "maximize": $("#radio-maximize").prop("checked")
                 }]),
+                "design_objectives": JSON.stringify([{
+                    "name": cyano_design_design_objective_select.val(),
+                    "maximize": true
+                }]),
+                "type": JSON.stringify($("#radio-fba").prop("checked") ? "fba" : "mba"),
                 "display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
                 "auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
             };
@@ -579,27 +588,41 @@ Released under the MIT license
                 data: data
             }).done(function(x) {
                 //var graph = Viz(x["graph"], "svg", "dot");
+                var symtype = $("#radio-fba").prop("checked") ? "fba" : "mba";
 
-                if (x["solution"] == "Optimal") {
-                    var obj = cyano_design_objective_select.val();
-                    notifyInfo("The solution is " + x["solution"] + ". Flux of objective is " + x["flux"][obj].toFixed(4));
-                } else {
-                    notifyWarning("The solution is " + x["solution"] + ". Check if your constraints are too strict.");
-                }
-
-                $("#visual").show();
-                document.getElementById("visual").innerHTML = x["graph"];
-
-                $("svg").attr("width", "100%").attr("height", "400px");
-                var svgPan = svgPanZoom('svg', {minZoom: 0.1, fit: false});
-                svgPan.zoom(1);
-                /*$("svg").find(".edge text").each(function() {
-                    if ($(this).text().indexOf(cyano_design_objective_select.val() + " ") == 0) {
-                        var new_x = ($("svg").width() / 2) - $(this).attr("x");
-                        var new_y = ($("svg").height() / 2) - $(this).attr("y");
-                        svgPan.pan({x: new_x, y: new_y});
+                if (symtype == "fba") {
+                    if (x["solution"] == "Optimal") {
+                        var obj = cyano_design_objective_select.val();
+                        notifyInfo("The solution is " + x["solution"] + ". Flux of objective is " + x["flux"][obj].toFixed(4));
+                    } else {
+                        notifyWarning("The solution is " + x["solution"] + ". Check if your constraints are too strict.");
                     }
-                });*/
+
+                    $("#visual").show();
+                    document.getElementById("visual").innerHTML = x["graph"];
+
+                    $("svg").attr("width", "100%").attr("height", "400px");
+                    var svgPan = svgPanZoom('svg', {minZoom: 0.1, fit: false});
+                    svgPan.zoom(1);
+                     /*$("svg").find(".edge text").each(function() {
+                        if ($(this).text().indexOf(cyano_design_objective_select.val() + " ") == 0) {
+                            var new_x = ($("svg").width() / 2) - $(this).attr("x");
+                            var new_y = ($("svg").height() / 2) - $(this).attr("y");
+                            svgPan.pan({x: new_x, y: new_y});
+                        }
+                    });*/
+                } else if (symtype == "mba") {
+                    var chart = c3.generate({
+                        bindto: '#visual',
+                        data: {
+                            x: 'x',
+                            columns: [
+                                ['x'].concat(x["flux"][0]),
+                                ['data1'].concat(x["flux"][1])
+                            ]
+                        }
+                    });
+                }
 
                 endRequest();
             }).error(function(x) {
@@ -751,10 +774,12 @@ Released under the MIT license
 
             Enzyme.enzymes.forEach(function(item) {
                 cyano_design_objective_select[0].selectize.addOption(item);
+                cyano_design_design_objective_select[0].selectize.addOption(item);
                 design_objective_visible_combobox[0].selectize.addOption(item);
                 item.updateMetaboliteReference();
             });
             cyano_design_objective_select[0].selectize.refreshOptions();
+            cyano_design_design_objective_select[0].selectize.refreshOptions();
             design_objective_visible_combobox[0].selectize.refreshOptions();
 
             if (old_design_objective !== undefined) {
@@ -883,12 +908,15 @@ Released under the MIT license
                 visible_value = enzyme;
             }
             cyano_design_objective_select[0].selectize.removeOption(enzyme.name);
+            cyano_design_design_objective_select[0].selectize.removeOption(enzyme.name);
             design_objective_visible_combobox[0].selectize.removeOption(enzyme.name);
 
             enzyme.name = name.val();
 
             cyano_design_objective_select[0].selectize.addOption(enzyme);
             cyano_design_objective_select[0].selectize.refreshOptions();
+            cyano_design_design_objective_select[0].selectize.addOption(enzyme);
+            cyano_design_design_objective_select[0].selectize.refreshOptions();
             design_objective_visible_combobox[0].selectize.addOption(enzyme);
             design_objective_visible_combobox[0].selectize.refreshOptions();
 
@@ -1322,6 +1350,7 @@ Released under the MIT license
             });
 
             cyano_design_objective_select[0].selectize.removeOption(reaction.name);
+            cyano_design_design_objective_select[0].selectize.removeOption(reaction.name);
             design_objective_visible_combobox[0].selectize.removeOption(reaction.name);
 
             datatable_metabolites.draw();
@@ -1331,7 +1360,7 @@ Released under the MIT license
             dialog_delete.data("parent").fadeOut(200, function() { datatable_enzymes.row(this).remove().draw(); });
         });
 
-        cyano_design_objective_select.selectize({
+        var cdos = {
             delimiter: ',',
             labelField: "name",
             valueField: "name",
@@ -1345,7 +1374,10 @@ Released under the MIT license
                     design_objective = undefined;
                 }
             }
-        });
+        };
+
+        cyano_design_objective_select.selectize(cdos);
+        cyano_design_design_objective_select.selectize(cdos);
 
         design_objective_visible_combobox.selectize({
             delimiter: '\x00',
@@ -1378,12 +1410,17 @@ Released under the MIT license
             updateMetabolitesList();
 
             $("#radio-maximize").prop("checked", true);
+            $("#radio-fba").prop("checked", true);
 
             if (x.objectives && x.objectives.length > 0) {
                 cyano_design_objective_select[0].selectize.setValue(x.objectives[0].name);
                 if (x.objectives[0].maximize == false) {
                     $("#radio-minimize").prop("checked", true);
                 }
+            }
+
+            if (x.design_objectives && x.design_objectives.length > 0) {
+                cyano_design_design_objective_select[0].selectize.setValue(x.design_objectives[0].name);
             }
 
             waitIndicator.hide($("#content"));
@@ -1720,32 +1757,80 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
             </fieldset>
         </div>
 
-        <div>
-            The main objective is always displayed in the simulation.
-        </div>
-
-        <div>
-            <div class="radio">
-                <input id="auto_flux" type="radio" name="flux" value="auto_flux">
-                <label for="auto_flux">Display reactions with highest flux connected to the objective</label>
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">Simulation Type</h3>
             </div>
-            <div class="radio">
-                <input id="manual_flux" type="radio" name="flux" value="manual_flux">
-                <label for="manual_flux">Display selected reactions</label>
-            </div>
-        </div>
-
-        <div class="cyano-design-reaction-filter">
-            <fieldset>
-                <div class="form-group">
-                    <label class="control-label" for="design-objective-visible-combobox">Select visible reactions</label>
-                    <input id="design-objective-visible-combobox">
+            <div class="panel-body" id="simulation-type">
+                <div class="radio">
+                    <input type="radio" name="simulationtype" id="radio-fba">
+                    <label for="radio-fba">
+                        Flux Balance Analysis
+                    </label>
                 </div>
-            </fieldset>
+                <div class="radio">
+                    <input type="radio" name="simulationtype" id="radio-mba">
+                    <label for="radio-mba">
+                        Metabolic Burden Analysis
+                    </label>
+                </div>
+            </div>
         </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">FBA settings</h3>
+            </div>
+
+            <div class="panel-body" id="settings-fba">
+                <div>
+                    The main objective is always displayed in the simulation.
+                </div>
+
+                <div>
+                    <div class="radio">
+                        <input id="auto_flux" type="radio" name="flux" value="auto_flux">
+                        <label for="auto_flux">Display reactions with highest flux connected to the objective</label>
+                    </div>
+                    <div class="radio">
+                        <input id="manual_flux" type="radio" name="flux" value="manual_flux">
+                        <label for="manual_flux">Display selected reactions</label>
+                    </div>
+                </div>
+
+                <div class="cyano-design-reaction-filter">
+                    <fieldset>
+                        <div class="form-group">
+                            <label class="control-label" for="design-objective-visible-combobox">Select visible reactions</label>
+                            <input id="design-objective-visible-combobox">
+                        </div>
+                    </fieldset>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-default">
+            <div class="panel-heading">
+                <h3 class="panel-title">MBA settings</h3>
+            </div>
+
+            <div class="panel-body" id="settings-mba">
+                <fieldset>
+                    <div class="form-group">
+                        <label class="control-label" for="cyano-design-design-objective-select">Design objective</label>
+                        <select id="cyano-design-design-objective-select" placeholder="Select a design objective"></select>
+                    </div>
+                </fieldset>
+            </div>
+        </div>
+
     </div>
 
     <div role="tabpanel" class="tab-pane" id="simulation-tab">
+        <div class="checkbox">
+            <input type="checkbox" name="remember-simulation" id="remember-simulation">
+            <label for="remember-simulation">Combine results with previous simulation</label>
+        </div>
         <button type="button" id="design-submit" class="btn btn-primary">Run simulation</button>
         <div id="export-button" class="btn-group">
             <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
