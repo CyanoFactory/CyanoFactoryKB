@@ -45,6 +45,7 @@ Released under the MIT license
     var datatable_metabolites;
     var submit_form;
     var revision = {% if revision %}{{ revision.pk }}{% else %}undefined{% endif %};
+    var simulation_chart = undefined;
 
     Enzyme.prototype.invalidate = function() {
         this.getMetabolites().forEach(function (obj) {
@@ -612,16 +613,26 @@ Released under the MIT license
                         }
                     });*/
                 } else if (symtype == "mba") {
-                    var chart = c3.generate({
-                        bindto: '#visual',
-                        data: {
-                            x: 'x',
+                    if (!$("#remember-simulation").prop("checked") || simulation_chart === undefined) {
+                        simulation_chart = c3.generate({
+                            bindto: '#visual',
+                            data: {
+                                x: 'x',
+                                columns: [
+                                    ['x'].concat(x["flux"][0]),
+                                    [cyano_design_design_objective_select.val()].concat(x["flux"][1])
+                                ],
+                                type: 'bar'
+                            }
+                        });
+                    } else {
+                        simulation_chart.load({
                             columns: [
-                                ['x'].concat(x["flux"][0]),
-                                ['data1'].concat(x["flux"][1])
-                            ]
-                        }
-                    });
+                                [cyano_design_design_objective_select.val()].concat(x["flux"][1])
+                            ],
+                            type: 'bar'
+                        });
+                    }
                 }
 
                 endRequest();
