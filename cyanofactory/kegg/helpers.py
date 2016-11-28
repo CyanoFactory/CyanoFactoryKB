@@ -71,7 +71,7 @@ def get_reaction_map(map_id, enzymes, metabolites, export):
         image.set("height", str(iheight))
 
         if export:
-            href = "data:image/png;base64," + encoded_string
+            href = "data:image/png;base64," + encoded_string.decode("utf-8")
         else:
             href = "{}kegg/img/{}.png".format(settings.STATIC_URL, map_id)
         image.set("xlink:href", href)

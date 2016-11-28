@@ -73,7 +73,7 @@ def format_output(request):
     else:
         encoded_string = ""
 
-    data = {'image': "data:image/png;base64," + encoded_string,
+    data = {'image': "data:image/png;base64," + encoded_string.decode("utf-8"),
             'export': export,
             'items': items,
             'metabolites': metabolites,
