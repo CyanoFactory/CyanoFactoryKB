@@ -99,10 +99,10 @@ def checkRequest(request):
     checkProteinInteractionRequest
     """
     data = {}
-    selectedID = request.GET["requestID"]
-    if selectedID[0] == "P":
+    selectedID = request.GET.get("requestID", "")
+    if len(selectedID) > 0 and selectedID[0] == "P":
         data = checkProteinInteractionRequest(selectedID[1:])
-    elif selectedID[0] == "C":
+    elif len(selectedID) > 0 and selectedID[0] == "C":
         data = checkChemicalInteractionRequest(int(selectedID[1:]))
     else:
         data = checkProteinInteractionRequest(selectedID)
