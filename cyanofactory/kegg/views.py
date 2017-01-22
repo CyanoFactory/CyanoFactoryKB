@@ -70,7 +70,7 @@ def map_view(request, map_id):
         map_data = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>""" + map_data
 
         import wand.image
-        with wand.image.Image(blob=map_data, format="svg") as image:
+        with wand.image.Image(blob=map_data.encode("utf-8"), format="svg") as image:
             png_image = image.make_blob("png")
 
         response = HttpResponse(png_image, content_type='image/png')

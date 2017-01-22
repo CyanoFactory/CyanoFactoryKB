@@ -99,7 +99,7 @@ def get_reactions(request, pk):
 
 @global_permission_required("access_cyanodesign")
 def simulate(request, pk):
-    if not all(x in request.POST for x in ["changes", "objectives", "design_objectives", "display", "auto_flux", "type"]):
+    if not all(x in request.POST for x in ["changes", "objectives", "design_objectives", "target_reactions", "display", "auto_flux", "type"]):
         return HttpResponseBadRequest("Request incomplete")
 
     output_format = request.POST.get("format", "json")
@@ -119,12 +119,13 @@ def simulate(request, pk):
     except KeyError:
         revision = model.get_latest_revision()
 
-    org = model_from_string(revision.content)
+    org_json = model_from_string(revision.content)
 
     try:
         changes = json.loads(request.POST["changes"])
         objectives = json.loads(request.POST["objectives"])
         design_objectives = json.loads(request.POST["design_objectives"])
+        target_reactions = json.loads(request.POST["target_reactions"])
         display = json.loads(request.POST["display"])
         auto_flux = json.loads(request.POST["auto_flux"])
         simtype = json.loads(request.POST["type"])
@@ -136,44 +137,56 @@ def simulate(request, pk):
     except ValueError:
         return HttpResponseBadRequest("Invalid data type")
 
-    if str(simtype) not in ["fba", "mba"]:
+    if str(simtype) not in ["fba", "mba", "sa"]:
         return HttpResponseBadRequest("Unsupported simulation type: {}".format(simtype))
 
     try:
-        apply_commandlist(org, changes)
-        org = model_from_string(revision.content)
+        apply_commandlist(org_json, changes)
+        org_json = model_from_string(revision.content)
         changes = compress_command_list(changes)
-        apply_commandlist(org, changes)
+        apply_commandlist(org_json, changes)
 
         if not objectives:
             raise ValueError("No objective specified")
-        org.objectives = []
+        org_json.objectives = []
         for obj in objectives:
-            obj_reac = org.get_reaction(obj["name"])
+            obj_reac = org_json.get_reaction(obj["name"])
             if obj_reac is None:
                 raise ValueError("Objective not in model: " + obj["name"])
 
             if obj_reac.disabled:
                 return HttpResponseBadRequest("Objective disabled: " + obj_reac.name)
 
-            org.objectives.append(JsonModel.Objective(**obj))
+            org_json.objectives.append(JsonModel.Objective(**obj))
 
-        if simtype == "mba":
-            org.design_objectives = []
+        if simtype == "mba" or simtype == "sa":
+            org_json.design_objectives = []
             for obj in design_objectives:
-                obj_reac = org.get_reaction(obj["name"])
+                obj_reac = org_json.get_reaction(obj["name"])
                 if obj_reac is None:
                     raise ValueError("Design objective not in model: " + obj["name"])
 
                 if obj_reac.disabled:
                     return HttpResponseBadRequest("Design objective disabled: " + obj_reac.name)
 
-                org.design_objectives.append(JsonModel.Objective(**obj))
+                org_json.design_objectives.append(JsonModel.Objective(**obj))
+
+            org_json.target_reactions = []
+            if simtype == "sa":
+                for obj in target_reactions:
+                    obj_reac = org_json.get_reaction(obj["name"])
+                    if obj_reac is None:
+                        raise ValueError("Target reaction not in model: " + obj["name"])
+
+                    if obj_reac.disabled:
+                        return HttpResponseBadRequest("Target reaction disabled: " + obj_reac.name)
+
+                    org_json.target_reactions.append(JsonModel.Objective(**obj))
 
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + str(e))
 
-    org = org.to_model()
+    org = org_json.to_model()
 
     try:
         fba = org.fba()
@@ -188,7 +201,6 @@ def simulate(request, pk):
 
         full_g, nodeIDs = calc_reactions(org, fba)
 
-        display = json.loads(request.POST["display"])
         display = list(filter(lambda x: len(x) > 0 and org.has_reaction(x), display))
 
         dflux = {}
@@ -223,11 +235,12 @@ def simulate(request, pk):
         graph.node_attr.update(style="filled", colorscheme="pastel19")
         outgraph = str(graph.to_string())
         outgraph = pygraphviz.AGraph(outgraph)
-        outgraph = outgraph.draw(format="svg", prog="dot")
+        #outgraph = outgraph.draw(format="svg", prog="dot")
 
         if output_format == "json":
             return HttpResponse(json.dumps(
-                {"graph": outgraph.decode("utf-8"),
+                {"graph": None,
+                 "graphstr": str(graph.to_string()),
                 "solution": fba.get_status(),
                 "flux": dflux
                 }),
@@ -257,16 +270,69 @@ def simulate(request, pk):
             return r
         else:
             return HttpResponseBadRequest("Unknown format")
-    else:  # mba
-        design_result = fba.design_fba([0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1])
-        dflux = [list(x[fba.reac_names.index(fba.obj[0][0])] for x in design_result),
-                 list(x[fba.reac_names.index(fba.design_obj[0][0])] for x in design_result)]
+    elif simtype == "mba":
+        # Determine optimal steps
+        obj = org.obj[:]
+        dobj = org.design_obj[:]
+
+        # Absolute
+        design_result = [["x"], [dobj[0][0]]]
+        design_result[0] += [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]
+        sim_result = fba.design_fba(design_result[0][1:])
+        dflux = [list(str(x[fba.reac_names.index(obj[0][0])]) for x in sim_result),
+                 list(x[fba.reac_names.index(dobj[0][0])] for x in sim_result)]
+
+        design_result[1] += dflux[1]
 
         if output_format == "json":
             return HttpResponse(json.dumps(
                 {
                 "solution": fba.get_status(),
-                "flux": dflux
+                "flux": design_result
+                }),
+                content_type="application/json"
+            )
+        else:
+            return HttpResponseBadRequest("Unknown format")
+    elif simtype == "sa":
+        # Percentage
+        # 1. WT conditions
+        obj = org.obj[:]
+        dobj = org.design_obj[:]
+        tobj = org_json.target_reactions[0].name
+        obj_r = org.get_reaction(obj[0][0])
+        target = org.get_reaction(tobj)
+        target_flux = fba.flux[fba.reac_names.index(target.name)]
+
+        design_result = [["x"], [obj[0][0]], [dobj[0][0]], ["Yield"]]
+
+        # 2. Limit target reaction
+        for limit in [1.0, 0.8, 0.6, 0.4, 0.2, 0.0]:
+            # Limit to a % of the target flux
+            target.constraint = (target.constraint[0], target_flux * limit)
+
+            # Optimize limited growth
+            org.obj = obj
+            growth = org.fba().Z
+
+            # Optimize production
+            obj_r.constraint = (growth, growth)
+            org.obj = dobj
+            production = org.fba().Z
+
+            # Reset production constraint
+            obj_r.constraint = (0, None)
+
+            design_result[0].append(str(int(limit * 100)) + "%")
+            design_result[1].append(round(growth, 4))
+            design_result[2].append(round(production, 4))
+            design_result[3].append(round(growth * production, 4))
+
+        if output_format == "json":
+            return HttpResponse(json.dumps(
+                {
+                "solution": fba.get_status(),
+                "flux": design_result
                 }),
                 content_type="application/json"
             )

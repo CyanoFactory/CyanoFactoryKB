@@ -299,11 +299,16 @@ class FBA:
         self.obj = self.design_obj
 
         for unit in units:
+            # TODO: Erster Durchlauf ohne Constraints
+            # TODO: Aufhören mit FBA wenn unfeasible
             for obj in saved_obj:
                 iobj = self.reac_names.index(obj[0])
                 self.constr[iobj] = [unit, unit]
 
             self.fba()
+
+            if self.lp.status != "opt":
+                continue
             
             all_flux.append(self.flux)
 

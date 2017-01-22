@@ -135,6 +135,7 @@ class JsonModel(object):
         self.metabolites = []
         self.objectives = []
         self.design_objectives = []
+        self.target_reactions = []
 
     @staticmethod
     def __index_predicate(iterator, pred):
@@ -251,16 +252,19 @@ class JsonModel(object):
         jm = JsonModel()
 
         if "reactions" in jstr:
-            jm.reactions = [JsonModel.Reaction(**x) for x in jstr["reactions"]]
+            jm.reactions = list(JsonModel.Reaction(**x) for x in jstr["reactions"])
 
         if "metabolites" in jstr:
-            jm.metabolites = [JsonModel.Metabolite(**x) for x in jstr["metabolites"]]
+            jm.metabolites = list(JsonModel.Metabolite(**x) for x in jstr["metabolites"])
 
         if "objectives" in jstr:
-            jm.objectives = [JsonModel.Objective(**x) for x in jstr["objectives"]]
+            jm.objectives = list(JsonModel.Objective(**x) for x in jstr["objectives"])
 
         if "design_objectives" in jstr:
-            jm.design_objectives = [JsonModel.Objective(**x) for x in jstr["design_objectives"]]
+            jm.design_objectives = list(JsonModel.Objective(**x) for x in jstr["design_objectives"])
+
+        if "target_reactions" in jstr:
+            jm.target_reactions = list(JsonModel.Objective(**x) for x in jstr["target_reactions"])
 
         return jm
 
@@ -271,6 +275,7 @@ class JsonModel(object):
             "metabolites",
             "objectives",
             "design_objectives"
+            "target_reactions"
         ]
         for i in order:
             val = self.__dict__[i]

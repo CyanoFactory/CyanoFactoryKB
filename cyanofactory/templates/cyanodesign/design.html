@@ -22,9 +22,10 @@ Released under the MIT license
 <script src="{% get_static_prefix %}cyanodesign/js/d3.v3.js"></script>
 <link href="{% get_static_prefix %}cyanodesign/css/c3.css" rel="stylesheet" type="text/css">
 <script src="{% get_static_prefix %}cyanodesign/js/c3.js"></script>
-<script src="{% get_static_prefix %}cyano/js/viz.js"></script>
+<script async src="{% get_static_prefix %}cyanodesign/js/viz.js"></script>
 <script type="text/javascript" src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
 <script src="{% get_static_prefix %}cyanodesign/js/enzyme.js"></script>
+<script src="{% get_static_prefix %}cyanodesign/js/mba_chart.js"></script>
 <script type="text/javascript">
     "use strict";
     var enzymes_design = [];
@@ -34,6 +35,7 @@ Released under the MIT license
     var dialog_metabolite_add;
     var cyano_design_objective_select;
     var cyano_design_design_objective_select;
+    var cyano_design_target_objective_select;
     var design_objective_visible_combobox;
     var constraints_div;
     var create_new_enzyme = false;
@@ -46,6 +48,7 @@ Released under the MIT license
     var submit_form;
     var revision = {% if revision %}{{ revision.pk }}{% else %}undefined{% endif %};
     var simulation_chart = undefined;
+    var last_symtype;
 
     Enzyme.prototype.invalidate = function() {
         this.getMetabolites().forEach(function (obj) {
@@ -115,6 +118,7 @@ Released under the MIT license
         dialog_metabolite_add = $("#dialog-add-metabolite");
         cyano_design_objective_select = $("#cyano-design-objective-select");
         cyano_design_design_objective_select = $("#cyano-design-design-objective-select");
+        cyano_design_target_objective_select = $("#cyano-design-target-objective-select");
         design_objective_visible_combobox = $("#design-objective-visible-combobox");
         constraints_div = $("#constraints-min-max");
         table_enzymes = $('#cyano-enzyme-list');
@@ -441,57 +445,41 @@ Released under the MIT license
         };
 
         dialog_enzyme.find("#reaction-substrates").text("");
-        selectize_options["onItemAdd"] = function(value, item) {
-            item.data("dialog", dialog_enzyme.find("#reaction-substrates")[0]);
-            item.data("value", dialog_enzyme.find("#reaction-substrates")[0].selectize.options[value].item.amount);
-            item.editable({
-                type: "text",
-                container: dialog_enzyme[0],
-                title: "Enter amount",
-                unsavedclass: null,
-                success: function (response, newValue) {
-                    if (!isFinite(newValue)) {
-                        return "Not a number";
-                    }
 
-                    var sel;
-                    sel = dialog_enzyme.find("#reaction-substrates")[0].selectize;
-                    sel.options[$(this).data("item")].item.amount = newValue;
-                    // no this doesn't rerender selected items only flushes render cache...
-                    sel.clearCache("item");
-                    // readd items
-                    // braindead api returns delimited string in get but expects array in set m(
-                    sel.setValue(sel.getValue().split('\x00').map(function (a) {
-                        return a;
-                    }));
-                    return {"newValue": newValue};
-                }
-            });
+        var item_add = function(elements) {
+            return function(value, item) {
+                item.data("dialog", elements);
+                item.data("value", elements.selectize.options[value].item.amount);
+                item.editable({
+                    type: "text",
+                    container: dialog_enzyme[0],
+                    title: "Enter amount",
+                    unsavedclass: null,
+                    success: function (response, newValue) {
+                        if (!isFinite(newValue)) {
+                            return "Not a number";
+                        }
+
+                        var sel;
+                        sel = elements.selectize;
+                        sel.options[$(this).data("item")].item.amount = newValue;
+                        // no this doesn't rerender selected items only flushes render cache...
+                        sel.clearCache("item");
+                        // readd items
+                        // braindead api returns delimited string in get but expects array in set m(
+                        sel.setValue(sel.getValue().split('\x00').map(function (a) {
+                            return a;
+                        }));
+                        return {"newValue": newValue};
+                    }
+                });
+            };
         };
+
+        selectize_options["onItemAdd"] = item_add(dialog_enzyme.find("#reaction-substrates")[0]);
         dialog_enzyme.find("#reaction-substrates").selectize(selectize_options);
         dialog_enzyme.find("#reaction-products").text("");
-        selectize_options["onItemAdd"] = function(value, item) {
-            item.data("dialog", dialog_enzyme.find("#reaction-products")[0]);
-            item.data("value", dialog_enzyme.find("#reaction-products")[0].selectize.options[value].item.amount);
-            item.editable({
-                type: "text",
-                container: dialog_enzyme[0],
-                title: "Enter amount",
-                unsavedclass: null,
-                success: function(response, newValue) {
-                    if (!isFinite(newValue)) {
-                        return "Not a number";
-                    }
-
-                    var sel;
-                    sel = dialog_enzyme.find("#reaction-products")[0].selectize;
-                    sel.options[$(this).data("item")].item.amount = newValue;
-                    sel.clearCache("item");
-                    sel.setValue(sel.getValue().split('\x00').map(function(a) { return a; }));
-                    return {"newValue": newValue};
-                }
-            });
-        };
+        selectize_options["onItemAdd"] = item_add(dialog_enzyme.find("#reaction-products")[0]);
         dialog_enzyme.find("#reaction-products").selectize(selectize_options);
 
         dialog_enzyme.find("#reaction-substrates").editable();
@@ -528,7 +516,11 @@ Released under the MIT license
                     "name": cyano_design_design_objective_select.val(),
                     "maximize": true
                 }]),
-                "type": JSON.stringify($("#radio-fba").prop("checked") ? "fba" : "mba"),
+                "target_reactions": JSON.stringify([{
+                    "name": cyano_design_target_objective_select.val(),
+                    "maximize": true
+                }]),
+                "type": JSON.stringify(getSimulationType()),
                 "display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
                 "auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
             };
@@ -588,10 +580,12 @@ Released under the MIT license
                 type: "POST",
                 data: data
             }).done(function(x) {
-                //var graph = Viz(x["graph"], "svg", "dot");
-                var symtype = $("#radio-fba").prop("checked") ? "fba" : "mba";
+                var symtype = getSimulationType();
+                last_symtype = symtype;
 
                 if (symtype == "fba") {
+                    var graph = Viz(x["graphstr"], "svg", "dot");
+
                     if (x["solution"] == "Optimal") {
                         var obj = cyano_design_objective_select.val();
                         notifyInfo("The solution is " + x["solution"] + ". Flux of objective is " + x["flux"][obj].toFixed(4));
@@ -600,12 +594,12 @@ Released under the MIT license
                     }
 
                     $("#visual").show();
-                    document.getElementById("visual").innerHTML = x["graph"];
+                    document.getElementById("visual").innerHTML = graph;
 
                     $("svg").attr("width", "100%").attr("height", "400px");
                     var svgPan = svgPanZoom('svg', {minZoom: 0.1, fit: false});
                     svgPan.zoom(1);
-                     /*$("svg").find(".edge text").each(function() {
+                /*$("svg").find(".edge text").each(function() {
                         if ($(this).text().indexOf(cyano_design_objective_select.val() + " ") == 0) {
                             var new_x = ($("svg").width() / 2) - $(this).attr("x");
                             var new_y = ($("svg").height() / 2) - $(this).attr("y");
@@ -613,18 +607,34 @@ Released under the MIT license
                         }
                     });*/
                 } else if (symtype == "mba") {
+                    $("#visual").show();
+
                     if (!$("#remember-simulation").prop("checked") || simulation_chart === undefined) {
-                        simulation_chart = c3.generate({
+                        var chart = {
                             bindto: '#visual',
                             data: {
                                 x: 'x',
-                                columns: [
-                                    ['x'].concat(x["flux"][0]),
-                                    [cyano_design_design_objective_select.val()].concat(x["flux"][1])
-                                ],
-                                type: 'bar'
+                                columns: x["flux"],
+                                type: 'bar',
+                                axes: {}
+                            },
+                            axis: {
+                                x: {
+                                    label: {
+                                        position: "outer-center"
+                                    },
+                                    type: 'category'
+                                },
+                                y: {
+                                    label: {
+                                        position: "outer-middle"
+                                    },
+                                }
                             }
-                        });
+                        };
+                        chart["data"]["axes"][cyano_design_objective_select.val()] = "y";
+
+                        simulation_chart = c3.generate(chart);
                     } else {
                         simulation_chart.load({
                             columns: [
@@ -633,6 +643,41 @@ Released under the MIT license
                             type: 'bar'
                         });
                     }
+                } else if (symtype == "sa") {
+                    $("#visual").show();
+
+                    var chart = {
+                        bindto: '#visual',
+                        data: {
+                            x: 'x',
+                            columns: x["flux"],
+                            type: 'bar',
+                            axes: {}
+                        },
+                        axis: {
+                            x: {
+                                label: {
+                                    position: "outer-center"
+                                },
+                                type: 'category'
+                            },
+                            y: {
+                                label: {
+                                    position: "outer-middle"
+                                },
+                            },
+                            y2: {
+                                label: {
+                                    position: "outer-middle"
+                                },
+                                show: true
+                            }
+                        }
+                    };
+                    chart["data"]["axes"][cyano_design_objective_select.val()] = "y";
+                    chart["data"]["axes"][cyano_design_design_objective_select.val()] = "y2";
+
+                    simulation_chart = c3.generate(chart);
                 }
 
                 endRequest();
@@ -713,10 +758,28 @@ Released under the MIT license
         });
 
         $("#export-png").click(function(event) {
+            if (last_symtype == "mba" || last_symtype == "sa") {
+                $("#visual > svg").find(".c3-axis path, .c3-axis line").css({"fill":"none","stroke":"black"});
+                $("#visual > svg").css({"font":"10px sans-serif"});
+                $("#visual > svg").find(".c3-legend-item").css({"font":"12px sans-serif"});
+
+                downloadPNG();
+                return;
+            }
+
             doExport("png");
         });
 
         $("#export-svg").click(function(event) {
+            if (last_symtype == "mba" || last_symtype == "sa") {
+                $("#visual > svg").find(".c3-axis path, .c3-axis line").css({"fill":"none","stroke":"black"});
+                $("#visual > svg").css({"font":"10px sans-serif"});
+                $("#visual > svg").find(".c3-legend-item").css({"font":"12px sans-serif"});
+
+                downloadSVG();
+                return;
+            }
+
             doExport("svg");
         });
 
@@ -787,11 +850,13 @@ Released under the MIT license
                 cyano_design_objective_select[0].selectize.addOption(item);
                 cyano_design_design_objective_select[0].selectize.addOption(item);
                 design_objective_visible_combobox[0].selectize.addOption(item);
+                cyano_design_target_objective_select[0].selectize.addOption(item);
                 item.updateMetaboliteReference();
             });
             cyano_design_objective_select[0].selectize.refreshOptions();
             cyano_design_design_objective_select[0].selectize.refreshOptions();
             design_objective_visible_combobox[0].selectize.refreshOptions();
+            cyano_design_target_objective_select[0].selectize.refreshOptions();
 
             if (old_design_objective !== undefined) {
                 cyano_design_objective_select[0].selectize.setValue(old_design_objective.name, false);
@@ -921,6 +986,7 @@ Released under the MIT license
             cyano_design_objective_select[0].selectize.removeOption(enzyme.name);
             cyano_design_design_objective_select[0].selectize.removeOption(enzyme.name);
             design_objective_visible_combobox[0].selectize.removeOption(enzyme.name);
+            cyano_design_target_objective_select[0].selectize.removeOption(enzyme.name);
 
             enzyme.name = name.val();
 
@@ -930,6 +996,8 @@ Released under the MIT license
             cyano_design_design_objective_select[0].selectize.refreshOptions();
             design_objective_visible_combobox[0].selectize.addOption(enzyme);
             design_objective_visible_combobox[0].selectize.refreshOptions();
+            cyano_design_target_objective_select[0].selectize.addOption(enzyme);
+            cyano_design_target_objective_select[0].selectize.refreshOptions();
 
             if (visible_value !== undefined) {
                 design_objective_visible_combobox[0].selectize.addItem(visible_value.name);
@@ -967,6 +1035,49 @@ Released under the MIT license
             });
             enzyme.invalidate();
         }
+
+        function updateSettingsVisibility() {
+            $("#fba-settings-panel").hide();
+            $("#sa-settings-panel").hide();
+
+            if ($("#radio-fba").prop("checked")) {
+                $("#fba-settings-panel").show();
+            } else if ($("#radio-mba").prop("checked")) {
+                $("#sa-settings-panel").show();
+                $("#sa-settings-target-function-panel").hide();
+            } else if ($("#radio-sa").prop("checked")) {
+                $("#sa-settings-panel").show();
+                $("#sa-settings-target-function-panel").show();
+            }
+        }
+
+        function getSimulationType() {
+            if ($("#radio-fba").prop("checked")) {
+                return "fba";
+            } else if ($("#radio-mba").prop("checked")) {
+                return "mba";
+            } else if ($("#radio-sa").prop("checked")) {
+                return "sa";
+            }
+
+            return "fba";
+        }
+
+        function setSimulationType(t) {
+            if (t == "fba") {
+                $("#radio-fba").prop("checked", true);
+            } else if (t == "mba") {
+                $("#radio-mba").prop("checked", true);
+            } else if (t == "sa") {
+                $("#radio-sa").prop("checked", true);
+            }
+
+            updateSettingsVisibility();
+        }
+
+        $("#radio-fba").change(updateSettingsVisibility);
+        $("#radio-mba").change(updateSettingsVisibility);
+        $("#radio-sa").change(updateSettingsVisibility);
 
         dialog_enzyme.on('shown.bs.modal', function() {
             dialog_enzyme.find("input").blur();
@@ -1363,6 +1474,7 @@ Released under the MIT license
             cyano_design_objective_select[0].selectize.removeOption(reaction.name);
             cyano_design_design_objective_select[0].selectize.removeOption(reaction.name);
             design_objective_visible_combobox[0].selectize.removeOption(reaction.name);
+            cyano_design_target_objective_select[0].selectize.removeOption(reaction.name);
 
             datatable_metabolites.draw();
 
@@ -1389,6 +1501,7 @@ Released under the MIT license
 
         cyano_design_objective_select.selectize(cdos);
         cyano_design_design_objective_select.selectize(cdos);
+        cyano_design_target_objective_select.selectize(cdos);
 
         design_objective_visible_combobox.selectize({
             delimiter: '\x00',
@@ -1421,7 +1534,7 @@ Released under the MIT license
             updateMetabolitesList();
 
             $("#radio-maximize").prop("checked", true);
-            $("#radio-fba").prop("checked", true);
+            setSimulationType("fba");
 
             if (x.objectives && x.objectives.length > 0) {
                 cyano_design_objective_select[0].selectize.setValue(x.objectives[0].name);
@@ -1471,6 +1584,24 @@ Released under the MIT license
             }
         });
 
+        var updateLabels = function () {
+            simulation_chart.axis.labels({
+                x: $("#mba-x-label").val(),
+                y: $("#mba-y-label").val(),
+                y2: $("#mba-y2-label").val()
+            });
+        };
+
+        $("#mba-x-label").change(function() {
+            updateLabels();
+        });
+         $("#mba-y-label").change(function() {
+            updateLabels();
+        });
+         $("#mba-y2-label").change(function() {
+            updateLabels();
+        });
+
         $("#enzyme_regex").click(function() {
             datatable_enzymes.search("", $(this).prop("checked"), true).draw();
         });
@@ -1488,10 +1619,30 @@ Released under the MIT license
             var lines = $("#enzyme-bulkdata").val().split(/\r*\n/);
 
             $("#enzyme-bulkadd-preview").empty();
+            var buffered_line = "";
             lines.forEach(function(line) {
                 var e;
                 try {
-                    e = Enzyme.fromBioOptString(line).toString();
+                    var last = line.split(/\s+/g).pop();
+                    if (last === "undefined") {
+                        return;
+                    }
+                    if (last == "<->" || last == "->" || last == "+") {
+                        buffered_line += " " + line;
+                        return;
+                    }
+
+                    buffered_line += " " + line;
+
+                    buffered_line = buffered_line.trim();
+
+                    if (buffered_line.length == 0) {
+                        return;
+                    }
+
+                    e = Enzyme.fromBioOptString(buffered_line).toString();
+
+                    buffered_line = "";
                 } catch (err) {
                     e = err["enzyme"].toString() + " Error: " + err["message"];
                 }
@@ -1550,6 +1701,15 @@ Released under the MIT license
                         Enzyme.enzymes.push(reaction);
 
                         datatable_enzymes.row.add(reaction);
+
+                        cyano_design_objective_select[0].selectize.addOption(reaction);
+                        cyano_design_objective_select[0].selectize.refreshOptions();
+                        cyano_design_design_objective_select[0].selectize.addOption(reaction);
+                        cyano_design_design_objective_select[0].selectize.refreshOptions();
+                        design_objective_visible_combobox[0].selectize.addOption(reaction);
+                        design_objective_visible_combobox[0].selectize.refreshOptions();
+                        cyano_design_target_objective_select[0].selectize.addOption(reaction);
+                        cyano_design_target_objective_select[0].selectize.refreshOptions();
 
                         command["op"] = "add";
                     }
@@ -1785,10 +1945,16 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
                         Metabolic Burden Analysis
                     </label>
                 </div>
+                <div class="radio">
+                    <input type="radio" name="simulationtype" id="radio-sa">
+                    <label for="radio-sa">
+                        Sensitivity Analysis
+                    </label>
+                </div>
             </div>
         </div>
 
-        <div class="panel panel-default">
+        <div class="panel panel-default" id="fba-settings-panel">
             <div class="panel-heading">
                 <h3 class="panel-title">FBA settings</h3>
             </div>
@@ -1820,9 +1986,9 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
             </div>
         </div>
 
-        <div class="panel panel-default">
+        <div class="panel panel-default" id="sa-settings-panel">
             <div class="panel-heading">
-                <h3 class="panel-title">MBA settings</h3>
+                <h3 class="panel-title">Sensitivity/MBA settings</h3>
             </div>
 
             <div class="panel-body" id="settings-mba">
@@ -1830,6 +1996,10 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
                     <div class="form-group">
                         <label class="control-label" for="cyano-design-design-objective-select">Design objective</label>
                         <select id="cyano-design-design-objective-select" placeholder="Select a design objective"></select>
+                    </div>
+                    <div class="form-group" id="sa-settings-target-function-panel">
+                        <label class="control-label" for="cyano-design-target-objective-select">Target reaction</label>
+                        <select id="cyano-design-target-objective-select" placeholder="Select a target reaction"></select>
                     </div>
                 </fieldset>
             </div>
@@ -1842,6 +2012,12 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
             <input type="checkbox" name="remember-simulation" id="remember-simulation">
             <label for="remember-simulation">Combine results with previous simulation</label>
         </div>
+        <label class="control-label" for="mba-x-label">X</label>
+        <input class="form-control" type="text" id="mba-x-label">
+        <label class="control-label" for="mba-y-label">Y</label>
+        <input class="form-control" type="text" id="mba-y-label">
+        <label class="control-label" for="mba-y2-label">Y2</label>
+        <input class="form-control" type="text" id="mba-y2-label">
         <button type="button" id="design-submit" class="btn btn-primary">Run simulation</button>
         <div id="export-button" class="btn-group">
             <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
@@ -1859,6 +2035,9 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
         <div id="visual">
 
         </div>
+        <canvas id="output_canvas">
+
+        </canvas>
     </div>
 </div>
 </div>
