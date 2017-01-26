@@ -4,10 +4,11 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
-from django.conf.urls import patterns, url
+from django.conf.urls import url
+from . import views
 
-urlpatterns = patterns('boehringer.views',
-    url(r'^$', 'index'),
-    url(r'^ajax/$', 'index_ajax'),
-    url(r'^legacy/$', 'legacy'),
-)
+urlpatterns = [
+    url(r'^$', views.index),
+    url(r'^ajax/$', views.index_ajax),
+    url(r'^legacy/$', views.legacy),
+]

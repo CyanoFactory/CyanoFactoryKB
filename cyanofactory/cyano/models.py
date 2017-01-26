@@ -39,6 +39,7 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.models import F, Model, OneToOneField, CharField, IntegerField, URLField, PositiveIntegerField,\
     FloatField, BooleanField, SlugField, TextField, DateTimeField, options, permalink, SET_NULL, signals
+from django.db.models.fields.related import ForeignKey, ManyToManyField
 from django.db.models.query import QuerySet, Prefetch
 from django.template import loader, Context
 from django.dispatch.dispatcher import receiver
@@ -47,8 +48,6 @@ from model_utils.managers import InheritanceManager
 
 from .templatetags.templatetags import set_time_zone
 from .cache import Cache
-from .history import HistoryForeignKey as ForeignKey
-from .history import HistoryManyToManyField as ManyToManyField
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 from copy import deepcopy
 from django.conf import settings

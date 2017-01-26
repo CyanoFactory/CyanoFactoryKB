@@ -9,9 +9,11 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from rest_framework.urlpatterns import format_suffix_patterns
-from cyano import views
+from . import views
+
+app_name = "cyano"
 
 _species_wid = r'(?P<species_wid>[a-zA-Z0-9_\-]+)'
 _wid = r'(?P<wid>[a-zA-Z0-9_\-]+)'
@@ -55,22 +57,22 @@ def cyano_pattern(uri, view, root=False, species=False, model_type=False, item=F
 
     return urls
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'^api/basket/$', views.BasketList.as_view()),
     url(r'^api/basket/(?P<basket_id>[0-9]+)/$', views.BasketDetail.as_view()),
     url(r'^api/$', views.ApiIndex.as_view(), name="cyano-api-index"),
     url(r'^api/' + _species_wid + '/$', views.ApiSpecies.as_view(), name="cyano-api-species"),
     url(r'^api/' + _species_wid_model_type + '/$', views.ApiEntryList.as_view(), name="cyano-api-list"),
     url(r'^api/' + _species_wid_model_type_wid + '/$', views.ApiEntryDetail.as_view(), name="cyano-api-detail")
-)
+]
 
 urlpatterns = format_suffix_patterns(urlpatterns, allowed=['json', 'xml'])
 
-urlpatterns += patterns('cyano.views',
-    url(r'^sitemap\.xml$', 'sitemap'),
-    url(r'^sitemap_toplevel\.xml$', 'sitemap_toplevel'),
-    url(r'^sitemap/' + _species_wid + '\.xml$', 'sitemap_species'),
-)
+urlpatterns += [
+    url(r'^sitemap\.xml$', views.sitemap),
+    url(r'^sitemap_toplevel\.xml$', views.sitemap_toplevel),
+    url(r'^sitemap/' + _species_wid + '\.xml$', views.sitemap_species),
+]
 
 urlpatterns += cyano_pattern("login/", views.login, name="login", root=True, species=True)
 urlpatterns += cyano_pattern("logout/", views.logout, name="logout", root=True, species=True)
@@ -107,6 +109,6 @@ urlpatterns += cyano_pattern("/", views.detail, item=True)
 urlpatterns += cyano_pattern("/", views.listing, model_type=True)
 urlpatterns += cyano_pattern("/", views.species, species=True)
 
-urlpatterns += patterns('cyano.views',
-    url(r'^$', 'index'),
-)
+urlpatterns += [
+    url(r'^$', views.index, name="cyano.views.index"),
+]

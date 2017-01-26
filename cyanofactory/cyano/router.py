@@ -39,19 +39,19 @@ class WarehouseRouter(object):
 
         return None
 
-    def allow_migrate(self, db, model):
+    def allow_migrate(self, db, app_label, model_name=None, **hints):
         """
         Make sure the auth app only appears in the 'auth_db'
         database.
         """
         if db == 'cyano':
-            return model._meta.app_label == 'biowarehouse'
-        elif model._meta.app_label == 'biowarehouse':
+            return app_label == 'biowarehouse'
+        elif app_label == 'biowarehouse':
             return False
 
         if db == 'stringdb':
-            return model._meta.app_label == 'cyanointeraction'
-        elif model._meta.app_label == 'cyanointeraction':
+            return app_label == 'cyanointeraction'
+        elif app_label == 'cyanointeraction':
             return False
 
         return None

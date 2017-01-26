@@ -416,6 +416,9 @@ class ChangeProfileForm(forms.Form):
         self.fields["affiliation"].initial = user.profile.affiliation
 
     def clean(self):
+        if self.request.user.username == "cyanofactorist":
+            raise forms.ValidationError("Profile editing disabled")
+
         password = self.cleaned_data.get('password')
 
         if password:
