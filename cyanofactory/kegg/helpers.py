@@ -137,7 +137,7 @@ def get_reaction_map(map_id, enzymes, metabolites, export):
 
                 ##try:
                 ##    pw_obj = Pathway.objects.for_species(species).for_wid(pathway_name)
-                elem.set("xlink:href", reverse("kegg.views.map_view", kwargs={"map_id": pathway_name}))
+                elem.set("xlink:href", reverse("kegg:map_view", kwargs={"map_id": pathway_name}))
 
                 for metabolite in metabolites:
                     ltitle = title.lower()

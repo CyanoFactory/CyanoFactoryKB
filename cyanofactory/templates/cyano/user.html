@@ -16,7 +16,7 @@ Released under the MIT license
 {% load static %}
 
 {% block head_title %}{% with user=queryset.0.user %}{{ block.super }} :: {{ queryset.0.get_name }}{% endwith %}{% endblock %}
-{% block page_title %}{% with user=queryset.0.user %}<a href="{% if species %}{% url "cyano.views.users" species_wid=species.wid %}{% else %}{% url "cyano.views.users" %}{% endif %}">Members</a> :: {{ queryset.0.get_name }}{% endwith %}{% endblock %}
+{% block page_title %}{% with user=queryset.0.user %}<a href="{% if species %}{% url "cyano:users" species_wid=species.wid %}{% else %}{% url "cyano:users" %}{% endif %}">Members</a> :: {{ queryset.0.get_name }}{% endwith %}{% endblock %}
 
 {% block action_icons %}
 {% if not request.user.is_anonymous %}

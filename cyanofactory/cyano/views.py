@@ -58,7 +58,7 @@ from rest_framework.views import APIView
 import cyano.serializers as cserializers
 import cyano.filters as cfilters
 
-@redirect_api_request('cyano-api-index')
+@redirect_api_request('cyano:api-index')
 def index(request):
     return chelpers.render_queryset_to_response(
         request,
@@ -72,7 +72,7 @@ def not_found(request, *args, **kwargs):
         msg="The requested page was not found"
     )
 
-@redirect_api_request('cyano-api-species', ["species_wid"])
+@redirect_api_request('cyano:api-species', ["species_wid"])
 @global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
@@ -237,7 +237,7 @@ def search_google(request, species, query):
             })
 
 
-@redirect_api_request('cyano-api-list', ["species_wid", "model_type"])
+@redirect_api_request('cyano:api-list', ["species_wid", "model_type"])
 @global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
@@ -254,7 +254,7 @@ def listing(request, species: cmodels.Species, model: cmodels.Entry):
         tmp_model = model
         field_verbose_name = []
         for field_name in field_names:
-            field = tmp_model._meta.get_field_by_name(field_name)[0]
+            field = tmp_model._meta.get_field(field_name)
             field_verbose_name.append(field.verbose_name)
             if isinstance(field, (ForeignKey, ManyToManyField)):
                 tmp_model = field.rel.to
@@ -318,7 +318,7 @@ def listing(request, species: cmodels.Species, model: cmodels.Entry):
 
     if hasattr(model._meta, "group_field"):
         field_name = getattr(model._meta, "group_field")
-        group_field = model._meta.get_field_by_name(getattr(model._meta, "group_field"))[0]
+        group_field = model._meta.get_field(getattr(model._meta, "group_field"))
 
         if group_field:
             objects = objects.order_by(field_name, "wid")
@@ -427,8 +427,8 @@ class ApiSpecies(generics.ListAPIView):
                 queryset.append({
                     "name": model._meta.object_name,
                     "count": count,
-                    "url": reverse("cyano-api-list", kwargs=args),
-                    "web_url": reverse("cyano.views.listing", kwargs=args)
+                    "url": reverse("cyano:api-list", kwargs=args),
+                    "web_url": reverse("cyano:listing", kwargs=args)
                 })
 
         return queryset
@@ -562,7 +562,7 @@ class BasketDetail(generics.GenericAPIView):
         raise Http404
 
 
-@redirect_api_request('cyano-api-detail', ["species_wid", "model_type", "wid"])
+@redirect_api_request('cyano:api-detail', ["species_wid", "model_type", "wid"])
 @global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
@@ -670,7 +670,7 @@ def history(request, species, model=None, item=None):
         time = obj.detail.date.strftime("%H:%M")
         reason = obj.detail.reason
         author = "" # obj.detail.user
-        url = reverse("cyano.views.history_detail", kwargs={"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
+        url = reverse("cyano:history_detail", kwargs={"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
 
         if last_date != date:
             revisions.append(entry)
@@ -722,7 +722,7 @@ def history_detail(request, species, model, item, detail_id):
                 verbose_name = fieldsets[idx][1]['fields'][idx2]['verbose_name']
             else:
                 field_name = fieldsets[idx][1]['fields'][idx2]
-                field = model._meta.get_field_by_name(field_name)[0]
+                field = model._meta.get_field(field_name)
                 if hasattr(field, "get_accessor_name"):
                     verbose_name = field.get_accessor_name()
                 else:
@@ -900,17 +900,17 @@ def delete(request, species, model=None, item=None):
 
         if item is None:
             # Delete species
-            target_url = reverse('cyano.views.index')
+            target_url = reverse('cyano:index')
         else:
-            target_url = reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': model.__name__})
+            target_url = reverse('cyano:listing', kwargs={'species_wid': species.wid, 'model_type': model.__name__})
 
         return HttpResponseRedirect(target_url)
 
     if item is None:
         # Delete species
-        target_url = reverse('cyano.views.delete', kwargs={'species_wid': species.wid})
+        target_url = reverse('cyano:delete', kwargs={'species_wid': species.wid})
     else:
-        target_url = reverse('cyano.views.delete',
+        target_url = reverse('cyano:delete',
                              kwargs={
                                  'species_wid': species.wid,
                                  'model_type': model.__name__,
@@ -1094,7 +1094,7 @@ def password_change_required(request, species=None):
     from django.contrib.auth.forms import AdminPasswordChangeForm
     
     if not request.user.profile.force_password_change:
-        return HttpResponseRedirect(reverse("cyano.views.index"))
+        return HttpResponseRedirect(reverse("cyano:index"))
     
     context = chelpers.get_extra_context(
         species = species,
@@ -1508,7 +1508,7 @@ def basket_op(request, species=None):
 
         return HttpResponse(json.dumps(
             {"id": basket.pk,
-             "url": reverse("cyano-basket", kwargs=url)
+             "url": reverse("cyano:basket", kwargs=url)
             })
         )
     elif op == "delete":
@@ -1697,7 +1697,7 @@ def register(request):
 
         if form.is_valid():
             form.save(request)
-            return redirect("cyano.views.index")
+            return redirect("cyano:index")
     else:
         form = CreateProfileForm()
 

@@ -250,7 +250,7 @@ def is_concrete_entry(model_verbose_name_plural, app_name):
 def get_choice_verbose_name(app_name, model_type, field_name, choice_name):
 	from django.db.models import get_model
 	
-	choices = get_model(app_name, model_type)._meta.get_field_by_name(field_name)[0].choices
+	choices = get_model(app_name, model_type)._meta.get_field(field_name).choices
 	
 	choice_names = [x[0] for x in choices]
 	if choice_name in choice_names:

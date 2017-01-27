@@ -13,7 +13,7 @@ Released under the MIT license
 {% load templatetags %}
 
 {% block action_icons_edit %}
-<li><a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}">View {{ queryset.0.wid }}</a></li>
+<li><a href="{% url "cyano:detail" species_wid=species.wid model_type=model_type wid=queryset.0.wid %}">View {{ queryset.0.wid }}</a></li>
 {% endblock %}
 
 {% block head_title %}{{ block.super }} (History){% endblock %}
@@ -31,9 +31,9 @@ as edited by {{ revision.user.user.name }} at {{ revision.date }}.
 </div>
 
 <div>
-{% if previous_revision %}<a href="{% url 'cyano.views.history_detail' species_wid=species.wid model_type=model_type wid=queryset.0.wid detail_id=previous_revision.pk %}" title="Previous revision">Previous revision</a>{% else %}Previous revision{% endif %} |
-{% if newer_revision %}<a href="{% url 'cyano.views.history_detail' species_wid=species.wid model_type=model_type wid=queryset.0.wid detail_id=latest_revision.pk %}" title="Latest revision">Latest revision</a>{% else %}Latest revision{% endif %} |
-{% if newer_revision %}<a href="{% url 'cyano.views.history_detail' species_wid=species.wid model_type=model_type wid=queryset.0.wid detail_id=newer_revision.pk %}" title="Newer revision">Newer revision</a>{% else %}Newer revision{% endif %}
+{% if previous_revision %}<a href="{% url 'cyano:history_detail' species_wid=species.wid model_type=model_type wid=queryset.0.wid detail_id=previous_revision.pk %}" title="Previous revision">Previous revision</a>{% else %}Previous revision{% endif %} |
+{% if newer_revision %}<a href="{% url 'cyano:history_detail' species_wid=species.wid model_type=model_type wid=queryset.0.wid detail_id=latest_revision.pk %}" title="Latest revision">Latest revision</a>{% else %}Latest revision{% endif %} |
+{% if newer_revision %}<a href="{% url 'cyano:history_detail' species_wid=species.wid model_type=model_type wid=queryset.0.wid detail_id=newer_revision.pk %}" title="Newer revision">Newer revision</a>{% else %}Newer revision{% endif %}
 </div>
 <br>
 {{ block.super}}

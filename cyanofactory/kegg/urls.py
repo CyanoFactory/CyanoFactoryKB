@@ -4,10 +4,13 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 """
-from django.conf.urls import patterns, url
+from django.conf.urls import url
+from . import views
 
-urlpatterns = patterns('kegg.views',
-    url(r'^$', 'index'),
-    url(r'^ajax/$', 'index_ajax'),
-    url(r'^(?P<map_id>map[0-9]{5})/$', 'map_view')
-)
+app_name = "kegg"
+
+urlpatterns = [
+    url(r'^$', views.index, name="index"),
+    url(r'^ajax/$', views.index_ajax, name="index_ajax"),
+    url(r'^(?P<map_id>map[0-9]{5})/$', views.map_view, name="map_view")
+]

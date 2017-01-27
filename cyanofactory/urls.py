@@ -2,46 +2,46 @@
 URL patterns
 '''
 
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 
 # enable the admin:
 from django.contrib import admin
 admin.autodiscover()
 
 
+
 # admin interface
-urlpatterns = patterns('',
+urlpatterns = [
 #   url(r'^admin/doc/', include('django.contrib.admindocs.urls')),
-    url(r'^admin/', include(admin.site.urls)),
-)
+    url(r'^admin/', admin.site.urls),
+]
 
-urlpatterns += patterns('cyanointeraction.views',
+urlpatterns += [
     url(r'^cyanointeraction/', include("cyanointeraction.urls"))
-)
-
+]
 
 # boehringer map
-urlpatterns += patterns('boehringer.views',
+urlpatterns += [
     url(r'^boehringer/', include("boehringer.urls")),
-)
+]
 
 # kegg maps
-urlpatterns += patterns('kegg.views',
+urlpatterns += [
     url(r'^kegg/', include("kegg.urls")),
-)
+]
 
 
 # database crossreference resolver
-urlpatterns += patterns('db_xref.views',
+urlpatterns += [
     url(r'^dbxref/', include("db_xref.urls")),
-)
+]
 
-urlpatterns += patterns('cyanodesign.views',
+urlpatterns += [
     url(r'^design/', include("cyanodesign.urls")),
-)
+]
 
 # authentication
-urlpatterns += patterns('',
+urlpatterns += [
     url(r'^account/', include('django.contrib.auth.urls'))
     #url(r'^login/password_reset_done/$', 'password_reset_done'),
     #url(r'^login/password_reset_confirm/(?P<uidb36>[0-9A-Za-z]+)-(?P<token>.+)/$', 'password_reset_confirm', name='password_reset_confirm'),
@@ -50,12 +50,12 @@ urlpatterns += patterns('',
     #url(r'^login/password_reset/$', 'password_reset', name = "password_reset"),
     #url(r'^login/password_reset_confirm/$', 'password_reset_confirm', name = "password_reset_confirm"),
     #url(r'^login/password_reset_complete/$', 'password_reset_complete', name = "password_reset_complete"),
-)
+]
 
 # cyanofactory project
-urlpatterns += patterns('cyano.views',
+urlpatterns += [
     url(r'^', include("cyano.urls")),
-)
+]
 
 # authentication
 #urlpatterns += patterns('public.views',
@@ -104,3 +104,6 @@ urlpatterns += patterns('cyano.views',
 #	url(r'^$', 'index'),
 #	url(r'^(?P<species_wid>[a-zA-Z0-9_\-]+)/*$', 'index'),
 # )
+
+a = 1
+a += 1

@@ -23,7 +23,7 @@ Released under the MIT license
 <body>
 <h1>db_xref Webservice</h1>
 <p>
-{% url "db_xref.views.dbxref" db value as sample_url %}
+{% url "db_xref:index" db value as sample_url %}
 This Webservice resolves database cross references (e.g. <a href="{{ sample_url }}">{{ item }}</a>) into URLs. This is a wrapper around the <a href="https://www.ebi.ac.uk/miriam/" title="MIRIAM">MIRIAM registry</a>.
 </p>
 <h2>
@@ -36,6 +36,7 @@ Supported formats:
 {% for format in formats %}
 <a href="{{ sample_url }}?format={{ format }}">{{ format }}</a>{% if not forloop.last %}, {% endif %}
 {% endfor %}
+
 </p>
 
 <p>

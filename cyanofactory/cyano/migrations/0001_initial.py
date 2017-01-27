@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
             name='BasketComponent',
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False, verbose_name='ID', auto_created=True)),
-                ('basket', cyano.history.HistoryForeignKey(verbose_name='In basket', related_name='components', to='cyano.Basket')),
+                ('basket', models.ForeignKey(verbose_name='In basket', related_name='components', to='cyano.Basket')),
             ],
         ),
         migrations.CreateModel(
@@ -307,7 +307,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(primary_key=True, serialize=False, verbose_name='ID', auto_created=True)),
                 ('xid', models.CharField(verbose_name='External ID', max_length=255)),
                 ('species', models.CharField(choices=[('B. subtilis', 'B. subtilis'), ('E. coli', 'E. coli'), ('M. hyopneumoniae', 'M. hyopneumoniae'), ('M. mobile', 'M. mobile'), ('M. pneumoniae', 'M. pneumoniae'), ('S. coelicolor', 'S. coelicolor'), ('S. oneidensis', 'S. oneidensis')], verbose_name='Species', max_length=20)),
-                ('evidence', cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
+                ('evidence', models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
             ],
             options={
                 'verbose_name_plural': 'Homologs',
@@ -323,7 +323,7 @@ class Migration(migrations.Migration):
                 ('km', models.CharField(validators=[django.core.validators.RegexValidator('^([0-9\\.]+)(, [0-9\\.]+)*$')], verbose_name='K<sub>m</sub> (&mu;M)', blank=True, max_length=255)),
                 ('vmax', models.FloatField(validators=[django.core.validators.MinValueValidator(0)], null=True, verbose_name='V<sub>max</sub>', blank=True)),
                 ('vmax_unit', models.CharField(choices=[('1/min', '1/min'), ('U/mg', 'U/mg')], verbose_name='V<sub>max</sub> Unit', blank=True, max_length=255)),
-                ('evidence', cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
+                ('evidence', models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
             ],
             options={
                 'verbose_name_plural': 'Kinetics',
@@ -361,7 +361,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(primary_key=True, serialize=False, verbose_name='ID', auto_created=True)),
                 ('concentration', models.FloatField(verbose_name='Concentration (mM)', validators=[django.core.validators.MinValueValidator(0)])),
                 ('is_diffused', models.BooleanField(verbose_name='Is diffused')),
-                ('evidence', cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
+                ('evidence', models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
             ],
             options={
                 'verbose_name_plural': 'Media composition',
@@ -387,7 +387,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False, verbose_name='ID', auto_created=True)),
                 ('position', models.PositiveIntegerField(null=True, verbose_name='Position', blank=True)),
-                ('evidence', cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
+                ('evidence', models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
             ],
             options={
                 'verbose_name_plural': 'Protein monomers',
@@ -400,7 +400,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False, verbose_name='ID', auto_created=True)),
                 ('coefficient', models.PositiveIntegerField(null=True, verbose_name='Coefficient', blank=True)),
-                ('evidence', cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
+                ('evidence', models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
             ],
             options={
                 'verbose_name_plural': 'Prosthetic group participants',
@@ -423,7 +423,7 @@ class Migration(migrations.Migration):
                 ('id', models.AutoField(primary_key=True, serialize=False, verbose_name='ID', auto_created=True)),
                 ('residue', models.PositiveIntegerField(null=True, verbose_name='Residue', blank=True)),
                 ('coefficient', models.FloatField(verbose_name='Coefficient')),
-                ('evidence', cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
+                ('evidence', models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
             ],
             options={
                 'verbose_name_plural': 'Protein complex biosythesis participants',
@@ -452,7 +452,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(primary_key=True, serialize=False, verbose_name='ID', auto_created=True)),
                 ('coefficient', models.FloatField(verbose_name='Coefficient')),
-                ('evidence', cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
+                ('evidence', models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
             ],
             options={
                 'verbose_name_plural': 'Molecule coefficient compartments',
@@ -467,7 +467,7 @@ class Migration(migrations.Migration):
                 ('object_id', models.IntegerField(db_index=True, verbose_name='Current version primary key')),
                 ('action', models.CharField(choices=[('I', 'Insert'), ('U', 'Update'), ('D', 'Delete'), ('X', 'Unknown')], max_length=1)),
                 ('new_data', models.TextField(blank=True)),
-                ('content_type', cyano.history.HistoryForeignKey(to='contenttypes.ContentType')),
+                ('content_type', models.ForeignKey(to='contenttypes.ContentType')),
             ],
             options={
                 'ordering': ['detail__date'],
@@ -488,7 +488,7 @@ class Migration(migrations.Migration):
                 ('type', models.CharField(choices=[('lipoprotein', 'Lipoprotein'), ('secretory', 'Secretory')], verbose_name='Type', max_length=20)),
                 ('location', models.CharField(choices=[('N', 'N-terminus'), ('C', 'C-terminus')], verbose_name='Location', max_length=1)),
                 ('length', models.PositiveIntegerField(verbose_name='Length (nt)')),
-                ('evidence', cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
+                ('evidence', models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence')),
             ],
             options={
                 'verbose_name_plural': 'Signal sequences',
@@ -574,17 +574,17 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='revisiondetail',
             name='user',
-            field=cyano.history.HistoryForeignKey(editable=False, verbose_name='Modified by', related_name='+', to='cyano.UserProfile'),
+            field=models.ForeignKey(editable=False, verbose_name='Modified by', related_name='+', to='cyano.UserProfile'),
         ),
         migrations.AddField(
             model_name='revision',
             name='detail',
-            field=cyano.history.HistoryForeignKey(editable=False, verbose_name='Details about this revision', related_name='revisions', to='cyano.RevisionDetail'),
+            field=models.ForeignKey(editable=False, verbose_name='Details about this revision', related_name='revisions', to='cyano.RevisionDetail'),
         ),
         migrations.AddField(
             model_name='enzymeparticipant',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AddField(
             model_name='entryuserobjectpermission',
@@ -604,12 +604,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='entrytextdata',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AddField(
             model_name='entrypositivefloatdata',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AddField(
             model_name='entrygroupobjectpermission',
@@ -629,37 +629,37 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='entryfloatdata',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AddField(
             model_name='entrychardata',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AddField(
             model_name='entrybooleandata',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AddField(
             model_name='entry',
             name='model_type',
-            field=cyano.history.HistoryForeignKey(to='cyano.TableMeta'),
+            field=models.ForeignKey(to='cyano.TableMeta'),
         ),
         migrations.AddField(
             model_name='entry',
             name='synonyms',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Synonyms', blank=True, related_name='entry', to='cyano.Synonym'),
+            field=models.ManyToManyField(verbose_name='Synonyms', blank=True, related_name='entry', to='cyano.Synonym'),
         ),
         migrations.AddField(
             model_name='dnafootprint',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AddField(
             model_name='disulfidebond',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AlterUniqueTogether(
             name='crossreference',
@@ -668,27 +668,27 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='coenzymeparticipant',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AddField(
             model_name='codon',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AddField(
             model_name='biomasscomposition',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AddField(
             model_name='bindingsite',
             name='evidence',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
+            field=models.ManyToManyField(verbose_name='Evidence', blank=True, to='cyano.Evidence'),
         ),
         migrations.AddField(
             model_name='basket',
             name='user',
-            field=cyano.history.HistoryForeignKey(verbose_name='Users baskets', related_name='baskets', to='cyano.UserProfile'),
+            field=models.ForeignKey(verbose_name='Users baskets', related_name='baskets', to='cyano.UserProfile'),
         ),
         migrations.CreateModel(
             name='ChromosomeFeature',
@@ -852,17 +852,17 @@ class Migration(migrations.Migration):
                 ('direction', models.CharField(choices=[('f', 'Forward'), ('b', 'Backward'), ('r', 'Reversible')], verbose_name='Direction', max_length=1)),
                 ('is_spontaneous', models.BooleanField(verbose_name='Is spontaneous (pH 7.5, 25C, <i>I</i> = 0)')),
                 ('delta_g', models.FloatField(null=True, verbose_name='&Delta;G (pH 7.5, 25C, <i>I</i> = 0; kJ mol<sup>-1</sup>)', blank=True)),
-                ('coenzymes', cyano.history.HistoryManyToManyField(verbose_name='Coenzymes', blank=True, related_name='reactions', to='cyano.CoenzymeParticipant')),
-                ('enzyme', cyano.history.HistoryForeignKey(null=True, verbose_name='Enzyme', blank=True, related_name='reactions', to='cyano.EnzymeParticipant', on_delete=django.db.models.deletion.SET_NULL)),
-                ('keq', cyano.history.HistoryForeignKey(null=True, verbose_name='K<sub>eq</sub>', blank=True, related_name='+', to='cyano.EntryPositiveFloatData', on_delete=django.db.models.deletion.SET_NULL)),
-                ('kinetics_backward', cyano.history.HistoryForeignKey(null=True, verbose_name='Backward kinetics', blank=True, related_name='reactions_backward', to='cyano.Kinetics', on_delete=django.db.models.deletion.SET_NULL)),
-                ('kinetics_forward', cyano.history.HistoryForeignKey(null=True, verbose_name='Forward kinetics', blank=True, related_name='reactions_forward', to='cyano.Kinetics', on_delete=django.db.models.deletion.SET_NULL)),
-                ('map_coordinates', cyano.history.HistoryManyToManyField(verbose_name='Map coordinates', blank=True, related_name='reactions', to='cyano.ReactionMapCoordinate')),
-                ('modification', cyano.history.HistoryForeignKey(null=True, verbose_name='Modification', blank=True, related_name='reactions', to='cyano.ModificationReaction', on_delete=django.db.models.deletion.SET_NULL)),
-                ('optimal_ph', cyano.history.HistoryForeignKey(null=True, verbose_name='Optimal pH', blank=True, related_name='+', to='cyano.EntryPositiveFloatData', on_delete=django.db.models.deletion.SET_NULL)),
-                ('optimal_temperature', cyano.history.HistoryForeignKey(null=True, verbose_name='Optimal temperature', blank=True, related_name='+', to='cyano.EntryFloatData', on_delete=django.db.models.deletion.SET_NULL)),
-                ('pathways', cyano.history.HistoryManyToManyField(verbose_name='Pathways', blank=True, related_name='reactions', to='cyano.Pathway')),
-                ('processes', cyano.history.HistoryForeignKey(null=True, verbose_name='Process', blank=True, related_name='reactions', to='cyano.Process', on_delete=django.db.models.deletion.SET_NULL)),
+                ('coenzymes', models.ManyToManyField(verbose_name='Coenzymes', blank=True, related_name='reactions', to='cyano.CoenzymeParticipant')),
+                ('enzyme', models.ForeignKey(null=True, verbose_name='Enzyme', blank=True, related_name='reactions', to='cyano.EnzymeParticipant', on_delete=django.db.models.deletion.SET_NULL)),
+                ('keq', models.ForeignKey(null=True, verbose_name='K<sub>eq</sub>', blank=True, related_name='+', to='cyano.EntryPositiveFloatData', on_delete=django.db.models.deletion.SET_NULL)),
+                ('kinetics_backward', models.ForeignKey(null=True, verbose_name='Backward kinetics', blank=True, related_name='reactions_backward', to='cyano.Kinetics', on_delete=django.db.models.deletion.SET_NULL)),
+                ('kinetics_forward', models.ForeignKey(null=True, verbose_name='Forward kinetics', blank=True, related_name='reactions_forward', to='cyano.Kinetics', on_delete=django.db.models.deletion.SET_NULL)),
+                ('map_coordinates', models.ManyToManyField(verbose_name='Map coordinates', blank=True, related_name='reactions', to='cyano.ReactionMapCoordinate')),
+                ('modification', models.ForeignKey(null=True, verbose_name='Modification', blank=True, related_name='reactions', to='cyano.ModificationReaction', on_delete=django.db.models.deletion.SET_NULL)),
+                ('optimal_ph', models.ForeignKey(null=True, verbose_name='Optimal pH', blank=True, related_name='+', to='cyano.EntryPositiveFloatData', on_delete=django.db.models.deletion.SET_NULL)),
+                ('optimal_temperature', models.ForeignKey(null=True, verbose_name='Optimal temperature', blank=True, related_name='+', to='cyano.EntryFloatData', on_delete=django.db.models.deletion.SET_NULL)),
+                ('pathways', models.ManyToManyField(verbose_name='Pathways', blank=True, related_name='reactions', to='cyano.Pathway')),
+                ('processes', models.ForeignKey(null=True, verbose_name='Process', blank=True, related_name='reactions', to='cyano.Process', on_delete=django.db.models.deletion.SET_NULL)),
             ],
             options={
                 'verbose_name_plural': 'Reactions',
@@ -895,9 +895,9 @@ class Migration(migrations.Migration):
             name='TranscriptionalRegulation',
             fields=[
                 ('parent_ptr_species_component', models.OneToOneField(to='cyano.SpeciesComponent', verbose_name='Species component', serialize=False, related_name='child_ptr_transcriptional_regulation', parent_link=True, primary_key=True)),
-                ('activity', cyano.history.HistoryForeignKey(verbose_name='Fold-change activity', related_name='+', to='cyano.EntryPositiveFloatData')),
-                ('affinity', cyano.history.HistoryForeignKey(null=True, verbose_name='Affinity', blank=True, related_name='+', to='cyano.EntryPositiveFloatData', on_delete=django.db.models.deletion.SET_NULL)),
-                ('binding_site', cyano.history.HistoryForeignKey(null=True, verbose_name='Binding site', blank=True, related_name='transcriptional_regulations', to='cyano.BindingSite', on_delete=django.db.models.deletion.SET_NULL)),
+                ('activity', models.ForeignKey(verbose_name='Fold-change activity', related_name='+', to='cyano.EntryPositiveFloatData')),
+                ('affinity', models.ForeignKey(null=True, verbose_name='Affinity', blank=True, related_name='+', to='cyano.EntryPositiveFloatData', on_delete=django.db.models.deletion.SET_NULL)),
+                ('binding_site', models.ForeignKey(null=True, verbose_name='Binding site', blank=True, related_name='transcriptional_regulations', to='cyano.BindingSite', on_delete=django.db.models.deletion.SET_NULL)),
             ],
             options={
                 'verbose_name_plural': 'Transcriptional regulation',
@@ -929,27 +929,27 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='speciescomponent',
             name='cross_references',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Cross references', blank=True, related_name='cross_referenced_components', to='cyano.CrossReference'),
+            field=models.ManyToManyField(verbose_name='Cross references', blank=True, related_name='cross_referenced_components', to='cyano.CrossReference'),
         ),
         migrations.AddField(
             model_name='speciescomponent',
             name='parent',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='Parent', blank=True, related_name='children', to='cyano.SpeciesComponent', on_delete=django.db.models.deletion.SET_NULL),
+            field=models.ForeignKey(null=True, verbose_name='Parent', blank=True, related_name='children', to='cyano.SpeciesComponent', on_delete=django.db.models.deletion.SET_NULL),
         ),
         migrations.AddField(
             model_name='speciescomponent',
             name='species',
-            field=cyano.history.HistoryForeignKey(verbose_name='Species', related_name='components', to='cyano.Species'),
+            field=models.ForeignKey(verbose_name='Species', related_name='components', to='cyano.Species'),
         ),
         migrations.AddField(
             model_name='species',
             name='cross_references',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Cross references', blank=True, related_name='cross_referenced_species', to='cyano.CrossReference'),
+            field=models.ManyToManyField(verbose_name='Cross references', blank=True, related_name='cross_referenced_species', to='cyano.CrossReference'),
         ),
         migrations.AddField(
             model_name='evidence',
             name='species_component',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Species component', blank=True, related_name='_evidence_species_component_+', to='cyano.SpeciesComponent'),
+            field=models.ManyToManyField(verbose_name='Species component', blank=True, related_name='_evidence_species_component_+', to='cyano.SpeciesComponent'),
         ),
         migrations.AlterUniqueTogether(
             name='entryuserobjectpermission',
@@ -962,12 +962,12 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='basketcomponent',
             name='component',
-            field=cyano.history.HistoryForeignKey(verbose_name='component', related_name='+', to='cyano.SpeciesComponent'),
+            field=models.ForeignKey(verbose_name='component', related_name='+', to='cyano.SpeciesComponent'),
         ),
         migrations.AddField(
             model_name='basketcomponent',
             name='species',
-            field=cyano.history.HistoryForeignKey(verbose_name='Species component belongs to', related_name='+', to='cyano.Species'),
+            field=models.ForeignKey(verbose_name='Species component belongs to', related_name='+', to='cyano.Species'),
         ),
         migrations.CreateModel(
             name='Gene',
@@ -1056,7 +1056,7 @@ class Migration(migrations.Migration):
             name='Stimulus',
             fields=[
                 ('parent_ptr_molecule', models.OneToOneField(to='cyano.Molecule', verbose_name='Molecule', serialize=False, related_name='child_ptr_stimulus', parent_link=True, primary_key=True)),
-                ('value', cyano.history.HistoryForeignKey(verbose_name='Value', related_name='+', to='cyano.EntryFloatData')),
+                ('value', models.ForeignKey(verbose_name='Value', related_name='+', to='cyano.EntryFloatData')),
             ],
             options={
                 'verbose_name_plural': 'Stimuli',
@@ -1078,7 +1078,7 @@ class Migration(migrations.Migration):
                 ('promoter_10_coordinate', models.IntegerField(null=True, verbose_name='Promoter -10 box coordinate (nt)', blank=True)),
                 ('promoter_10_length', models.IntegerField(null=True, verbose_name='Promoter -10 box length (nt)', blank=True)),
                 ('tss_coordinate', models.IntegerField(null=True, verbose_name='Transcription start site coordinate (nt)', blank=True)),
-                ('genes', cyano.history.HistoryManyToManyField(verbose_name='Genes', related_name='transcription_units', to='cyano.Gene')),
+                ('genes', models.ManyToManyField(verbose_name='Genes', related_name='transcription_units', to='cyano.Gene')),
             ],
             options={
                 'verbose_name_plural': 'Transcription units',
@@ -1094,117 +1094,117 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='speciescomponent',
             name='publication_references',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Publications', blank=True, related_name='publication_referenced_components', to='cyano.PublicationReference'),
+            field=models.ManyToManyField(verbose_name='Publications', blank=True, related_name='publication_referenced_components', to='cyano.PublicationReference'),
         ),
         migrations.AddField(
             model_name='speciescomponent',
             name='type',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Type', blank=True, related_name='members', to='cyano.Type'),
+            field=models.ManyToManyField(verbose_name='Type', blank=True, related_name='members', to='cyano.Type'),
         ),
         migrations.AddField(
             model_name='species',
             name='publication_references',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Publication references', blank=True, related_name='publication_referenced_species', to='cyano.PublicationReference'),
+            field=models.ManyToManyField(verbose_name='Publication references', blank=True, related_name='publication_referenced_species', to='cyano.PublicationReference'),
         ),
         migrations.AddField(
             model_name='reactionstoichiometryparticipant',
             name='compartment',
-            field=cyano.history.HistoryForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
+            field=models.ForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
         ),
         migrations.AddField(
             model_name='reactionstoichiometryparticipant',
             name='molecule',
-            field=cyano.history.HistoryForeignKey(verbose_name='Molecule', related_name='reaction_stoichiometry_participants', to='cyano.Molecule'),
+            field=models.ForeignKey(verbose_name='Molecule', related_name='reaction_stoichiometry_participants', to='cyano.Molecule'),
         ),
         migrations.AddField(
             model_name='reaction',
             name='states',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='State', blank=True, related_name='reactions', to='cyano.State', on_delete=django.db.models.deletion.SET_NULL),
+            field=models.ForeignKey(null=True, verbose_name='State', blank=True, related_name='reactions', to='cyano.State', on_delete=django.db.models.deletion.SET_NULL),
         ),
         migrations.AddField(
             model_name='reaction',
             name='stoichiometry',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Stoichiometry', related_name='reactions', to='cyano.ReactionStoichiometryParticipant'),
+            field=models.ManyToManyField(verbose_name='Stoichiometry', related_name='reactions', to='cyano.ReactionStoichiometryParticipant'),
         ),
         migrations.AddField(
             model_name='proteincomplexbiosythesisparticipant',
             name='compartment',
-            field=cyano.history.HistoryForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
+            field=models.ForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
         ),
         migrations.AddField(
             model_name='proteincomplexbiosythesisparticipant',
             name='molecule',
-            field=cyano.history.HistoryForeignKey(verbose_name='Molecule', related_name='protein_complex_biosythesis_participants', to='cyano.Molecule'),
+            field=models.ForeignKey(verbose_name='Molecule', related_name='protein_complex_biosythesis_participants', to='cyano.Molecule'),
         ),
         migrations.AddField(
             model_name='prostheticgroupparticipant',
             name='compartment',
-            field=cyano.history.HistoryForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
+            field=models.ForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
         ),
         migrations.AddField(
             model_name='parameter',
             name='molecules',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Molecules', blank=True, related_name='parameters', to='cyano.Molecule'),
+            field=models.ManyToManyField(verbose_name='Molecules', blank=True, related_name='parameters', to='cyano.Molecule'),
         ),
         migrations.AddField(
             model_name='parameter',
             name='process',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='Process', blank=True, related_name='parameters', to='cyano.Process', on_delete=django.db.models.deletion.SET_NULL),
+            field=models.ForeignKey(null=True, verbose_name='Process', blank=True, related_name='parameters', to='cyano.Process', on_delete=django.db.models.deletion.SET_NULL),
         ),
         migrations.AddField(
             model_name='parameter',
             name='reactions',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Reactions', blank=True, related_name='parameters', to='cyano.Reaction'),
+            field=models.ManyToManyField(verbose_name='Reactions', blank=True, related_name='parameters', to='cyano.Reaction'),
         ),
         migrations.AddField(
             model_name='parameter',
             name='state',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='State', blank=True, related_name='parameters', to='cyano.State', on_delete=django.db.models.deletion.SET_NULL),
+            field=models.ForeignKey(null=True, verbose_name='State', blank=True, related_name='parameters', to='cyano.State', on_delete=django.db.models.deletion.SET_NULL),
         ),
         migrations.AddField(
             model_name='parameter',
             name='value',
-            field=cyano.history.HistoryForeignKey(to='cyano.EntryCharData', verbose_name='Value'),
+            field=models.ForeignKey(to='cyano.EntryCharData', verbose_name='Value'),
         ),
         migrations.AddField(
             model_name='modificationreaction',
             name='compartment',
-            field=cyano.history.HistoryForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
+            field=models.ForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
         ),
         migrations.AddField(
             model_name='modificationreaction',
             name='molecule',
-            field=cyano.history.HistoryForeignKey(verbose_name='Molecule', related_name='modification_reactions', to='cyano.Molecule'),
+            field=models.ForeignKey(verbose_name='Molecule', related_name='modification_reactions', to='cyano.Molecule'),
         ),
         migrations.AddField(
             model_name='metabolitemapcoordinate',
             name='compartment',
-            field=cyano.history.HistoryForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
+            field=models.ForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
         ),
         migrations.AddField(
             model_name='featureposition',
             name='chromosome_feature',
-            field=cyano.history.HistoryForeignKey(verbose_name='', related_name='positions', to='cyano.ChromosomeFeature'),
+            field=models.ForeignKey(verbose_name='', related_name='positions', to='cyano.ChromosomeFeature'),
         ),
         migrations.AddField(
             model_name='evidence',
             name='references',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='References', blank=True, related_name='evidence', to='cyano.PublicationReference'),
+            field=models.ForeignKey(null=True, verbose_name='References', blank=True, related_name='evidence', to='cyano.PublicationReference'),
         ),
         migrations.AddField(
             model_name='enzymeparticipant',
             name='compartment',
-            field=cyano.history.HistoryForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
+            field=models.ForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
         ),
         migrations.AddField(
             model_name='coenzymeparticipant',
             name='compartment',
-            field=cyano.history.HistoryForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
+            field=models.ForeignKey(verbose_name='Compartment', related_name='+', to='cyano.Compartment'),
         ),
         migrations.AddField(
             model_name='biomasscomposition',
             name='compartment',
-            field=cyano.history.HistoryForeignKey(verbose_name='Compartment', related_name='biomass_compositions', to='cyano.Compartment'),
+            field=models.ForeignKey(verbose_name='Compartment', related_name='biomass_compositions', to='cyano.Compartment'),
         ),
         migrations.CreateModel(
             name='Chromosome',
@@ -1232,8 +1232,8 @@ class Migration(migrations.Migration):
                 ('length', models.PositiveIntegerField(verbose_name='Length (nt)')),
                 ('pi', models.FloatField(verbose_name='Protein PI')),
                 ('mass', models.FloatField(verbose_name='Protein Mass (Da)')),
-                ('ambiguous', cyano.history.HistoryManyToManyField(verbose_name='Ambiguous Proteins', related_name='ambiguous', to='cyano.EntryBasicTextData')),
-                ('sub', cyano.history.HistoryManyToManyField(verbose_name='Sub-Proteins', related_name='sub', to='cyano.EntryBasicTextData')),
+                ('ambiguous', models.ManyToManyField(verbose_name='Ambiguous Proteins', related_name='ambiguous', to='cyano.EntryBasicTextData')),
+                ('sub', models.ManyToManyField(verbose_name='Sub-Proteins', related_name='sub', to='cyano.EntryBasicTextData')),
             ],
             options={
                 'verbose_name_plural': 'Mass Spectrometry Proteins',
@@ -1257,7 +1257,7 @@ class Migration(migrations.Migration):
                 ('mass', models.FloatField(verbose_name='m/z')),
                 ('zscore', models.FloatField(verbose_name='z-score')),
                 ('retention_time', models.FloatField(verbose_name='Retention Time')),
-                ('proteins', cyano.history.HistoryManyToManyField(verbose_name='Proteins belonging to the Peptide', related_name='peptides', to='cyano.EntryBasicTextData')),
+                ('proteins', models.ManyToManyField(verbose_name='Proteins belonging to the Peptide', related_name='peptides', to='cyano.EntryBasicTextData')),
             ],
             options={
                 'verbose_name_plural': 'Peptides',
@@ -1290,9 +1290,9 @@ class Migration(migrations.Migration):
             name='ProteinComplex',
             fields=[
                 ('parent_ptr_protein', models.OneToOneField(to='cyano.Protein', verbose_name='Protein', serialize=False, related_name='child_ptr_protein_complex', parent_link=True, primary_key=True)),
-                ('biosynthesis', cyano.history.HistoryManyToManyField(verbose_name='Biosynthesis', related_name='protein_complexes', to='cyano.ProteinComplexBiosythesisParticipant')),
-                ('disulfide_bonds', cyano.history.HistoryManyToManyField(verbose_name='Disulfide bonds (pH 7.5)', blank=True, related_name='protein_complexes', to='cyano.DisulfideBond')),
-                ('formation_process', cyano.history.HistoryForeignKey(null=True, verbose_name='Formation process', blank=True, related_name='formed_complexes', to='cyano.Process', on_delete=django.db.models.deletion.SET_NULL)),
+                ('biosynthesis', models.ManyToManyField(verbose_name='Biosynthesis', related_name='protein_complexes', to='cyano.ProteinComplexBiosythesisParticipant')),
+                ('disulfide_bonds', models.ManyToManyField(verbose_name='Disulfide bonds (pH 7.5)', blank=True, related_name='protein_complexes', to='cyano.DisulfideBond')),
+                ('formation_process', models.ForeignKey(null=True, verbose_name='Formation process', blank=True, related_name='formed_complexes', to='cyano.Process', on_delete=django.db.models.deletion.SET_NULL)),
             ],
             options={
                 'verbose_name_plural': 'Protein complexes',
@@ -1324,131 +1324,131 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='transcriptionalregulation',
             name='transcription_factor',
-            field=cyano.history.HistoryForeignKey(verbose_name='Transcripton factor', related_name='transcriptional_regulations', to='cyano.Protein'),
+            field=models.ForeignKey(verbose_name='Transcripton factor', related_name='transcriptional_regulations', to='cyano.Protein'),
         ),
         migrations.AddField(
             model_name='transcriptionalregulation',
             name='transcription_unit',
-            field=cyano.history.HistoryForeignKey(verbose_name='Transcription unit', related_name='transcriptional_regulations', to='cyano.TranscriptionUnit'),
+            field=models.ForeignKey(verbose_name='Transcription unit', related_name='transcriptional_regulations', to='cyano.TranscriptionUnit'),
         ),
         migrations.AddField(
             model_name='protein',
             name='chaperones',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Chaperones', blank=True, related_name='chaperone_substrates', to='cyano.Protein'),
+            field=models.ManyToManyField(verbose_name='Chaperones', blank=True, related_name='chaperone_substrates', to='cyano.Protein'),
         ),
         migrations.AddField(
             model_name='protein',
             name='dna_footprint',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='DNA footprint', blank=True, related_name='proteins', to='cyano.DNAFootprint'),
+            field=models.ForeignKey(null=True, verbose_name='DNA footprint', blank=True, related_name='proteins', to='cyano.DNAFootprint'),
         ),
         migrations.AddField(
             model_name='protein',
             name='prosthetic_groups',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Prosthetic groups', blank=True, related_name='proteins', to='cyano.ProstheticGroupParticipant'),
+            field=models.ManyToManyField(verbose_name='Prosthetic groups', blank=True, related_name='proteins', to='cyano.ProstheticGroupParticipant'),
         ),
         migrations.AddField(
             model_name='protein',
             name='regulatory_rule',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='Regulatory rule', blank=True, related_name='+', to='cyano.EntryCharData', on_delete=django.db.models.deletion.SET_NULL),
+            field=models.ForeignKey(null=True, verbose_name='Regulatory rule', blank=True, related_name='+', to='cyano.EntryCharData', on_delete=django.db.models.deletion.SET_NULL),
         ),
         migrations.AddField(
             model_name='prostheticgroupparticipant',
             name='metabolite',
-            field=cyano.history.HistoryForeignKey(verbose_name='Metabolite', related_name='prosthetic_group_participants', to='cyano.Metabolite'),
+            field=models.ForeignKey(verbose_name='Metabolite', related_name='prosthetic_group_participants', to='cyano.Metabolite'),
         ),
         migrations.AddField(
             model_name='metabolite',
             name='biomass_composition',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Biomass composition (SP4 media, <br/>5% CO<sub>2</sub>, 37C; mmol gDCW<sup>-1</sup>)', blank=True, related_name='metabolites', to='cyano.BiomassComposition'),
+            field=models.ManyToManyField(verbose_name='Biomass composition (SP4 media, <br/>5% CO<sub>2</sub>, 37C; mmol gDCW<sup>-1</sup>)', blank=True, related_name='metabolites', to='cyano.BiomassComposition'),
         ),
         migrations.AddField(
             model_name='metabolite',
             name='map_coordinates',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Map coordinates', blank=True, related_name='metabolites', to='cyano.MetaboliteMapCoordinate'),
+            field=models.ManyToManyField(verbose_name='Map coordinates', blank=True, related_name='metabolites', to='cyano.MetaboliteMapCoordinate'),
         ),
         migrations.AddField(
             model_name='metabolite',
             name='media_composition',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='Media composition (SP4; mM)', blank=True, related_name='metabolites', to='cyano.MediaComposition', on_delete=django.db.models.deletion.SET_NULL),
+            field=models.ForeignKey(null=True, verbose_name='Media composition (SP4; mM)', blank=True, related_name='metabolites', to='cyano.MediaComposition', on_delete=django.db.models.deletion.SET_NULL),
         ),
         migrations.AddField(
             model_name='gene',
             name='amino_acid',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='Amino acid', blank=True, related_name='genes', to='cyano.Metabolite', on_delete=django.db.models.deletion.SET_NULL),
+            field=models.ForeignKey(null=True, verbose_name='Amino acid', blank=True, related_name='genes', to='cyano.Metabolite', on_delete=django.db.models.deletion.SET_NULL),
         ),
         migrations.AddField(
             model_name='gene',
             name='chromosome',
-            field=cyano.history.HistoryForeignKey(verbose_name='Chromosome or Plasmid', related_name='genes', to='cyano.Genome'),
+            field=models.ForeignKey(verbose_name='Chromosome or Plasmid', related_name='genes', to='cyano.Genome'),
         ),
         migrations.AddField(
             model_name='gene',
             name='codons',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Codons', blank=True, related_name='genes', to='cyano.Codon'),
+            field=models.ManyToManyField(verbose_name='Codons', blank=True, related_name='genes', to='cyano.Codon'),
         ),
         migrations.AddField(
             model_name='gene',
             name='expression',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='Relative expression', blank=True, related_name='+', to='cyano.EntryPositiveFloatData'),
+            field=models.ForeignKey(null=True, verbose_name='Relative expression', blank=True, related_name='+', to='cyano.EntryPositiveFloatData'),
         ),
         migrations.AddField(
             model_name='gene',
             name='half_life',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='Half life', blank=True, related_name='+', to='cyano.EntryPositiveFloatData'),
+            field=models.ForeignKey(null=True, verbose_name='Half life', blank=True, related_name='+', to='cyano.EntryPositiveFloatData'),
         ),
         migrations.AddField(
             model_name='gene',
             name='homologs',
-            field=cyano.history.HistoryManyToManyField(verbose_name='Homologs', blank=True, related_name='genes', to='cyano.Homolog'),
+            field=models.ManyToManyField(verbose_name='Homologs', blank=True, related_name='genes', to='cyano.Homolog'),
         ),
         migrations.AddField(
             model_name='gene',
             name='is_essential',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='Is essential', blank=True, related_name='+', to='cyano.EntryBooleanData'),
+            field=models.ForeignKey(null=True, verbose_name='Is essential', blank=True, related_name='+', to='cyano.EntryBooleanData'),
         ),
         migrations.AddField(
             model_name='featureposition',
             name='chromosome',
-            field=cyano.history.HistoryForeignKey(verbose_name='Chromosome or Plasmid', related_name='features', to='cyano.Genome'),
+            field=models.ForeignKey(verbose_name='Chromosome or Plasmid', related_name='features', to='cyano.Genome'),
         ),
         migrations.AddField(
             model_name='enzymeparticipant',
             name='protein',
-            field=cyano.history.HistoryForeignKey(verbose_name='Protein', related_name='enzyme_participants', to='cyano.Protein'),
+            field=models.ForeignKey(verbose_name='Protein', related_name='enzyme_participants', to='cyano.Protein'),
         ),
         migrations.AddField(
             model_name='coenzymeparticipant',
             name='metabolite',
-            field=cyano.history.HistoryForeignKey(verbose_name='Metabolite', related_name='coenzyme_participants', to='cyano.Metabolite'),
+            field=models.ForeignKey(verbose_name='Metabolite', related_name='coenzyme_participants', to='cyano.Metabolite'),
         ),
         migrations.AddField(
             model_name='proteinmonomer',
             name='gene',
-            field=cyano.history.HistoryForeignKey(verbose_name='Gene', related_name='protein_monomers', to='cyano.Gene'),
+            field=models.ForeignKey(verbose_name='Gene', related_name='protein_monomers', to='cyano.Gene'),
         ),
         migrations.AddField(
             model_name='proteinmonomer',
             name='is_n_terminal_methionine_cleaved',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='Is N-terminal methionine cleaved', related_name='+', to='cyano.EntryBooleanData'),
+            field=models.ForeignKey(null=True, verbose_name='Is N-terminal methionine cleaved', related_name='+', to='cyano.EntryBooleanData'),
         ),
         migrations.AddField(
             model_name='proteinmonomer',
             name='localization',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='Localization', related_name='protein_monomers', to='cyano.Compartment'),
+            field=models.ForeignKey(null=True, verbose_name='Localization', related_name='protein_monomers', to='cyano.Compartment'),
         ),
         migrations.AddField(
             model_name='proteinmonomer',
             name='signal_sequence',
-            field=cyano.history.HistoryForeignKey(null=True, verbose_name='Sequence sequence', blank=True, related_name='protein_monomers', to='cyano.SignalSequence', on_delete=django.db.models.deletion.SET_NULL),
+            field=models.ForeignKey(null=True, verbose_name='Sequence sequence', blank=True, related_name='protein_monomers', to='cyano.SignalSequence', on_delete=django.db.models.deletion.SET_NULL),
         ),
         migrations.AddField(
             model_name='massspectrometryproteindetail',
             name='protein',
-            field=cyano.history.HistoryForeignKey(related_name='protein_details', to='cyano.MassSpectrometryProtein'),
+            field=models.ForeignKey(related_name='protein_details', to='cyano.MassSpectrometryProtein'),
         ),
         migrations.AddField(
             model_name='disulfidebond',
             name='protein_monomer',
-            field=cyano.history.HistoryForeignKey(verbose_name='Protein monomer', related_name='disulfide_bonds', to='cyano.ProteinMonomer'),
+            field=models.ForeignKey(verbose_name='Protein monomer', related_name='disulfide_bonds', to='cyano.ProteinMonomer'),
         ),
     ]

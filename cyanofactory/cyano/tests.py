@@ -386,7 +386,7 @@ class CyanoUserTestAccessSpeciesPerm(CyanoUserTestBase):
 
         for key in getModelsMetadata(cmodels.SpeciesComponent).keys():
             with self.assertTemplateUsed("cyano/list.html"):
-                self.assertOK(reverse("cyano.views.listing", kwargs=dict(species_wid=SPECIES, model_type=key)))
+                self.assertOK(reverse("cyano:listing", kwargs=dict(species_wid=SPECIES, model_type=key)))
 
     def test_detail(self):
         """Visit detail page"""
@@ -523,7 +523,7 @@ class CyanoUserTestAccessSpeciesPerm(CyanoUserTestBase):
 
     def test_permission(self):
         """Visit permission view page"""
-        #self.assertRedirect("permission/", "login/?next={}".format(reverse('cyano.views.global_permission')))
+        #self.assertRedirect("permission/", "login/?next={}".format(reverse('cyano:global_permission')))
         
         self.assertPermissionRequired(SPECIES + "/permission/", P.READ_PERMISSION)
         self.assertNotFound(SPECIES + "/" + MODEL + "/permission/")

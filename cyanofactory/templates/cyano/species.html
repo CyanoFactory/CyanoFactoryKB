@@ -17,10 +17,10 @@ Released under the MIT license
 {% load templatetags %}
 
 {% block action_icons_edit %}
-<li><a href="{% url "cyano.views.edit" species_wid=species.wid %}">Edit {{ species.wid }}</a></li>
-<li><a data-toggle="modal" href="{% url 'cyano.views.delete' species_wid=species.wid %}" data-target="#delete-form">Delete {{ species.wid }}</a></li>
-<li><a href="{% url "cyano.views.permission" species_wid=species.wid %}">View permissions of {{ species.wid }}</a></li>
-<li><a href="{% url "cyano.views.permission_edit" species_wid=species.wid %}">Edit permissions of {{ species.wid }}</a></li>
+<li><a href="{% url "cyano:edit" species_wid=species.wid %}">Edit {{ species.wid }}</a></li>
+<li><a data-toggle="modal" href="{% url 'cyano:delete' species_wid=species.wid %}" data-target="#delete-form">Delete {{ species.wid }}</a></li>
+<li><a href="{% url "cyano:permission" species_wid=species.wid %}">View permissions of {{ species.wid }}</a></li>
+<li><a href="{% url "cyano:permission_edit" species_wid=species.wid %}">Edit permissions of {{ species.wid }}</a></li>
 {{ block.super }}
 {% endblock %}
 
@@ -87,7 +87,7 @@ Released under the MIT license
 
 {% if species.cross_references.all|length > 0 %}
 <h2>Cross references</h2>
-<p>{% for cr in species.cross_references.all %}{{ cr.source }}: <a href="{% url "db_xref.views.dbxref" source=cr.source xid=cr.xid %}">{{ cr.xid }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+<p>{% for cr in species.cross_references.all %}{{ cr.source }}: <a href="{% url "db_xref:index" source=cr.source xid=cr.xid %}">{{ cr.xid }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}</p>
 {% endif %}
 
 <h2>Genetic code</h2>

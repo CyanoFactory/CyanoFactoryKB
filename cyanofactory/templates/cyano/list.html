@@ -38,7 +38,7 @@ $(document).ready(function() {
     } );
 
     // DataTable
-    // ajax: "{% url "cyano-api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,url",
+    // ajax: "{% url "cyano:api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,url",
 
     var table = $('#new_list').DataTable({
         columns: [
@@ -97,7 +97,7 @@ $(document).ready(function() {
 
                                 $.ajax({
                                     type: "POST",
-                                    url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+                                    url: "{% url "cyano:basket-op" species_wid=species.wid %}",
                                     context: document.body,
                                     async: false,
                                     data: {
@@ -117,7 +117,7 @@ $(document).ready(function() {
                             onChange: function(option, checked, select) {
                                 $.ajax({
                                     type: "POST",
-                                    url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+                                    url: "{% url "cyano:basket-op" species_wid=species.wid %}",
                                     context: document.body,
                                     data: {
                                         "id": $(option).data("pk"),
@@ -177,7 +177,7 @@ var updateTable = function() {
 
     var filterString = filters.join("&");
 
-    $('#new_list').DataTable().ajax.url("{% url "cyano-api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,web_url&" + filterString).load();
+    $('#new_list').DataTable().ajax.url("{% url "cyano:api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,web_url&" + filterString).load();
 }
 
 </script>
@@ -220,7 +220,7 @@ var updateTable = function() {
 {% endblock %}
 
 {% block action_icons_edit %}
-<li><a href="{% url "cyano.views.add" species_wid=species.wid model_type=model_type %}">Add new {{ model_verbose_name }}</a></li>
+<li><a href="{% url "cyano:add" species_wid=species.wid model_type=model_type %}">Add new {{ model_verbose_name }}</a></li>
 {{ block.super }}
 {% endblock %}
 {% block action_icons_export %}

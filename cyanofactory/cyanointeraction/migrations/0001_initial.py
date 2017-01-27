@@ -2,8 +2,7 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-import dbarray.fields
-
+from django.contrib.postgres import fields
 
 class Migration(migrations.Migration):
 
@@ -286,7 +285,7 @@ class Migration(migrations.Migration):
                 ('node_type_b', models.IntegerField(null=True, blank=True)),
                 ('node_id_b', models.IntegerField()),
                 ('combined_score', models.SmallIntegerField(null=True, blank=True)),
-                ('evidence_scores', dbarray.fields.TextArrayField()),
+                ('evidence_scores', fields.ArrayField(models.TextField())),
             ],
             options={
                 'db_table': 'node_node_links',
@@ -673,7 +672,7 @@ class Migration(migrations.Migration):
                 ('node_type_b', models.IntegerField()),
                 ('node_id_b', models.IntegerField()),
                 ('combined_score', models.SmallIntegerField()),
-                ('evidence_scores', dbarray.fields.TextArrayField()),
+                ('evidence_scores', fields.ArrayField(models.TextField())),
             ],
             options={
                 'db_table': 'node_node_links',

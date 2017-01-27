@@ -87,7 +87,7 @@ Released under the MIT license
 
 
 {% block content %}
-{% url "cyano-design-design" pk=model.pk as url %}
+{% url "cyanodesign:design" pk=model.pk as url %}
 {% for revision in revisions %}
 <div class="panel panel-primary">
     <table class="table table-striped table-hover">

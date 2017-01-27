@@ -59,7 +59,7 @@ $(document).on('input', '#id_new_species',function(){
     <div class="panel-body">
         {% if species %}
         A mutant is created for <b>{{ species.name }}</b>. All components of that organism will be copied to the mutant.<br/>
-        If you want to create an empty organism you can <a href="{% url "cyano.views.importSpeciesData" %}" title="Create new species">create a new species</a> instead.
+        If you want to create an empty organism you can <a href="{% url "cyano:importSpeciesData" %}" title="Create new species">create a new species</a> instead.
         {% else %}
         A new empty species is created. If you want to create a mutant select a species in the navigation menu and select "Create Mutant" from the import menu.
         {% endif %}

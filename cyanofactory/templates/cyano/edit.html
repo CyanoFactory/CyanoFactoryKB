@@ -22,8 +22,8 @@ Released under the MIT license
 {% block action_icons_edit %}
 {% if queryset|length > 0 %}
 {% with object=queryset.0 %}
-<li><a href="{% url "cyano.views.detail" species_wid=species.wid model_type=model_type wid=object.wid %}">View {{ object.wid }}</a></li>
-<li><a href="{% url "cyano.views.delete" species_wid=species.wid model_type=model_type wid=object.wid %}">Delete {{ object.wid }}</a></li>
+<li><a href="{% url "cyano:detail" species_wid=species.wid model_type=model_type wid=object.wid %}">View {{ object.wid }}</a></li>
+<li><a href="{% url "cyano:delete" species_wid=species.wid model_type=model_type wid=object.wid %}">Delete {{ object.wid }}</a></li>
 {% endwith %}
 {% endif %}
 {{ block.super }}
