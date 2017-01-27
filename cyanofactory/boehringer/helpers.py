@@ -71,7 +71,7 @@ def format_output(request):
         with open(finder, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read())
     else:
-        encoded_string = ""
+        encoded_string = b""
 
     data = {'image': "data:image/png;base64," + encoded_string.decode("utf-8"),
             'export': export,
