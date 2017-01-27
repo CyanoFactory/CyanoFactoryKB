@@ -86,7 +86,7 @@ Released under the MIT license
                     <span class="icon-bar"></span>
                     <span class="icon-bar"></span>
                 </button>
-                <a href="{% url "cyano.views.index" %}" class="pull-left"><img src="{% get_static_prefix %}cyano/img/banner.png"></a>
+                <a href="{% url "cyano:index" %}" class="pull-left"><img src="{% get_static_prefix %}cyano/img/banner.png"></a>
             </div>
             <div id="navbar" class="navbar-collapse collapse">
                 <ul class="nav navbar-nav navbar-left">
@@ -110,7 +110,7 @@ Released under the MIT license
                             {% if species %}
                             {% for key, modelmetadata in modelmetadatas.items %}
                             <li>
-                                <a href="{% url "cyano.views.listing" species_wid=species.wid model_type=key %}">{{ modelmetadata.verbose_name_plural }}</a>
+                                <a href="{% url "cyano:listing" species_wid=species.wid model_type=key %}">{{ modelmetadata.verbose_name_plural }}</a>
                             </li>
                             {% endfor %}
                             {% else %}
@@ -127,20 +127,20 @@ Released under the MIT license
                             {% if global_permissions.any_of_cyanomaps %}
                             <li class="dropdown-header">CyanoMaps</li>
                             {% if "access_boehringer" in global_permissions %}
-                            <li><a href="{% url "boehringer.views.index" %}" title="Biochemical Pathways">Biochemical Pathways</a></li>
+                            <li><a href="{% url "boehringer:index" %}" title="Biochemical Pathways">Biochemical Pathways</a></li>
                             {% endif %}
                             {% if "access_kegg" in global_permissions %}
-                            <li><a href="{% url "kegg.views.index" %}" title="KEGG Pathways">KEGG Pathways</a></li>
+                            <li><a href="{% url "kegg:index" %}" title="KEGG Pathways">KEGG Pathways</a></li>
                             {% endif %}
                             {% if "access_sbgn" in global_permissions %}
-                            <li><a href="{% url "cyano.views.sbgn" %}" title="SBGN of Synechocystis">SBGN of Synechocystis</a></li>
+                            <li><a href="{% url "cyano:sbgn" %}" title="SBGN of Synechocystis">SBGN of Synechocystis</a></li>
                             {% endif %}
                             {% if "access_cyanodesign" in global_permissions %}
                             <li class="divider"></li>
                             {% endif %}
                             {% endif %}
                             {% if "access_cyanodesign" in global_permissions %}
-                            <li><a href="{% url "cyanodesign.views.index" %}" title="CyanoDesign">CyanoDesign</a></li>
+                            <li><a href="{% url "cyanodesign:index" %}" title="CyanoDesign">CyanoDesign</a></li>
                             {% endif %}
                             {% else %}
                             <li class="disabled">
@@ -152,9 +152,9 @@ Released under the MIT license
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Import <span class="caret"></span></a>
                         <ul class="dropdown-menu" role="menu">
-                            {% if not species %}<li><a href="{% url "cyano.views.importSpeciesData" %}">Create New Species</a></li>{% endif %}
-                            <li {% if not species %}class="disabled"{% endif %}><a href="{% if species %}{% url "cyano.views.importData" species_wid=species.wid %}{% else %}#{% endif %}">Import Data</a></li>
-                            <li><a href="{% if species %}{% url "cyano.views.jobs" species_wid=species.wid %}{% else %}{% url "cyano.views.jobs" %}{% endif %}">View Import Jobs</a></li>
+                            {% if not species %}<li><a href="{% url "cyano:importSpeciesData" %}">Create New Species</a></li>{% endif %}
+                            <li {% if not species %}class="disabled"{% endif %}><a href="{% if species %}{% url "cyano:importData" species_wid=species.wid %}{% else %}#{% endif %}">Import Data</a></li>
+                            <li><a href="{% if species %}{% url "cyano:jobs" species_wid=species.wid %}{% else %}{% url "cyano:jobs" %}{% endif %}">View Import Jobs</a></li>
                         </ul>
                     </li>
                     <li class="dropdown">
@@ -194,22 +194,22 @@ Released under the MIT license
                         <ul class="dropdown-menu" role="menu">
                             <li><a href="{% get_static_prefix %}cyano/CyanoFactory-Manual.pdf">How to use CyanoFactory</a></li>
                             <li><a href="{% get_static_prefix %}cyano/CyanoDesign-Manual.pdf">How to use CyanoDesign</a></li>
-                            <li><a href="{% if species %}{% url "cyano.views.licensing" species_wid=species.wid %}{% else %}{% url "cyano.views.licensing" %}{% endif %}">License</a></li>
+                            <li><a href="{% if species %}{% url "cyano:license" species_wid=species.wid %}{% else %}{% url "cyano:license" %}{% endif %}">License</a></li>
                         </ul>
                     </li>
                     {% if request.user.is_authenticated %}
                     <li class="dropdown">
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">{{ request.user.username }} <span class="caret"></span></a>
                         <ul class="dropdown-menu" role="menu">
-                            <li><a href="{% if species %}{% url "cyano.views.users" species_wid=species.wid %}{% else %}{% url "cyano.views.users" %}{% endif %}">Members</a></li>
+                            <li><a href="{% if species %}{% url "cyano:users" species_wid=species.wid %}{% else %}{% url "cyano:users" %}{% endif %}">Members</a></li>
                             <li class="divider"></li>
-                            <li><a href="{% if species %}{% url "cyano.views.user" username=request.user.username species_wid=species.wid %}{% else %}{% url "cyano.views.user" username=request.user.username %}{% endif %}">My Profile</a></li>
-                            <li><a href="{% if species %}{% url "cyano.views.basket" species_wid=species.wid %}{% else %}{% url "cyano.views.basket" %}{% endif %}">My Baskets</a></li>
+                            <li><a href="{% if species %}{% url "cyano:user" username=request.user.username species_wid=species.wid %}{% else %}{% url "cyano:user" username=request.user.username %}{% endif %}">My Profile</a></li>
+                            <li><a href="{% if species %}{% url "cyano:basket" species_wid=species.wid %}{% else %}{% url "cyano:basket" %}{% endif %}">My Baskets</a></li>
                             <li class="divider"></li>
-                            <li><a href="{% if species %}{% url "account_change" species_wid=species.wid %}{% else %}{% url "account_change" %}{% endif %}">Edit Profile</a></li>
+                            <li><a href="{% if species %}{% url "cyano:account_change" species_wid=species.wid %}{% else %}{% url "cyano:account_change" %}{% endif %}">Edit Profile</a></li>
                             <li><a href="{% url "password_change" %}">Change password</a></li>
                             <li class="divider"></li>
-                            <li><a href="{% if species %}{% url "logout" species_wid=species.wid %}{% else %}{% url "logout" %}{% endif %}">Logout</a></li>
+                            <li><a href="{% if species %}{% url "cyano:logout" species_wid=species.wid %}{% else %}{% url "cyano:logout" %}{% endif %}">Logout</a></li>
                         </ul>
                     </li>
                     {% if request.user.profile.is_admin %}
@@ -222,8 +222,8 @@ Released under the MIT license
                     </li>
                     {% endif %}
                     {% else %}
-                    <li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% url "login" species_wid=species.wid %}{% else %}{% url "login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
-                    <li><a href="{% url "register" %}">Sign up</a></li>
+                    <li><a href="{% if request.get_full_path|truncatechars:9 == '/login...' %}{{ request.get_full_path }}{% else %}{% if species %}{% url "cyano:login" species_wid=species.wid %}{% else %}{% url "cyano:login" %}{% endif %}?next={{ request.get_full_path|urlencode }}{% endif %}">Login</a></li>
+                    <li><a href="{% url "cyano:register" %}">Sign up</a></li>
                     {% endif %}
                 </ul>
             </div>

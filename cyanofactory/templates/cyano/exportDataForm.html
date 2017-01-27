@@ -37,7 +37,7 @@ function uncheckAll(field){
 		field[i].checked = false;
 }
 </script>
-<form id="form" name="exportData" action="{% if species %}{% url "cyano.views.exportData" species_wid=species.wid %}{% else %}{% url "cyano.views.exportData" %}{% endif %}" method="get">
+<form id="form" name="exportData" action="{% if species %}{% url "cyano:exportData" species_wid=species.wid %}{% else %}{% url "cyano:exportData" %}{% endif %}" method="get">
 	<div class="block">
 		<h1>Select {{ form.species.label }}</h1>
 		<div class="content">

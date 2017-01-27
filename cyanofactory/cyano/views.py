@@ -428,7 +428,7 @@ class ApiSpecies(generics.ListAPIView):
                     "name": model._meta.object_name,
                     "count": count,
                     "url": reverse("cyano-api-list", kwargs=args),
-                    "web_url": reverse("cyano.views.listing", kwargs=args)
+                    "web_url": reverse("cyano:listing", kwargs=args)
                 })
 
         return queryset
@@ -670,7 +670,7 @@ def history(request, species, model=None, item=None):
         time = obj.detail.date.strftime("%H:%M")
         reason = obj.detail.reason
         author = "" # obj.detail.user
-        url = reverse("cyano.views.history_detail", kwargs={"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
+        url = reverse("cyano:history_detail", kwargs={"species_wid": species.wid, "model_type": item_model, "wid": wid, "detail_id": detail_id})
 
         if last_date != date:
             revisions.append(entry)
@@ -900,17 +900,17 @@ def delete(request, species, model=None, item=None):
 
         if item is None:
             # Delete species
-            target_url = reverse('cyano.views.index')
+            target_url = reverse('cyano:index')
         else:
-            target_url = reverse('cyano.views.listing', kwargs={'species_wid': species.wid, 'model_type': model.__name__})
+            target_url = reverse('cyano:listing', kwargs={'species_wid': species.wid, 'model_type': model.__name__})
 
         return HttpResponseRedirect(target_url)
 
     if item is None:
         # Delete species
-        target_url = reverse('cyano.views.delete', kwargs={'species_wid': species.wid})
+        target_url = reverse('cyano:delete', kwargs={'species_wid': species.wid})
     else:
-        target_url = reverse('cyano.views.delete',
+        target_url = reverse('cyano:delete',
                              kwargs={
                                  'species_wid': species.wid,
                                  'model_type': model.__name__,
@@ -1094,7 +1094,7 @@ def password_change_required(request, species=None):
     from django.contrib.auth.forms import AdminPasswordChangeForm
     
     if not request.user.profile.force_password_change:
-        return HttpResponseRedirect(reverse("cyano.views.index"))
+        return HttpResponseRedirect(reverse("cyano:index"))
     
     context = chelpers.get_extra_context(
         species = species,
@@ -1508,7 +1508,7 @@ def basket_op(request, species=None):
 
         return HttpResponse(json.dumps(
             {"id": basket.pk,
-             "url": reverse("cyano-basket", kwargs=url)
+             "url": reverse("cyano:basket", kwargs=url)
             })
         )
     elif op == "delete":
@@ -1697,7 +1697,7 @@ def register(request):
 
         if form.is_valid():
             form.save(request)
-            return redirect("cyano.views.index")
+            return redirect("cyano:index")
     else:
         form = CreateProfileForm()
 

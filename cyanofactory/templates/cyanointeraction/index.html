@@ -759,7 +759,7 @@ Released under the MIT license
                                                     id = d.id;
                                                 }
                                         })
-                                        var url = "{% url "cyanointeraction.views.checkRequest" %}?requestID="+id;
+                                        var url = "{% url "cyanointeraction:checkRequest" %}?requestID="+id;
                                         return url;
                                 })
                                 .append("text")
@@ -799,10 +799,10 @@ Released under the MIT license
                 if(amount != 0){
                     var text = "";
                     if(selectedItem[0] == "C"){
-                        text = "{% url "cyanointeraction.views.onlyChemGraph" %}?chemid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
+                        text = "{% url "cyanointeraction:onlyChemGraph" %}?chemid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
                     }
                     else{
-                        text = "{% url "cyanointeraction.views.onlyProtGraph" %}?protid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
+                        text = "{% url "cyanointeraction:onlyProtGraph" %}?protid={{ protid }}&amount="+amount+"&chemAmount="+chemamount;
                     }
                     $.ajax({url:text,
                          beforeSend: function() {
@@ -827,10 +827,10 @@ Released under the MIT license
                 if(amount > -1){
                     var text = "";
                     if(selectedItem[0] == "C"){
-                        text = "{% url "cyanointeraction.views.onlyChemGraph" %}?chemid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
+                        text = "{% url "cyanointeraction:onlyChemGraph" %}?chemid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
                     }
                     else{
-                        text = "{% url "cyanointeraction.views.onlyProtGraph" %}?protid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
+                        text = "{% url "cyanointeraction:onlyProtGraph" %}?protid={{ protid }}&amount="+protamount+"&chemAmount="+chemamount;
                     }
                     $.ajax({url:text,
                          beforeSend: function() {
@@ -1254,7 +1254,7 @@ Released under the MIT license
                         if(ids.indexOf(d) > -1){
                             aID = d;
                         }
-                        var url = "{% url "cyanointeraction.views.checkRequest" %}?requestID="+aID;
+                        var url = "{% url "cyanointeraction:checkRequest" %}?requestID="+aID;
                         return url;
                     })
                     .style("color", "black")

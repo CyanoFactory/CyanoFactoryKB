@@ -46,7 +46,7 @@ $(document).ready(function() {
 <div class="alert alert-info" role="alert">
     <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
     <span class="sr-only">Information:</span>
-    <a href="{% url "kegg.views.index" %}" title="Reset search filter">Only maps containing any of the EC numbers and/or keywords are listed. Click here to reset the map list</a>.
+    <a href="{% url "kegg:index" %}" title="Reset search filter">Only maps containing any of the EC numbers and/or keywords are listed. Click here to reset the map list</a>.
 </div>
 {% endif %}
 {% if overview_maps %}
@@ -59,8 +59,8 @@ $(document).ready(function() {
 </thead>
 <tbody>
 {% for object in overview_maps %}
-{% url 'kegg.views.map_view' object.name as url %}
-<tr data-url="{% url 'kegg.views.map_view' object.name %}">
+{% url 'kegg:map_view' object.name as url %}
+<tr data-url="{% url 'kegg:map_view' object.name %}">
 <th><a href="{{ url }}">{{ object.name }}</a></th>
 <td><a href="{{ url }}">{{ object.title|truncatechars:80 }}</a></td>
 </tr>
@@ -79,7 +79,7 @@ $(document).ready(function() {
 </thead>
 <tbody>
 {% for object in other_maps %}
-<tr data-url="{% url 'kegg.views.map_view' object.name %}">
+<tr data-url="{% url 'kegg:map_view' object.name %}">
 <th>{{ object.name }}</th>
 <td>{{ object.title|truncatechars:80 }}</td>
 </tr>

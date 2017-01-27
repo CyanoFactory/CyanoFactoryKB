@@ -97,7 +97,7 @@ $(document).ready(function() {
 
                                 $.ajax({
                                     type: "POST",
-                                    url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+                                    url: "{% url "cyano:basket-op" species_wid=species.wid %}",
                                     context: document.body,
                                     async: false,
                                     data: {
@@ -117,7 +117,7 @@ $(document).ready(function() {
                             onChange: function(option, checked, select) {
                                 $.ajax({
                                     type: "POST",
-                                    url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+                                    url: "{% url "cyano:basket-op" species_wid=species.wid %}",
                                     context: document.body,
                                     data: {
                                         "id": $(option).data("pk"),
@@ -220,7 +220,7 @@ var updateTable = function() {
 {% endblock %}
 
 {% block action_icons_edit %}
-<li><a href="{% url "cyano.views.add" species_wid=species.wid model_type=model_type %}">Add new {{ model_verbose_name }}</a></li>
+<li><a href="{% url "cyano:add" species_wid=species.wid model_type=model_type %}">Add new {{ model_verbose_name }}</a></li>
 {{ block.super }}
 {% endblock %}
 {% block action_icons_export %}

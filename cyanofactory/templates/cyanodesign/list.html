@@ -60,7 +60,7 @@ $(document).ready(function() {
             var form = $("#dialog-create").find("form");
 
             $.ajax({
-                url: "{% url 'cyano-design-save-upload-form' pk=1 %}",
+                url: "{% url 'cyanodesign:upload' pk=1 %}",
                 type: "POST",
                 data: new FormData(form[0]),
                 processData: false,
@@ -86,7 +86,7 @@ $(document).ready(function() {
             var form = $("#dialog-template").find("form");
 
             $.ajax({
-                url: "{% url 'cyano-design-save-upload-form' pk=2 %}",
+                url: "{% url 'cyanodesign:upload' pk=2 %}",
                 type: "POST",
                 data: new FormData(form[0]),
                 processData: false,
@@ -111,7 +111,7 @@ $(document).ready(function() {
         $("#dialog-delete .btn-primary").click(function () {
             $.ajax({
                 type: "POST",
-                url: "{% url "cyano-design-delete" %}",
+                url: "{% url "cyanodesign:delete" %}",
                 context: document.body,
                 data: { "id": dialog_delete.data("pk") }
             });
@@ -143,18 +143,18 @@ $(document).ready(function() {
     </thead>
     <tbody>
     {% for object in queryset %}
-        <tr data-pk="{{ object.pk }}" data-url="{% url "cyano-design-design" pk=object.pk %}">
+        <tr data-pk="{{ object.pk }}" data-url="{% url "cyanodesign:design" pk=object.pk %}">
             <th>{{ object.name }}</th>
             <td>
                 <div class="btn-group" role="group">
-                <a class='btn btn-default btn-xs' href="{% url "cyano-design-history" pk=object.pk %}">View revisions</a>
+                <a class='btn btn-default btn-xs' href="{% url "cyanodesign:history" pk=object.pk %}">View revisions</a>
                 <div class="btn-group" role="group">
                     <a class='btn btn-default btn-xs dropdown-toggle' data-toggle="dropdown" aria-expanded="false">
                         Export model <span class="caret"></span>
                     </a>
                     <ul class="dropdown-menu" role="menu">
-                    <li><a id="export-bioopt" href="{% url "cyano-design-export" pk=object.pk %}?format=bioopt">As BioOpt file</a></li>
-                    <li><a id="export-sbml" href="{% url "cyano-design-export" pk=object.pk %}?format=sbml">As SBML file</a></li>
+                    <li><a id="export-bioopt" href="{% url "cyanodesign:export" pk=object.pk %}?format=bioopt">As BioOpt file</a></li>
+                    <li><a id="export-sbml" href="{% url "cyanodesign:export" pk=object.pk %}?format=sbml">As SBML file</a></li>
                     </ul>
                 </div>
                 {% if request.user.is_authenticated %}

@@ -537,7 +537,7 @@ Released under the MIT license
             data["dry_run"] = true;
 
             $.ajax({
-                url: "{% url "cyano-design-simulate" pk=pk %}",
+                url: "{% url "cyanodesign:simulate" pk=pk %}",
                 type: "POST",
                 data: data
             }).done(function(x) {
@@ -576,7 +576,7 @@ Released under the MIT license
             var data = beginRequest();
 
             $.ajax({
-                url: "{% url "cyano-design-simulate" pk=pk %}",
+                url: "{% url "cyanodesign:simulate" pk=pk %}",
                 type: "POST",
                 data: data
             }).done(function(x) {
@@ -715,12 +715,12 @@ Released under the MIT license
             var data = beginRequest($("#dialog-save-model").find(".modal-content"));
             data["summary"] = form.find("#id_save_summary").val();
             $.ajax({
-                url: "{% url "cyano-design-save" pk=pk %}",
+                url: "{% url "cyanodesign:save" pk=pk %}",
                 type: "POST",
                 data: data
             }).done(function(x) {
                 if (revision !== undefined) {
-                    location.replace("{% url "cyano-design-design" pk=pk %}");
+                    location.replace("{% url "cyanodesign:design" pk=pk %}");
                 }
                 $("#dialog-save-model").modal("hide");
                 endRequest($("#dialog-save-model").find(".modal-content"));
@@ -740,7 +740,7 @@ Released under the MIT license
             data["saveas_name"] = form.find("#id_saveas_name").val();
             data["saveas_summary"] = form.find("#id_saveas_summary").val();
             $.ajax({
-                url: "{% url "cyano-design-saveas" pk=pk %}",
+                url: "{% url "cyanodesign:save_as" pk=pk %}",
                 type: "POST",
                 data: data
             }).done(function(x) {
@@ -1521,7 +1521,7 @@ Released under the MIT license
         });
 
         $.ajax({
-            url: "{% url "cyano-design-get-reactions" pk=pk %}{% if revision %}?revision={{ revision.pk }}{% endif %}",
+            url: "{% url "cyanodesign:get_reactions" pk=pk %}{% if revision %}?revision={{ revision.pk }}{% endif %}",
             context: document.body,
             beforeSend: function() {
                 waitIndicator.show($("#content"));
@@ -2273,7 +2273,7 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
 <input type="submit" id="design-saveas" class="btn btn-primary" value="Save As">
 {% endif %}
 
-<form method="post" action="{% url "cyano-design-simulate" pk=pk %}" id="submit-form">
+<form method="post" action="{% url "cyanodesign:simulate" pk=pk %}" id="submit-form">
 {% csrf_token %}
 </form>
 

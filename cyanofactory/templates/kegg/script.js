@@ -6,7 +6,7 @@ $(document).ready(function() {
     $("form#save_form").submit(function(e) {
         e.preventDefault();
         $.ajax({
-            url: '{% url "kegg.views.index_ajax" %}',
+            url: '{% url "kegg:index_ajax" %}',
             context: document.body,
             method: "POST",
             data: {
@@ -25,7 +25,7 @@ $(document).ready(function() {
 
     $("form#load_form #load_button").click(function(e) {
         $.ajax({
-            url: '{% url "kegg.views.index_ajax" %}',
+            url: '{% url "kegg:index_ajax" %}',
             context: document.body,
             method: "POST",
             data: {"op": "load", "pk": $("form#load_form select").children(":selected").attr("name")}
@@ -39,7 +39,7 @@ $(document).ready(function() {
 
     $("form#load_form #delete_button").click(function(e) {
         $.ajax({
-            url: '{% url "kegg.views.index_ajax" %}',
+            url: '{% url "kegg:index_ajax" %}',
             context: document.body,
             data: {"op": "delete", "pk": $("form#load_form select").children(":selected").attr("name")}
         }).done(function(result) {
@@ -80,7 +80,7 @@ $(document).ready(function() {
             return;
         }
 
-        if (href.indexOf('{% url "kegg.views.index" %}') == 0) {
+        if (href.indexOf('{% url "kegg:index" %}') == 0) {
             event.preventDefault();
 
             if (!isDragging) {

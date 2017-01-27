@@ -1336,7 +1336,7 @@ class Entry(AbstractEntry):
     def get_as_html_cross_references(self, is_user_anonymous):
         results = []
         for cr in self.cross_references.all():
-            results.append('%s: <a href="%s">%s</a>' % (cr.source, reverse("db_xref.views.dbxref", kwargs={"source" : cr.source, "xid" : cr.xid}), cr.xid ))
+            results.append('%s: <a href="%s">%s</a>' % (cr.source, reverse("db_xref:index", kwargs={"source" : cr.source, "xid" : cr.xid}), cr.xid ))
         return format_list_html(results, separator=', ')
 
     def get_as_html_created_user(self, is_user_anonymous):
@@ -1489,7 +1489,7 @@ class SpeciesComponent(AbstractSpeciesComponent):
 
         #provide links to references
         return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]',
-            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':self.species.wid, 'model_type': 'PublicationReference', 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
+            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano:detail', kwargs={'species_wid':self.species.wid, 'model_type': 'PublicationReference', 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
 
     def get_as_html_publication_references(self, is_user_anonymous):
@@ -3340,7 +3340,7 @@ class Pathway(SpeciesComponent):
                         fill_opacity = "0.3"
                         fill_color = "blue"
                     except ObjectDoesNotExist:
-                        elem.set("xlink:href", reverse("kegg.views.map_view", kwargs={"map_id": pathway_name}))
+                        elem.set("xlink:href", reverse("kegg:map_view", kwargs={"map_id": pathway_name}))
                         elem.set("target", "_blank")
                 else:
                     elem.set("xlink:href", url)
@@ -3977,7 +3977,7 @@ class ProteinMonomer(Protein):
 
         if prot_name:
             return '<a href="{}">Show interactions</a>'.format(
-                reverse("cyanointeraction.views.checkInteraction", kwargs={"protID": prot_name.protein_id}))
+                reverse("cyanointeraction:checkInteraction", kwargs={"protID": prot_name.protein_id}))
 
         return ""
 
@@ -4379,7 +4379,7 @@ class Species(Entry):
     #getters
     @permalink
     def get_absolute_url(self, history_id = None):
-        return ('cyano.views.species', (), {'species_wid': self.wid})
+        return ('cyano:species', (), {'species_wid': self.wid})
 
     @permalink
     def get_absolute_url_api(self):
@@ -4391,7 +4391,7 @@ class Species(Entry):
 
         #provide links to references
         return re.sub(r'\[(PUB_\d{4,4})(, PUB_\d{4,4})*\]',
-            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano.views.detail', kwargs={'species_wid':self.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
+            lambda match: '[' + ', '.join(['<a href="%s">%s</a>' % (reverse('cyano:detail', kwargs={'species_wid':self.wid, 'wid': x}), x, ) for x in match.group(0)[1:-1].split(', ')]) + ']',
             txt)
 
     def get_as_html_genetic_code(self, is_user_anonymous):

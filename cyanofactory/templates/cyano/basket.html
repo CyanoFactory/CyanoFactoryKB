@@ -53,7 +53,7 @@ $(document).ready(function() {
             var form = $("#dialog-create").find("form");
 
             $.ajax({
-                url: "{% url 'cyano-basket-create-save-form' %}",
+                url: "{% url 'cyano:basket-create' %}",
                 type: "POST",
                 data: new FormData(form[0]),
                 processData: false,
@@ -78,7 +78,7 @@ $(document).ready(function() {
         dialog_delete.find(".btn-primary").click(function () {
             $.ajax({
                 type: "POST",
-                url: "{% url "cyano-basket-op" %}",
+                url: "{% url "cyano:basket-op" %}",
                 context: document.body,
                 data: { "op": "delete", "id": dialog_delete.data("pk") }
             });
@@ -115,9 +115,9 @@ $(document).ready(function() {
 <tbody>
 {% for object in queryset %}
 {% if species %}
-{% url "cyano.views.basket" species_wid=species.wid basket_id=object.pk as basket_url %}
+{% url "cyano:basket" species_wid=species.wid basket_id=object.pk as basket_url %}
 {% else %}
-{% url "cyano.views.basket" basket_id=object.pk as basket_url %}
+{% url "cyano:basket" basket_id=object.pk as basket_url %}
 {% endif %}
 <tr data-pk="{{ object.pk }}" data-url="{{ basket_url }}">
 	<th>{{ object.name }}</th>

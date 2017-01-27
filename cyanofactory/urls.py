@@ -9,6 +9,7 @@ from django.contrib import admin
 admin.autodiscover()
 
 
+
 # admin interface
 urlpatterns = [
 #   url(r'^admin/doc/', include('django.contrib.admindocs.urls')),

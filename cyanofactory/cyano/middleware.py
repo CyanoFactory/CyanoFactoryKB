@@ -67,11 +67,11 @@ class RedirectAllowedHostMiddlware(object):
 class PasswordChangeMiddleware(object):
     def process_request(self, request):
         if request.user.is_authenticated() and \
-            not re.match(r'^' + reverse("password_change_required"), request.path) and \
-            not re.match(r'^' + reverse("logout"), request.path):
+            not re.match(r'^' + reverse("cyano:password_change_required"), request.path) and \
+            not re.match(r'^' + reverse("cyano:logout"), request.path):
             #re.match(r'^/admin/?', request.path) and
 
             profile = request.user.profile
             if profile.force_password_change:
-                return HttpResponseRedirect(reverse("password_change_required"))
+                return HttpResponseRedirect(reverse("cyano:password_change_required"))
 

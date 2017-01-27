@@ -46,7 +46,7 @@ $(document).ready(function() {
 
         $.ajax({
             type: "POST",
-            url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+            url: "{% url "cyano:basket-op" species_wid=species.wid %}",
             context: document.body,
             data: {
                 "id": ui.value.substring(6),
@@ -59,7 +59,7 @@ $(document).ready(function() {
     $("#cart-button").click(function() {
         $.ajax({
             type: "POST",
-            url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+            url: "{% url "cyano:basket-op" species_wid=species.wid %}",
             context: document.body,
             async: false,
             data: {
@@ -91,7 +91,7 @@ $(document).ready(function() {
                     // Removed
                     $.ajax({
                         type: "POST",
-                        url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+                        url: "{% url "cyano:basket-op" species_wid=species.wid %}",
                         context: document.body,
                         data: {
                             "id": obj.data("pk"),
@@ -105,7 +105,7 @@ $(document).ready(function() {
                     // Added
                     $.ajax({
                         type: "POST",
-                        url: "{% url "cyano-basket-op" species_wid=species.wid %}",
+                        url: "{% url "cyano:basket-op" species_wid=species.wid %}",
                         context: document.body,
                         data: {
                             "id": obj.data("pk"),
@@ -126,10 +126,10 @@ $(document).ready(function() {
 {% block action_icons_edit %}
 {% with object=queryset.0 %}
 <li><a href="#" id="cart-button" title="Add to basket" data-pk="{{ object.id }}">Add to basket</a></li>
-<li><a href="{% url "cyano.views.edit" species_wid=species.wid model_type=model_type wid=object.wid %}">Edit {{ object.wid }}</a></li>
-<li><a data-toggle="modal" href="{% url 'cyano.views.delete' species_wid=species.wid model_type=model_type wid=object.wid %}" data-target="#delete-form">Delete {{ object.wid }}</a></li>
-<li><a href="{% url "cyano.views.permission" species_wid=species.wid model_type=model_type wid=object.wid %}">View permissions of {{ object.wid }}</a></li>
-<li><a href="{% url "cyano.views.permission_edit" species_wid=species.wid model_type=model_type wid=object.wid %}">Edit permissions of {{ object.wid }}</a></li>
+<li><a href="{% url "cyano:edit" species_wid=species.wid model_type=model_type wid=object.wid %}">Edit {{ object.wid }}</a></li>
+<li><a data-toggle="modal" href="{% url 'cyano:delete' species_wid=species.wid model_type=model_type wid=object.wid %}" data-target="#delete-form">Delete {{ object.wid }}</a></li>
+<li><a href="{% url "cyano:permission" species_wid=species.wid model_type=model_type wid=object.wid %}">View permissions of {{ object.wid }}</a></li>
+<li><a href="{% url "cyano:permission_edit" species_wid=species.wid model_type=model_type wid=object.wid %}">Edit permissions of {{ object.wid }}</a></li>
 {% endwith %}
 {% endblock %}
 {% block action_icons_export %}

@@ -43,7 +43,7 @@ $(document).ready(function() {
         var form = $("#dialog-rename").find("form");
 
         $.ajax({
-            url: "{% url 'cyano-basket-rename-save-form' basket_id=basket.pk %}",
+            url: "{% url 'cyano:basket-rename' basket_id=basket.pk %}",
             type: "POST",
             data: new FormData(form[0]),
             processData: false,
@@ -110,12 +110,12 @@ $(document).ready(function() {
 {% with object=component.component %}
 {% with species_wid=component.species.wid %}
 {% with model_type=object.get_model.model_name %}
-{% url "cyano.views.detail" species_wid=species_wid model_type=model_type wid=object.wid as detail_url %}
-<tr data-pk="{{ object.pk }}" data-op-url="{% url "cyano-basket-op" species_wid=species_wid %}" data-url="{{ detail_url }}">
+{% url "cyano:detail" species_wid=species_wid model_type=model_type wid=object.wid as detail_url %}
+<tr data-pk="{{ object.pk }}" data-op-url="{% url "cyano:basket-op" species_wid=species_wid %}" data-url="{{ detail_url }}">
 	<th>{{ object.wid }}</th>
 	<td>{% autoescape off %}{{ object.name|truncatechars:80 }}{% endautoescape %}</td>
 	<td>
-		{% comment %}<a href="{% url "cyano.views.edit" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}" title="Edit entry"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>{% endcomment %}
+		{% comment %}<a href="{% url "cyano:edit" species_wid=species_wid model_type=object.get_model.model_name wid=object.wid %}" title="Edit entry"><img src="{% get_static_prefix %}public/img/pencil.png" /></a>{% endcomment %}
         <div class="btn-group" role="group"><a class='btn btn-default btn-xs delete-button'>Delete</a></div>
 	</td>
 </tr>

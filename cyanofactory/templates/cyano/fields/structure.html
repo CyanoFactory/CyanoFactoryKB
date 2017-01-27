@@ -75,7 +75,7 @@ var hide_features_func = function(evt) {
                                 {{ gene.x1 }},{{ gene.y2 }}
                                 {{ gene.x1 }},{{ gene.y1 }}
                             {% endif %}"
-                         onmousemove="tooltip_func(evt, '{{ gene.title }}', '{% url 'cyano.views.detail_field' species_wid=species.wid model_type="Gene" wid=gene.wid %}?name=tooltip&strip=1')"
+                         onmousemove="tooltip_func(evt, '{{ gene.title }}', '{% url 'cyano:detail_field' species_wid=species.wid model_type="Gene" wid=gene.wid %}?name=tooltip&strip=1')"
                          onmouseout="hideToolTip(evt);"
                          {% if highlight_all or gene.wid in highlight_wid %}
                          style="stroke-width: 3px; stroke: red"
@@ -88,7 +88,7 @@ var hide_features_func = function(evt) {
             <a xlink:href="{{ gene.url }}">
                 <text x="{% widthratio gene.x1|add:gene.x2 2 1 %}"
                       y="{% widthratio gene.y1|add:gene.y2 2 1 %}"
-                      onmousemove="tooltip_func(evt, '{{ gene.title }}', '{% url 'cyano.views.detail_field' species_wid=species.wid model_type="Gene" wid=gene.wid %}?name=tooltip&strip=1')"
+                      onmousemove="tooltip_func(evt, '{{ gene.title }}', '{% url 'cyano:detail_field' species_wid=species.wid model_type="Gene" wid=gene.wid %}?name=tooltip&strip=1')"
                       onmouseout="hideToolTip(evt);">{{ gene.label }}
                 </text>
             </a>
@@ -152,7 +152,7 @@ var hide_features_func = function(evt) {
                   width="{{ feature.width }}"
                   height="{{ feature.height }}"
         {% endif %}
-                  onmousemove="features_func(evt, '{{ feature.title }}', '{% url 'cyano.views.detail_field' species_wid=species.wid model_type="ChromosomeFeature" wid=feature.wid %}?name=tooltip&strip=1')"
+                  onmousemove="features_func(evt, '{{ feature.title }}', '{% url 'cyano:detail_field' species_wid=species.wid model_type="ChromosomeFeature" wid=feature.wid %}?name=tooltip&strip=1')"
                   onmouseout="hide_features_func(evt);"
                   data-coordinate="{{ feature.coordinate }}"
                   data-length="{{ feature.length }}"

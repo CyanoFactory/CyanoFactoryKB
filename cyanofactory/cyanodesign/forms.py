@@ -32,7 +32,7 @@ class UploadModelForm(forms.Form):
         super(UploadModelForm, self).__init__(*args, **kwargs)
 
         self.helper = FormHelper()
-        self.helper.form_action = reverse("cyano-design-save-upload-form", kwargs={'pk': 1})
+        self.helper.form_action = reverse("cyanodesign:upload", kwargs={'pk': 1})
         self.helper.layout = Layout(
             ModalHeader(
                 'Create new model',
@@ -78,7 +78,7 @@ class ModelFromTemplateForm(forms.Form):
 
         self.fields["choice"].choices = choices
         self.helper = FormHelper()
-        self.helper.form_action = reverse("cyano-design-save-upload-form", kwargs={'pk': 2})
+        self.helper.form_action = reverse("cyanodesign:upload", kwargs={'pk': 2})
         self.helper.layout = Layout(
             ModalHeader(
                 'Create new model from template',
@@ -118,7 +118,7 @@ class SaveModelForm(forms.Form):
         super(SaveModelForm, self).__init__(*args, **kwargs)
 
         self.helper = FormHelper()
-        #self.helper.form_action = reverse("cyano-design-save-upload-form", kwargs={'pk': 1})
+        #self.helper.form_action = reverse("cyanodesign:upload", kwargs={'pk': 1})
         self.helper.layout = Layout(
             ModalHeader(
                 'Save model',
@@ -152,7 +152,7 @@ class SaveModelAsForm(forms.Form):
         super(SaveModelAsForm, self).__init__(*args, **kwargs)
 
         self.helper = FormHelper()
-        #self.helper.form_action = reverse("cyano-design-save-upload-form", kwargs={'pk': 1})
+        #self.helper.form_action = reverse("cyanodesign:upload", kwargs={'pk': 1})
         self.helper.layout = Layout(
             ModalHeader(
                 'Save changes as new model',

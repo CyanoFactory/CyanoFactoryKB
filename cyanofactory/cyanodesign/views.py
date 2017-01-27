@@ -463,7 +463,7 @@ def save_as(request, pk):
             rev.model = dm
             rev.save()
 
-            return {'success': True, 'url': reverse("cyano-design-design", kwargs={"pk":dm.pk})}
+            return {'success': True, 'url': reverse("cyanodesign:design", kwargs={"pk":dm.pk})}
         else:
             form_html = render_crispy_form(form, context=request)
             return {'success': False, 'form_html': form_html}
