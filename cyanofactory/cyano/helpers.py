@@ -333,7 +333,7 @@ def getModelDataFields(model, auto_created=True, metadata=True):
         if not metadata and field in ['id', 'created_detail', 'detail']:
             continue
         
-        field = model._meta.get_field_by_name(field)[0]
+        field = model._meta.get_field(field)
         if not field.auto_created or auto_created:
             ordered_fields.append(field)
     
@@ -1350,7 +1350,7 @@ def create_detail_fieldset(item, fieldsets, is_anonymous):
                 verbose_name = fields[idx2]['verbose_name']
             else:
                 field_name = fields[idx2]
-                field = model._meta.get_field_by_name(field_name)[0]
+                field = model._meta.get_field(field_name)
                 if hasattr(field, "get_accessor_name"):
                     verbose_name = field.get_accessor_name()
                 else:
@@ -1381,7 +1381,7 @@ def format_field_detail_view(obj, field_name, is_user_anonymous, history_id = No
         return val
 
     try:
-        field = obj.__class__._meta.get_field_by_name(field_name)[0]
+        field = obj.__class__._meta.get_field(field_name)
     except FieldDoesNotExist:
         return None
     value = getattr(obj, field_name)
@@ -1499,7 +1499,7 @@ def get_history(species, obj, detail_id):
 
     for rev in rev_query:
         for key, value in json.loads(rev.new_data).items():
-            field = history_obj._meta.get_field_by_name(key)[0]
+            field = history_obj._meta.get_field(key)
             if isinstance(field, ManyToManyField):
                 ##print "M2M: " + field.name
                 pass
@@ -1719,7 +1719,7 @@ def get_edit_form_fields(species_wid, model, obj=None):
     initial_values = {}
     
     if issubclass(model, cmodels.Entry):
-        fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
+        fields = [model._meta.get_field(x) for x in model._meta.field_list]
     else:
         fields = model._meta.fields + model._meta.many_to_many
     
@@ -1805,7 +1805,7 @@ def get_edit_form_fields(species_wid, model, obj=None):
 def get_edit_form_data(model, POST, field_prefix='', user = None):
     #get fields
     if issubclass(model, cmodels.Entry):
-        fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
+        fields = [model._meta.get_field(x) for x in model._meta.field_list]
     else:
         fields = model._meta.fields    + model._meta.many_to_many
         
@@ -1866,7 +1866,7 @@ def get_edit_form_data(model, POST, field_prefix='', user = None):
     
 def validate_object_fields(model, data, wids, species_wid, entry_wid):
     if issubclass(model, cmodels.Entry):
-        fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
+        fields = [model._meta.get_field(x) for x in model._meta.field_list]
     else:
         fields = model._meta.fields    + model._meta.many_to_many
         
@@ -1980,7 +1980,7 @@ def save_object_data(species, obj, obj_data, obj_list, user, save=False, save_m2
     model = obj.__class__
 
     if issubclass(model, cmodels.Entry):
-        fields = [model._meta.get_field_by_name(x)[0] for x in model._meta.field_list]
+        fields = [model._meta.get_field(x) for x in model._meta.field_list]
         
         if obj.model_type_id is None:
             obj.model_type = cmodels.TableMeta.get_by_model_name(obj._meta.object_name)
@@ -2449,7 +2449,7 @@ def draw_molecule(smiles, imgformat='svg', width=200, height=200):
     return img
 
 def get_verbose_name_for_field_by_name(model, field_name):
-    return model._meta.get_field_by_name(field_name)[0].verbose_name
+    return model._meta.get_field(field_name).verbose_name
 
 def slugify(string):
     return re.sub(r"[^A-Za-z0-9_-]", "-", string)

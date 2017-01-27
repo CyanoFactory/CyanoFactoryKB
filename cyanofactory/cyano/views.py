@@ -254,7 +254,7 @@ def listing(request, species: cmodels.Species, model: cmodels.Entry):
         tmp_model = model
         field_verbose_name = []
         for field_name in field_names:
-            field = tmp_model._meta.get_field_by_name(field_name)[0]
+            field = tmp_model._meta.get_field(field_name)
             field_verbose_name.append(field.verbose_name)
             if isinstance(field, (ForeignKey, ManyToManyField)):
                 tmp_model = field.rel.to
@@ -318,7 +318,7 @@ def listing(request, species: cmodels.Species, model: cmodels.Entry):
 
     if hasattr(model._meta, "group_field"):
         field_name = getattr(model._meta, "group_field")
-        group_field = model._meta.get_field_by_name(getattr(model._meta, "group_field"))[0]
+        group_field = model._meta.get_field(getattr(model._meta, "group_field"))
 
         if group_field:
             objects = objects.order_by(field_name, "wid")
@@ -722,7 +722,7 @@ def history_detail(request, species, model, item, detail_id):
                 verbose_name = fieldsets[idx][1]['fields'][idx2]['verbose_name']
             else:
                 field_name = fieldsets[idx][1]['fields'][idx2]
-                field = model._meta.get_field_by_name(field_name)[0]
+                field = model._meta.get_field(field_name)
                 if hasattr(field, "get_accessor_name"):
                     verbose_name = field.get_accessor_name()
                 else:
