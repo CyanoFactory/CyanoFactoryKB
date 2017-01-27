@@ -38,7 +38,7 @@ $(document).ready(function() {
     } );
 
     // DataTable
-    // ajax: "{% url "cyano-api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,url",
+    // ajax: "{% url "cyano:api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,url",
 
     var table = $('#new_list').DataTable({
         columns: [
@@ -177,7 +177,7 @@ var updateTable = function() {
 
     var filterString = filters.join("&");
 
-    $('#new_list').DataTable().ajax.url("{% url "cyano-api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,web_url&" + filterString).load();
+    $('#new_list').DataTable().ajax.url("{% url "cyano:api-list" species_wid=species.wid model_type=model_type %}?format=json&fields=id,wid,name,web_url&" + filterString).load();
 }
 
 </script>

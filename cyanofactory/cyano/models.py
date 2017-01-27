@@ -4383,7 +4383,7 @@ class Species(Entry):
 
     @permalink
     def get_absolute_url_api(self):
-        return ('cyano-api-species', (), {'species_wid': self.wid})
+        return ('cyano:api-species', (), {'species_wid': self.wid})
 
     #html formatting
     def get_as_html_comments(self, is_user_anonymous):

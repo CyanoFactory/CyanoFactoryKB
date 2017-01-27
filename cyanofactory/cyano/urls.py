@@ -58,15 +58,15 @@ def cyano_pattern(uri, view, root=False, species=False, model_type=False, item=F
     return urls
 
 urlpatterns = [
-    url(r'^api/basket/$', views.BasketList.as_view()),
-    url(r'^api/basket/(?P<basket_id>[0-9]+)/$', views.BasketDetail.as_view()),
-    url(r'^api/$', views.ApiIndex.as_view(), name="cyano-api-index"),
-    url(r'^api/' + _species_wid + '/$', views.ApiSpecies.as_view(), name="cyano-api-species"),
-    url(r'^api/' + _species_wid_model_type + '/$', views.ApiEntryList.as_view(), name="cyano-api-list"),
-    url(r'^api/' + _species_wid_model_type_wid + '/$', views.ApiEntryDetail.as_view(), name="cyano-api-detail")
+    #url(r'^api/basket/$', views.BasketList.as_view()),
+    #url(r'^api/basket/(?P<basket_id>[0-9]+)/$', views.BasketDetail.as_view()),
+    url(r'^api/$', views.ApiIndex.as_view(), name="api-index"),
+    url(r'^api/' + _species_wid + '/$', views.ApiSpecies.as_view(), name="api-species"),
+    url(r'^api/' + _species_wid_model_type + '/$', views.ApiEntryList.as_view(), name="api-list"),
+    url(r'^api/' + _species_wid_model_type_wid + '/$', views.ApiEntryDetail.as_view(), name="api-detail")
 ]
 
-urlpatterns = format_suffix_patterns(urlpatterns, allowed=['json', 'xml'])
+urlpatterns += format_suffix_patterns(urlpatterns, allowed=['json', 'xml'])
 
 urlpatterns += [
     url(r'^sitemap\.xml$', views.sitemap),

@@ -58,7 +58,7 @@ from rest_framework.views import APIView
 import cyano.serializers as cserializers
 import cyano.filters as cfilters
 
-@redirect_api_request('cyano-api-index')
+@redirect_api_request('cyano:api-index')
 def index(request):
     return chelpers.render_queryset_to_response(
         request,
@@ -72,7 +72,7 @@ def not_found(request, *args, **kwargs):
         msg="The requested page was not found"
     )
 
-@redirect_api_request('cyano-api-species', ["species_wid"])
+@redirect_api_request('cyano:api-species', ["species_wid"])
 @global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
@@ -237,7 +237,7 @@ def search_google(request, species, query):
             })
 
 
-@redirect_api_request('cyano-api-list', ["species_wid", "model_type"])
+@redirect_api_request('cyano:api-list', ["species_wid", "model_type"])
 @global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
@@ -427,7 +427,7 @@ class ApiSpecies(generics.ListAPIView):
                 queryset.append({
                     "name": model._meta.object_name,
                     "count": count,
-                    "url": reverse("cyano-api-list", kwargs=args),
+                    "url": reverse("cyano:api-list", kwargs=args),
                     "web_url": reverse("cyano:listing", kwargs=args)
                 })
 
@@ -562,7 +562,7 @@ class BasketDetail(generics.GenericAPIView):
         raise Http404
 
 
-@redirect_api_request('cyano-api-detail', ["species_wid", "model_type", "wid"])
+@redirect_api_request('cyano:api-detail', ["species_wid", "model_type", "wid"])
 @global_permission_required(perm.ACCESS_SPECIES)
 @resolve_to_objects
 @permission_required(perm.READ_NORMAL)
