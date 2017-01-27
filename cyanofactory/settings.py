@@ -120,6 +120,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'cyano.middleware.ProtectedUserMiddleware',
     'cyano.middleware.PasswordChangeMiddleware',
     #'django.contrib.messages.middleware.MessageMiddleware',
 )

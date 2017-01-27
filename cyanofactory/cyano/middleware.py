@@ -14,6 +14,8 @@ from django.shortcuts import redirect
 from django.http.response import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 
+from cyanofactory.cyano.helpers import render_queryset_to_response_error
+
 
 class RedirectAllowedHostMiddlware(object):
     """
@@ -75,3 +77,9 @@ class PasswordChangeMiddleware(object):
             if profile.force_password_change:
                 return HttpResponseRedirect(reverse("cyano:password_change_required"))
 
+
+class ProtectedUserMiddleware(object):
+    def process_request(self, request):
+        if request.user.username == "cyanofactorist" and \
+                ("/user/" in request.path_info or "/account/" in request.path_info):
+            return render_queryset_to_response_error(request, msg="Not allowed for this user")
