@@ -584,7 +584,7 @@ def render_queryset_to_response_error(request = [], queryset = None, model = Non
 
     data['is_pdf'] = False
     data['pdfstyles'] = ''
-    data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/cyano/error.html'))
+    data['last_updated_date'] = datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATES[0]['DIRS'][0] + '/cyano/error.html'))
     data['GOOGLE_SEARCH_ENABLED'] = getattr(settings, 'GOOGLE_SEARCH_ENABLED', False)
 
     if queryset is not None and data['queryset'].model is None:

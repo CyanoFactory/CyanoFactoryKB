@@ -279,7 +279,7 @@ def multiply(val1, val2):
 @register.filter
 def get_template_last_updated(templateFile):
 	import settings
-	return datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATE_DIRS[0] + '/' + templateFile))
+	return datetime.datetime.fromtimestamp(os.path.getmtime(settings.TEMPLATES[0]['DIRS'][0] + '/' + templateFile))
 
 @register.filter	
 def set_time_zone(datetime):		
