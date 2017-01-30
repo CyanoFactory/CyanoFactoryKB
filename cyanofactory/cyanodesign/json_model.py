@@ -274,7 +274,7 @@ class JsonModel(object):
             "reactions",
             "metabolites",
             "objectives",
-            "design_objectives"
+            "design_objectives",
             "target_reactions"
         ]
         for i in order:
