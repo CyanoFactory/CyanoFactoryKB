@@ -277,18 +277,29 @@ def simulate(request, pk):
 
         # Absolute
         design_result = [["x"], [dobj[0][0]]]
-        design_result[0] += [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]
-        sim_result = fba.design_fba(design_result[0][1:])
-        dflux = [list(str(x[fba.reac_names.index(obj[0][0])]) for x in sim_result),
-                 list(x[fba.reac_names.index(dobj[0][0])] for x in sim_result)]
+        #design_result[0] += [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]
+        sim_result = fba.design_fba()
+        #dflux = [list(str(x[fba.reac_names.index(obj[0][0])]) for x in sim_result),
+        #         list(x[fba.reac_names.index(dobj[0][0])] for x in sim_result)]
 
-        design_result[1] += dflux[1]
+        dflux = list([x[0]] for x in sim_result)
+        for lst, sim_res in zip(dflux, sim_result):
+            lst.append({})
+            for name, flux in zip(fba.reac_names, sim_res[1]):
+                lst[1][name] = flux
+
+        graph = [["x"], [dobj[0][0]]]
+
+        for d in dflux:
+            graph[0].append(d[0])
+            graph[1].append(d[1][dobj[0][0]])
 
         if output_format == "json":
             return HttpResponse(json.dumps(
                 {
                 "solution": fba.get_status(),
-                "flux": design_result
+                "flux": dflux,
+                "graph": graph
                 }),
                 content_type="application/json"
             )
@@ -304,21 +315,28 @@ def simulate(request, pk):
         target = org.get_reaction(tobj)
         target_flux = fba.flux[fba.reac_names.index(target.name)]
 
+        # ToDo: Die ganzen Fluxe müssen rückgegeben werden für Fancy click code
+        # Brauch: target_flux
+
         design_result = [["x"], [obj[0][0]], [dobj[0][0]], ["Yield"]]
 
+        dflux = list([x] for x in [1.0, 0.8, 0.6, 0.4, 0.2, 0.0])
+
         # 2. Limit target reaction
-        for limit in [1.0, 0.8, 0.6, 0.4, 0.2, 0.0]:
+        for i, limit in enumerate([1.0, 0.8, 0.6, 0.4, 0.2, 0.0]):
             # Limit to a % of the target flux
             target.constraint = (target.constraint[0], target_flux * limit)
 
             # Optimize limited growth
             org.obj = obj
-            growth = org.fba().Z
+            fba = org.fba()
+            growth = fba.Z
 
             # Optimize production
             obj_r.constraint = (growth, growth)
             org.obj = dobj
-            production = org.fba().Z
+            fba = org.fba()
+            production =  fba.Z
 
             # Reset production constraint
             obj_r.constraint = (0, None)
@@ -328,11 +346,17 @@ def simulate(request, pk):
             design_result[2].append(round(production, 4))
             design_result[3].append(round(growth * production, 4))
 
+            dflux[i].append({})
+
+            for reac, flux in zip(map(lambda x: x.name, fba.reacs), fba.flux):
+                dflux[i][-1][reac] = flux
+
         if output_format == "json":
             return HttpResponse(json.dumps(
                 {
                 "solution": fba.get_status(),
-                "flux": design_result
+                "flux": dflux,
+                "graph": design_result
                 }),
                 content_type="application/json"
             )

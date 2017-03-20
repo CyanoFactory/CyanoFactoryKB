@@ -287,7 +287,7 @@ class FBA:
             self.obj = obj
         return results
 
-    def design_fba(self, units):
+    def design_fba(self, units=None):
         saved_constr = []
         saved_obj = self.obj[:]
         all_flux = []
@@ -296,7 +296,22 @@ class FBA:
             iobj = self.reac_names.index(obj[0])
             saved_constr.append(self.constr[iobj][:])
 
-        self.obj = self.design_obj
+        if units is None:
+            # Determine max and min of obj by constraining obj from 0 to nothing
+            self.fba()
+
+            max_flux = self.flux[self.reac_names.index(self.obj[0][0])]
+
+            self.obj = self.design_obj[:]
+
+            units = []
+
+            for i in range(0, 9):
+                units.append(round(max_flux * (i / 9), 2))
+
+            units.append(round(max_flux, 2))
+
+        self.obj = self.design_obj[:]
 
         for unit in units:
             # TODO: Erster Durchlauf ohne Constraints
@@ -309,8 +324,8 @@ class FBA:
 
             if self.lp.status != "opt":
                 continue
-            
-            all_flux.append(self.flux)
+
+            all_flux.append([unit, self.flux])
 
         # Restore previous settings
         self.obj = saved_obj

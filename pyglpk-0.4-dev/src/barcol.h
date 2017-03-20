@@ -45,7 +45,7 @@ BarColObject *BarCol_New(LPXObject *py_lp, char rows);
 /* Return the number of rows or columns in the bar collection. */
 int BarCol_Size(BarColObject *bc);
 /* Return non-zero if this bar column object is over rows, 0 if over columns*/
-static int BarCol_Rows(BarColObject *bc) {return bc->r;};
+static inline int BarCol_Rows(BarColObject *bc) {return bc->r;};
 /* Index into the bar collection using an object, and store the index
    in the provided pointer and return 0.  If this object is neither an
    int or a string return 1 (and raise TypeError if exception flag

@@ -34,12 +34,12 @@ static void KKT_dealloc(KKTObject *self) {
 KKTObject *KKT_New(void) {
   KKTObject *k = (KKTObject*)PyObject_New(KKTObject, &KKTType);
   if (k==NULL) return k;
-  memset((void*)(&(k->kkt)), sizeof(pyglpk_kkt_t), '\0');
+  memset(&k->kkt, 0, sizeof(pyglpk_kkt_t));
   k->weakreflist = NULL;
   return k;
 }
 
-static int quality(double re_max)
+static inline int quality(double re_max)
 {
   int ret;
   if (re_max <= 1e-9)
