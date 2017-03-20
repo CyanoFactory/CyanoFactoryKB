@@ -600,22 +600,6 @@ Released under the MIT license
             //alert(d);
 
             if (getSimulationType() == "mba" || getSimulationType() == "sa") {
-                /*var reaction = getEnzymeByName(cyano_design_objective_select.val());
-                var constraint = simulation_chart.categories()[d.index];
-
-                var command = {
-                    "type": "reaction",
-                    "name": reaction.name,
-                    "op": "edit",
-                    "object": jQuery.extend(true, {}, reaction)
-                };
-
-                command["object"].constraints = [constraint, constraint];
-
-                command_list.push(command);
-                var data = beginRequest();
-                command_list.pop();*/
-
                 datatable_flux.clear();
 
                 var idx = d.index;
@@ -627,7 +611,6 @@ Released under the MIT license
                 }
 
                 datatable_flux.draw();
-                return;
             } else { // type == sa
                 // Constraint target reaction auf constraint[0] -> target_flux
                        /* for limit in [1.0, 0.8, 0.6, 0.4, 0.2, 0.0]:
@@ -651,10 +634,32 @@ Released under the MIT license
             design_result[2].append(round(production, 4))
             design_result[3].append(round(growth * production, 4))*/
             }
-            return;
+
+            if (getSimulationType() != "mba") {
+                return;
+            }
+
+            var reaction = getEnzymeByName(cyano_design_objective_select.val());
+            var constraint = simulation_chart.categories()[d.index];
+
+            var command = {
+                "type": "reaction",
+                "name": reaction.name,
+                "op": "edit",
+                "object": jQuery.extend(true, {}, reaction)
+            };
+
+            command["object"].constraints = [constraint, constraint];
+
+            command_list.push(command);
+            var data = beginRequest();
+            command_list.pop();
 
             data["type"] = JSON.stringify("fba");
-            /*var result = {
+
+
+
+            var result = {
                 "changes": JSON.stringify(command_list),
                 "objectives": JSON.stringify([{
                     "name": cyano_design_objective_select.val(),
@@ -671,7 +676,7 @@ Released under the MIT license
                 "type": JSON.stringify(getSimulationType()),
                 "display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
                 "auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
-            };*/
+            };
 
             $.ajax({
                 url: "{% url "cyanodesign:simulate" pk=pk %}",
@@ -695,7 +700,7 @@ Released under the MIT license
                 var svgPan = svgPanZoom('#visual_fba > svg', {minZoom: 0.1, fit: false});
                 svgPan.zoom(1);
 
-                datatable_flux.clear();
+               /* datatable_flux.clear();
 
                 for (var key in x["flux"]) {
                     if (x["flux"].hasOwnProperty(key)) {
@@ -703,7 +708,7 @@ Released under the MIT license
                     }
                 }
 
-                datatable_flux.draw();
+                datatable_flux.draw();*/
 
                 endRequest();
             }).error(function(x) {
