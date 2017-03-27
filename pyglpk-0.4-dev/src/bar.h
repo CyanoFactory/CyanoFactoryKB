@@ -39,9 +39,9 @@ extern PyTypeObject BarType;
 /* Returns a new bar collection object, either over rows or columns. */
 BarObject *Bar_New(BarColObject *py_bc, int index);
 /* Return non-zero if this bar is a row, 0 if a column. */
-static int Bar_Row(BarObject *b) {return b->r;};
+static inline int Bar_Row(BarObject *b) {return b->r;};
 /* Return the index of this bar object. */
-static int Bar_Index(BarObject *b) {return b->index;};
+static inline int Bar_Index(BarObject *b) {return b->index;};
 /* Return non-zero if this bar is still valid (i.e., its index is
    still in range).  If the argument is non-zero, throw an exception
    if it is not. */

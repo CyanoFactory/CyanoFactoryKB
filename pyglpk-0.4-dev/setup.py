@@ -60,7 +60,7 @@ try:
     libs
 except NameError:
     # The user nor test code did not set libs up yet.
-    libs = ['glpk']
+    libs = ['glpk', 'gmp']
 
 incdirs.append('src')
 
@@ -80,7 +80,7 @@ of the GNU Linear Programming Kit.
 """
 
 setup(name='glpk',
-      version='0.4',
+      version='0.4.3',
       description='PyGLPK, a Python module encapsulating GLPK.',
       long_description=ld,
       author='Thomas Finley',
