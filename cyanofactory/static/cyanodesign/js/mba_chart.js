@@ -160,7 +160,7 @@ function downloadPNG() {
 	loader.height = can.height = h * 4;
 	loader.onload = function(){
 	  	ctx.drawImage( loader, 0, 0, loader.width, loader.height );
-		downloadURI(can.toDataURL(), "MBA.png");
+		downloadURI(can.toDataURL("image/png"), "MBA.png");
 	};
 	var svgAsXML = (new XMLSerializer).serializeToString( svgelem );
 	loader.src = 'data:image/svg+xml,' + encodeURIComponent( svgAsXML );

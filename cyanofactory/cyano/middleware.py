@@ -14,7 +14,7 @@ from django.shortcuts import redirect
 from django.http.response import HttpResponseRedirect
 from django.core.urlresolvers import reverse
 
-from cyanofactory.cyano.helpers import render_queryset_to_response_error
+from .helpers import render_queryset_to_response_error
 
 
 class RedirectAllowedHostMiddlware(object):

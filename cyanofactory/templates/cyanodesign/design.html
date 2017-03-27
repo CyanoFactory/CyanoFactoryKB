@@ -45,10 +45,13 @@ Released under the MIT license
     var datatable_enzymes;
     var table_metabolites;
     var datatable_metabolites;
+    var table_flux;
+    var datatable_flux;
     var submit_form;
     var revision = {% if revision %}{{ revision.pk }}{% else %}undefined{% endif %};
     var simulation_chart = undefined;
     var last_symtype;
+    var last_sim_flux;
 
     Enzyme.prototype.invalidate = function() {
         this.getMetabolites().forEach(function (obj) {
@@ -123,6 +126,7 @@ Released under the MIT license
         constraints_div = $("#constraints-min-max");
         table_enzymes = $('#cyano-enzyme-list');
         table_metabolites = $('#cyano-metabolite-list');
+        table_flux = $('#cyano-flux-list');
         submit_form = $('#submit-form');
 
         datatable_enzymes = table_enzymes.DataTable({
@@ -230,6 +234,25 @@ Released under the MIT license
                 "<'row'>" +
                 "<'row'<'col-sm-12'tr>>" +
                 "<'row'<'col-sm-6'i><'col-sm-6'p>>"
+        });
+
+        datatable_flux = table_flux.DataTable({
+            "deferRender": true,
+            "displayLength": 25,
+            "order": [[ 1, 'desc' ]],
+            columnDefs: [
+                {
+                    "targets": 0,
+                    "width": "50%"
+                },
+                {
+                    "targets": 1,
+                    "width": "50%"
+                }
+            ],
+            buttons: [
+                'copy', 'csv'
+            ]
         });
 
         $($("#filter_row").text()).appendTo($("#cyano-enzyme-list_wrapper").children()[1]);
@@ -559,7 +582,8 @@ Released under the MIT license
 
                 endRequest();
             }).error(function(x) {
-                $("#visual").hide();
+                $("#visual_graph").hide();
+                $("#visual_fba").hide();
                 notifyError(x.responseText);
                 endRequest();
             });
@@ -570,6 +594,108 @@ Released under the MIT license
                 waitIndicator.hide($("#content"));
             else
                 waitIndicator.hide(wait_position);
+        };
+
+        var chart_clicked = function(d) {
+            //alert(d);
+
+            if (getSimulationType() == "mba" || getSimulationType() == "sa") {
+                datatable_flux.clear();
+
+                var idx = d.index;
+                for (var key in last_sim_flux[idx][1]) {
+                    if (last_sim_flux[idx][1].hasOwnProperty(key)) {
+                        if (key.indexOf("_transp") == -1)
+                        datatable_flux.row.add([key, last_sim_flux[idx][1][key]]);
+                    }
+                }
+
+                datatable_flux.draw();
+            } else { // type == sa
+                // Constraint target reaction auf constraint[0] -> target_flux
+                       /* for limit in [1.0, 0.8, 0.6, 0.4, 0.2, 0.0]:
+            # Limit to a % of the target flux
+            target.constraint = (target.constraint[0], target_flux * limit)
+
+            # Optimize limited growth
+            org.obj = obj
+            growth = org.fba().Z
+
+            # Optimize production
+            obj_r.constraint = (growth, growth)
+            org.obj = dobj
+            production = org.fba().Z
+
+            # Reset production constraint
+            obj_r.constraint = (0, None)
+
+            design_result[0].append(str(int(limit * 100)) + "%")
+            design_result[1].append(round(growth, 4))
+            design_result[2].append(round(production, 4))
+            design_result[3].append(round(growth * production, 4))*/
+            }
+
+            if (getSimulationType() != "mba") {
+                return;
+            }
+
+            var reaction = getEnzymeByName(cyano_design_objective_select.val());
+            var constraint = simulation_chart.categories()[d.index];
+
+            var command = {
+                "type": "reaction",
+                "name": reaction.name,
+                "op": "edit",
+                "object": jQuery.extend(true, {}, reaction)
+            };
+
+            command["object"].constraints = [constraint, constraint];
+
+            command_list.push(command);
+            var data = beginRequest();
+            command_list.pop();
+
+            data["type"] = JSON.stringify("fba");
+
+            $.ajax({
+                url: "{% url "cyanodesign:simulate" pk=pk %}",
+                type: "POST",
+                data: data
+            }).done(function(x) {
+                 var graph = Viz(x["graphstr"], "svg", "dot");
+
+                if (x["solution"] == "Optimal") {
+                    var obj = cyano_design_objective_select.val();
+                    notifyInfo("The solution is " + x["solution"] + ". Flux of objective is " + x["flux"][obj].toFixed(4));
+                } else {
+                    notifyWarning("The solution is " + x["solution"] + ". Check if your constraints are too strict.");
+                }
+
+                $("#visual_graph").show();
+                $("#visual_fba").show();
+                document.getElementById("visual_fba").innerHTML = graph;
+
+                $("#visual_fba").attr("width", "100%").attr("height", "400px");
+                var svgPan = svgPanZoom('#visual_fba > svg', {minZoom: 0.1, fit: false});
+                svgPan.zoom(1);
+
+               /* datatable_flux.clear();
+
+                for (var key in x["flux"]) {
+                    if (x["flux"].hasOwnProperty(key)) {
+                        datatable_flux.row.add([key, x["flux"][key]]);
+                    }
+                }
+
+                datatable_flux.draw();*/
+
+                endRequest();
+            }).error(function(x) {
+                $("#visual_graph").hide();
+                $("#visual_fba").hide();
+                notifyError(x.responseText);
+                endRequest();
+            });
         };
 
         $("#design-submit").click(function(event) {
@@ -593,12 +719,24 @@ Released under the MIT license
                         notifyWarning("The solution is " + x["solution"] + ". Check if your constraints are too strict.");
                     }
 
-                    $("#visual").show();
-                    document.getElementById("visual").innerHTML = graph;
+                    $("#visual_graph").hide();
+                    $("#visual_fba").show();
+                    document.getElementById("visual_fba").innerHTML = graph;
 
-                    $("svg").attr("width", "100%").attr("height", "400px");
-                    var svgPan = svgPanZoom('svg', {minZoom: 0.1, fit: false});
+                    $("#visual_fba").attr("width", "100%").attr("height", "400px");
+                    var svgPan = svgPanZoom('#visual_fba > svg', {minZoom: 0.1, fit: false});
                     svgPan.zoom(1);
+
+                    datatable_flux.clear();
+
+                    for (var key in x["flux"]) {
+                        if (x["flux"].hasOwnProperty(key)) {
+                            if (key.indexOf("_transp") == -1)
+                            datatable_flux.row.add([key, x["flux"][key]]);
+                        }
+                    }
+
+                    datatable_flux.draw();
                 /*$("svg").find(".edge text").each(function() {
                         if ($(this).text().indexOf(cyano_design_objective_select.val() + " ") == 0) {
                             var new_x = ($("svg").width() / 2) - $(this).attr("x");
@@ -607,16 +745,18 @@ Released under the MIT license
                         }
                     });*/
                 } else if (symtype == "mba") {
-                    $("#visual").show();
+                    $("#visual_graph").show();
+                    $("#visual_fba").hide();
 
                     if (!$("#remember-simulation").prop("checked") || simulation_chart === undefined) {
                         var chart = {
-                            bindto: '#visual',
+                            bindto: '#visual_graph',
                             data: {
                                 x: 'x',
-                                columns: x["flux"],
+                                columns: x["graph"],
                                 type: 'bar',
-                                axes: {}
+                                axes: {},
+                                onclick: chart_clicked
                             },
                             axis: {
                                 x: {
@@ -628,7 +768,7 @@ Released under the MIT license
                                 y: {
                                     label: {
                                         position: "outer-middle"
-                                    },
+                                    }
                                 }
                             }
                         };
@@ -638,21 +778,25 @@ Released under the MIT license
                     } else {
                         simulation_chart.load({
                             columns: [
-                                [cyano_design_design_objective_select.val()].concat(x["flux"][1])
+                                [cyano_design_design_objective_select.val()].concat(x["graph"][1])
                             ],
                             type: 'bar'
                         });
                     }
+                    last_sim_flux = x["flux"];
+                    updateLabels();
                 } else if (symtype == "sa") {
-                    $("#visual").show();
+                    $("#visual_graph").show();
+                    $("#visual_fba").hide();
 
                     var chart = {
-                        bindto: '#visual',
+                        bindto: '#visual_graph',
                         data: {
                             x: 'x',
-                            columns: x["flux"],
+                            columns: x["graph"],
                             type: 'bar',
-                            axes: {}
+                            axes: {},
+                            onclick: chart_clicked
                         },
                         axis: {
                             x: {
@@ -678,11 +822,14 @@ Released under the MIT license
                     chart["data"]["axes"][cyano_design_design_objective_select.val()] = "y2";
 
                     simulation_chart = c3.generate(chart);
+                    last_sim_flux = x["flux"];
+                    updateLabels();
                 }
 
                 endRequest();
             }).error(function(x) {
-                $("#visual").hide();
+                $("#visual_graph").hide();
+                $("#visual_fba").hide();
                 notifyError(x.responseText);
                 endRequest();
             });
@@ -728,7 +875,8 @@ Released under the MIT license
                 command_list = [];
             }).error(function(x) {
                 $("#dialog-save-model").modal("hide");
-                $("#visual").hide();
+                $("#visual_graph").hide();
+                $("#visual_fba").hide();
                 notifyError(JSON.parse(x.responseText)["message"]);
                 endRequest($("#dialog-save-model").find(".modal-content"));
             });
@@ -751,7 +899,8 @@ Released under the MIT license
                 }
                 endRequest($("#dialog-saveas-model").find(".modal-content"));
             }).error(function(x) {
-                $("#visual").hide();
+                $("#visual_graph").hide();
+                $("#visual_fba").hide();
                 notifyError(x.responseText);
                 endRequest($("#dialog-saveas-model").find(".modal-content"));
             });
@@ -759,28 +908,48 @@ Released under the MIT license
 
         $("#export-png").click(function(event) {
             if (last_symtype == "mba" || last_symtype == "sa") {
-                $("#visual > svg").find(".c3-axis path, .c3-axis line").css({"fill":"none","stroke":"black"});
-                $("#visual > svg").css({"font":"10px sans-serif"});
-                $("#visual > svg").find(".c3-legend-item").css({"font":"12px sans-serif"});
+                $("#visual_graph > svg").find(".c3-axis path, .c3-axis line").css({"fill":"none","stroke":"black"});
+                $("#visual_graph > svg").css({"font":"10px sans-serif"});
+                $("#visual_graph > svg").find(".c3-legend-item").css({"font":"12px sans-serif"});
 
                 downloadPNG();
-                return;
-            }
+            } else {
+                // save old style
+                var g = $("#visual_fba > svg > g");
+                var g_style = g.attr("style");
+                var g_transform = g.attr("transform");
 
-            doExport("png");
+                // Clear style, otherwise SVG only shows a viewport
+                g.attr("style", "").attr("transform", "");
+
+                downloadPNG();
+
+                // Reset style
+                g.attr("style", g_style).attr("transform", g_transform);
+            }
         });
 
         $("#export-svg").click(function(event) {
             if (last_symtype == "mba" || last_symtype == "sa") {
-                $("#visual > svg").find(".c3-axis path, .c3-axis line").css({"fill":"none","stroke":"black"});
-                $("#visual > svg").css({"font":"10px sans-serif"});
-                $("#visual > svg").find(".c3-legend-item").css({"font":"12px sans-serif"});
+                $("#visual_graph > svg").find(".c3-axis path, .c3-axis line").css({"fill":"none","stroke":"black"});
+                $("#visual_graph > svg").css({"font":"10px sans-serif"});
+                $("#visual_graph > svg").find(".c3-legend-item").css({"font":"12px sans-serif"});
 
                 downloadSVG();
-                return;
-            }
+            } else {
+                // save old style
+                var g = $("#visual_fba > svg > g");
+                var g_style = g.attr("style");
+                var g_transform = g.attr("transform");
 
-            doExport("svg");
+                // Clear style, otherwise SVG only shows a viewport
+                g.attr("style", "").attr("transform", "");
+
+                downloadSVG();
+
+                // Reset style
+                g.attr("style", g_style).attr("transform", g_transform);
+            }
         });
 
         $("#export-csv").click(function(event) {
@@ -1039,15 +1208,18 @@ Released under the MIT license
         function updateSettingsVisibility() {
             $("#fba-settings-panel").hide();
             $("#sa-settings-panel").hide();
+            $("#sa-settings-axis-panel").hide();
 
             if ($("#radio-fba").prop("checked")) {
                 $("#fba-settings-panel").show();
             } else if ($("#radio-mba").prop("checked")) {
                 $("#sa-settings-panel").show();
                 $("#sa-settings-target-function-panel").hide();
+                $("#sa-settings-axis-panel").show();
             } else if ($("#radio-sa").prop("checked")) {
                 $("#sa-settings-panel").show();
                 $("#sa-settings-target-function-panel").show();
+                $("#sa-settings-axis-panel").show();
             }
         }
 
@@ -1555,14 +1727,14 @@ Released under the MIT license
 
         var isDragging = false;
 
-        $("#visual").on("click", "g.node", function() {
+        $("#visual_fba").on("click", "g.node", function() {
             var idx = Metabolite.indexByName($(this).children("text").text());
             if (!isDragging & idx > -1) {
                 showEditMetaboliteDialog(Metabolite.metabolites[idx]);
             }
         });
 
-        $("#visual").on("click", "g.edge text", function() {
+        $("#visual_fba").on("click", "g.edge text", function() {
             // remove flux value
             var idx = Enzyme.indexByName($(this).text().replace(/ \(-?[0-9]+(\.[0-9]+)?\)$/, ""));
             if (!isDragging & idx > -1) {
@@ -1570,11 +1742,11 @@ Released under the MIT license
             }
         });
 
-        $("#visual").on("mousedown", "g", function(event) {
+        $("#visual_fba").on("mousedown", "g", function(event) {
             isDragging = false;
             $(this).data('page', {x: event.pageX, y: event.pageY})
         });
-        $("#visual").on("mousemove", "g", function(event) {
+        $("#visual_fba").on("mousemove", "g", function(event) {
             var p = $(this).data('page');
             if (p !== undefined) {
                 if (Math.abs(p.x - event.pageX) > 4 ||
@@ -1585,6 +1757,10 @@ Released under the MIT license
         });
 
         var updateLabels = function () {
+            if (typeof(simulation_chart) === "undefined") {
+                return;
+            }
+
             simulation_chart.axis.labels({
                 x: $("#mba-x-label").val(),
                 y: $("#mba-y-label").val(),
@@ -2005,6 +2181,25 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
             </div>
         </div>
 
+        <div class="panel panel-default" id="sa-settings-axis-panel">
+            <div class="panel-heading">
+                <h3 class="panel-title">Axis label</h3>
+            </div>
+
+            <div class="panel-body">
+                <fieldset>
+                    <label class="control-label" for="mba-x-label">X-Axis</label>
+                    <input class="form-control" type="text" id="mba-x-label">
+                    <label class="control-label" for="mba-y-label">Y-Axis (Left)</label>
+                    <input class="form-control" type="text" id="mba-y-label">
+                    <label class="control-label" for="mba-y2-label">Y-Axis (Right)</label>
+                    <input class="form-control" type="text" id="mba-y2-label">
+                    Changes apply without running a new simulation
+                </fieldset>
+            </div>
+        </div>
+
+
     </div>
 
     <div role="tabpanel" class="tab-pane" id="simulation-tab">
@@ -2012,19 +2207,13 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
             <input type="checkbox" name="remember-simulation" id="remember-simulation">
             <label for="remember-simulation">Combine results with previous simulation</label>
         </div>
-        <label class="control-label" for="mba-x-label">X</label>
-        <input class="form-control" type="text" id="mba-x-label">
-        <label class="control-label" for="mba-y-label">Y</label>
-        <input class="form-control" type="text" id="mba-y-label">
-        <label class="control-label" for="mba-y2-label">Y2</label>
-        <input class="form-control" type="text" id="mba-y2-label">
         <button type="button" id="design-submit" class="btn btn-primary">Run simulation</button>
         <div id="export-button" class="btn-group">
             <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
             Export <span class="caret"></span>
             </button>
             <ul class="dropdown-menu" role="menu">
-            <li><a id="export-csv" href="#">As flux list</a></li>
+            <!--<li><a id="export-csv" href="#">As flux list</a></li>-->
             <li><a id="export-png" href="#">As image</a></li>
             <li><a id="export-svg" href="#">As vector graphic</a></li>
             </ul>
@@ -2032,12 +2221,21 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
 
         <div id="simulation-result">
         </div>
-        <div id="visual">
+        <div id="visual_graph">
 
         </div>
-        <canvas id="output_canvas">
+        <div id="visual_fba">
 
-        </canvas>
+        </div>
+
+        <table id="cyano-flux-list" class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Flux</th>
+                </tr>
+            </thead>
+        </table>
     </div>
 </div>
 </div>
