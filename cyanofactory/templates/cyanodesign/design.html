@@ -707,63 +707,68 @@ Released under the MIT license
         var chart_clicked = function(d) {
             //alert(d);
 
-            if (getSimulationType() == "mba" || getSimulationType() == "sa") {
-                datatable_flux.clear();
+            if (getSimulationType() == "mba") {
+                var reaction = getEnzymeByName(cyano_design_objective_select.val());
+                var constraint = simulation_chart.categories()[d.index];
 
-                var idx = d.index;
-                for (var key in last_sim_flux[idx][1]) {
-                    if (last_sim_flux[idx][1].hasOwnProperty(key)) {
-                        if (key.indexOf("_transp") == -1)
-                        datatable_flux.row.add([key, last_sim_flux[idx][1][key]]);
-                    }
+                var command = {
+                    "type": "reaction",
+                    "name": reaction.name,
+                    "op": "edit",
+                    "object": jQuery.extend(true, {}, reaction)
+                };
+
+                command["object"].constraints = [constraint, constraint];
+
+                command_list.push(command);
+                var data = beginRequest();
+                command_list.pop();
+            } else if (getSimulationType() == "sa") {
+                // Limit target reaction to measured growth
+                var reaction = getEnzymeByName(cyano_design_target_objective_select.val());
+                var constraint = simulation_chart.categories()[d.index]; // Upper constraint
+
+                var command = {
+                    "type": "reaction",
+                    "name": reaction.name,
+                    "op": "edit",
+                    "object": jQuery.extend(true, {}, reaction)
+                };
+
+                if (command["object"].constraints.length == 0) {
+                    command["object"].constraints = [0, 0];
                 }
 
-                datatable_flux.draw();
-            } else { // type == sa
-                // Constraint target reaction auf constraint[0] -> target_flux
-                       /* for limit in [1.0, 0.8, 0.6, 0.4, 0.2, 0.0]:
-            # Limit to a % of the target flux
-            target.constraint = (target.constraint[0], target_flux * limit)
+                command["object"].constraints[1] = last_sim_flux[last_sim_flux.length - 1] * last_sim_flux[d.index][0];
 
-            # Optimize limited growth
-            org.obj = obj
-            growth = org.fba().Z
+                command_list.push(command);
 
-            # Optimize production
-            obj_r.constraint = (growth, growth)
-            org.obj = dobj
-            production = org.fba().Z
+                reaction = getEnzymeByName(cyano_design_objective_select.val());
+                constraint = last_sim_flux[d.index][1][reaction.name];
 
-            # Reset production constraint
-            obj_r.constraint = (0, None)
+                var command = {
+                    "type": "reaction",
+                    "name": reaction.name,
+                    "op": "edit",
+                    "object": jQuery.extend(true, {}, reaction)
+                };
 
-            design_result[0].append(str(int(limit * 100)) + "%")
-            design_result[1].append(round(growth, 4))
-            design_result[2].append(round(production, 4))
-            design_result[3].append(round(growth * production, 4))*/
+                command["object"].constraints = [constraint, constraint];
+
+                command_list.push(command);
+
+                var data = beginRequest();
+
+                command_list.pop();
+                command_list.pop();
             }
-
-            if (getSimulationType() != "mba") {
-                return;
-            }
-
-            var reaction = getEnzymeByName(cyano_design_objective_select.val());
-            var constraint = simulation_chart.categories()[d.index];
-
-            var command = {
-                "type": "reaction",
-                "name": reaction.name,
-                "op": "edit",
-                "object": jQuery.extend(true, {}, reaction)
-            };
-
-            command["object"].constraints = [constraint, constraint];
-
-            command_list.push(command);
-            var data = beginRequest();
-            command_list.pop();
 
             data["type"] = JSON.stringify("fba");
+
+            data["objectives"] = JSON.stringify([{
+                "name": cyano_design_design_objective_select.val(),
+                "maximize": $("#radio-maximize").prop("checked")
+            }]);
 
             $.ajax({
                 url: "{% url "cyanodesign:simulate" pk=pk %}",
@@ -787,15 +792,17 @@ Released under the MIT license
                 var svgPan = svgPanZoom('#visual_fba > svg', {minZoom: 0.1, fit: false});
                 svgPan.zoom(1);
 
-               /* datatable_flux.clear();
+                datatable_flux.clear();
 
-                for (var key in x["flux"]) {
-                    if (x["flux"].hasOwnProperty(key)) {
-                        datatable_flux.row.add([key, x["flux"][key]]);
+                var idx = d.index;
+                for (var key in last_sim_flux[idx][1]) {
+                    if (last_sim_flux[idx][1].hasOwnProperty(key)) {
+                        if (key.indexOf("_transp") == -1)
+                        datatable_flux.row.add([key, last_sim_flux[idx][1][key]]);
                     }
                 }
 
-                datatable_flux.draw();*/
+                datatable_flux.draw();
 
                 endRequest();
             }).error(function(x) {
@@ -916,7 +923,7 @@ Released under the MIT license
                             y: {
                                 label: {
                                     position: "outer-middle"
-                                },
+                                }
                             },
                             y2: {
                                 label: {
