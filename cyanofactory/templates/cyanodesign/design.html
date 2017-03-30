@@ -185,6 +185,10 @@ Released under the MIT license
                         return !rowData.disabled;
                     },
                     render: function(data, type, row, meta) {
+                        if (type === 'copy') {
+                            return data === true ? "Enabled" : "Disabled";
+                        }
+
                         return "<div class='checkbox'> \
                         <input type='checkbox' id='enabled" + meta.row + "' " + (data ? "checked='checked'" : "") + "> \
                         <label for='enabled"  + meta.row + "'>Enabled</label> \
@@ -233,27 +237,106 @@ Released under the MIT license
                 "<'row'<'col-sm-6'l><'col-sm-6'f>>" +
                 "<'row'>" +
                 "<'row'<'col-sm-12'tr>>" +
-                "<'row'<'col-sm-6'i><'col-sm-6'p>>"
+                "<'row'<'col-sm-12'B>>" +
+                "<'row'<'col-sm-6'i><'col-sm-6'p>>",
+            buttons: [
+                {
+                    extend: 'copy',
+                    exportOptions: {
+                        columns: [0, 1, 2, 3],
+                        modifier: {
+                            selected: true
+                        },
+                        orthogonal: 'copy'
+                    }
+                },
+                {
+                    extend: 'csv',
+                    exportOptions: {
+                        columns: [0, 1, 2, 3],
+                        modifier: {
+                            selected: true
+                        },
+                        orthogonal: 'copy'
+                    }
+                }
+            ]
         });
 
         datatable_flux = table_flux.DataTable({
             "deferRender": true,
             "displayLength": 25,
             "order": [[ 1, 'desc' ]],
+            "language": {
+                "emptyTable": "The fluxes are displayed here after running a simulation"
+            },
             columnDefs: [
                 {
-                    "targets": 0,
-                    "width": "50%"
+                    "targets": 0
                 },
                 {
-                    "targets": 1,
-                    "width": "50%"
+                    "targets": 1
                 }
             ],
+            dom: "<'row'<'col-sm-6'l><'col-sm-6'f>>" +
+                "<'row'>" +
+                "<'row'<'col-sm-12'tr>>" +
+                "<'row'<'col-sm-12'B>>" +
+                "<'row'<'col-sm-5'i><'col-sm-7'p>>",
             buttons: [
-                'copy', 'csv'
+                {
+                    extend: 'copy',
+                    exportOptions: {
+                        modifier: {
+                            selected: true
+                        },
+                        orthogonal: 'copy'
+                    }
+                },
+                {
+                    extend: 'csv',
+                    exportOptions: {
+                        modifier: {
+                            selected: true
+                        },
+                        orthogonal: 'copy'
+                    }
+                }
             ]
         });
+
+        $($("#filter_row_flux").text()).appendTo($("#cyano-flux-list_wrapper").children()[1]);
+
+        $.fn.dataTable.ext.search.push(
+            function( settings, data, dataIndex ) {
+                if (settings.nTable == table_flux[0]) {
+                    var min = parseFloat($("#filter-flux-min").val());
+                    var max = parseFloat($("#filter-flux-max").val());
+
+                    var d = datatable_flux.data()[dataIndex];
+
+                    // Check flux values
+                    if (!isNaN(min) && d[1] < min) {
+                        return false;
+                    }
+
+                    if (!isNaN(max) && d[1] > max) {
+                        return false;
+                    }
+
+                    return true;
+                }
+
+                return true;
+            }
+        );
+
+        $("#filter-flux-min").change(function() { datatable_flux.draw(); });
+        $("#filter-flux-max").change(function() { datatable_flux.draw(); });
+
+        $("#radio-fba").change(updateSettingsVisibility);
+        $("#radio-mba").change(updateSettingsVisibility);
+        $("#radio-sa").change(updateSettingsVisibility);
 
         $($("#filter_row").text()).appendTo($("#cyano-enzyme-list_wrapper").children()[1]);
 
@@ -381,9 +464,13 @@ Released under the MIT license
                     "orderable": false,
                     "searchable": false,
                     "data": function (rowData, type, set, meta) {
-                        return rowData.external
+                        return rowData.external;
                     },
                     render: function(data, type, row, meta) {
+                        if (type === 'copy') {
+                            return data === true ? "External" : "Internal";
+                        }
+
                         return "<div class='checkbox'> \
                         <input type='checkbox' id='external" + meta.row + "' " + (data ? "checked='checked'" : "") + "> \
                         <label for='external"  + meta.row + "'>External</label> \
@@ -396,7 +483,28 @@ Released under the MIT license
                 "<'row'<'col-sm-6'l><'col-sm-6'f>>" +
                 "<'row'>" +
                 "<'row'<'col-sm-12'tr>>" +
-                "<'row'<'col-sm-6'i><'col-sm-6'p>>"
+                "<'row'<'col-sm-12'B>>" +
+                "<'row'<'col-sm-6'i><'col-sm-6'p>>",
+            buttons: [
+                {
+                    extend: 'copy',
+                    exportOptions: {
+                        modifier: {
+                            selected: true
+                        },
+                        orthogonal: 'copy'
+                    }
+                },
+                {
+                    extend: 'csv',
+                    exportOptions: {
+                        modifier: {
+                            selected: true
+                        },
+                        orthogonal: 'copy'
+                    }
+                }
+            ]
         });
 
         $($("#filter_row_metabolites").text()).appendTo($("#cyano-metabolite-list_wrapper").children()[1]);
@@ -1786,6 +1894,10 @@ Released under the MIT license
             datatable_metabolites.search("", $(this).prop("checked"), true).draw();
         });
 
+        $("#flux_regex").click(function() {
+            datatable_flux.search("", $(this).prop("checked"), true).draw();
+        });
+
         $("#create-enzyme-bulk-button").click(function() {
             $("#enzyme-bulkdata").val("");
             $("#dialog-reaction-bulkadd").modal("show");
@@ -1953,6 +2065,34 @@ Released under the MIT license
     <div class="checkbox">
     <input id="metabolite_regex" type="checkbox">
     <label for="metabolite_regex">Search with RegExp</label>
+    </div>
+    </div>
+</div>
+</script>
+
+<script id="filter_row_flux" type="text/plain">
+<div class="col-sm-3">
+    <div class="form-group">
+        <label class="control-label" for="filter-flux-min">Min Flux:</label>
+        <input id="filter-flux-min" class="form-control" type="text">
+    </div>
+</div>
+<div class="col-sm-3">
+        <label class="control-label" for="filter-flux-max">Max Flux:</label>
+        <input id="filter-flux-max" class="form-control" type="text">
+</div>
+<!--
+<label for="cyano-metabolite-list-filter-reactions">Filter metabolites</label>
+<select id="cyano-metabolite-list-filter-reactions" class="form-control combobox" multiple="multiple">
+    <option selected="selected">Is internal</option>
+    <option selected="selected">Is external</option>
+</select>-->
+</div>
+<div class="col-sm-6">
+    <div class="dataTables_filter">
+    <div class="checkbox">
+    <input id="flux_regex" type="checkbox">
+    <label for="flux_regex">Search with RegExp</label>
     </div>
     </div>
 </div>

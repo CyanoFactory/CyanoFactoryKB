@@ -33,6 +33,9 @@ $(document).ready(function() {
         var dialog_delete = $("#dialog-delete");
 
         var table = $('#new_list').DataTable({
+            "language": {
+                "emptyTable": "You don't have any models. Please create one."
+            },
             columnDefs: [
                 {
                     "targets": 0,
