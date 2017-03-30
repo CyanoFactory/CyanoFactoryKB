@@ -528,8 +528,8 @@ def upload(request, pk):
 
                     if len(model.enzymes) == 0 or len(model.mets) == 0:
                         raise ValueError("Model is empty")
-                except:
-                    form.add_error("file", "Not a valid model")
+                except e:
+                    form.add_error("file", "Not a valid model: " + str(e))
                     form_html = render_crispy_form(form, context=request)
                     return {'success': False, 'form_html': form_html}
 

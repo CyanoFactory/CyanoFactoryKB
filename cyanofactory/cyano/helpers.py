@@ -2472,7 +2472,7 @@ def get_global_permissions():
 
 def render_crispy_form(form, helper=None, context=None):
     from crispy_forms.utils import render_crispy_form
-    from django.core.context_processors import csrf
+    from django.template.context_processors import csrf
     ctx = {}
     ctx.update(csrf(context))
     return render_crispy_form(form, helper=helper, context=ctx)
