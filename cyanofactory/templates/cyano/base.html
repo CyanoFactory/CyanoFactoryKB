@@ -140,7 +140,7 @@ Released under the MIT license
                             {% endif %}
                             {% endif %}
                             {% if "access_cyanodesign" in global_permissions %}
-                            <li><a href="{% url "cyanodesign:index" %}" title="CyanoDesign">CyanoDesign</a></li>
+                            <li><a href="{% url "cyanodesign:index" %}" title="CellDesign">CellDesign</a></li>
                             {% endif %}
                             {% else %}
                             <li class="disabled">
@@ -193,7 +193,7 @@ Released under the MIT license
                         <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Help <span class="caret"></span></a>
                         <ul class="dropdown-menu" role="menu">
                             <li><a href="{% get_static_prefix %}cyano/CyanoFactory-Manual.pdf">How to use CyanoFactory</a></li>
-                            <li><a href="{% get_static_prefix %}cyano/CyanoDesign-Manual.pdf">How to use CyanoDesign</a></li>
+                            <li><a href="{% get_static_prefix %}cyano/CellDesign-Manual.pdf">How to use CellDesign</a></li>
                             <li><a href="{% if species %}{% url "cyano:license" species_wid=species.wid %}{% else %}{% url "cyano:license" %}{% endif %}">License</a></li>
                         </ul>
                     </li>

@@ -14,6 +14,7 @@ class JsonModel(object):
         def __init__(self, **kwargs):
             self.name = None
             self.stoichiometry = 1
+            self.annotations = []
 
             self.__dict__.update(**kwargs)
 
@@ -40,6 +41,7 @@ class JsonModel(object):
 
     class Reaction(object):
         def __init__(self, **kwargs):
+            self.id = None
             self.name = None
             self.substrates = []
             self.products = []
@@ -48,6 +50,7 @@ class JsonModel(object):
             self.pathway = None
             self.disabled = False
             self.favourite = False
+            self.annotations = []
 
             self.__dict__.update(**kwargs)
             if "substrates" in kwargs:
@@ -61,6 +64,7 @@ class JsonModel(object):
         def to_json(self):
             out = OrderedDict()
             order = [
+                "id",
                 "name",
                 "substrates",
                 "products",
@@ -89,6 +93,7 @@ class JsonModel(object):
 
     class Metabolite(object):
         def __init__(self, **kwargs):
+            self.id = None
             self.name = None
             self.external = False
 
@@ -97,6 +102,7 @@ class JsonModel(object):
         def to_json(self):
             out = OrderedDict()
             order = [
+                "id",
                 "name",
                 "external",
             ]
@@ -155,9 +161,13 @@ class JsonModel(object):
 
         for enz in model.enzymes:
             reac = JsonModel.Reaction()
-            if enz.pathway == "_TRANSPORT_":
-                continue
-            reac.name = enz.name
+            try:
+                if enz.pathway == "_TRANSPORT_":
+                    continue
+            except ValueError:
+                pass
+            reac.id = enz.meta_id
+            reac.name = enz.get_name_or_id()
             reac.substrates = []
             for s, m in zip(enz.stoic[0], enz.substrates):
                 reac.substrates.append(
@@ -174,31 +184,38 @@ class JsonModel(object):
 
             this.reactions.append(reac)
 
-        for metabolite in model.mets:
+        for metabolite in model.metabolites:
             this.metabolites.append(
-                JsonModel.Metabolite(name=metabolite,
-                                     external=metabolite in model.external)
+                JsonModel.Metabolite(id=metabolite.meta_id,
+                                     name=metabolite.get_name_or_id(),
+                                     external=any(x.id == metabolite for x in model.external))
             )
 
-        for obj in model.obj:
-            try:
-                this.objectives.append(
-                    JsonModel.Objective(name=obj[0],
-                                        maximize=int(float(obj[1])) == 1)
-                )
-            except ValueError:
-                raise ValueError("Bad objective")
+        #for obj in model.obj:
+        #    try:
+        #        this.objectives.append(
+        #            JsonModel.Objective(name=obj[0],
+        #                                maximize=int(float(obj[1])) == 1)
+        #        )
+        #    except ValueError:
+        #        raise ValueError("Bad objective")
 
-        for obj in model.design_obj:
-            try:
-                this.design_objectives.append(
-                    JsonModel.Objective(name=obj[0],
-                                        maximize=int(float(obj[1])) == 1)
-                )
-            except ValueError:
-                raise ValueError("Bad objective")
+        #for obj in model.design_obj:
+        #    try:
+        #        this.design_objectives.append(
+        #            JsonModel.Objective(name=obj[0],
+        #                                maximize=int(float(obj[1])) == 1)
+        #        )
+        #    except ValueError:
+        #        raise ValueError("Bad objective")
 
         return this
+
+    @staticmethod
+    def from_sbml(model):
+        from io import StringIO
+
+        return JsonModel.from_model(Metabolism(StringIO(model)))
 
     def to_model(self):
         reactions = []
@@ -216,6 +233,7 @@ class JsonModel(object):
             reactions.append(enz)
 
             if reac.constraints:
+                print(reac.constraints)
                 enz.constraint = (float(reac.constraints[0]), float(reac.constraints[1]))
 
         for metabolite in self.metabolites:

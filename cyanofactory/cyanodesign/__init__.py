@@ -1,2 +1,2 @@
-"""CyanoDesign
+"""CellDesign
 """

@@ -94,7 +94,7 @@ def get_reactions(request, pk):
     except KeyError:
         revision = item.get_latest_revision()
 
-    return revision.content
+    return JsonModel.from_sbml(revision.content).to_json()
 
 
 @global_permission_required("access_cyanodesign")
@@ -119,7 +119,7 @@ def simulate(request, pk):
     except KeyError:
         revision = model.get_latest_revision()
 
-    org_json = model_from_string(revision.content)
+    org = Metabolism(StringIO(revision.content))
 
     try:
         changes = json.loads(request.POST["changes"])
@@ -141,52 +141,50 @@ def simulate(request, pk):
         return HttpResponseBadRequest("Unsupported simulation type: {}".format(simtype))
 
     try:
-        apply_commandlist(org_json, changes)
-        org_json = model_from_string(revision.content)
+        apply_commandlist(org, changes)
+        org = Metabolism(StringIO(revision.content))
         changes = compress_command_list(changes)
-        apply_commandlist(org_json, changes)
+        apply_commandlist(org, changes)
 
         if not objectives:
             raise ValueError("No objective specified")
-        org_json.objectives = []
+        org.obj = []
         for obj in objectives:
-            obj_reac = org_json.get_reaction(obj["name"])
+            obj_reac = org.get_reaction(obj["name"])
             if obj_reac is None:
                 raise ValueError("Objective not in model: " + obj["name"])
 
-            if obj_reac.disabled:
-                return HttpResponseBadRequest("Objective disabled: " + obj_reac.name)
+            #if obj_reac.disabled:
+            #    return HttpResponseBadRequest("Objective disabled: " + obj_reac.name)
 
-            org_json.objectives.append(JsonModel.Objective(**obj))
+            org.obj.append([obj["name"], obj["maximize"]])
 
         if simtype == "mba" or simtype == "sa":
-            org_json.design_objectives = []
+            org.design_obj = []
             for obj in design_objectives:
-                obj_reac = org_json.get_reaction(obj["name"])
+                obj_reac = org.get_reaction(obj["name"])
                 if obj_reac is None:
                     raise ValueError("Design objective not in model: " + obj["name"])
 
-                if obj_reac.disabled:
-                    return HttpResponseBadRequest("Design objective disabled: " + obj_reac.name)
+                #if obj_reac.disabled:
+                #    return HttpResponseBadRequest("Design objective disabled: " + obj_reac.name)
 
-                org_json.design_objectives.append(JsonModel.Objective(**obj))
+                org.design_obj.append([obj["name"], obj["maximize"]])
 
-            org_json.target_reactions = []
+            org.target_reactions = []
             if simtype == "sa":
                 for obj in target_reactions:
-                    obj_reac = org_json.get_reaction(obj["name"])
+                    obj_reac = org.get_reaction(obj["name"])
                     if obj_reac is None:
                         raise ValueError("Target reaction not in model: " + obj["name"])
 
-                    if obj_reac.disabled:
-                        return HttpResponseBadRequest("Target reaction disabled: " + obj_reac.name)
+                    #if obj_reac.disabled:
+                    #    return HttpResponseBadRequest("Target reaction disabled: " + obj_reac.name)
 
-                    org_json.target_reactions.append(JsonModel.Objective(**obj))
+                    org.target_reactions.append([obj["name"], obj["maximize"]])
 
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + str(e))
-
-    org = org_json.to_model()
 
     try:
         fba = org.fba()
@@ -310,13 +308,10 @@ def simulate(request, pk):
         # 1. WT conditions
         obj = org.obj[:]
         dobj = org.design_obj[:]
-        tobj = org_json.target_reactions[0].name
+        tobj = target_reactions[0]["name"]
         obj_r = org.get_reaction(obj[0][0])
         target = org.get_reaction(tobj)
         target_flux = fba.flux[fba.reac_names.index(target.name)]
-
-        # ToDo: Die ganzen Fluxe müssen rückgegeben werden für Fancy click code
-        # Brauch: target_flux
 
         design_result = [["x"], [obj[0][0]], [dobj[0][0]], ["Yield"]]
 
@@ -350,6 +345,8 @@ def simulate(request, pk):
 
             for reac, flux in zip(map(lambda x: x.name, fba.reacs), fba.flux):
                 dflux[i][-1][reac] = flux
+
+        dflux.append(target_flux)
 
         if output_format == "json":
             return HttpResponse(json.dumps(
@@ -417,7 +414,7 @@ def save(request, pk):
     except KeyError:
         revision = model.get_latest_revision()
 
-    org = model_from_string(revision.content)
+    org = Metabolism(StringIO(revision.content))
 
     try:
         changes = json.loads(request.POST["changes"])
@@ -429,28 +426,30 @@ def save(request, pk):
 
     try:
         apply_commandlist(org, changes)
-        org = model_from_string(revision.content)
+        org = Metabolism(StringIO(revision.content))
         changes = compress_command_list(changes)
         apply_commandlist(org, changes)
 
-        if objectives:
-            org.objectives = []
-            for obj in objectives:
-                if len(obj["name"]) > 0:
-                    obj_reac = org.get_reaction(obj["name"])
-                    if obj_reac is None:
-                        raise BadRequest("Objective not in model: " + obj["name"])
+        #if objectives:
+        #    org.objectives = []
+        #    for obj in objectives:
+        #        if len(obj["name"]) > 0:
+        #            obj_reac = org.get_reaction(obj["name"])
+        #            if obj_reac is None:
+        #                raise BadRequest("Objective not in model: " + obj["name"])
 
-                    org.objectives.append(JsonModel.Objective(**obj))
+        #            org.objectives.append(JsonModel.Objective(**obj))
     except ValueError as e:
         raise BadRequest("Model error: " + str(e))
 
     if len(changes) == 0:
         raise BadRequest("Model not saved: No changes found")
 
+    import libsbml
+
     Revision(
         model=model,
-        content=org.to_json(),
+        content=libsbml.SBMLWriter().writeSBMLToString(org._doc),
         changes=dict(changes=changes,objectives=objectives),
         reason=summary
     ).save()
@@ -522,16 +521,16 @@ def upload(request, pk):
                         form_html = render_crispy_form(form, context=request)
                         return {'success': False, 'form_html': form_html}
 
-                try:
-                    ss.seek(0)
-                    model = Metabolism(ss)
+                #try:
+                ss.seek(0)
+                model = Metabolism(ss, filename=freq.name)
 
-                    if len(model.enzymes) == 0 or len(model.mets) == 0:
-                        raise ValueError("Model is empty")
-                except e:
-                    form.add_error("file", "Not a valid model: " + str(e))
-                    form_html = render_crispy_form(form, context=request)
-                    return {'success': False, 'form_html': form_html}
+                if len(model.enzymes) == 0 or len(model.mets) == 0:
+                    raise ValueError("Model is empty")
+                #except Exception as e:
+                #    form.add_error("file", "Not a valid model: " + str(e))
+                #    form_html = render_crispy_form(form, context=request)
+                #    return {'success': False, 'form_html': form_html}
 
                 dm = DesignModel.objects.create(
                     user=request.user.profile,
@@ -540,14 +539,16 @@ def upload(request, pk):
                     content=ss.getvalue()
                 )
 
-                try:
-                    jm = JsonModel.from_model(model).to_json()
-                except ValueError:
-                    return BadRequest(str(ValueError))
+                #try:
+                #    jm = JsonModel.from_model(model).to_json()
+                #except ValueError:
+                #    return BadRequest(str(ValueError))
+
+                import libsbml
 
                 Revision(
                     model=dm,
-                    content=jm,
+                    content=libsbml.SBMLWriter().writeSBMLToString(model._doc),
                     reason="Initial version"
                 ).save()
 

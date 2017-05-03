@@ -1,7 +1,8 @@
 "use strict";
 
 var Enzyme = (function() {
-    function Enzyme(name) {
+    function Enzyme(id, name) {
+        this.id = id;
         this.name = name;
         this.substrates = [];
         this.products = [];
@@ -111,14 +112,14 @@ var Enzyme = (function() {
 
         // Add refs
         this.substrates.forEach(function(substrate) {
-            var substrateObj = Metabolite.instanceByName(substrate.name);
+            var substrateObj = Metabolite.instanceById(substrate.name);
             substrateObj.consumed.push(that);
             affected_mets.push(substrateObj);
             substrateObj.consumed = substrateObj.consumed.sort(Metabolite.nameComparator);
         });
 
         this.products.forEach(function(product) {
-            var productObj = Metabolite.instanceByName(product.name);
+            var productObj = Metabolite.instanceById(product.name);
             productObj.produced.push(that);
             affected_mets.push(productObj);
             productObj.produced = productObj.produced.sort(Metabolite.nameComparator);
@@ -143,7 +144,7 @@ var Enzyme = (function() {
             return arg.name;
         };
 
-        return this.substrates.map(nameProp).concat(this.products.map(nameProp)).map(Metabolite.instanceByName);
+        return this.substrates.map(nameProp).concat(this.products.map(nameProp)).map(Metabolite.instanceById);
     };
 
     return Enzyme;
@@ -180,9 +181,10 @@ Enzyme.getPathways = function() {
 
 Enzyme.compoundToHTML = function(compound) {
     var amount = compound.stoichiometry + " ";
-    var name = $("<span>").addClass("cyano-metabolite").text(compound.name);
+    var inst = Metabolite.instanceById(compound.name);
+    var name = $("<span>").addClass("cyano-metabolite").text(inst.name);
 
-    if (Metabolite.instanceByName(compound.name).external) {
+    if (inst.external) {
         name.addClass("cyano-external-metabolite");
     }
 
@@ -194,7 +196,7 @@ Enzyme.compoundToString = function(compound) {
 };
 
 Enzyme.fromReaction = function(value) {
-    var enzyme = new Enzyme(value.name);
+    var enzyme = new Enzyme(value.id, value.name);
 
     for (var key in value) {
         enzyme[key] = value[key];
@@ -229,6 +231,7 @@ Enzyme.fromBioOptString = function(value) {
     var res = takeWhile(function(x) { return x.indexOf(":") != x.length - 1 }, line, true);
 
     enzyme.name = res[0].join(" ").slice(0, -1).trim();
+    enzyme.id = enzyme.name;
     line = res[1];
 
     if (line.length == 0) {
@@ -335,8 +338,9 @@ Enzyme.fromList = function(list) {
 };
 
 var Metabolite = (function() {
-    function Metabolite(name, external) {
+    function Metabolite(id, name, external) {
         this.external = external;
+        this.id = id;
         this.name = name;
         this.consumed = [];
         this.produced = [];
@@ -368,6 +372,7 @@ var Metabolite = (function() {
 				}
 			});
 
+			this.id = new_name;
 			this.name = new_name;
 
             return true;
@@ -425,6 +430,15 @@ Metabolite.indexByName = function(value) {
     return -1;
 };
 
+Metabolite.instanceById = function(value) {
+    for (var index = 0; index < Metabolite.metabolites.length; ++index) {
+        if (Metabolite.metabolites[index].id == value) {
+            return Metabolite.metabolites[index];
+        }
+    }
+    return undefined;
+};
+
 Metabolite.instanceByName = function(value) {
     for (var index = 0; index < Metabolite.metabolites.length; ++index) {
         if (Metabolite.metabolites[index].name == value) {
@@ -438,7 +452,7 @@ Metabolite.fromReaction = function(reaction) {
     var metabolite_fn = function(value) {
         var idx = Metabolite.indexByName(value.name);
         if (idx == -1) {
-            Metabolite.metabolites.push(new Metabolite(value.name, false));
+            Metabolite.metabolites.push(new Metabolite(value.id, value.name, false));
         }
     };
 
@@ -448,7 +462,7 @@ Metabolite.fromReaction = function(reaction) {
 
 Metabolite.fromList = function(list) {
     for (var i = 0; i < list.length; ++i) {
-        Metabolite.metabolites.push(new Metabolite(list[i].name, list[i].external));
+        Metabolite.metabolites.push(new Metabolite(list[i].id, list[i].name, list[i].external));
     }
 };
 
@@ -456,7 +470,7 @@ Metabolite.createExternal = function(external) {
     var metabolite_fn = function(value) {
        var idx = Metabolite.indexByName(value);
         if (idx == -1) {
-            Metabolite.metabolites.push(new Metabolite(value, true));
+            Metabolite.metabolites.push(new Metabolite(value, value, true));
         } else {
             Metabolite.metabolites[idx].external = true;
         }
@@ -471,5 +485,8 @@ Metabolite.getExternalMetabolites = function() {
 };
 
 Metabolite.nameComparator = function(a, b) {
+    if (a.name === undefined || b.name === undefined) {
+        console.log(a);
+    }
     return a.name.localeCompare(b.name);
 };

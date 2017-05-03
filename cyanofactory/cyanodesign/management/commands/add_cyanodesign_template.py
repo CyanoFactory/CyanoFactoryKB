@@ -15,7 +15,7 @@ import os
 
 class Command(BaseCommand):
     args = 'file'
-    help = 'Add template model to CyanoDesign'
+    help = 'Add template model to CellDesign'
 
     option_list = BaseCommand.option_list + (
         make_option('--chromosome', '-c',

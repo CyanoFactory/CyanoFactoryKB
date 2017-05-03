@@ -11,17 +11,18 @@ from PyNetMet2.enzyme import Enzyme
 from PyNetMet2.metabolism import Metabolism
 from networkx import DiGraph
 from cyanodesign.json_model import JsonModel
-
+from PyNetMet2.util import create_sid
 
 def apply_commandlist(model, commandlist):
     """
-    :type model: json_model.JsonModel
+    :type model: PyNetMet2.Metabolism
     """
     for command in commandlist:
         try:
             op = command["op"]
             typ = command["type"]
             name = command["name"]
+            cid = create_sid(name)
             obj = command["object"]
         except KeyError:
             raise ValueError("Bad command " + str(command))
@@ -94,7 +95,10 @@ def apply_commandlist(model, commandlist):
                 model.add_metabolite(obj["name"], obj.get("external", False))
             elif op == "edit":
                 if "external" in obj:
-                    model.set_metabolite_external(name, obj["external"])
+                    if obj["external"]:
+                        model.make_metabolite_external(name)
+                    else:
+                        model.make_metabolite_internal(name)
                 if name != obj["name"]:
                     model.rename_metabolite(name, obj["name"])
             elif op == "delete":

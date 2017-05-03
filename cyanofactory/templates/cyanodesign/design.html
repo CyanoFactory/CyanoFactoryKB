@@ -15,8 +15,8 @@ Released under the MIT license
 {% load filters %}
 {% load crispy_forms_tags %}
 
-{% block head_title %}{{ block.super }} :: CyanoDesign{% endblock %}
-{% block page_title %}CyanoDesign &ndash; {{ name }}{% endblock %}
+{% block head_title %}{{ block.super }} :: CellDesign{% endblock %}
+{% block page_title %}CellDesign &ndash; {{ name }}{% endblock %}
 {% block head %}
 {{ block.super }}
 <script src="{% get_static_prefix %}cyanodesign/js/d3.v3.js"></script>
@@ -1161,13 +1161,13 @@ Released under the MIT license
         }
 
         function showAddEnzymeDialog() {
-            showEditEnzymeDialog(new Enzyme("New Enzyme"), true);
+            showEditEnzymeDialog(new Enzyme("new_enzyme", "New Enzyme"), true);
         }
 
         function showEditEnzymeDialog(enzyme, create_new) {
             dialog_enzyme.data("object", enzyme);
             dialog_enzyme.data("create", create_new);
-            dialog_enzyme.find("#enzyme-name").val(enzyme.name);
+            dialog_enzyme.find("#enzyme-name").val(enzyme.id);
             dialog_enzyme.find("#reversible").prop("checked", enzyme.reversible);
 
             var substrates = dialog_enzyme.find("#reaction-substrates")[0].selectize;
@@ -1245,7 +1245,7 @@ Released under the MIT license
             dialog_metabolite_edit.find("div").removeClass("has-error");
             dialog_metabolite_edit.find(".help-block").remove();
             dialog_metabolite_edit.find("#metabolite-name").val(item.name);
-            dialog_metabolite_edit.find("#external").prop("checked", Metabolite.instanceByName(item.name).external);
+            dialog_metabolite_edit.find("#external").prop("checked", Metabolite.instanceById(item.id).external);
             dialog_metabolite_edit.data("object", item);
             dialog_metabolite_edit.modal("show");
         }
@@ -1272,6 +1272,7 @@ Released under the MIT license
             design_objective_visible_combobox[0].selectize.removeOption(enzyme.name);
             cyano_design_target_objective_select[0].selectize.removeOption(enzyme.name);
 
+            enzyme.id = name.val();
             enzyme.name = name.val();
 
             cyano_design_objective_select[0].selectize.addOption(enzyme);
@@ -1503,7 +1504,7 @@ Released under the MIT license
             }
 
             if (valid) {
-                var metabolite = new Metabolite(name.val(), external.prop("checked"));
+                var metabolite = new Metabolite(name.val(), name.val(), external.prop("checked"));
                 Metabolite.metabolites.push(metabolite);
 
                 command_list.push({

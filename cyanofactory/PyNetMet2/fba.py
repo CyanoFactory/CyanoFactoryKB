@@ -19,7 +19,7 @@
 #    Please, cite us in your reasearch!
 #
 
-import glpk
+#import glpk
 
 from .util import python_2_unicode_compatible
 
@@ -151,6 +151,8 @@ class FBA:
         """
         Simplex algorithm through glpk.
         """
+        import glpk
+
         lp = glpk.LPX()
         lp.name = " FBA SOLUTION "
         lp.rows.add(len(self.mets))
