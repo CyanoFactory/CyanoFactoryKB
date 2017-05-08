@@ -344,6 +344,7 @@ var Metabolite = (function() {
         this.name = name;
         this.consumed = [];
         this.produced = [];
+        this.chemical = "";
     }
 
     Metabolite.prototype.updateName = function(new_name) {
@@ -420,6 +421,15 @@ var Metabolite = (function() {
 })();
 
 Metabolite.metabolites = [];
+
+Metabolite.indexById = function(value) {
+    for (var index = 0; index < Metabolite.metabolites.length; ++index) {
+        if (Metabolite.metabolites[index].id == value) {
+            return index;
+        }
+    }
+    return -1;
+};
 
 Metabolite.indexByName = function(value) {
     for (var index = 0; index < Metabolite.metabolites.length; ++index) {

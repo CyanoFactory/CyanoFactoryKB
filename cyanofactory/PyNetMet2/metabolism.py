@@ -272,9 +272,9 @@ class Metabolism(object):
         param_lb = self._sbml.getParameter("cobra_default_lb")
         if not param_lb:
             param_lb = self._sbml.createParameter()
+            param_lb.setId("cobra_default_lb")
             param_lb.setName("cobra default - lb")
-            param_lb.setConstan_sbml.createParameter()
-            param_lb.setIdt(True)
+            param_lb.setConstant(True)
             param_lb.setUnits("mmol_per_gDW_per_hr")
             param_lb.setValue(-999999)
 
@@ -699,184 +699,80 @@ class Metabolism(object):
         reader = libsbml.SBMLReader()
 
         sbml_doc = reader.readSBMLFromString(filein.read())
-        sbml_doc.enablePackage("http://www.sbml.org/sbml/level3/version1/groups/version1", "groups", True)
-        sbml_doc.enablePackage("http://www.sbml.org/sbml/level3/version1/fbc/version2", "fbc", True)
+
         sbml_doc.setLevelAndVersion(3, 1, False, False)
         model = sbml_doc.getModel()
 
-        return sbml_doc
+        if sbml_doc.getPlugin("fbc"):
+            sbml_doc.enablePackage("http://www.sbml.org/sbml/level3/version1/groups/version1", "groups", True)
+            sbml_doc.enablePackage("http://www.sbml.org/sbml/level3/version1/fbc/version2", "fbc", True)
 
-        fbc_parsing = None
-        group_parsing = None
+            return sbml_doc
 
-        for i in range(sbml_doc.getNumPlugins()):
-            if sbml_doc.getPlugin(i).getPackageName() == "fbc":
-                fbc_parsing = i
-            elif sbml_doc.getPlugin(i).getPackageName() == "groups":
-                group_parsing = i
+        # Non-fbc SBML handler
+        sbml_doc.enablePackage("http://www.sbml.org/sbml/level3/version1/groups/version1", "groups", True)
+        sbml_doc.enablePackage("http://www.sbml.org/sbml/level3/version1/fbc/version2", "fbc", True)
 
         sbml_reactions = model.getListOfReactions()
 
-        self.notes = sbml_doc.getNotesString()
-        self.id = model.getId()
-        self.name = model.getName()
-
-        if fbc_parsing is not None:
-            for obj in model.getPlugin(fbc_parsing).getListOfObjectives():
-                for fobj in obj.getListOfFluxObjectives():
-                    self.obj.append([fobj.getReaction(), 1 if obj.getType() == "maximize" else 0])
-                    break
-
-            parameters = {}
-            for param in model.getListOfParameters():
-                val = param.getValue()
-                if abs(val) == 999999:
-                    val = None
-
-                parameters[param.getId()] = val
-
-        if group_parsing is not None:
-            groups = {}
-
-            for group in model.getPlugin(group_parsing).getListOfGroups():
-                for member in group.getListOfMembers():
-                    groups[member.getIdRef()] = group.getName()
-
         for reac in sbml_reactions:
-            e = Enzyme()
-            e.name = reac.getName()
-            e.id = reac.getId()
 
-            for reactant in reac.getListOfReactants():
-                e.substrates.append(reactant.getSpecies())
-                e.stoic[0].append(reactant.getStoichiometry())
+            kinetic = reac.getKineticLaw()
 
-            for product in reac.getListOfProducts():
-                e.products.append(product.getSpecies())
-                e.stoic[1].append(product.getStoichiometry())
+            if kinetic:
+                # No idea why, but getListOfParameters returns []
+                for param in kinetic.getListOfAllElements():
+                    if param.getId() == "LOWER_BOUND":
+                        lb = param.getValue()
+                        if lb == -999999:
+                            reac.getPlugin("fbc").setLowerFluxBound("cobra_default_lb")
+                        elif lb == 0:
+                            reac.getPlugin("fbc").setLowerFluxBound("cobra_0_bound")
+                        else:
+                            param_name = reac.getId() + "_lower_bound"
+                            param = model.createParameter()
+                            param.setId(param_name)
+                            param.setUnits("mmol_per_gDW_per_hr")
+                            param.setValue(lb)
+                            reac.getPlugin("fbc").setLowerFluxBound(param_name)
+                    elif param.getId() == "UPPER_BOUND":
+                        ub = param.getValue()
+                        if ub == 999999:
+                            reac.getPlugin("fbc").setUpperFluxBound("cobra_default_ub")
+                        elif lb == 0:
+                            reac.getPlugin("fbc").setUpperFluxBound("cobra_0_bound")
+                        else:
+                            param_name = reac.getId() + "_upper_bound"
+                            param = model.createParameter()
+                            param.setId(param_name)
+                            param.setUnits("mmol_per_gDW_per_hr")
+                            param.setValue(ub)
+                            reac.getPlugin("fbc").setUpperFluxBound(param_name)
+                    elif param.getId() == "OBJECTIVE_COEFFICIENT":
+                        obj = model.getPlugin("fbc").createObjective()
+                        obj.setId("obj")
+                        obj.setType("maximize")
+                        fobj = obj.createFluxObjective()
+                        fobj.setCoefficient(param.getValue())
+                        fobj.setReaction(reac.getId())
 
-            e.reversible = reac.getReversible()
+                kinetic.removeFromParentAndDelete()
 
-            lb = None if e.reversible else 0
-            ub = None
-
-            if fbc_parsing is None:
-                kinetic = reac.getKineticLaw()
-
-                if kinetic:
-                    # No idea why, but getListOfParameters returns []
-                    for param in kinetic.getListOfAllElements():
-                        if param.getId() == "LOWER_BOUND":
-                            lb = param.getValue()
-                        elif param.getId() == "UPPER_BOUND":
-                            ub = param.getValue()
-                        elif param.getId() == "OBJECTIVE_COEFFICIENT":
-                            self.obj.append([e.name, param.getValue()])
-            else:
-                lb = parameters.get(reac.getPlugin(fbc_parsing).getLowerFluxBound())
-                ub = parameters.get(reac.getPlugin(fbc_parsing).getUpperFluxBound())
-
-                for o in self.obj:
-                    if o[0] == e.id:
-                        o[0] = e.name
-
-            if group_parsing is not None:
-                e.pathway = groups.get(e.id)
-
-            e.constraint = [lb, ub]
-
-            self.enzymes.append(e)
-
-        for metabolite in model.getListOfSpecies():
-            self.metabolites[metabolite.getId()] = metabolite.getName()
-
-            if metabolite.getBoundaryCondition():
-                self.external.append(metabolite.getName())
+        return sbml_doc
 
     def write_sbml(self, fileout="model.xml", fbc=True):
+        if isinstance(fileout, six.string_types):
+            f = open(fileout, "w", encoding='utf-8')
+        else:
+            f = fileout
 
+        for reac in self.enzymes:
+            if reac.transport:
+                self._sbml.removeReaction(reac.id)
 
-        #import libsbml
-#
-
-#
-        #doc.enablePackage("http://www.sbml.org/sbml/level3/version1/groups/version1", "groups", True)
-#
-        #if fbc:
-        #    doc.enablePackage("http://www.sbml.org/sbml/level3/version1/fbc/version2", "fbc", True)
-#
-        #doc.setLevelAndVersion(3, 1, False, False)
-#
-        #model = doc.createModel()
-#
-        #model.setId(self.id)
-        #model.setName(self.name)
-#
-        #for k, v in self.metabolites.items():
-        #    species = model.createSpecies()
-#
-        #    species.setId(k)
-        #    species.setMetaId(k)
-        #    species.setName(v)
-#
-        #    species.setBoundaryCondition(v in self.external)
-#
-        #groups = defaultdict(list)
-#
-        #for enz in self.enzymes:
-        #    reac = model.createReaction()
-#
-        #    reac.setId(enz.id)
-        #    reac.setMetaId(enz.id)
-        #    reac.setName(enz.name)
-#
-        #    groups[enz.pathway].append(enz)
-#
-        #    for m, s in zip(enz.substrates, enz.stoic[0]):
-        #        reactant = reac.createReactant()
-        #        reactant.setSpecies(m)
-        #        reactant.setStoichiometry(s)
-#
-        #    for m, s in zip(enz.products, enz.stoic[1]):
-        #        product = reac.createProduct()
-        #        product.setSpecies(m)
-        #        product.setStoichiometry(s)
-#
-        #    reac.setReversible(enz.reversible)
-#
-        #    if not fbc:
-        #        kinetic = reac.createKineticLaw()
-#
-        #        if enz.constraint[0] is not None:
-        #            param = kinetic.createParameter()
-        #            param.setId("LOWER_BOUND")
-        #            param.setValue(enz.constraint[0])
-#
-        #        if enz.constraint[1] is not None:
-        #            param = kinetic.createParameter()
-        #            param.setId("UPPER_BOUND")
-        #            param.setValue(enz.constraint[1])
-#
-        #        for obj in self.obj:
-        #            if obj[0] == enz.name:
-        #                param = kinetic.createParameter()
-        #                param.setId("OBJECTIVE_COEFFICIENT")
-        #                param.setValue(obj[1])
-#
-        #for k, v in groups.items():
-        #    if k is None or len(k) == 0:
-        #        continue
-#
-        #    g = model.getPlugin(0).createGroup()
-        #    g.setName(k)
-#
-        #    for vv in v:
-        #        member = g.createMember()
-        #        member.setIdRef(vv.id)
-#
         writer = libsbml.SBMLWriter()
-        writer.writeSBMLToFile(self._doc, filename=fileout)
-
+        s = writer.writeSBMLToString(self._doc)
+        f.write(s)
 
     def dump(self, fileout="model.txt", filetype="opt", printgenes=False, \
              dic_genes={}, alllimits=False, allobjs=False):

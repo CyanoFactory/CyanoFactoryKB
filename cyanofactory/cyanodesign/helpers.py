@@ -21,7 +21,7 @@ def apply_commandlist(model, commandlist):
         try:
             op = command["op"]
             typ = command["type"]
-            name = command["name"]
+            name = command["id"]
             cid = create_sid(name)
             obj = command["object"]
         except KeyError:
@@ -37,7 +37,7 @@ def apply_commandlist(model, commandlist):
             if op == "add":
                 if enzyme is not None:
                     raise ValueError("Reaction already in model: " + name)
-                if name != obj["name"]:
+                if name != obj["id"]:
                     raise ValueError("Reaction name mismatch: " + name)
                 if "reversible" not in obj:
                     raise ValueError("Bad command " + str(command))
@@ -47,9 +47,10 @@ def apply_commandlist(model, commandlist):
                 if enzyme is None:
                     raise ValueError("Reaction not in model: " + name)
 
-                if obj["name"] != enzyme.name and model.has_reaction(obj["name"]):
+                if obj["id"] != enzyme.id and model.has_reaction(obj["id"]):
                     raise ValueError("Reaction already in model: " + obj["name"])
 
+                enzyme.id = obj["id"]
                 enzyme.name = obj["name"]
 
                 if "substrates" in obj:
@@ -85,14 +86,14 @@ def apply_commandlist(model, commandlist):
                 raise ValueError("Invalid operation " + op)
 
         elif typ == "metabolite":
-            if op in ["add", "edit"] and "name" not in obj:
+            if op in ["add", "edit"] and "id" not in obj:
                 raise ValueError("Bad command " + str(command))
 
             if op == "add":
-                if name != obj["name"]:
+                if name != obj["id"]:
                     raise ValueError("Metabolite name mismatch: " + name)
 
-                model.add_metabolite(obj["name"], obj.get("external", False))
+                model.add_metabolite(obj["id"], obj.get("external", False))
             elif op == "edit":
                 if "external" in obj:
                     if obj["external"]:
@@ -113,7 +114,7 @@ def apply_commandlist(model, commandlist):
             if op == "edit":
                 for reac in model.enzymes:
                     if reac.pathway == name:
-                        reac.pathway = obj["name"]
+                        reac.pathway = obj["id"]
 
             else:
                 raise ValueError("Invalid operation " + op)
@@ -137,7 +138,7 @@ def compress_command_list(commandlist):
     for command in commandlist:
         op = command["op"]
         typ = command["type"]
-        name = command["name"]
+        name = command["id"]
 
         if len(pending_commands) == 0:
             pending_commands.append(command)
@@ -146,24 +147,24 @@ def compress_command_list(commandlist):
 
         if typ == "metabolite" or typ == "reaction" or typ == "pathway":
             if last_command["type"] == typ:
-                if last_command["object"].get("name", last_command["name"]) != name or op == "add":
+                if last_command["object"].get("id", last_command["id"]) != name or op == "add":
                     # Different to previous ones
                     new_commandlist += pending_commands
                     pending_commands = []
                     pending_commands.append(command)
                 elif op == "edit":
-                    if last_command["object"].get("name", last_command["name"]) == name:
+                    if last_command["object"].get("id", last_command["id"]) == name:
                         # Merge with previous
                         pending_commands[-1]["object"].update(command["object"])
                         # If previous was an add update the name
                         if pending_commands[-1]["op"] == "add":
-                            pending_commands[-1]["name"] = command["object"]["name"]
+                            pending_commands[-1]["id"] = command["object"]["id"]
                     else:
                         new_commandlist += pending_commands
                         pending_commands = []
                 elif op == "delete":
                     # Remove all previous instances and take name of first
-                    command["name"] = pending_commands[0]["name"]
+                    command["id"] = pending_commands[0]["id"]
                     # If first command was an "add" the item was created and just deleted
                     # can be removed completely
                     if pending_commands[0]["op"] != "add":

@@ -46,6 +46,7 @@ Released under the MIT license
     var table_metabolites;
     var datatable_metabolites;
     var table_flux;
+    var table_chemical;
     var datatable_flux;
     var submit_form;
     var revision = {% if revision %}{{ revision.pk }}{% else %}undefined{% endif %};
@@ -127,6 +128,7 @@ Released under the MIT license
         table_enzymes = $('#cyano-enzyme-list');
         table_metabolites = $('#cyano-metabolite-list');
         table_flux = $('#cyano-flux-list');
+        table_chemical = $('#cyano-chemical-list');
         submit_form = $('#submit-form');
 
         datatable_enzymes = table_enzymes.DataTable({
@@ -713,7 +715,7 @@ Released under the MIT license
 
                 var command = {
                     "type": "reaction",
-                    "name": reaction.name,
+                    "id": reaction.id,
                     "op": "edit",
                     "object": jQuery.extend(true, {}, reaction)
                 };
@@ -730,7 +732,7 @@ Released under the MIT license
 
                 var command = {
                     "type": "reaction",
-                    "name": reaction.name,
+                    "id": reaction.id,
                     "op": "edit",
                     "object": jQuery.extend(true, {}, reaction)
                 };
@@ -748,7 +750,7 @@ Released under the MIT license
 
                 var command = {
                     "type": "reaction",
-                    "name": reaction.name,
+                    "id": reaction.id,
                     "op": "edit",
                     "object": jQuery.extend(true, {}, reaction)
                 };
@@ -1246,6 +1248,7 @@ Released under the MIT license
             dialog_metabolite_edit.find(".help-block").remove();
             dialog_metabolite_edit.find("#metabolite-name").val(item.name);
             dialog_metabolite_edit.find("#external").prop("checked", Metabolite.instanceById(item.id).external);
+            dialog_metabolite_edit.find("#metabolite-chemical").val(item.chemical);
             dialog_metabolite_edit.data("object", item);
             dialog_metabolite_edit.modal("show");
         }
@@ -1272,8 +1275,10 @@ Released under the MIT license
             design_objective_visible_combobox[0].selectize.removeOption(enzyme.name);
             cyano_design_target_objective_select[0].selectize.removeOption(enzyme.name);
 
-            enzyme.id = name.val();
-            enzyme.name = name.val();
+            if (enzyme.name != name.val()) {
+                enzyme.id = name.val();
+                enzyme.name = name.val();
+            }
 
             cyano_design_objective_select[0].selectize.addOption(enzyme);
             cyano_design_objective_select[0].selectize.refreshOptions();
@@ -1451,7 +1456,7 @@ Released under the MIT license
 
             if (bValid) {
                 var reaction = dialog_enzyme.data("object");
-                var old_name = reaction.name;
+                var old_name = reaction.id;
 
                 var old_pathway = reaction.pathway;
                 saveEnzyme(reaction);
@@ -1459,7 +1464,7 @@ Released under the MIT license
 
                 var command = {
                     "type": "reaction",
-                    "name": old_name,
+                    "id": old_name,
                     "object": jQuery.extend(true, {}, reaction)
                 };
 
@@ -1471,7 +1476,7 @@ Released under the MIT license
                     datatable_enzymes.draw();
 
                     command["op"] = "add";
-                    command["name"] = reaction.name;
+                    command["id"] = reaction.id;
 
                     command_list.push(command);
                 } else {
@@ -1510,10 +1515,11 @@ Released under the MIT license
                 command_list.push({
                     "type": "metabolite",
                     "op": "add",
-                    "name": metabolite.name,
+                    "id": metabolite.id,
                     "object": {
                         "name": metabolite.name,
-                        "external": metabolite.external
+                        "external": metabolite.external,
+                        "chemical": metabolite.chemical
                     }
                 });
 
@@ -1542,7 +1548,7 @@ Released under the MIT license
 
             if (valid) {
                 var metabolite = dialog_metabolite_edit.data("object");
-                var old_name = metabolite.name;
+                var old_name = metabolite.id;
                 metabolite.updateName(name.val());
                 var old_external = metabolite.external;
                 metabolite.external = external.prop("checked");
@@ -1551,10 +1557,11 @@ Released under the MIT license
                     command_list.push({
                         "type": "metabolite",
                         "op": "edit",
-                        "name": old_name,
+                        "id": old_name,
                         "object": {
                             "name": metabolite.name,
-                            "external": metabolite.external
+                            "external": metabolite.external,
+                            "chemical": metabolite.chemical
                         }
                     });
                 }
@@ -2173,6 +2180,7 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
     <li role="presentation" class="active"><a href="#reaction-tab" role="tab" data-toggle="tab">Reactions</a></li>
     <li role="presentation"><a href="#metabolite-tab" role="tab" data-toggle="tab">Metabolites</a></li>
     <li role="presentation"><a href="#settings-tab" role="tab" data-toggle="tab">Settings</a></li>
+    <li role="presentation"><a href="#chemical-tab" role="tab" data-toggle="tab">Stoichiometry</a></li>
     <li role="presentation"><a href="#simulation-tab" role="tab" data-toggle="tab">Simulation</a></li>
 </ul>
 
@@ -2350,6 +2358,18 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
 
     </div>
 
+    <div role="tabpanel" class="tab-pane" id="chemical-tab">
+        <table id="cyano-chemical-list" class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Left</th>
+                    <th>Right</th>
+                    <th>Difference</th>
+                </tr>
+            </thead>
+        </table>
+    </div>
+
     <div role="tabpanel" class="tab-pane" id="simulation-tab">
         <div class="checkbox">
             <input type="checkbox" name="remember-simulation" id="remember-simulation">
@@ -2502,6 +2522,11 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
                             <input type="checkbox" id="add-external">
                             <label for="add-external">External</label>
                         </div>
+
+                        <div class="form-group">
+                            <label for="add-chemical">Chemical formula</label>
+                            <input type="text" id="metabolite-chemical" class="form-control">
+                        </div>
                     </fieldset>
                 </form>
             </div>
@@ -2535,6 +2560,11 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
                         <div class="checkbox">
                             <input type="checkbox" id="external">
                             <label for="external">External</label>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="metabolite-chemical">Chemical formula</label>
+                            <input type="text" id="metabolite-chemical" class="form-control">
                         </div>
                     </fieldset>
                 </form>

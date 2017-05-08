@@ -277,12 +277,17 @@ class Enzyme(object):
 
         if lb == "cobra_default_lb":
             lb = None
-        else:
+        elif lb:
             lb = self.model.getParameter(lb).getValue()
+        else:
+            lb = 0
+
         if ub == "cobra_default_ub":
             ub = None
-        else:
+        elif ub:
             ub = self.model.getParameter(ub).getValue()
+        else:
+            ub = 0
 
         return [lb, ub]
 
