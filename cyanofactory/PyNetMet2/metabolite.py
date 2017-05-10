@@ -46,7 +46,7 @@ class Metabolite(object):
 
     @property
     def external(self):
-       return self._sbml.getBoundaryCondition()
+        return self._sbml.getBoundaryCondition()
 
     @external.setter
     def external(self, val):

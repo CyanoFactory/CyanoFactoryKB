@@ -294,7 +294,7 @@ Enzyme.fromBioOptString = function(value) {
             target = enzyme.products;
         }
 
-        target.push({"stoichiometry": value, "name": mname})
+        target.push({"stoichiometry": value, "name": mname});
 
         if (line.length == 0) {
             break;
@@ -305,7 +305,7 @@ Enzyme.fromBioOptString = function(value) {
                 throw {"enzyme": enzyme, message: "More then one reaction arrow"};
             }
 
-            arrow = line[0]
+            arrow = line[0];
             state = 1;
         }
 
@@ -460,9 +460,9 @@ Metabolite.instanceByName = function(value) {
 
 Metabolite.fromReaction = function(reaction) {
     var metabolite_fn = function(value) {
-        var idx = Metabolite.indexByName(value.name);
+        var idx = Metabolite.indexById(value.name);
         if (idx == -1) {
-            Metabolite.metabolites.push(new Metabolite(value.id, value.name, false));
+            Metabolite.metabolites.push(new Metabolite(value.name, value.name, false));
         }
     };
 

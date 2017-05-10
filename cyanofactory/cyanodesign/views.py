@@ -202,8 +202,8 @@ def simulate(request, pk):
         display = list(filter(lambda x: len(x) > 0 and org.has_reaction(x), display))
 
         dflux = {}
-        for reac, flux in zip(map(lambda x: x.name, fba.reacs), fba.flux):
-            dflux[reac] = flux
+        for reac, flux in zip(map(lambda x: x, fba.reacs), fba.flux):
+            dflux[reac.id] = flux
 
         # Auto filter by FBA
         if auto_flux:
@@ -213,7 +213,7 @@ def simulate(request, pk):
                 full_eg = nx.ego_graph(full_g.reverse(), nodeIDs[org.obj[0][0]], radius=3, center=False, undirected=False)
 
             full_g.remove_edges_from(full_g.in_edges(nodeIDs[org.obj[0][0]]) + full_g.out_edges(nodeIDs[org.obj[0][0]]))
-            all_edges = map(lambda x: full_eg.get_edge_data(*x)["object"].name, full_eg.edges())
+            all_edges = map(lambda x: full_eg.get_edge_data(*x)["object"]["id"], full_eg.edges())
             # Get fluxes of "edges"
             flux = []
             for reac in all_edges:
@@ -471,7 +471,7 @@ def save_as(request, pk):
             request.POST = request.POST.copy()
             request.POST["summary"] = summary
             save(request, pk)
-    
+
             model = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
 
             dm = DesignModel.objects.create(

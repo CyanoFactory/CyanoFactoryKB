@@ -206,7 +206,7 @@ def get_selected_reaction(jsonGraph, nodeDic, reacIDs, org):
     met_ids = list(map(lambda x: nodeDic[x], metabolites))
     g = json_graph.node_link_graph(jsonGraph)
 
-    g.remove_edges_from(list(filter(lambda x: g.get_edge_data(*x)["object"].name not in reacIDs, g.edges(met_ids))))
+    g.remove_edges_from(list(filter(lambda x: g.get_edge_data(*x)["object"]["name"] not in reacIDs, g.edges(met_ids))))
 
     # Get products/substrates directly connected to filter
     #reacIDs += flatten(g.in_edges(reacIDs)) + flatten(g.out_edges(reacIDs))
@@ -293,7 +293,7 @@ def calc_reactions(org, fluxResults):
                     else:
                         value = 1
 
-                    attr = {"color": color, "penwidth": value, "label": u"{} ({})".format(enzyme.name, flux), "object": enzyme}
+                    attr = {"color": color, "penwidth": value, "label": u"{} ({})".format(enzyme.name, flux), "object": {"name":enzyme.name,"id":enzyme.id}}
 
                     if enzyme.name == objective:
                         attr["style"] = "dashed"
@@ -305,6 +305,6 @@ def calc_reactions(org, fluxResults):
                         graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
 
                     if enzyme.reversible:
-                        graph.add_edge(nodeDic[product], nodeDic[substrate], label=enzyme.name, object=enzyme)
+                        graph.add_edge(nodeDic[product], nodeDic[substrate], label=enzyme.name, object={"name":enzyme.name,"id":enzyme.id})
 
     return graph, nodeDic

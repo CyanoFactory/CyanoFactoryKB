@@ -48,10 +48,6 @@ class Metabolism(object):
         This class defines a metabolism object (set of chemical reactions,
         metabolites and a network).
     """
-    @staticmethod
-    def from_sbml(filein):
-        self._sbml = libsbml.Model(3, 1)
-
     def __init__(self, filein, filetype="auto", fromfile=True, filename=None):
         self._doc = libsbml.SBMLDocument(3, 1)
         self._sbml = self._doc.createModel()

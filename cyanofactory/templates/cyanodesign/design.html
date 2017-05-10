@@ -1970,8 +1970,9 @@ Released under the MIT license
                             command_list.push({
                                 "type": "metabolite",
                                 "op": "add",
-                                "name": metabolite.name,
+                                "id": metabolite.id,
                                 "object": {
+                                    "id": metabolite.id,
                                     "name": metabolite.name,
                                     "external": metabolite.external
                                 }
@@ -1985,7 +1986,7 @@ Released under the MIT license
 
                     var command = {
                         "type": "reaction",
-                        "name": reaction.name,
+                        "id": reaction.id,
                         "object": jQuery.extend(true, {}, reaction)
                     };
 
@@ -2274,7 +2275,7 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
                 <div class="radio">
                     <input type="radio" name="simulationtype" id="radio-mba">
                     <label for="radio-mba">
-                        Metabolic Burden Analysis
+                        Robustness Analysis
                     </label>
                 </div>
                 <div class="radio">
@@ -2320,7 +2321,7 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
 
         <div class="panel panel-default" id="sa-settings-panel">
             <div class="panel-heading">
-                <h3 class="panel-title">Sensitivity/MBA settings</h3>
+                <h3 class="panel-title">Sensitivity/RA settings</h3>
             </div>
 
             <div class="panel-body" id="settings-mba">

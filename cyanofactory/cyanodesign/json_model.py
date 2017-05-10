@@ -188,7 +188,7 @@ class JsonModel(object):
             this.metabolites.append(
                 JsonModel.Metabolite(id=metabolite.meta_id,
                                      name=metabolite.get_name_or_id(),
-                                     external=any(x.id == metabolite for x in model.external))
+                                     external=metabolite.external)
             )
 
         #for obj in model.obj:
