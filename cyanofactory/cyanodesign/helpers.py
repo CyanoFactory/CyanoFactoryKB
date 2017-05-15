@@ -31,10 +31,13 @@ def apply_commandlist(model, commandlist):
             enzyme = model.get_reaction(name)
 
             if op in ["add", "edit"]:
-                if "name" not in obj:
-                    raise ValueError("Bad commmand " + str(command))
+                if "id" not in obj:
+                    raise ValueError("Bad command " + str(command))
 
             if op == "add":
+                if "name" not in obj:
+                    raise ValueError("Bad command " + str(command))
+
                 if enzyme is not None:
                     raise ValueError("Reaction already in model: " + name)
                 if name != obj["id"]:
@@ -51,12 +54,16 @@ def apply_commandlist(model, commandlist):
                     raise ValueError("Reaction already in model: " + obj["name"])
 
                 enzyme.id = obj["id"]
-                enzyme.name = obj["name"]
+                if name in obj:
+                    enzyme.name = obj["name"]
 
-                if "substrates" in obj:
-                    enzyme.substrates = map(lambda x: JsonModel.Compound(**x), obj["substrates"])
-                if "products" in obj:
-                    enzyme.products = map(lambda x: JsonModel.Compound(**x), obj["products"])
+                if "substrates" in obj and "products" in obj:
+                    enzyme.substrates = list(map(lambda x: JsonModel.Compound(**x).name, obj["substrates"]))
+                    enzyme.products = list(map(lambda x: JsonModel.Compound(**x).name, obj["products"]))
+                    enzyme.stoic = [
+                        list(map(lambda x: JsonModel.Compound(**x).stoichiometry, obj["substrates"])),
+                        list(map(lambda x: JsonModel.Compound(**x).stoichiometry, obj["products"]))
+                    ]
 
                 try:
                     enzyme.reversible = obj["reversible"]
@@ -64,7 +71,7 @@ def apply_commandlist(model, commandlist):
                     pass
 
                 try:
-                    enzyme.constraints = obj["constraints"]
+                    enzyme.constraint = obj["constraints"]
                 except KeyError:
                     pass
 
@@ -108,8 +115,8 @@ def apply_commandlist(model, commandlist):
                 raise ValueError("Invalid operation " + op)
 
         elif typ == "pathway":
-            if "name" not in obj:
-                raise ValueError("Bad commmand " + str(command))
+            if "id" not in obj:
+                raise ValueError("Bad command " + str(command))
 
             if op == "edit":
                 for reac in model.enzymes:
@@ -225,7 +232,7 @@ def calc_reactions(org, fluxResults):
     reactions = fluxResults.reacs
     for reaction, flux in zip(reactions, fluxResults.flux):
         if not reaction.name.endswith("_transp"):
-            changeDic[reaction.name] = float('%.3g' % flux)
+            changeDic[reaction.id] = float('%.3g' % flux)
 
     vList = list(changeDic.values())
 
@@ -250,11 +257,11 @@ def calc_reactions(org, fluxResults):
         objective = org.obj[0][0]
 
     for enzyme in enzymes:
-        if not enzyme.name.endswith("_transp"):
+        if not enzyme.id.endswith("_transp"):
             nodecounter += 1
-            nodeDic[enzyme.name] = nodecounter
+            nodeDic[enzyme.id] = nodecounter
             if enzyme.name == objective:
-                graph.add_node(nodeDic[enzyme.name])
+                graph.add_node(nodeDic[enzyme.id])
 
             for substrate in enzyme.substrates:
                 nodecounter += 1
@@ -279,7 +286,7 @@ def calc_reactions(org, fluxResults):
             # Check if enzyme is objective
             for substrate in enzyme.substrates:
                 for product in enzyme.products:
-                    flux = changeDic[enzyme.name]
+                    flux = changeDic[enzyme.id]
 
                     color = "black"
                     if flux < 0:
@@ -302,7 +309,7 @@ def calc_reactions(org, fluxResults):
 
                     if enzyme.name == objective:
                         graph.add_edge(nodeDic[substrate], nodeDic[enzyme.name])
-                        graph.add_edge(nodeDic[enzyme.name], nodeDic[product])
+                        graph.add_edge(nodeDic[enzyme.id], nodeDic[product])
 
                     if enzyme.reversible:
                         graph.add_edge(nodeDic[product], nodeDic[substrate], label=enzyme.name, object={"name":enzyme.name,"id":enzyme.id})

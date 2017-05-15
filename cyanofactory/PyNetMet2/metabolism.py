@@ -19,15 +19,6 @@
 #    Please, cite us in your research!
 #
 
-# TODO:
-# Konvertiere 2 zu 3
-# Export: 3 zu 2, 3 zu BioOpt
-# Objective not parsed
-#! In Datenbank SBML statt JSON
-#! JSON-Operationen zu SBML
-# rausfinden wie man celldesign-namespace setzt
-# FBA testen :D
-
 from __future__ import print_function
 
 from codecs import open
@@ -55,6 +46,8 @@ class Metabolism(object):
         self._sbml.enablePackage("http://www.sbml.org/sbml/level3/version1/groups/version1", "groups", True)
         self._sbml.enablePackage("http://www.sbml.org/sbml/level3/version1/fbc/version2", "fbc", True)
 
+        self.enzymes = []
+        self.metabolites = []
         self.obj = []
         self.design_obj = []
 
@@ -158,11 +151,16 @@ class Metabolism(object):
             if not line.startswith("#"):
                 line = line.strip()
 
-                reac = self._sbml.getSpecies(line)
+                reac = self._sbml.getSpecies(create_sid(line))
 
-                if reac:
-                    reac.setCompartment("Extra_cellular")
-                    reac.setBoundaryCondition(True)
+                if not reac:
+                    reac = self._sbml.createSpecies()
+                    reac.setId(create_sid(line))
+                    reac.setMetaId(create_sid(line))
+                    reac.setName(line)
+
+                reac.setCompartment("Extra_cellular")
+                reac.setBoundaryCondition(True)
 
         self.external = list(filter(lambda x: x.external, self.metabolites))
 
@@ -260,6 +258,11 @@ class Metabolism(object):
         """
         Creates the metabolism attributes based on the enzymes list.
         """
+        # Remove transp reactions
+        for reac in self.enzymes:
+            if reac.transport:
+                reac._sbml.removeFromParentAndDelete()
+
         self.enzymes = list(map(lambda x: Enzyme(model=self._sbml, reac=x), self._sbml.getListOfReactions()))
         self.metabolites = list(map(lambda x: Metabolite(model=self._sbml, met=x), self._sbml.getListOfSpecies()))
 
@@ -764,7 +767,7 @@ class Metabolism(object):
 
         for reac in self.enzymes:
             if reac.transport:
-                self._sbml.removeReaction(reac.id)
+                reac._sbml.removeFromParentAndDelete()
 
         writer = libsbml.SBMLWriter()
         s = writer.writeSBMLToString(self._doc)

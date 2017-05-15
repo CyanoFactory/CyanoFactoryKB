@@ -154,10 +154,10 @@ def simulate(request, pk):
             if obj_reac is None:
                 raise ValueError("Objective not in model: " + obj["name"])
 
-            #if obj_reac.disabled:
-            #    return HttpResponseBadRequest("Objective disabled: " + obj_reac.name)
+            if obj_reac.disabled:
+                return HttpResponseBadRequest("Objective disabled: " + obj_reac.name)
 
-            org.obj.append([obj["name"], obj["maximize"]])
+            org.obj.append([obj["name"], "1" if obj["maximize"] else "0"])
 
         if simtype == "mba" or simtype == "sa":
             org.design_obj = []
@@ -166,10 +166,10 @@ def simulate(request, pk):
                 if obj_reac is None:
                     raise ValueError("Design objective not in model: " + obj["name"])
 
-                #if obj_reac.disabled:
-                #    return HttpResponseBadRequest("Design objective disabled: " + obj_reac.name)
+                if obj_reac.disabled:
+                    return HttpResponseBadRequest("Design objective disabled: " + obj_reac.name)
 
-                org.design_obj.append([obj["name"], obj["maximize"]])
+                org.design_obj.append([obj["name"], "1" if obj["maximize"] else "0"])
 
             org.target_reactions = []
             if simtype == "sa":
@@ -178,10 +178,10 @@ def simulate(request, pk):
                     if obj_reac is None:
                         raise ValueError("Target reaction not in model: " + obj["name"])
 
-                    #if obj_reac.disabled:
-                    #    return HttpResponseBadRequest("Target reaction disabled: " + obj_reac.name)
+                    if obj_reac.disabled:
+                        return HttpResponseBadRequest("Target reaction disabled: " + obj_reac.name)
 
-                    org.target_reactions.append([obj["name"], obj["maximize"]])
+                    org.target_reactions.append([obj["name"], "1" if obj["maximize"] else "0"])
 
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + str(e))
@@ -311,7 +311,7 @@ def simulate(request, pk):
         tobj = target_reactions[0]["name"]
         obj_r = org.get_reaction(obj[0][0])
         target = org.get_reaction(tobj)
-        target_flux = fba.flux[fba.reac_names.index(target.name)]
+        target_flux = fba.flux[fba.reac_names.index(target.id)]
 
         design_result = [["x"], [obj[0][0]], [dobj[0][0]], ["Yield"]]
 
@@ -374,11 +374,14 @@ def export(request, pk):
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
 
-    org = model_from_string(content)
+    org = Metabolism(StringIO(content))
 
     ss = StringIO()
 
-    org.to_model().dump(fileout=ss, filetype="opt" if form == "bioopt" else "sbml")
+    # TODO bioopt
+    org.write_sbml(ss)
+
+    #org.to_model().dump(fileout=ss, filetype="opt" if form == "bioopt" else "sbml")
 
     response = HttpResponse(
         ss.getvalue(),
@@ -445,11 +448,12 @@ def save(request, pk):
     if len(changes) == 0:
         raise BadRequest("Model not saved: No changes found")
 
-    import libsbml
+    sio = StringIO()
+    org.write_sbml(fileout=sio)
 
     Revision(
         model=model,
-        content=libsbml.SBMLWriter().writeSBMLToString(org._doc),
+        content=sio.getvalue(),
         changes=dict(changes=changes,objectives=objectives),
         reason=summary
     ).save()
@@ -544,11 +548,12 @@ def upload(request, pk):
                 #except ValueError:
                 #    return BadRequest(str(ValueError))
 
-                import libsbml
+                sio = StringIO()
+                model.write_sbml(fileout=sio)
 
                 Revision(
                     model=dm,
-                    content=libsbml.SBMLWriter().writeSBMLToString(model._doc),
+                    content=sio.getvalue(),
                     reason="Initial version"
                 ).save()
 

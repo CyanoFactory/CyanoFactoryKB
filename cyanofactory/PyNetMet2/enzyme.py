@@ -224,8 +224,10 @@ class Enzyme(object):
 
     @substrates.setter
     def substrates(self, value):
-        for s, v in zip(self._sbml.getListOfReactants(), value):
-            s.setSpecies(v)
+        self._sbml.getListOfReactants().clear(True)
+        for v in value:
+            r = self._sbml.createReactant()
+            r.setSpecies(v)
 
     @property
     def products(self):
@@ -233,8 +235,10 @@ class Enzyme(object):
 
     @products.setter
     def products(self, value):
-        for s, v in zip(self._sbml.getListOfProducts(), value):
-            s.setSpecies(v)
+        self._sbml.getListOfProducts().clear(True)
+        for v in value:
+            r = self._sbml.createProduct()
+            r.setSpecies(v)
 
     @property
     def stoic(self):
@@ -275,19 +279,37 @@ class Enzyme(object):
         lb = self._sbml.getPlugin(0).getLowerFluxBound()
         ub = self._sbml.getPlugin(0).getUpperFluxBound()
 
+        lb_changed = False
+        ub_changed = False
+
         if lb == "cobra_default_lb":
             lb = None
+            lb_changed = True
         elif lb:
             lb = self.model.getParameter(lb).getValue()
-        else:
-            lb = None
+            lb_changed = True
 
         if ub == "cobra_default_ub":
             ub = None
+            ub_changed = True
         elif ub:
             ub = self.model.getParameter(ub).getValue()
-        else:
-            ub = None
+            ub_changed = True
+
+        if not (lb_changed or ub_changed):
+            print(lb_changed, ub_changed, self.id, self.reversible)
+            if len(self.substrates) == 0 and self.reversible:
+                return (None, None)
+            elif len(self.substrates) == 0 and not self.reversible:
+                return (0., None)
+            elif len(self.products) == 0 and self.reversible:
+                return (None, None)
+            elif len(self.products) == 0 and not self.reversible:
+                return (0., None)
+            elif self.reversible:
+                return (None, None)
+            else:
+                return (0., None)
 
         return [lb, ub]
 
@@ -361,6 +383,31 @@ class Enzyme(object):
 
         m = g.createMember()
         m.setIdRef(self.meta_id)
+
+    @property
+    def disabled(self):
+        return self.model.getParameter("celldesign_" + self.id + "_disabled") is not None
+
+    @disabled.setter
+    def disabled(self, val):
+        arg = "celldesign_" + self.id + "_disabled"
+
+        param = self.model.getParameter(arg)
+
+        if val:
+            if not param:
+                param = self.model.createParameter()
+            param.setId(arg)
+            param.setValue(1)
+
+            param.setUnits(("_" + str(self.constraint[0])+"X"+str(self.constraint[1])).replace(".", "_"))
+
+            self.constraint = [0, 0]
+        else:
+            if param:
+                const = param.getUnits()[1:].replace("_", ".").split("X")
+                self.constraint = [float(const[0]), float(const[1])]
+                param.removeFromParentAndDelete()
 
     def __str__(self):
         """

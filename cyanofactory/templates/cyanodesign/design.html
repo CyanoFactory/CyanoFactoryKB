@@ -639,18 +639,22 @@ Released under the MIT license
             else
                 waitIndicator.show(wait_position);
 
+            var cdos = cyano_design_objective_select.val();
+            var cddos = cyano_design_design_objective_select.val();
+            var cdto = cyano_design_target_objective_select.val();
+
             var result = {
                 "changes": JSON.stringify(command_list),
                 "objectives": JSON.stringify([{
-                    "name": cyano_design_objective_select.val(),
+                    "name": cdos,
                     "maximize": $("#radio-maximize").prop("checked")
                 }]),
                 "design_objectives": JSON.stringify([{
-                    "name": cyano_design_design_objective_select.val(),
+                    "name": cddos,
                     "maximize": true
                 }]),
                 "target_reactions": JSON.stringify([{
-                    "name": cyano_design_target_objective_select.val(),
+                    "name": cdto,
                     "maximize": true
                 }]),
                 "type": JSON.stringify(getSimulationType()),
@@ -1311,11 +1315,19 @@ Released under the MIT license
             enzyme.products = [];
 
             substrates.getValue().split('\x00').forEach(function(a) {
-                enzyme.substrates.push({"name": a, "stoichiometry": substrates.options[a].item.amount});
+                enzyme.substrates.push({
+                    "id": substrates.options[a].item.obj.id,
+                    "name": substrates.options[a].item.obj.name,
+                    "stoichiometry": substrates.options[a].item.amount
+                });
             });
 
             products.getValue().split('\x00').forEach(function(a) {
-                enzyme.products.push({"name": a, "stoichiometry": products.options[a].item.amount});
+                enzyme.products.push({
+                    "id": products.options[a].item.obj.id,
+                    "name": products.options[a].item.obj.name,
+                    "stoichiometry": products.options[a].item.amount
+                });
             });
 
             enzyme.pathway = pathway.val();
@@ -1559,6 +1571,7 @@ Released under the MIT license
                         "op": "edit",
                         "id": old_name,
                         "object": {
+                            "id": metabolite.id,
                             "name": metabolite.name,
                             "external": metabolite.external,
                             "chemical": metabolite.chemical
@@ -1600,9 +1613,9 @@ Released under the MIT license
             command_list.push({
                 "type": "reaction",
                 "op": "edit",
-                "name": row.data().name,
+                "id": row.data().id,
                 "object": {
-                    "name": row.data().name,
+                    "id": row.data().id,
                     "disabled": row.data().disabled
                 }
             });
@@ -1626,8 +1639,9 @@ Released under the MIT license
             command_list.push({
                 "type": "metabolite",
                 "op": "edit",
-                "name": row.data().name,
+                "id": row.data().id,
                 "object": {
+                    "id": row.data().id,
                     "name": row.data().name,
                     "external": row.data().external
                 }
@@ -1781,16 +1795,16 @@ Released under the MIT license
         var cdos = {
             delimiter: ',',
             labelField: "name",
-            valueField: "name",
+            valueField: "id",
             sortField: "name",
             searchField: ["name"],
             onChange: function(value) {
-                var idx = Enzyme.indexByName(value);
+                /*var idx = Enzyme.indexById(value);
                 if (idx >= 0) {
                     design_objective = Enzyme.enzymes[idx];
                 } else {
                     design_objective = undefined;
-                }
+                }*/
             }
         };
 
@@ -1801,7 +1815,7 @@ Released under the MIT license
         design_objective_visible_combobox.selectize({
             delimiter: '\x00',
             labelField: "name",
-            valueField: "name",
+            valueField: "id",
             searchField: ["name"],
             plugins: ['drag_drop', 'remove_button', 'restore_on_backspace'],
             maxItems: 20
@@ -1809,7 +1823,7 @@ Released under the MIT license
 
         dialog_enzyme.find("#reaction-pathway").selectize({
             labelField: "text",
-            valueField: "text",
+            valueField: "id",
             sortField: "text",
             searchField: ["text"],
             create: true

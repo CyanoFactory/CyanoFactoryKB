@@ -15,7 +15,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with PyNetMet.  If not, see <http://www.gnu.org/licenses/>.
 #
-#    
+#
 #    Please, cite us in your reasearch!
 #
 
@@ -39,7 +39,7 @@ class FBA:
         external_out = org.external_out
         reacs = org.enzymes
         mets = org.mets
-        reac_names = [ele.name for ele in reacs]
+        reac_names = [ele.id for ele in reacs]
         # Stoichiometric matrix
         # Matrix
         lista = []
@@ -135,7 +135,7 @@ class FBA:
         lista = sorted(percent_list, key=keyz, reverse=rev)
         stri = ""
         for ele in lista:
-            blac = "%40s  %20s  %20s   |   dif=%25s \n" % (ele[0], str(ele[1]), 
+            blac = "%40s  %20s  %20s   |   dif=%25s \n" % (ele[0], str(ele[1]),
                                                       str(ele[2]),str(ele[3]))
             stri += blac
         return stri
@@ -144,7 +144,7 @@ class FBA:
         """
         Prints the flux for one reaction.
         """
-        return "%30s ---->  %9.9f  " % (self.lp.cols[ii].name, 
+        return "%30s ---->  %9.9f  " % (self.lp.cols[ii].name,
                                         self.lp.cols[ii].value)
 
     def fba(self):
@@ -316,8 +316,6 @@ class FBA:
         self.obj = self.design_obj[:]
 
         for unit in units:
-            # TODO: Erster Durchlauf ohne Constraints
-            # TODO: Aufhören mit FBA wenn unfeasible
             for obj in saved_obj:
                 iobj = self.reac_names.index(obj[0])
                 self.constr[iobj] = [unit, unit]

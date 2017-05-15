@@ -12,7 +12,7 @@ from PyNetMet2.enzyme import Enzyme
 class JsonModel(object):
     class Compound(object):
         def __init__(self, **kwargs):
-            self.name = None
+            self.id = None
             self.stoichiometry = 1
             self.annotations = []
 
@@ -27,7 +27,7 @@ class JsonModel(object):
         def to_json(self):
             out = OrderedDict()
             order = [
-                "name",
+                "id",
                 "stoichiometry",
             ]
             for i in order:
@@ -37,7 +37,7 @@ class JsonModel(object):
             return out
 
         def __str__(self):
-            return u"{} {}".format(self.stoichiometry, self.name)
+            return u"{} {}".format(self.stoichiometry, self.id)
 
     class Reaction(object):
         def __init__(self, **kwargs):
@@ -171,11 +171,11 @@ class JsonModel(object):
             reac.substrates = []
             for s, m in zip(enz.stoic[0], enz.substrates):
                 reac.substrates.append(
-                    JsonModel.Compound(name=m, stoichiometry=s)
+                    JsonModel.Compound(id=m, stoichiometry=s)
                 )
             for s, m in zip(enz.stoic[1], enz.products):
                 reac.products.append(
-                    JsonModel.Compound(name=m, stoichiometry=s)
+                    JsonModel.Compound(id=m, stoichiometry=s)
                 )
             if None not in enz.constraint:
                 reac.constraints = enz.constraint

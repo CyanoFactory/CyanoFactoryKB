@@ -112,14 +112,14 @@ var Enzyme = (function() {
 
         // Add refs
         this.substrates.forEach(function(substrate) {
-            var substrateObj = Metabolite.instanceById(substrate.name);
+            var substrateObj = Metabolite.instanceById(substrate.id);
             substrateObj.consumed.push(that);
             affected_mets.push(substrateObj);
             substrateObj.consumed = substrateObj.consumed.sort(Metabolite.nameComparator);
         });
 
         this.products.forEach(function(product) {
-            var productObj = Metabolite.instanceById(product.name);
+            var productObj = Metabolite.instanceById(product.id);
             productObj.produced.push(that);
             affected_mets.push(productObj);
             productObj.produced = productObj.produced.sort(Metabolite.nameComparator);
@@ -181,7 +181,7 @@ Enzyme.getPathways = function() {
 
 Enzyme.compoundToHTML = function(compound) {
     var amount = compound.stoichiometry + " ";
-    var inst = Metabolite.instanceById(compound.name);
+    var inst = Metabolite.instanceById(compound.id);
     var name = $("<span>").addClass("cyano-metabolite").text(inst.name);
 
     if (inst.external) {
@@ -201,6 +201,13 @@ Enzyme.fromReaction = function(value) {
     for (var key in value) {
         enzyme[key] = value[key];
     }
+
+    enzyme.substrates.forEach(function(item) {
+        item.name = Metabolite.instanceById(item.id).name;
+    });
+    enzyme.products.forEach(function(item) {
+        item.name = Metabolite.instanceById(item.id).name;
+    });
 
     return enzyme;
 };
@@ -294,7 +301,7 @@ Enzyme.fromBioOptString = function(value) {
             target = enzyme.products;
         }
 
-        target.push({"stoichiometry": value, "name": mname});
+        target.push({"stoichiometry": value, "id": mname, "name": mname});
 
         if (line.length == 0) {
             break;
