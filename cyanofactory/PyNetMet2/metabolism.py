@@ -28,6 +28,7 @@ from collections import defaultdict
 
 from .enzyme import *
 from .metabolite import *
+from .objective import *
 from xml.dom.minidom import parseString
 import re
 import six
@@ -48,7 +49,7 @@ class Metabolism(object):
 
         self.enzymes = []
         self.metabolites = []
-        self.obj = []
+        self.obj = None
         self.design_obj = []
 
         if fromfile:
@@ -217,7 +218,9 @@ class Metabolism(object):
                     design_objs.append([line[0],"1"])
 
         self.design_obj = design_objs
-        self.obj = objs
+        self.obj = map(lambda x: Objective(self._sbml), objs)
+        for i, o in enumerate(self.obj):
+            o = objs[i]
 
         # Most attributes calculated in the calcs routine.
         self.calcs()
@@ -267,6 +270,8 @@ class Metabolism(object):
         self.metabolites = list(map(lambda x: Metabolite(model=self._sbml, met=x), self._sbml.getListOfSpecies()))
 
         self.objective = self._sbml.getPlugin("fbc").getListOfObjectives()
+
+        self.obj = list(map(lambda x: Objective(model=self._sbml, obj=x), self.objective))
 
         param_lb = self._sbml.getParameter("cobra_default_lb")
         if not param_lb:

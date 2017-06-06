@@ -315,6 +315,21 @@ class Enzyme(object):
 
     @constraint.setter
     def constraint(self, val):
+        if len(val) < 2:
+            if len(self.substrates) == 0 and self.reversible:
+                self.constraint = (None, None)
+            elif len(self.substrates) == 0 and not self.reversible:
+                self.constraint = (0., None)
+            elif len(self.products) == 0 and self.reversible:
+                self.constraint = (None, None)
+            elif len(self.products) == 0 and not self.reversible:
+                self.constraint = (0., None)
+            elif self.reversible:
+                self.constraint = (None, None)
+            else:
+                self.constraint = (0., None)
+            return
+
         lb = val[0]
         ub = val[1]
 
