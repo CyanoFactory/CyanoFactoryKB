@@ -372,7 +372,7 @@ class Enzyme(object):
         for g in self.model.getPlugin("groups").getListOfGroups():
             m = g.getMemberByIdRef(self.meta_id)
             if m:
-                return m.getIdRef()
+                return g.getName()
 
         return ""
 

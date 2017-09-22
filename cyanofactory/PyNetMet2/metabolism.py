@@ -543,7 +543,10 @@ class Metabolism(object):
         self.obj = list(filter(lambda x: x[0] != name, self.obj))
         self.design_obj = list(filter(lambda x: x[0] != name, self.obj))
 
-        self._sbml.removeReaction(name)
+        reac = self._sbml.getReaction(name)
+        reac.removeFromParentAndDelete()
+
+        self.calcs()
 
     def has_reaction(self, name):
         return self.get_reaction(name) is not None
@@ -558,10 +561,12 @@ class Metabolism(object):
         if re.match(r"(^\+ | \+ )", met_to):
             raise ValueError("Lonely + only allowed at end of name")
 
-        if not self.has_metabolite(met_from):
+        species_from = self._sbml.getSpecies(met_from)
+        if not species_from:
             raise ValueError("Metabolite not in model: " + met_from)
 
-        if self.has_metabolite(met_to):
+        species_to = self._sbml.getSpecies(met_to)
+        if species_to:
             raise ValueError("Metabolite already in model: " + met_to)
 
         for reaction in self.enzymes:
@@ -577,6 +582,9 @@ class Metabolism(object):
                 if line[0] != "#":
                     if line == met_from:
                         self.external[i] = met_to
+
+        species_from.name = met_to
+        species_from.id = create_sid(id)
 
         self.calcs()
 
@@ -598,28 +606,29 @@ class Metabolism(object):
         self.calcs()
 
     def remove_metabolite(self, name):
-        if not self.has_metabolite(name):
+        met = self._sbml.getSpecies(name)
+        if not met:
             raise ValueError("Metabolite not in model: " + name)
 
-        self._sbml.removeSpecies(name)
+        met.removeFromParentAndDelete()
+
+        self.calcs()
 
     def make_metabolite_external(self, name):
-        if not self.has_metabolite(name):
+        species = self._sbml.getSpecies(name)
+        if not species:
             raise ValueError("Metabolite not in model: " + name)
 
-        species = self._sbml.getSpecies(name)
-        if species:
-            species.setBoundaryCondition(True)
+        species.setBoundaryCondition(True)
 
         self.calcs()
 
     def make_metabolite_internal(self, name):
-        if not self.has_metabolite(name):
+        species = self._sbml.getSpecies(name)
+        if not species:
             raise ValueError("Metabolite not in model: " + name)
 
-        species = self._sbml.getSpecies(name)
-        if species:
-            species.setBoundaryCondition(False)
+        species.setBoundaryCondition(False)
 
         self.calcs()
 
@@ -778,6 +787,9 @@ class Metabolism(object):
         s = writer.writeSBMLToString(self._doc)
         f.write(s)
 
+    def write_bioopt(self, fileout="model.txt"):
+        self.dump(fileout)
+
     def dump(self, fileout="model.txt", filetype="opt", printgenes=False, \
              dic_genes={}, alllimits=False, allobjs=False):
         """
@@ -791,14 +803,23 @@ class Metabolism(object):
 
         if filetype == "opt":
             print("-REACTIONS", file=fil)
+
+            self.pathways = {}
+
+            for reac in self.enzymes:
+                if not reac.pathway in self.pathways:
+                    self.pathnames.append(reac.pathway)
+                    self.pathways[reac.pathway] = []
+                self.pathways[reac.pathway].append(reac)
+
             for ii, pathname in enumerate(self.pathnames):
                 if pathname == "_TRANSPORT_":
                     continue
                 print("", file=fil)
                 if pathname is not None:
                     print("# " + pathname, file=fil)
-                for reac in self.pathways[ii]:
-                    fil.write(str(self.enzymes[reac]))
+                for reac in self.pathways[pathname]:
+                    fil.write(str(reac))
                     fil.write("\n")
             print("", file=fil)
             print("-CONSTRAINTS", file=fil)
@@ -813,9 +834,9 @@ class Metabolism(object):
             exts = set(self.external) | set(self.external_in)
             exts = exts|set(self.external_out)
             exts = list(exts)
-            exts.sort()
+            #exts.sort()
             for ext in exts:
-                print(ext, file=fil)
+                print(ext.name, file=fil)
 
             if self.obj:
                 print("", file=fil)
