@@ -378,8 +378,10 @@ def export(request, pk):
 
     ss = StringIO()
 
-    # TODO bioopt
-    org.write_sbml(ss)
+    if form=="sbml":
+        org.write_sbml(ss)
+    elif form=="bioopt":
+        org.write_bioopt(ss)
 
     #org.to_model().dump(fileout=ss, filetype="opt" if form == "bioopt" else "sbml")
 
@@ -433,15 +435,16 @@ def save(request, pk):
         changes = compress_command_list(changes)
         apply_commandlist(org, changes)
 
-        #if objectives:
-        #    org.objectives = []
-        #    for obj in objectives:
-        #        if len(obj["name"]) > 0:
-        #            obj_reac = org.get_reaction(obj["name"])
-        #            if obj_reac is None:
-        #                raise BadRequest("Objective not in model: " + obj["name"])
+        if objectives:
+            org.objectives = []
+            for obj in objectives:
+                if len(obj["name"]) > 0:
+                    obj_reac = org.get_reaction(obj["name"])
+                    if obj_reac is None:
+                        raise BadRequest("Objective not in model: " + obj["name"])
 
-        #            org.objectives.append(JsonModel.Objective(**obj))
+                    org.obj = []
+                    org.obj.append([obj_reac.id, "1" if obj["maximize"] else "-1"])
     except ValueError as e:
         raise BadRequest("Model error: " + str(e))
 

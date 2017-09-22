@@ -1697,7 +1697,7 @@ Released under the MIT license
                 command_list.push({
                     "type": "metabolite",
                     "op": "delete",
-                    "name": m.name,
+                    "id": m.id,
                     "object": {}
                 });
             });
@@ -1761,7 +1761,7 @@ Released under the MIT license
             command_list.push({
                 "op": "delete",
                 "type": "reaction",
-	            "name": reaction.name,
+	            "id": reaction.id,
                 "object": {}
             });
 
@@ -1775,7 +1775,7 @@ Released under the MIT license
                 command_list.push({
                     "type": "metabolite",
                     "op": "delete",
-                    "name": m.name,
+                    "id": m.id,
                     "object": {}
                 });
             });

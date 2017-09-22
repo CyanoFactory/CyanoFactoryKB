@@ -88,11 +88,14 @@ def apply_commandlist(model, commandlist):
                 if enzyme is None:
                     raise ValueError("Reaction not in model: " + name)
 
-                model.remove_reaction(enzyme.name)
+                idd = enzyme.id
+                model.remove_reaction(idd)
+                continue
             else:
                 raise ValueError("Invalid operation " + op)
 
         elif typ == "metabolite":
+            print("met")
             if op in ["add", "edit"] and "id" not in obj:
                 raise ValueError("Bad command " + str(command))
 
@@ -110,6 +113,7 @@ def apply_commandlist(model, commandlist):
                 if name != obj["name"]:
                     model.rename_metabolite(name, obj["name"])
             elif op == "delete":
+                print("del")
                 model.remove_metabolite(name)
             else:
                 raise ValueError("Invalid operation " + op)
@@ -260,7 +264,7 @@ def calc_reactions(org, fluxResults):
         if not enzyme.id.endswith("_transp"):
             nodecounter += 1
             nodeDic[enzyme.id] = nodecounter
-            if enzyme.name == objective:
+            if enzyme.id == objective:
                 graph.add_node(nodeDic[enzyme.id])
 
             for substrate in enzyme.substrates:
@@ -270,7 +274,7 @@ def calc_reactions(org, fluxResults):
                     attr = {"label": substrate, "shape": "oval", "color": str((nodecounter % 8)+1)}
                     graph.add_node(nodeDic[substrate], **attr)
 
-                if enzyme.name == objective:
+                if enzyme.id == objective:
                     graph.add_nodes_from([(nodeDic[substrate], {"shape":"box"})])
 
             for product in enzyme.products:
@@ -280,7 +284,7 @@ def calc_reactions(org, fluxResults):
                     attr = {"label": product, "shape": "oval", "color": str((nodecounter % 8)+1)}
                     graph.add_node(nodeDic[product], **attr)
 
-                if enzyme.name == objective:
+                if enzyme.id == objective:
                     graph.add_nodes_from([(nodeDic[product], {"shape":"box"})])
 
             # Check if enzyme is objective
@@ -302,16 +306,16 @@ def calc_reactions(org, fluxResults):
 
                     attr = {"color": color, "penwidth": value, "label": u"{} ({})".format(enzyme.name, flux), "object": {"name":enzyme.name,"id":enzyme.id}}
 
-                    if enzyme.name == objective:
+                    if enzyme.id == objective:
                         attr["style"] = "dashed"
 
                     graph.add_edge(nodeDic[substrate], nodeDic[product], attr)
 
-                    if enzyme.name == objective:
-                        graph.add_edge(nodeDic[substrate], nodeDic[enzyme.name])
+                    if enzyme.id == objective:
+                        graph.add_edge(nodeDic[substrate], nodeDic[enzyme.id])
                         graph.add_edge(nodeDic[enzyme.id], nodeDic[product])
 
                     if enzyme.reversible:
-                        graph.add_edge(nodeDic[product], nodeDic[substrate], label=enzyme.name, object={"name":enzyme.name,"id":enzyme.id})
+                        graph.add_edge(nodeDic[product], nodeDic[substrate], label=enzyme.id, object={"name":enzyme.name,"id":enzyme.id})
 
     return graph, nodeDic
