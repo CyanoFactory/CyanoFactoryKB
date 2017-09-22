@@ -36,19 +36,19 @@ class Objective(object):
 
     @property
     def coefficient(self):
-        return self._sbml.getListOfFluxObjectives(0).getCoefficient()
+        return self._sbml.getFluxObjective(0).getCoefficient()
 
     @coefficient.setter
     def coefficient(self, val):
-        self._sbml.getListOfFluxObjectives(0).setCoefficient(val)
+        self._sbml.getFluxObjective(0).setCoefficient(val)
 
     @property
     def reaction(self):
-        return self._sbml.getListOfFluxObjectives(0).getReaction()
+        return self._sbml.getFluxObjective(0).getReaction()
 
     @reaction.setter
     def reaction(self, val):
-        self._sbml.getListOfFluxObjectives(0).setReaction(val)
+        self._sbml.getFluxObjective(0).setReaction(val)
 
     def __getitem__(self, key):
         if key != 0:
