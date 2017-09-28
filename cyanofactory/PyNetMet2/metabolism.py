@@ -51,6 +51,7 @@ class Metabolism(object):
         self.metabolites = []
         self.obj = None
         self.design_obj = []
+        self.metabolite_mapping = {}
 
         if fromfile:
             if filetype == "auto":
@@ -397,6 +398,11 @@ class Metabolism(object):
         self.reacs_per_met = reacs_per_met
         self._net = None
 
+        self.metabolite_mapping = {}
+
+        for m in self.metabolites:
+            self.metabolite_mapping[m.id] = m
+
         # Check for duplicated enzyme names and rename
         ##non_uniq_run = False
         ##non_uniq = filter(lambda x: self.has_reaction(x), self.mets)
@@ -588,8 +594,11 @@ class Metabolism(object):
 
         self.calcs()
 
+    def get_metabolite(self, name):
+        return self.metabolite_mapping.get(name)
+
     def has_metabolite(self, name):
-        return name in self.dic_mets
+        return name in self.metabolite_mapping
 
     def add_metabolite(self, name, external):
         if self.has_metabolite(name):
@@ -837,7 +846,7 @@ class Metabolism(object):
             #exts.sort()
             for ext in exts:
                 print(ext.name, file=fil)
-
+# GRAPH IST BUGGY + OBJECTIVE LOAD/SAVE
             if self.obj:
                 print("", file=fil)
                 print("-OBJ", file=fil)

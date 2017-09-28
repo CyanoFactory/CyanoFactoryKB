@@ -161,6 +161,15 @@ Enzyme.indexByName = function(value) {
     return -1;
 };
 
+Enzyme.instanceById = function(value) {
+    for (var index = 0; index < Enzyme.enzymes.length; ++index) {
+        if (Enzyme.enzymes[index].id == value) {
+            return Enzyme.enzymes[index];
+        }
+    }
+    return undefined;
+};
+
 Enzyme.getPathways = function() {
     var paths = Enzyme.enzymes.map(function(x) {
         return x.pathway;

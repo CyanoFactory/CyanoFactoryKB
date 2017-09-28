@@ -804,7 +804,7 @@ Released under the MIT license
                 for (var key in last_sim_flux[idx][1]) {
                     if (last_sim_flux[idx][1].hasOwnProperty(key)) {
                         if (key.indexOf("_transp") == -1)
-                        datatable_flux.row.add([key, last_sim_flux[idx][1][key]]);
+                        datatable_flux.row.add([Enzyme.instanceById(key).name, last_sim_flux[idx][1][key]]);
                     }
                 }
 
@@ -853,7 +853,7 @@ Released under the MIT license
                     for (var key in x["flux"]) {
                         if (x["flux"].hasOwnProperty(key)) {
                             if (key.indexOf("_transp") == -1)
-                            datatable_flux.row.add([key, x["flux"][key]]);
+                            datatable_flux.row.add([Enzyme.instanceById(key).name, x["flux"][key]]);
                         }
                     }
 
@@ -1799,12 +1799,7 @@ Released under the MIT license
             sortField: "name",
             searchField: ["name"],
             onChange: function(value) {
-                /*var idx = Enzyme.indexById(value);
-                if (idx >= 0) {
-                    design_objective = Enzyme.enzymes[idx];
-                } else {
-                    design_objective = undefined;
-                }*/
+                design_objective = Enzyme.instanceById(value);
             }
         };
 

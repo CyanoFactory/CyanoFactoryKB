@@ -216,7 +216,7 @@ def simulate(request, pk):
             all_edges = map(lambda x: full_eg.get_edge_data(*x)["object"]["id"], full_eg.edges())
             # Get fluxes of "edges"
             flux = []
-            for reac in all_edges:
+            for reac in set(all_edges):
                 flux.append([reac, dflux[reac]])
             flux = sorted(flux, key=lambda x: -x[1])
             display = list(map(lambda x: x[0], flux[:30]))
