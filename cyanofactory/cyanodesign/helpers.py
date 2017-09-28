@@ -95,7 +95,6 @@ def apply_commandlist(model, commandlist):
                 raise ValueError("Invalid operation " + op)
 
         elif typ == "metabolite":
-            print("met")
             if op in ["add", "edit"] and "id" not in obj:
                 raise ValueError("Bad command " + str(command))
 
@@ -113,7 +112,6 @@ def apply_commandlist(model, commandlist):
                 if name != obj["name"]:
                     model.rename_metabolite(name, obj["name"])
             elif op == "delete":
-                print("del")
                 model.remove_metabolite(name)
             else:
                 raise ValueError("Invalid operation " + op)
@@ -217,7 +215,10 @@ def get_selected_reaction(jsonGraph, nodeDic, reacIDs, org):
     met_ids = list(map(lambda x: nodeDic[x], metabolites))
     g = json_graph.node_link_graph(jsonGraph)
 
-    g.remove_edges_from(list(filter(lambda x: g.get_edge_data(*x)["object"]["name"] not in reacIDs, g.edges(met_ids))))
+    def l(x):
+        return g.get_edge_data(*x)["object"]["id"] not in reacIDs
+
+    g.remove_edges_from(list(filter(l, g.edges(met_ids))))
 
     # Get products/substrates directly connected to filter
     #reacIDs += flatten(g.in_edges(reacIDs)) + flatten(g.out_edges(reacIDs))
@@ -271,7 +272,7 @@ def calc_reactions(org, fluxResults):
                 nodecounter += 1
                 if substrate not in nodeDic:
                     nodeDic[substrate] = nodecounter
-                    attr = {"label": substrate, "shape": "oval", "color": str((nodecounter % 8)+1)}
+                    attr = {"label": org.get_metabolite(substrate).name, "shape": "oval", "color": str((nodecounter % 8)+1)}
                     graph.add_node(nodeDic[substrate], **attr)
 
                 if enzyme.id == objective:
@@ -281,7 +282,7 @@ def calc_reactions(org, fluxResults):
                 nodecounter += 1
                 if product not in nodeDic:
                     nodeDic[product] = nodecounter
-                    attr = {"label": product, "shape": "oval", "color": str((nodecounter % 8)+1)}
+                    attr = {"label": org.get_metabolite(product).name, "shape": "oval", "color": str((nodecounter % 8)+1)}
                     graph.add_node(nodeDic[product], **attr)
 
                 if enzyme.id == objective:

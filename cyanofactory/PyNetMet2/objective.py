@@ -51,10 +51,10 @@ class Objective(object):
         self._sbml.getFluxObjective(0).setReaction(val)
 
     def __getitem__(self, key):
-        if key != 0:
+        if key != 0 and key != 1:
             raise ValueError("bad index")
 
-        return [self.reaction, '1' if self.type == "maximize" else '-1']
+        return [self.reaction, '1' if self.type == "maximize" else '-1'][key]
 
     def __setitem__(self, key, value):
         if key != 0:

@@ -297,7 +297,6 @@ class Enzyme(object):
             ub_changed = True
 
         if not (lb_changed or ub_changed):
-            print(lb_changed, ub_changed, self.id, self.reversible)
             if len(self.substrates) == 0 and self.reversible:
                 return (None, None)
             elif len(self.substrates) == 0 and not self.reversible:

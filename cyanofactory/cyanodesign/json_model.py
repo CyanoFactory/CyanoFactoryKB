@@ -191,23 +191,23 @@ class JsonModel(object):
                                      external=metabolite.external)
             )
 
-        #for obj in model.obj:
-        #    try:
-        #        this.objectives.append(
-        #            JsonModel.Objective(name=obj[0],
-        #                                maximize=int(float(obj[1])) == 1)
-        #        )
-        #    except ValueError:
-        #        raise ValueError("Bad objective")
+        for obj in model.obj:
+            try:
+                this.objectives.append(
+                    JsonModel.Objective(name=obj[0],
+                                        maximize=int(float(obj[1])) == 1)
+                )
+            except ValueError:
+                raise ValueError("Bad objective")
 
-        #for obj in model.design_obj:
-        #    try:
-        #        this.design_objectives.append(
-        #            JsonModel.Objective(name=obj[0],
-        #                                maximize=int(float(obj[1])) == 1)
-        #        )
-        #    except ValueError:
-        #        raise ValueError("Bad objective")
+        for obj in model.design_obj:
+            try:
+                this.design_objectives.append(
+                    JsonModel.Objective(name=obj[0],
+                                        maximize=int(float(obj[1])) == 1)
+                )
+            except ValueError:
+                raise ValueError("Bad objective")
 
         return this
 
@@ -233,7 +233,6 @@ class JsonModel(object):
             reactions.append(enz)
 
             if reac.constraints:
-                print(reac.constraints)
                 enz.constraint = (float(reac.constraints[0]), float(reac.constraints[1]))
 
         for metabolite in self.metabolites:
