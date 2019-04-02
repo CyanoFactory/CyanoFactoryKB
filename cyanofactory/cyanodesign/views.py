@@ -21,7 +21,6 @@ from cyano.models import UserProfile
 from cyanodesign.forms import UploadModelForm, ModelFromTemplateForm, SaveModelAsForm, SaveModelForm
 from cyanodesign.helpers import model_from_string, apply_commandlist, calc_reactions, get_selected_reaction, \
     compress_command_list
-from cyanodesign.json_model import JsonModel
 from metabolic_model.sbml_xml_generator import SbmlXMLGenerator
 from .models import DesignModel, Revision, DesignTemplate
 import networkx as nx

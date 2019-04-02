@@ -7,11 +7,7 @@ Released under the MIT license
 from collections import OrderedDict
 import math
 from networkx.readwrite import json_graph
-from PyNetMet2.enzyme import Enzyme
-from PyNetMet2.metabolism import Metabolism
 from networkx import DiGraph
-from cyanodesign.json_model import JsonModel
-from PyNetMet2.util import create_sid
 
 def apply_commandlist(model, commandlist):
     """

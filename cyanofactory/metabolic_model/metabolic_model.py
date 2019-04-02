@@ -7,7 +7,7 @@ Released under the MIT license
 
 import json
 from .sbml_json_generator import SbmlJsonGenerator
-
+from typing import List
 
 class ElementBase(object):
     def __init__(self):

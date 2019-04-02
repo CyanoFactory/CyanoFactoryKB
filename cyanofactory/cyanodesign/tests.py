@@ -1,6 +1,4 @@
 import json
-from django.core.exceptions import ObjectDoesNotExist
-from PyNetMet2.metabolism import Metabolism
 from cyano.tests import CyanoBaseTest
 from cyanodesign.json_model import JsonModel
 from cyanodesign.models import DesignTemplate, DesignModel
