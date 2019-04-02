@@ -24,7 +24,7 @@ Released under the MIT license
 <script src="{% get_static_prefix %}cyanodesign/js/c3.js"></script>
 <script async src="{% get_static_prefix %}cyanodesign/js/viz.js"></script>
 <script type="text/javascript" src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
-<script src="{% get_static_prefix %}cyanodesign/js/enzyme.js"></script>
+<script src="{% get_static_prefix %}cyanodesign/js/metabolic_model.js"></script>
 <script src="{% get_static_prefix %}cyanodesign/js/mba_chart.js"></script>
 <script type="text/javascript">
     "use strict";
@@ -54,12 +54,12 @@ Released under the MIT license
     var last_symtype;
     var last_sim_flux;
 
-    Enzyme.prototype.invalidate = function() {
+    /*Enzyme.prototype.invalidate = function() {
         this.getMetabolites().forEach(function (obj) {
-            datatable_metabolites.row(Metabolite.metabolites.indexOf(obj)).invalidate();
+            datatable_metabolites.row(MetabolicModel.model.metabolites.indexOf(obj)).invalidate();
         });
 
-        datatable_enzymes.row(Enzyme.enzymes.indexOf(this)).invalidate();
+        datatable_enzymes.row(MetabolicModel.model.reactions.indexOf(this)).invalidate();
     };
 
     Enzyme.prototype.removeFromList = function() {
@@ -71,10 +71,10 @@ Released under the MIT license
 
     Metabolite.prototype.invalidate = function() {
         this.getEnzymes().forEach(function (obj) {
-            datatable_enzymes.row(Enzyme.enzymes.indexOf(obj)).invalidate();
+            datatable_enzymes.row(MetabolicModel.model.reactions.indexOf(obj)).invalidate();
         });
 
-        datatable_metabolites.row(Metabolite.metabolites.indexOf(this)).invalidate();
+        datatable_metabolites.row(MetabolicModel.model.metabolites.indexOf(this)).invalidate();
     };
 
     Metabolite.prototype.removeFromList = function() {
@@ -82,11 +82,11 @@ Released under the MIT license
         datatable_metabolites.row(function(idx, data, node) {
             return data.name == that.name;
         }).remove();
-    };
+    };*/
 
     var reaction_filter = [
+        function(e) { return e.enabled },
         function(e) { return !e.disabled },
-        function(e) { return e.disabled },
         function(e) { return e.isConstrained() },
         function(e) { return !e.isConstrained() },
         function(e) { return e.reversible },
@@ -94,8 +94,8 @@ Released under the MIT license
     ];
 
     var metabolite_filter = [
-        function(e) { return !e.external },
-        function(e) { return e.external }
+        function(e) { return !e.isExternal() },
+        function(e) { return e.isExternal() }
     ];
 
     function notifyInfo(text) {
@@ -151,7 +151,7 @@ Released under the MIT license
                     render: function(data, type, row, meta) {
                         var e = $("<span>");
 
-                        if (data.disabled) {
+                        if (!data.enabled) {
                             e.addClass("cyano-enzyme-disabled");
                         }
 
@@ -184,7 +184,7 @@ Released under the MIT license
                     "orderable": false,
                     "searchable": false,
                     "data": function (rowData, type, set, meta) {
-                        return !rowData.disabled;
+                        return rowData.enabled;
                     },
                     render: function(data, type, row, meta) {
                         if (type === 'copy') {
@@ -214,7 +214,8 @@ Released under the MIT license
                     "visible": false,
                     "orderable": true,
                     "data": function (rowData, type, set, meta) {
-                        return rowData.pathway.length == 0 ? "No Pathway" : rowData.pathway;
+                        return "No Pathway";
+                        // FIXME return rowData.pathway.length == 0 ? "No Pathway" : rowData.pathway;
                     }
                 }
             ],
@@ -1124,19 +1125,19 @@ Released under the MIT license
         }
 
         function getEnzymeByName(name) {
-            return Enzyme.enzymes.find(function(obj) {
+            return MetabolicModel.model.reactions.find(function(obj) {
                 return obj.name == name;
             });
         }
 
         function updateEnzymeList() {
             datatable_enzymes.clear();
-            datatable_enzymes.rows.add(Enzyme.enzymes);
+            datatable_enzymes.rows.add(MetabolicModel.model.reactions);
             datatable_enzymes.draw();
 
             var old_design_objective = design_objective;
 
-            Enzyme.enzymes.forEach(function(item) {
+            MetabolicModel.model.reactions.forEach(function(item) {
                 cyano_design_objective_select[0].selectize.addOption(item);
                 cyano_design_design_objective_select[0].selectize.addOption(item);
                 design_objective_visible_combobox[0].selectize.addOption(item);
@@ -1155,7 +1156,7 @@ Released under the MIT license
 
         function updateMetabolitesList() {
             datatable_metabolites.clear();
-            datatable_metabolites.rows.add(Metabolite.metabolites);
+            datatable_metabolites.rows.add(MetabolicModel.model.metabolites);
             datatable_metabolites.draw();
         }
 
@@ -1192,7 +1193,7 @@ Released under the MIT license
             products.clearOptions();
             pathway.clearOptions();
 
-            Metabolite.metabolites.forEach(function(obj) {
+            MetabolicModel.model.metabolites.forEach(function(obj) {
                 substrates.addOption({"id": obj.name, item: {obj: obj, amount: 1}});
                 products.addOption({"id": obj.name, item: {obj: obj, amount: 1}});
             });
@@ -1423,8 +1424,8 @@ Released under the MIT license
             dialog_enzyme.find("div").removeClass("has-error");
             dialog_enzyme.find(".help-block").remove();
 
-            for (var i = 0; i < Enzyme.enzymes.length; ++i) {
-                var enz = Enzyme.enzymes[i];
+            for (var i = 0; i < MetabolicModel.model.reactions.length; ++i) {
+                var enz = MetabolicModel.model.reactions[i];
 
                 if (enz === dialog_enzyme.data("object")) {
                     continue;
@@ -1481,7 +1482,7 @@ Released under the MIT license
                 };
 
                 if (create_new_enzyme) {
-                    Enzyme.enzymes.push(reaction);
+                    MetabolicModel.model.reactions.push(reaction);
 
                     datatable_enzymes.row.add(reaction);
                     datatable_enzymes.sort();
@@ -1522,7 +1523,7 @@ Released under the MIT license
 
             if (valid) {
                 var metabolite = new Metabolite(name.val(), name.val(), external.prop("checked"));
-                Metabolite.metabolites.push(metabolite);
+                MetabolicModel.model.metabolites.push(metabolite);
 
                 command_list.push({
                     "type": "metabolite",
@@ -1555,7 +1556,7 @@ Released under the MIT license
             var met_idx = Metabolite.indexByName(name.val());
 
             if (met_idx != -1) {
-                valid &= checkBool(name, Metabolite.metabolites[met_idx] === dialog_metabolite_edit.data("object"), "Name already in use");
+                valid &= checkBool(name, MetabolicModel.model.metabolites[met_idx] === dialog_metabolite_edit.data("object"), "Name already in use");
             }
 
             if (valid) {
@@ -1600,7 +1601,7 @@ Released under the MIT license
         table_enzymes.on("click", ".cyano-metabolite", function(event) {
             var met = Metabolite.indexByName($(this).text());
             if (met >= 0) {
-                showEditMetaboliteDialog(Metabolite.metabolites[met]);
+                showEditMetaboliteDialog(MetabolicModel.model.metabolites[met]);
             }
         });
 
@@ -1654,7 +1655,7 @@ Released under the MIT license
         table_metabolites.on("click", ".cyano-enzyme", function(event) {
             var enzyme = Enzyme.indexByName($(this).text());
             if (enzyme >= 0) {
-                showEditEnzymeDialog(Enzyme.enzymes[enzyme], false);
+                showEditEnzymeDialog(MetabolicModel.model.reactions[enzyme], false);
             }
         });
 
@@ -1667,7 +1668,7 @@ Released under the MIT license
                 if (enzyme == -1) {
                     var text = "Error!";
                 } else {
-                    var text = Enzyme.enzymes[enzyme].reactionToString();
+                    var text = MetabolicModel.model.reactions[enzyme].reactionToString();
                 }
 
                 $(this).prop("title", text);
@@ -1688,7 +1689,7 @@ Released under the MIT license
         });
 
         $("#dialog-delete-metabolites").find(".btn-primary").click(function() {
-            Metabolite.metabolites.filter(function(m) {
+            MetabolicModel.model.metabolites.filter(function(m) {
                 return m.isUnused();
             }).forEach(function(m) {
                 m.remove();
@@ -1831,8 +1832,7 @@ Released under the MIT license
                 waitIndicator.show($("#content"));
             }
         }).done(function(x) {
-            Metabolite.fromList(x["listOfMetabolites"]);
-            Enzyme.fromList(x["listOfReactions"]);
+            MetabolicModel.model.fromJson(x);
 
             updateEnzymeList();
             updateMetabolitesList();
@@ -1862,7 +1862,7 @@ Released under the MIT license
         $("#visual_fba").on("click", "g.node", function() {
             var idx = Metabolite.indexByName($(this).children("text").text());
             if (!isDragging & idx > -1) {
-                showEditMetaboliteDialog(Metabolite.metabolites[idx]);
+                showEditMetaboliteDialog(MetabolicModel.model.metabolites[idx]);
             }
         });
 
@@ -1870,7 +1870,7 @@ Released under the MIT license
             // remove flux value
             var idx = Enzyme.indexByName($(this).text().replace(/ \(-?[0-9]+(\.[0-9]+)?\)$/, ""));
             if (!isDragging & idx > -1) {
-                showEditEnzymeDialog(Enzyme.enzymes[idx], false);
+                showEditEnzymeDialog(MetabolicModel.model.reactions[idx], false);
             }
         });
 
@@ -1970,12 +1970,12 @@ Released under the MIT license
             $("#enzyme-bulkadd-preview").empty();
             lines.forEach(function(line) {
                 try {
-                    var mlen = Metabolite.metabolites.length;
+                    var mlen = MetabolicModel.model.metabolites.length;
                     var reaction = Enzyme.fromBioOptString(line);
 
                     Metabolite.fromReaction(reaction);
-                    if (Metabolite.metabolites.length > mlen) {
-                        Metabolite.metabolites.slice(mlen).forEach(function (metabolite) {
+                    if (MetabolicModel.model.metabolites.length > mlen) {
+                        MetabolicModel.model.metabolites.slice(mlen).forEach(function (metabolite) {
                             command_list.push({
                                 "type": "metabolite",
                                 "op": "add",
@@ -2001,7 +2001,7 @@ Released under the MIT license
 
                     if (Enzyme.indexByName(reaction.name) != -1) {
                         // Reaction exists
-                        var orig_enzyme = Enzyme.enzymes[Enzyme.indexByName(reaction.name)];
+                        var orig_enzyme = MetabolicModel.model.reactions[Enzyme.indexByName(reaction.name)];
 
                         orig_enzyme.name = reaction.name;
                         orig_enzyme.substrates = reaction.substrates;
@@ -2011,7 +2011,7 @@ Released under the MIT license
                         command["op"] = "edit";
                     } else {
 
-                        Enzyme.enzymes.push(reaction);
+                        MetabolicModel.model.reactions.push(reaction);
 
                         datatable_enzymes.row.add(reaction);
 
