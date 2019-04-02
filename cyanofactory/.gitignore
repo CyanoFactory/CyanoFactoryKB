@@ -8,3 +8,4 @@ xapian_index
 log/*
 
 /.idea
+__pycache__

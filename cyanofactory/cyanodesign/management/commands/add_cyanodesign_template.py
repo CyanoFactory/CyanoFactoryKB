@@ -10,37 +10,37 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
 from cyanodesign.models import DesignTemplate
 from cyanodesign.json_model import *
-from PyNetMet2.metabolism import Metabolism
 import os
+
+import metabolic_model.sbml_parser as sbml_parser
 
 class Command(BaseCommand):
     args = 'file'
     help = 'Add template model to CellDesign'
 
-    option_list = BaseCommand.option_list + (
-        make_option('--chromosome', '-c',
-                    action='store',
-                    dest='chromosome',
-                    default=False,
-                    help='Name of the Chromosome (or Plasmid) to assign the GenBank data to. Created if necessary.'),
-        make_option('--name', '-n',
+    def add_arguments(self, parser):
+        parser.add_argument('--name', '-n',
                     action='store',
                     dest='name',
                     default=False,
                     help='Human readable name of the species'),
-        make_option('--description', '-d',
+        parser.add_argument('--description', '-d',
                     action='store',
                     dest='description',
                     default='',
                     help='Description of the model')
-    )
+        parser.add_argument('--file', '-f',
+                    action='store',
+                    dest='file',
+                    default='')
 
     def handle(self, *args, **options):
-        if len(args) > 0:
-            m = Metabolism(args[0])
-            j = JsonModel.from_model(m)
-        else:
-            return
+        #if len(args) > 0:
+        sbml_handler = sbml_parser.SbmlHandler()
+        sbml_parser.push_handler(sbml_handler)
+        sbml_parser.parser.parse(options["file"])
+        #else:
+        #    return
         
         try:
             dt = DesignTemplate.objects.get(name=options["name"])
@@ -50,6 +50,6 @@ class Command(BaseCommand):
             print("Creating new template " + dt.name)
 
         dt.description = options["description"]
-        dt.filename = os.path.basename(args[0])
-        dt.content = j.to_json()
+        dt.filename = os.path.basename(options["file"])
+        dt.content = sbml_handler.model.to_json()
         dt.save()
