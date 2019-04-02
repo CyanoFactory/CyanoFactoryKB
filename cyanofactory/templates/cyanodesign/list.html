@@ -158,6 +158,7 @@ $(document).ready(function() {
                     <ul class="dropdown-menu" role="menu">
                     <li><a id="export-bioopt" href="{% url "cyanodesign:export" pk=object.pk %}?format=bioopt">As BioOpt file</a></li>
                     <li><a id="export-sbml" href="{% url "cyanodesign:export" pk=object.pk %}?format=sbml">As SBML file</a></li>
+                    <li><a id="export-json" href="{% url "cyanodesign:export" pk=object.pk %}?format=json">As WeDesign JSON file</a></li>
                     </ul>
                 </div>
                 {% if request.user.is_authenticated %}

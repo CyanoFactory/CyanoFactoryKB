@@ -9,7 +9,6 @@ from optparse import make_option
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
 from cyanodesign.models import DesignTemplate
-from cyanodesign.json_model import *
 import os
 
 import metabolic_model.sbml_parser as sbml_parser

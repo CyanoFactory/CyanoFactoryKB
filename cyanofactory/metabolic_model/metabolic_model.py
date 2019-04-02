@@ -80,8 +80,8 @@ class ElementBase(object):
         if has_biol:
             writer.endPrefixMapping("bqbiol")
 
-    def to_json(self):
-        return json.dumps(self, cls=SbmlJsonGenerator)
+    def to_json(self, **kwargs):
+        return json.dumps(self, cls=SbmlJsonGenerator, **kwargs)
 
     @staticmethod
     def apply_by_id(lst, id, op):
@@ -260,6 +260,11 @@ class MetabolicModel(ElementBase):
 
     @staticmethod
     def from_json(j):
+        if "sbml" in j:
+            j = j["sbml"]
+        if "model" in j:
+            j = j["model"]
+
         obj = MetabolicModel()
         obj.read_attributes(j)
         obj.description = Description.from_json(j.get("annotation"))

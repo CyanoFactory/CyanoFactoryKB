@@ -1831,8 +1831,8 @@ Released under the MIT license
                 waitIndicator.show($("#content"));
             }
         }).done(function(x) {
-            Metabolite.fromList(x["metabolites"]);
-            Enzyme.fromList(x["reactions"]);
+            Metabolite.fromList(x["listOfMetabolites"]);
+            Enzyme.fromList(x["listOfReactions"]);
 
             updateEnzymeList();
             updateMetabolitesList();

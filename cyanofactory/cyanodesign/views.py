@@ -13,23 +13,24 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.transaction import atomic
 from django.http.response import HttpResponse, HttpResponseBadRequest
-from django.template.context import RequestContext
 from django.views.decorators.csrf import ensure_csrf_cookie
 from jsonview.decorators import json_view
-from cyano.decorators import ajax_required, permission_required, global_permission_required
-from PyNetMet2.metabolism import Metabolism
+from cyano.decorators import ajax_required, global_permission_required
 from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error, render_crispy_form
 from cyano.models import UserProfile
 from cyanodesign.forms import UploadModelForm, ModelFromTemplateForm, SaveModelAsForm, SaveModelForm
 from cyanodesign.helpers import model_from_string, apply_commandlist, calc_reactions, get_selected_reaction, \
     compress_command_list
 from cyanodesign.json_model import JsonModel
+from metabolic_model.sbml_xml_generator import SbmlXMLGenerator
 from .models import DesignModel, Revision, DesignTemplate
 import networkx as nx
 from networkx.readwrite import json_graph
 import pygraphviz
 import json
 from jsonview.exceptions import BadRequest
+import metabolic_model.sbml_parser as sbml_parser
+import metabolic_model.metabolic_model as metabolic_model
 
 @global_permission_required("access_cyanodesign")
 def index(request):
@@ -57,6 +58,10 @@ def design(request, pk):
     except ObjectDoesNotExist:
         return render_queryset_to_response_error(request, error=404, msg="Model not found")
 
+    if current.content != "":
+        return render_queryset_to_response_error(request, error=403, msg="Old model format is currently unsupported. "
+                                                                         "Please create a new model")
+
     try:
         revision = request.GET["revision"]
         try:
@@ -76,6 +81,7 @@ def design(request, pk):
 
     return render_queryset_to_response(request, template="cyanodesign/design.html", data=data)
 
+
 @ajax_required
 @global_permission_required("access_cyanodesign")
 @json_view
@@ -94,7 +100,7 @@ def get_reactions(request, pk):
     except KeyError:
         revision = item.get_latest_revision()
 
-    return JsonModel.from_sbml(revision.content).to_json()
+    return revision.sbml["sbml"]["model"]
 
 
 @global_permission_required("access_cyanodesign")
@@ -365,32 +371,46 @@ def simulate(request, pk):
 def export(request, pk):
     form = request.GET.get("format", "bioopt")
 
-    if form not in ["bioopt", "sbml"]:
+    if form not in ["bioopt", "sbml", "json"]:
         return HttpResponseBadRequest("Bad format")
 
     try:
         model = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
-        content = model.get_latest_revision().content
+        content = model.get_latest_revision().sbml
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
 
-    org = Metabolism(StringIO(content))
+    if form == "sbml":
+        xml_handle = StringIO()
+        writer = SbmlXMLGenerator(xml_handle, "utf-8")
 
-    ss = StringIO()
+        writer.startDocument()
+        metabolic_model.MetabolicModel.from_json(content).write_sbml(writer)
+        writer.endDocument()
 
-    if form=="sbml":
-        org.write_sbml(ss)
-    elif form=="bioopt":
-        org.write_bioopt(ss)
+        import xml.dom.minidom
+        dom = xml.dom.minidom.parseString(xml_handle.getvalue())
+        out = StringIO()
+        out.write(dom.toprettyxml())
+
+        export_data = out.getvalue()
+    elif form == "bioopt":
+        return HttpResponseBadRequest("TODO: Currently unsupported")
+    elif form == "json":
+        export_data = json.dumps(content, indent='\t')
 
     #org.to_model().dump(fileout=ss, filetype="opt" if form == "bioopt" else "sbml")
 
-    response = HttpResponse(
-        ss.getvalue(),
-        content_type="application/x-bioopt" if form=="bioopt" else "application/sbml+xml"
+    types = dict(
+        bioopt="application/x-bioopt",
+        sbml="application/sbml+xml",
+        json="application/json"
     )
 
-    ss.close()
+    response = HttpResponse(
+        export_data,
+        content_type=types[form]
+    )
 
     response['Content-Disposition'] = "attachment; filename=" + model.filename
 
@@ -515,7 +535,6 @@ def upload(request, pk):
             if form.is_valid():
                 name = form.cleaned_data.get('name')
 
-                #save to temporary file
                 freq = request.FILES['file']
                 filename = freq.name
 
@@ -528,11 +547,16 @@ def upload(request, pk):
                         form_html = render_crispy_form(form, context=request)
                         return {'success': False, 'form_html': form_html}
 
-                #try:
                 ss.seek(0)
-                model = Metabolism(ss, filename=freq.name)
+                sbml_handler = sbml_parser.SbmlHandler()
+                sbml_parser.push_handler(sbml_handler)
+                content = ss.getvalue()
+                # closes ss
+                sbml_parser.parser.parse(ss)
 
-                if len(model.enzymes) == 0 or len(model.mets) == 0:
+                model = sbml_handler.model
+
+                if len(model.reactions) == 0 or len(model.metabolites) == 0:
                     raise ValueError("Model is empty")
                 #except Exception as e:
                 #    form.add_error("file", "Not a valid model: " + str(e))
@@ -543,20 +567,13 @@ def upload(request, pk):
                     user=request.user.profile,
                     name=name,
                     filename=filename,
-                    content=ss.getvalue()
+                    content=content
                 )
-
-                #try:
-                #    jm = JsonModel.from_model(model).to_json()
-                #except ValueError:
-                #    return BadRequest(str(ValueError))
-
-                sio = StringIO()
-                model.write_sbml(fileout=sio)
 
                 Revision(
                     model=dm,
-                    content=sio.getvalue(),
+                    content="",
+                    sbml=model.to_json(),
                     reason="Initial version"
                 ).save()
 
@@ -584,7 +601,7 @@ def upload(request, pk):
 
                 Revision(
                     model=dm,
-                    content=template.content,
+                    sbml=template.content,
                     reason="Initial version"
                 ).save()
 
