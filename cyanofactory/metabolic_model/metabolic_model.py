@@ -176,6 +176,10 @@ class MetabolicModel(ElementBase):
         self.substance_units = ""
         self.time_units = False
 
+        self.lower_bound_ref = None
+        self.upper_bound_ref = None
+        self.zero_bound_ref = None
+
         super().__init__()
 
     @property
@@ -189,6 +193,10 @@ class MetabolicModel(ElementBase):
     @property
     def group(self):
         return LstOp(self.groups)
+
+    @property
+    def parameter(self):
+        return LstOp(self.parameters)
 
     def read_attributes(self, attrs):
         for k, v in attrs.items():
@@ -258,6 +266,40 @@ class MetabolicModel(ElementBase):
         writer.endPrefixMapping("fbc")
         writer.endPrefixMapping("")
 
+    def create_default_bounds(self):
+        self.lower_bound_ref = self.parameter.get(id="cobra_default_lb")
+        if self.lower_bound_ref is None:
+            p = Parameter()
+            p.id = "cobra_default_lb"
+            p.name = "cobra default - lb"
+            p.sbo_term = "SBO:0000626"
+            p.units = "mmol_per_gDW_per_hr"
+            p.value = -100000
+            self.lower_bound_ref = p
+            self.parameters.append(p)
+
+        self.upper_bound_ref = self.parameter.get(id="cobra_default_ub")
+        if self.upper_bound_ref is None:
+            p = Parameter()
+            p.id = "cobra_default_ub"
+            p.name = "cobra default - ub"
+            p.sbo_term = "SBO:0000626"
+            p.units = "mmol_per_gDW_per_hr"
+            p.value = 100000
+            self.upper_bound_ref = p
+            self.parameters.append(p)
+
+        self.zero_bound_ref = self.parameter.get(id="cobra_0_bound")
+        if self.zero_bound_ref is None:
+            p = Parameter()
+            p.id = "cobra_0_bound"
+            p.name = "cobra 0 - bound"
+            p.sbo_term = "SBO:0000625"
+            p.units = "mmol_per_gDW_per_hr"
+            p.value = 0
+            self.zero_bound_ref = p
+            self.parameters.append(p)
+
     @staticmethod
     def from_json(j):
         if "sbml" in j:
@@ -276,8 +318,121 @@ class MetabolicModel(ElementBase):
         ElementBase.list_parse(j, "listOfParameters", obj.parameters, Parameter)
         ElementBase.list_parse(j, "listOfReactions", obj.reactions, Reaction)
         ElementBase.list_parse(j, "listOfUnitDefinitions", obj.unit_definitions, UnitDefinition)
+
+        obj.create_default_bounds()
+        for reac in obj.reactions:
+            reac.update_bounds_from_parameters(obj)
+
         return obj
 
+    def fba(self, obj=None):
+        """
+        Simplex algorithm through glpk.
+        """
+        if obj is None:
+            raise ValueError("No objective specified")
+
+        # Create fake reactions for external metabolites
+        fba_reactions = list(filter(lambda x: x.enabled, self.reactions[:]))
+        for metabolite in filter(lambda x: x.is_external(), self.metabolites):
+            reaction = Reaction()
+            reaction.id = metabolite.id + "_transp"
+            reaction.name = metabolite.name + "_transp"
+            reaction.reversible = True
+            reaction.update_parameters_from_bounds(self)
+
+            ref = MetaboliteReference()
+            ref.id = metabolite.id
+            ref.stoichiometry = 1.0
+            reaction.products.append(ref)
+
+            fba_reactions.append(reaction)
+
+        # Calculate stoic
+        stoic = []
+        metabolite_ids = list(x.id for x in self.metabolites)
+
+        # FIXME MET INDEX
+        for i, reac in enumerate(fba_reactions):
+            for j, substrate in enumerate(reac.substrates):
+                mi = metabolite_ids.index(substrate.id)
+                stoic.append((mi, i, -substrate.stoichiometry))
+
+            for j, product in enumerate(reac.products):
+                mi = metabolite_ids.index(product.id)
+                stoic.append((mi, i, substrate.stoichiometry))
+
+        import glpk
+        #from scipy.optimize import linprog
+
+        lp = glpk.LPX()
+        lp.name = " FBA SOLUTION "
+        lp.rows.add(len(metabolite_ids))
+        lp.cols.add(len(fba_reactions))
+
+        for i, met in enumerate(metabolite_ids):
+            lp.rows[i].name = met
+
+        for i, reac in enumerate(fba_reactions):
+            lp.cols[i].name = reac.id
+
+        #constraints
+
+        for i, reac in enumerate(fba_reactions):
+            lp.cols[i].bounds = (reac.lower_bound, reac.upper_bound)
+            #print tuple(reac.constraint)
+
+        for n in range(len(metabolite_ids)):
+            lp.rows[n].bounds = (0., 0.)
+
+        ###### Objective
+        lista = [0. for ele in fba_reactions]
+
+        for i, reac in enumerate(fba_reactions):
+            if obj is reac:
+                lista[i] = 1.0
+
+        lstoic = list(map(lambda x: [0]*len(fba_reactions), [[]]*len(metabolite_ids)))
+
+        for i, reac in enumerate(fba_reactions):
+            for j, substrate in enumerate(reac.substrates):
+                mi = metabolite_ids.index(substrate.id)
+                lstoic[mi][i] = -substrate.stoichiometry
+
+            for j, product in enumerate(reac.products):
+                mi = metabolite_ids.index(product.id)
+                lstoic[mi][i] = -product.stoichiometry
+
+        #res = linprog(c=lista, A_ub=lstoic, bounds=[reac.constraint for reac in fba_reactions], options={"disp": True})
+        #print res
+
+        lp.obj[:] = lista[:]
+        lp.obj.maximize = True
+        ###### Matrix
+        lp.matrix = stoic
+        lp.simplex()
+
+        for flux, reac in zip(lp.cols, fba_reactions):
+            flux = flux.value
+
+            reac.flux = round(flux, 9)
+
+        if lp.status == "opt":
+            self.solution = "Optimal"
+        elif lp.status == "undef":
+            self.solution = "Undefined"
+        elif lp.status == "feas":
+            self.solution = "Maybe not optimal"
+        elif lp.status == "infeas" or lp.status == "nofeas":
+            self.solution = "Unfeasible"
+        elif lp.status == "unbnd":
+            self.solution = "Unbound (check constraints)"
+        else:
+            self.solution = "Unknown Error"
+
+        print(self.solution)
+        for reac in fba_reactions:
+            print("{}: {}".format(reac.id, reac.flux))
 
 # Single compartment in listOfCompartments
 class Compartment(ElementBase):
@@ -324,6 +479,9 @@ class Metabolite(ElementBase):
 
         super().__init__()
 
+    def is_external(self):
+        return self.compartment == "e"
+
     def read_attributes(self, attrs):
         for k, v in attrs.items():
             if k == "compartment":
@@ -365,8 +523,8 @@ class Metabolite(ElementBase):
 class Reaction(ElementBase):
     def __init__(self):
         self.metabolites = {}  # JSON?
-        self.lower_bound = -100000.0  # only JSON
-        self.upper_bound = 100000.0  # only JSON
+        self.lower_bound = None  # only JSON
+        self.upper_bound = None  # only JSON
         self.lower_bound_name = ""
         self.upper_bound_name = ""
         self.gene_reaction_rule = ""  # only JSON
@@ -379,6 +537,57 @@ class Reaction(ElementBase):
         self.enabled = True
 
         super().__init__()
+
+    def update_parameters_from_bounds(self, model: MetabolicModel):
+        if self.lower_bound is None or self.lower_bound == model.lower_bound_ref.value:
+            self.lower_bound_name = model.lower_bound_ref.id
+        elif self.lower_bound == 0:
+            self.lower_bound_name = model.zero_bound_ref.id
+        else:
+            p = model.parameter.get(id=self.id + "_lower_bound")
+            if p is None:
+                p = Parameter()
+                p.id = self.id + "_lower_bound"
+                p.name = self.name + " lower bound"
+                p.sbo_term = "SBO:0000625"
+                p.units = "mmol_per_gDW_per_hr"
+                model.parameters.append(p)
+            p.value = self.lower_bound
+            self.lower_bound_name = p.id
+
+        if self.upper_bound is None or self.upper_bound_name == model.upper_bound_ref.value:
+            self.upper_bound_name = model.upper_bound_ref.id
+        elif self.upper_bound == 0:
+            self.upper_bound_name = model.zero_bound_ref.id
+        else:
+            p = model.parameter.get(id=self.id + "_upper_bound")
+            if p is None:
+                p = Parameter()
+                p.id = self.id + "_upper_bound"
+                p.name = self.name + " upper bound"
+                p.sbo_term = "SBO:0000625"
+                p.units = "mmol_per_gDW_per_hr"
+                model.parameters.append(p)
+            p.value = self.upper_bound
+            self.upper_bound_name = p.id
+
+    def update_bounds_from_parameters(self, model):
+        if self.lower_bound_name == model.lower_bound_ref.id:
+            self.lower_bound = model.lower_bound_ref.value
+        elif self.lower_bound_name == model.zero_bound_ref.id:
+            self.lower_bound = 0
+        else:
+            p = model.parameter.get(id=self.id + "_lower_bound")
+            self.lower_bound = p.value
+
+        if self.upper_bound_name == model.upper_bound_ref.id:
+            self.upper_bound = model.upper_bound_ref.value
+        elif self.upper_bound_name == model.zero_bound_ref.id:
+            self.upper_bound = 0
+        else:
+            p = model.parameter.get(id=self.id + "_upper_bound")
+            self.upper_bound = p.value
+
 
     def read_attributes(self, attrs):
         for k, v in attrs.items():

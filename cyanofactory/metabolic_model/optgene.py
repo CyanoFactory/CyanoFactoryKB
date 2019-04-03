@@ -9,8 +9,8 @@ from collections import OrderedDict
 import re
 from typing import List
 
-import metabolic_model as mm
-
+from .metabolic_model import MetabolicModel, MetaboliteReference, Compartment, Reaction
+from .metabolic_model import Metabolite as mmMetabolite
 
 class OptGeneParser(object):
     """
@@ -464,7 +464,7 @@ class OptGeneParser(object):
 
     def parse(self):
         for line_no, line in enumerate(self._file, start=1):
-            line = line.decode("utf-8").strip()
+            line = line.strip()
             if len(line) == 0:
                 continue
 
@@ -653,6 +653,13 @@ class OptGeneParser(object):
             self.solution = "Unknown Error"
 
     @staticmethod
+    def create_sid(name):
+        name = re.sub('[^0-9a-zA-Z]+', '_', name)
+        if len(name) > 0 and name[0].isdigit():
+            name = "_" + name
+        return name
+
+    @staticmethod
     def from_model(model, include_compartment=True, use_name=True):
         optgene = OptGeneParser()
 
@@ -691,22 +698,46 @@ class OptGeneParser(object):
         return optgene
 
     def to_model(self):
-        model = mm.MetabolicModel()
+        model = MetabolicModel()
+        model.create_default_bounds()
 
         def component_builder(reac, stoic):
-            met_ref = mm.MetaboliteReference()
-            met_ref.id = reac
+            met_ref = MetaboliteReference()
+            met_ref.id = reac.name
             met_ref.stoichiometry = stoic
 
             return met_ref
 
-        for reaction in self.reactions:
-            model_reaction = mm.Reaction()
+        compartment = Compartment()
+        compartment.id = "c"
+        compartment.name = "Cytosol"
+        model.compartments.append(compartment)
 
+        compartment = Compartment()
+        compartment.id = "e"
+        compartment.name = "Extracellular"
+        model.compartments.append(compartment)
+
+        for reaction in self.reactions:
+            model_reaction = Reaction()
+
+            model_reaction.id = OptGeneParser.create_sid(reaction.name)
+            model_reaction.name = reaction.name
             model_reaction.substrates = list(map(lambda x: component_builder(*x), zip(reaction.reactants, reaction.reactants_stoic)))
             model_reaction.products = list(map(lambda x: component_builder(*x), zip(reaction.products, reaction.products_stoic)))
             model_reaction.reversible = reaction.reversible
+            model_reaction.lower_bound = reaction.constraint[0]
+            model_reaction.upper_bound = reaction.constraint[1]
+            model_reaction.update_parameters_from_bounds(model)
 
             model.reactions.append(model_reaction)
+
+        for metabolite in self.get_metabolites():
+            met = mmMetabolite()
+            met.id = OptGeneParser.create_sid(metabolite.name)
+            met.name = metabolite.name
+            met.compartment = "e" if metabolite.external else "c"
+
+            model.metabolites.append(met)
 
         return model
