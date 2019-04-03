@@ -156,6 +156,8 @@ var MetabolicModel;
             super(...arguments);
             this.substrates = [];
             this.products = [];
+            //gene_products;
+            this.enabled = true;
         }
         static fromBioOptString(bioopt_string) {
             var takeWhile = function (predicate, iterable, inclusive) {
@@ -303,7 +305,6 @@ var MetabolicModel;
             this.read_list(j["listOfReactants"], this.substrates, new ClassBuilder(MetaboliteReference));
             this.read_list(j["listOfProducts"], this.products, new ClassBuilder(MetaboliteReference));
         }
-        // todo: get bound from Parameter
         isConstrained() {
             return this.lower_bound != MetabolicModel.LOWER_BOUND_LIMIT && this.upper_bound != MetabolicModel.UPPER_BOUND_LIMIT;
         }
@@ -312,24 +313,41 @@ var MetabolicModel;
             this.upper_bound = MetabolicModel.UPPER_BOUND_LIMIT;
         }
         toHTML() {
-            let outer = document.createElement("div");
             let element = document.createElement("div");
             if (!this.enabled) {
                 element.classList.add("cyano-reaction-disabled");
             }
-            element.append(this.substrates.map(MetaboliteReference.compoundToHTML).join(" + "));
-            element.append(this.reversible ? " &harr; " : " &rarr; ");
-            element.append(this.products.map(MetaboliteReference.compoundToHTML).join(" + "));
-            element.append("</div>");
-            outer.append(element);
-            return outer.outerHTML;
+            for (let i = 0; i < this.substrates.length; ++i) {
+                element.appendChild(this.substrates[i].toHtml());
+                if (i != this.substrates.length - 1) {
+                    element.appendChild(document.createTextNode(" + "));
+                }
+            }
+            element.appendChild(document.createTextNode(this.reversible ? " ↔ " : " → "));
+            for (let i = 0; i < this.products.length; ++i) {
+                element.appendChild(this.products[i].toHtml());
+                if (i != this.products.length - 1) {
+                    element.appendChild(document.createTextNode(" + "));
+                }
+            }
+            return element;
         }
         ;
         reactionToString() {
             let element = "";
-            element = element.concat(this.substrates.map(MetaboliteReference.compoundToString).join(" + "));
+            for (let i = 0; i < this.substrates.length; ++i) {
+                element.concat(this.substrates[i].toString());
+                if (i != this.substrates.length - 1) {
+                    element.concat(" + ");
+                }
+            }
             element = element.concat(this.reversible ? " <-> " : " -> ");
-            element = element.concat(this.products.map(MetaboliteReference.compoundToString).join(" + "));
+            for (let i = 0; i < this.products.length; ++i) {
+                element.concat(this.products[i].toString());
+                if (i != this.products.length - 1) {
+                    element.concat(" + ");
+                }
+            }
             return element;
         }
         ;
@@ -435,22 +453,20 @@ var MetabolicModel;
         fromJson(j) {
             this.readAttributes(j);
         }
-        static compoundToHTML(compound) {
-            var amount = compound.stoichiometry + " ";
-            var inst = Helper.getById(compound.id, MetabolicModel.model.metabolites);
+        toHtml() {
+            var amount = this.stoichiometry + " ";
+            var inst = Helper.getById(this.id, MetabolicModel.model.metabolites);
             let span = document.createElement("span");
             span.classList.add("cyano-metabolite");
             span.append(amount + inst.name);
             if (inst.isExternal()) {
                 span.classList.add("cyano-external-metabolite");
             }
-            let p = document.createElement("p");
-            p.appendChild(span);
-            return p.outerHTML;
+            return span;
         }
         ;
-        static compoundToString(compound) {
-            return compound.stoichiometry + " " + compound.name;
+        toString() {
+            return this.stoichiometry + " " + this.name;
         }
         ;
     }

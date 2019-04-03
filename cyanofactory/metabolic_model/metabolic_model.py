@@ -353,13 +353,13 @@ class MetabolicModel(ElementBase):
         metabolite_ids = list(x.id for x in self.metabolites)
 
         for i, reac in enumerate(fba_reactions):
-            for j, substrate in enumerate(reac.substrates):
+            for substrate in reac.substrates:
                 mi = metabolite_ids.index(substrate.id)
                 stoic.append((mi, i, -substrate.stoichiometry))
 
-            for j, product in enumerate(reac.products):
+            for product in reac.products:
                 mi = metabolite_ids.index(product.id)
-                stoic.append((mi, i, substrate.stoichiometry))
+                stoic.append((mi, i, product.stoichiometry))
 
         import glpk
         #from scipy.optimize import linprog
@@ -389,7 +389,6 @@ class MetabolicModel(ElementBase):
                 ub = reac.upper_bound
 
             lp.cols[i].bounds = (lb, ub)
-            print(str(reac.name) + " " + str(lp.cols[i].bounds))
 
         for n in range(len(metabolite_ids)):
             lp.rows[n].bounds = (0., 0.)
@@ -410,7 +409,7 @@ class MetabolicModel(ElementBase):
 
             for j, product in enumerate(reac.products):
                 mi = metabolite_ids.index(product.id)
-                lstoic[mi][i] = -product.stoichiometry
+                lstoic[mi][i] = product.stoichiometry
 
         #res = linprog(c=lista, A_ub=lstoic, bounds=[reac.constraint for reac in fba_reactions], options={"disp": True})
         #print res
@@ -426,12 +425,6 @@ class MetabolicModel(ElementBase):
             res.results.append(SimulationResult.SingleResult(reac.id, flux.value))
 
         res.solution = lp.status
-
-        print("Solution is " + res.solution_text())
-
-        # dbg printing
-        for reac in res.results:
-            print("{}: {}".format(reac.reaction, reac.flux))
 
         return res
 

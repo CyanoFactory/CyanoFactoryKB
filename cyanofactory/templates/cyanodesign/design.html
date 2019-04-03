@@ -86,7 +86,7 @@ Released under the MIT license
 
     var reaction_filter = [
         function(e) { return e.enabled },
-        function(e) { return !e.disabled },
+        function(e) { return !e.enabled },
         function(e) { return e.isConstrained() },
         function(e) { return !e.isConstrained() },
         function(e) { return e.reversible },
@@ -439,7 +439,7 @@ Released under the MIT license
                     "render": function(data, type, row, meta ) {
                         return data.map(function(arg) {
                             var e = $("<span></span>").addClass("cyano-enzyme");
-                            if (arg.disabled) {
+                            if (!arg.enabled) {
                                 e.addClass("cyano-enzyme-disabled");
                             }
                             return e.append(arg.name).wrap("<p>").parent().html();
@@ -455,7 +455,7 @@ Released under the MIT license
                     "render": function(data, type, row, meta ) {
                         return data.map(function(arg) {
                             var e = $("<span></span>").addClass("cyano-enzyme");
-                            if (arg.disabled) {
+                            if (!arg.enabled) {
                                 e.addClass("cyano-enzyme-disabled");
                             }
                             return e.append(arg.name).wrap("<p>").parent().html();
@@ -467,7 +467,7 @@ Released under the MIT license
                     "orderable": false,
                     "searchable": false,
                     "data": function (rowData, type, set, meta) {
-                        return rowData.external;
+                        return rowData.isExternal();
                     },
                     render: function(data, type, row, meta) {
                         if (type === 'copy') {
@@ -1222,7 +1222,7 @@ Released under the MIT license
             pathway.addItem(enzyme.pathway);
             pathway.refreshItems();
 
-            enabled.prop("checked", !enzyme.disabled || create_new);
+            enabled.prop("checked", enzyme.enabled || create_new);
 
             constrained.prop("checked", enzyme.isConstrained());
             constrained_min.val(enzyme.constraints[0]);
@@ -1252,7 +1252,7 @@ Released under the MIT license
             dialog_metabolite_edit.find("div").removeClass("has-error");
             dialog_metabolite_edit.find(".help-block").remove();
             dialog_metabolite_edit.find("#metabolite-name").val(item.name);
-            dialog_metabolite_edit.find("#external").prop("checked", Metabolite.instanceById(item.id).external);
+            dialog_metabolite_edit.find("#external").prop("checked", MetabolicModel.model.metabolite.get("id", item.id).isExternal());
             dialog_metabolite_edit.find("#metabolite-chemical").val(item.chemical);
             dialog_metabolite_edit.data("object", item);
             dialog_metabolite_edit.modal("show");
@@ -1310,7 +1310,7 @@ Released under the MIT license
                 enzyme.makeUnconstrained();
             }
 
-            enzyme.disabled = !enabled.prop("checked");
+            enzyme.enabled = enabled.prop("checked");
 
             enzyme.substrates = [];
             enzyme.products = [];
@@ -1609,7 +1609,7 @@ Released under the MIT license
         table_enzymes.delegate('tr td:nth-child(4) input', 'change', function() {
             var row = datatable_enzymes.row($(this).closest("tr"));
 
-            row.data().disabled = !($(this).is(":checked"));
+            row.data().enabled = ($(this).is(":checked"));
 
             command_list.push({
                 "type": "reaction",
@@ -1617,7 +1617,7 @@ Released under the MIT license
                 "id": row.data().id,
                 "object": {
                     "id": row.data().id,
-                    "disabled": row.data().disabled
+                    "enabled": row.data().enabled
                 }
             });
 
