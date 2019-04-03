@@ -16,9 +16,9 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
 ]
 
-urlpatterns += [
-    url(r'^cyanointeraction/', include("cyanointeraction.urls"))
-]
+##urlpatterns += (
+##    url(r'^cyanointeraction/', include("cyanointeraction.urls")),
+##)
 
 # boehringer map
 urlpatterns += [

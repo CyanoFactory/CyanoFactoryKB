@@ -3975,9 +3975,12 @@ class ProteinMonomer(Protein):
 
         prot_name = IproteinsNames.objects.filter(protein_name=self.gene.wid).first()
 
-        if prot_name:
-            return '<a href="{}">Show interactions</a>'.format(
-                reverse("cyanointeraction:checkInteraction", kwargs={"protID": prot_name.protein_id}))
+        try:
+            if prot_name:
+                return '<a href="{}">Show interactions</a>'.format(
+                    reverse("cyanointeraction:checkInteraction", kwargs={"protID": prot_name.protein_id}))
+        except:
+            pass
 
         return ""
 
@@ -4090,7 +4093,7 @@ class ProteinMonomer(Protein):
                 {'verbose_name': 'Complex subunit', 'name':'protein_complex_biosythesis_participants'},
                 ]}),
             ('Parameters', {'fields': ['parameters']}),
-            ('Interactions', {'fields': [{'verbose_name': 'Protein/Metabolite interactions', 'name': 'interactions'}]}),
+            #('Interactions', {'fields': [{'verbose_name': 'Protein/Metabolite interactions', 'name': 'interactions'}]}),
             ('Comments', {'fields': ['comments', 'publication_references']}),
             ('Metadata', {'fields': [{'verbose_name': 'Created', 'name': 'created_user'}, {'verbose_name': 'Last updated', 'name': 'last_updated_user'}]}),
             ]
