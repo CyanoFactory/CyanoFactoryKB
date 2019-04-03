@@ -18,6 +18,32 @@ namespace MetabolicModel {
         }
     }
 
+    class LstOp<T extends ElementBase> {
+        private lst: T[];
+
+        constructor(list: T[]) {
+            this.lst = list;
+        }
+
+        get(key: string, value): T {
+            for (let item of this.lst) {
+                if (item[key] == value) {
+                    return item;
+                }
+            }
+            return null;
+        }
+
+        has(key: string, value): boolean {
+            for (const item of this.lst) {
+                if (item[key] == value) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     class Helper {
         static getById<T extends ElementBase>(id: string, lst: T[]): T {
             for (const item of lst) {
@@ -73,6 +99,22 @@ namespace MetabolicModel {
         reactions: Reaction[] = [];
         compartments: Compartment[] = [];
         parameters: Parameter[] = [];
+
+        get metabolite() {
+            return new LstOp(this.metabolites);
+        }
+
+        get reaction() {
+            return new LstOp(this.reactions);
+        }
+
+        get compartment() {
+            return new LstOp(this.compartments);
+        }
+
+        get parameter() {
+            return new LstOp(this.parameters);
+        }
         //objectives;
         //groups;
 

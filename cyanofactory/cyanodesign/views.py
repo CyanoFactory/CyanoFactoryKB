@@ -13,6 +13,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.core.urlresolvers import reverse
 from django.db.transaction import atomic
 from django.http.response import HttpResponse, HttpResponseBadRequest
+from django.utils.encoding import smart_str
 from django.views.decorators.csrf import ensure_csrf_cookie
 from jsonview.decorators import json_view
 from cyano.decorators import ajax_required, global_permission_required
@@ -21,6 +22,7 @@ from cyano.models import UserProfile
 from cyanodesign.forms import UploadModelForm, ModelFromTemplateForm, SaveModelAsForm, SaveModelForm
 from cyanodesign.helpers import model_from_string, apply_commandlist, calc_reactions, get_selected_reaction, \
     compress_command_list
+from metabolic_model.optgene import OptGeneParser
 from metabolic_model.sbml_xml_generator import SbmlXMLGenerator
 from .models import DesignModel, Revision, DesignTemplate
 import networkx as nx
@@ -124,7 +126,7 @@ def simulate(request, pk):
     except KeyError:
         revision = model.get_latest_revision()
 
-    org = Metabolism(StringIO(revision.content))
+    org = metabolic_model.MetabolicModel.from_json(revision.sbml)
 
     try:
         changes = json.loads(request.POST["changes"])
@@ -147,44 +149,47 @@ def simulate(request, pk):
 
     try:
         apply_commandlist(org, changes)
-        org = Metabolism(StringIO(revision.content))
+        org = metabolic_model.MetabolicModel.from_json(revision.sbml)
         changes = compress_command_list(changes)
         apply_commandlist(org, changes)
+        flux_objectives = []
 
         if not objectives:
             raise ValueError("No objective specified")
-        org.obj = []
+
         for obj in objectives:
-            obj_reac = org.get_reaction(obj["name"])
-            if obj_reac is None:
-                raise ValueError("Objective not in model: " + obj["name"])
+            obj_reaction = org.reaction.get(id=obj["id"])
+            if obj_reaction is None:
+                raise ValueError("Objective not in model: " + obj["id"])
 
-            if obj_reac.disabled:
-                return HttpResponseBadRequest("Objective disabled: " + obj_reac.name)
+            if not obj_reaction.enabled:
+                return HttpResponseBadRequest("Objective disabled: " + obj_reaction.name)
 
-            org.obj.append([obj["name"], "1" if obj["maximize"] else "0"])
+            flux_objectives.append(metabolic_model.FluxObjective())
+            flux_objectives[-1].reaction = obj["id"]
+            flux_objectives[-1].coefficient =  1 if obj["maximize"] else -1
 
-        if simtype == "mba" or simtype == "sa":
-            org.design_obj = []
-            for obj in design_objectives:
-                obj_reac = org.get_reaction(obj["name"])
-                if obj_reac is None:
-                    raise ValueError("Design objective not in model: " + obj["name"])
+            if simtype == "mba" or simtype == "sa":
+                org.design_obj = []
+                for obj in design_objectives:
+                    obj_reaction = org.get_reaction(obj["name"])
+                    if obj_reaction is None:
+                        raise ValueError("Design objective not in model: " + obj["name"])
 
-                if obj_reac.disabled:
-                    return HttpResponseBadRequest("Design objective disabled: " + obj_reac.name)
+                    if not obj_reaction.enabled:
+                        return HttpResponseBadRequest("Design objective disabled: " + obj_reaction.name)
 
-                org.design_obj.append([obj["name"], "1" if obj["maximize"] else "0"])
+                    org.design_obj.append([obj["name"], "1" if obj["maximize"] else "0"])
 
-            org.target_reactions = []
+                org.target_reactions = []
             if simtype == "sa":
                 for obj in target_reactions:
-                    obj_reac = org.get_reaction(obj["name"])
-                    if obj_reac is None:
+                    obj_reaction = org.get_reaction(obj["name"])
+                    if obj_reaction is None:
                         raise ValueError("Target reaction not in model: " + obj["name"])
 
-                    if obj_reac.disabled:
-                        return HttpResponseBadRequest("Target reaction disabled: " + obj_reac.name)
+                    if not obj_reaction.enabled:
+                        return HttpResponseBadRequest("Target reaction disabled: " + obj_reaction.name)
 
                     org.target_reactions.append([obj["name"], "1" if obj["maximize"] else "0"])
 
@@ -192,7 +197,7 @@ def simulate(request, pk):
         return HttpResponseBadRequest("Model error: " + str(e))
 
     try:
-        fba = org.fba()
+        fba = org.fba(objective=obj_reaction)
     except ValueError as e:
         return HttpResponseBadRequest("FBA error: " + str(e))
 
@@ -202,22 +207,22 @@ def simulate(request, pk):
                 json.dumps({"solution": fba.get_status()}),
                 content_type="application/json")
 
-        full_g, nodeIDs = calc_reactions(org, fba)
+        full_g, nodeIDs = calc_reactions(org, fba, obj_reaction)
 
-        display = list(filter(lambda x: len(x) > 0 and org.has_reaction(x), display))
+        display = list(filter(lambda x: len(x) > 0 and org.reaction.has(x), display))
 
         dflux = {}
-        for reac, flux in zip(map(lambda x: x, fba.reacs), fba.flux):
-            dflux[reac.id] = flux
+        for res in fba.results:
+            dflux[res.reaction] = res.flux
 
         # Auto filter by FBA
         if auto_flux:
             if len(full_g.edges()) <= 30:
                 full_eg = full_g
             else:
-                full_eg = nx.ego_graph(full_g.reverse(), nodeIDs[org.obj[0][0]], radius=3, center=False, undirected=False)
+                full_eg = nx.ego_graph(full_g.reverse(), nodeIDs[obj_reaction.id], radius=3, center=False, undirected=False)
 
-            full_g.remove_edges_from(full_g.in_edges(nodeIDs[org.obj[0][0]]) + full_g.out_edges(nodeIDs[org.obj[0][0]]))
+            full_g.remove_edges_from(full_g.in_edges(nodeIDs[obj_reaction.id]) + full_g.out_edges(nodeIDs[obj_reaction.id]))
             all_edges = map(lambda x: full_eg.get_edge_data(*x)["object"]["id"], full_eg.edges())
             # Get fluxes of "edges"
             flux = []
@@ -226,9 +231,9 @@ def simulate(request, pk):
             flux = sorted(flux, key=lambda x: -x[1])
             display = list(map(lambda x: x[0], flux[:30]))
         else:
-            full_g.remove_edges_from(full_g.in_edges(nodeIDs[org.obj[0][0]]) + full_g.out_edges(nodeIDs[org.obj[0][0]]))
+            full_g.remove_edges_from(full_g.in_edges(nodeIDs[obj_reaction.id]) + full_g.out_edges(nodeIDs[obj_reaction.id]))
 
-        display.append(org.obj[0][0])
+        display.append(obj_reaction.id)
 
         g = get_selected_reaction(json_graph.node_link_data(full_g), nodeIDs, display, org)
 
@@ -244,7 +249,7 @@ def simulate(request, pk):
             return HttpResponse(json.dumps(
                 {"graph": None,
                  "graphstr": str(graph.to_string()),
-                "solution": fba.get_status(),
+                "solution": fba.solution_text(),
                 "flux": dflux
                 }),
                 content_type="application/json"
@@ -540,20 +545,32 @@ def upload(request, pk):
                 ss = StringIO()
                 for chunk in freq.chunks():
                     try:
-                        ss.write(chunk.decode("utf-8"))
+                        ss.write(smart_str(chunk))
                     except UnicodeDecodeError:
                         form.add_error("file", "File does not have UTF-8 encoding")
                         form_html = render_crispy_form(form, context=request)
                         return {'success': False, 'form_html': form_html}
 
                 ss.seek(0)
-                sbml_handler = sbml_parser.SbmlHandler()
-                sbml_parser.push_handler(sbml_handler)
-                content = ss.getvalue()
-                # closes ss
-                sbml_parser.parser.parse(ss)
 
-                model = sbml_handler.model
+                try:
+                    if ss.readline().startswith("<?xml"):
+                        format = "sbml"
+                    format = "opt"
+                finally:
+                    ss.seek(0)
+
+                if format == "sbml":
+                    sbml_handler = sbml_parser.SbmlHandler()
+                    sbml_parser.push_handler(sbml_handler)
+                    content = ss.getvalue()
+                    # closes ss
+                    sbml_parser.parser.parse(ss)
+                    model = sbml_handler.model
+                else:
+                    content = ss.getvalue()
+                    bioopt = OptGeneParser(ss)
+                    model = bioopt.to_model()
 
                 if len(model.reactions) == 0 or len(model.metabolites) == 0:
                     raise ValueError("Model is empty")

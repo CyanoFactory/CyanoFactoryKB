@@ -16,6 +16,27 @@ var MetabolicModel;
             return new this.typeObj();
         }
     }
+    class LstOp {
+        constructor(list) {
+            this.lst = list;
+        }
+        get(key, value) {
+            for (let item of this.lst) {
+                if (item[key] == value) {
+                    return item;
+                }
+            }
+            return null;
+        }
+        has(key, value) {
+            for (const item of this.lst) {
+                if (item[key] == value) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
     class Helper {
         static getById(id, lst) {
             for (const item of lst) {
@@ -64,6 +85,18 @@ var MetabolicModel;
             this.reactions = [];
             this.compartments = [];
             this.parameters = [];
+        }
+        get metabolite() {
+            return new LstOp(this.metabolites);
+        }
+        get reaction() {
+            return new LstOp(this.reactions);
+        }
+        get compartment() {
+            return new LstOp(this.compartments);
+        }
+        get parameter() {
+            return new LstOp(this.parameters);
         }
         //objectives;
         //groups;

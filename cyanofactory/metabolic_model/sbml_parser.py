@@ -11,7 +11,6 @@ Released under the MIT license
 
 
 from xml.sax import make_parser, handler
-from io import StringIO
 
 import json
 import sys

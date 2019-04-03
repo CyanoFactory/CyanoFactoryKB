@@ -325,11 +325,11 @@ class MetabolicModel(ElementBase):
 
         return obj
 
-    def fba(self, obj=None):
+    def fba(self, objective=None):
         """
         Simplex algorithm through glpk.
         """
-        if obj is None:
+        if objective is None:
             raise ValueError("No objective specified")
 
         # Create fake reactions for external metabolites
@@ -352,7 +352,6 @@ class MetabolicModel(ElementBase):
         stoic = []
         metabolite_ids = list(x.id for x in self.metabolites)
 
-        # FIXME MET INDEX
         for i, reac in enumerate(fba_reactions):
             for j, substrate in enumerate(reac.substrates):
                 mi = metabolite_ids.index(substrate.id)
@@ -379,8 +378,18 @@ class MetabolicModel(ElementBase):
         #constraints
 
         for i, reac in enumerate(fba_reactions):
-            lp.cols[i].bounds = (reac.lower_bound, reac.upper_bound)
-            #print tuple(reac.constraint)
+            if reac.lower_bound == self.lower_bound_ref.value:
+                lb = None
+            else:
+                lb = reac.lower_bound
+
+            if reac.upper_bound == self.upper_bound_ref.value:
+                ub = None
+            else:
+                ub = reac.upper_bound
+
+            lp.cols[i].bounds = (lb, ub)
+            print(str(reac.name) + " " + str(lp.cols[i].bounds))
 
         for n in range(len(metabolite_ids)):
             lp.rows[n].bounds = (0., 0.)
@@ -389,7 +398,7 @@ class MetabolicModel(ElementBase):
         lista = [0. for ele in fba_reactions]
 
         for i, reac in enumerate(fba_reactions):
-            if obj is reac:
+            if objective is reac:
                 lista[i] = 1.0
 
         lstoic = list(map(lambda x: [0]*len(fba_reactions), [[]]*len(metabolite_ids)))
@@ -412,27 +421,20 @@ class MetabolicModel(ElementBase):
         lp.matrix = stoic
         lp.simplex()
 
+        res = SimulationResult()
         for flux, reac in zip(lp.cols, fba_reactions):
-            flux = flux.value
+            res.results.append(SimulationResult.SingleResult(reac.id, flux.value))
 
-            reac.flux = round(flux, 9)
+        res.solution = lp.status
 
-        if lp.status == "opt":
-            self.solution = "Optimal"
-        elif lp.status == "undef":
-            self.solution = "Undefined"
-        elif lp.status == "feas":
-            self.solution = "Maybe not optimal"
-        elif lp.status == "infeas" or lp.status == "nofeas":
-            self.solution = "Unfeasible"
-        elif lp.status == "unbnd":
-            self.solution = "Unbound (check constraints)"
-        else:
-            self.solution = "Unknown Error"
+        print("Solution is " + res.solution_text())
 
-        print(self.solution)
-        for reac in fba_reactions:
-            print("{}: {}".format(reac.id, reac.flux))
+        # dbg printing
+        for reac in res.results:
+            print("{}: {}".format(reac.reaction, reac.flux))
+
+        return res
+
 
 # Single compartment in listOfCompartments
 class Compartment(ElementBase):
@@ -587,7 +589,6 @@ class Reaction(ElementBase):
         else:
             p = model.parameter.get(id=self.id + "_upper_bound")
             self.upper_bound = p.value
-
 
     def read_attributes(self, attrs):
         for k, v in attrs.items():
@@ -1061,3 +1062,27 @@ class Unit(ElementBase):
         obj.read_attributes(j)
         obj.description = Description.from_json(j.get("annotation"))
         return obj
+
+class SimulationResult(object):
+    class SingleResult(object):
+        def __init__(self, reaction, flux):
+            self.reaction = reaction
+            self.flux = flux
+
+    def __init__(self):
+        self.solution = ""
+        self.results: List[SimulationResult.SingleResult] = []
+
+    def solution_text(self):
+        if self.solution == "opt":
+            return "Optimal"
+        elif self.solution == "undef":
+            return "Undefined"
+        elif self.solution == "feas":
+            return "Maybe not optimal"
+        elif self.solution == "infeas" or self.solution == "nofeas":
+            return "Unfeasible"
+        elif self.solution == "unbnd":
+            return "Unbound (check constraints)"
+        else:
+            return "Unknown Error"

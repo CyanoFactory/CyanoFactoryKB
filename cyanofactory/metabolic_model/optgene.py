@@ -703,7 +703,7 @@ class OptGeneParser(object):
 
         def component_builder(reac, stoic):
             met_ref = MetaboliteReference()
-            met_ref.id = reac.name
+            met_ref.id = OptGeneParser.create_sid(reac.name)
             met_ref.stoichiometry = stoic
 
             return met_ref

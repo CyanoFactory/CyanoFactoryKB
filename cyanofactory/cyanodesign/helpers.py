@@ -8,6 +8,7 @@ from collections import OrderedDict
 import math
 from networkx.readwrite import json_graph
 from networkx import DiGraph
+import metabolic_model.metabolic_model as metabolic_model
 
 def apply_commandlist(model, commandlist):
     """
@@ -206,9 +207,9 @@ def get_selected_reaction(jsonGraph, nodeDic, reacIDs, org):
     # Get substrates and products of all reacs
     metabolites = []
     for reac in reacIDs:
-        metabolites += org.get_reaction(reac).metabolites
+        metabolites += org.reaction.get(id=reac).metabolites
 
-    met_ids = list(map(lambda x: nodeDic[x], metabolites))
+    met_ids = list(map(lambda x: nodeDic[x.id], metabolites))
     g = json_graph.node_link_graph(jsonGraph)
 
     def l(x):
@@ -222,7 +223,7 @@ def get_selected_reaction(jsonGraph, nodeDic, reacIDs, org):
     h = g.subgraph(met_ids)
     return h
 
-def calc_reactions(org, fluxResults):
+def calc_reactions(org: metabolic_model.MetabolicModel, fluxResults: metabolic_model.SimulationResult, objective):
     """
     Adding Results from FLUX-Analysis
     @param org: organism
@@ -230,10 +231,9 @@ def calc_reactions(org, fluxResults):
     @return Graph with added Attributes
     """
     changeDic = {}
-    reactions = fluxResults.reacs
-    for reaction, flux in zip(reactions, fluxResults.flux):
-        if not reaction.name.endswith("_transp"):
-            changeDic[reaction.id] = float('%.3g' % flux)
+    for result in fluxResults.results:
+        if not result.reaction.endswith("_transp"):
+            changeDic[result.reaction] = float('%.3g' % result.flux)
 
     vList = list(changeDic.values())
 
@@ -248,41 +248,37 @@ def calc_reactions(org, fluxResults):
     newMax = 10
     newRange = newMax - newMin
 
-    enzymes = fluxResults.reacs
+    enzymes = org.reactions
     nodeDic = OrderedDict()
     nodecounter = 0
     graph = DiGraph()
-
-    objective = None
-    if len(org.obj) > 0:
-        objective = org.obj[0][0]
 
     for enzyme in enzymes:
         if not enzyme.id.endswith("_transp"):
             nodecounter += 1
             nodeDic[enzyme.id] = nodecounter
-            if enzyme.id == objective:
+            if enzyme == objective:
                 graph.add_node(nodeDic[enzyme.id])
 
             for substrate in enzyme.substrates:
                 nodecounter += 1
-                if substrate not in nodeDic:
-                    nodeDic[substrate] = nodecounter
-                    attr = {"label": org.get_metabolite(substrate).name, "shape": "oval", "color": str((nodecounter % 8)+1)}
-                    graph.add_node(nodeDic[substrate], **attr)
+                if substrate.id not in nodeDic:
+                    nodeDic[substrate.id] = nodecounter
+                    attr = {"label": org.metabolite.get(id=substrate.id).name, "shape": "oval", "color": str((nodecounter % 8)+1)}
+                    graph.add_node(nodeDic[substrate.id], **attr)
 
                 if enzyme.id == objective:
-                    graph.add_nodes_from([(nodeDic[substrate], {"shape":"box"})])
+                    graph.add_nodes_from([(nodeDic[substrate.id], {"shape":"box"})])
 
             for product in enzyme.products:
                 nodecounter += 1
-                if product not in nodeDic:
-                    nodeDic[product] = nodecounter
-                    attr = {"label": org.get_metabolite(product).name, "shape": "oval", "color": str((nodecounter % 8)+1)}
-                    graph.add_node(nodeDic[product], **attr)
+                if product.id not in nodeDic:
+                    nodeDic[product.id] = nodecounter
+                    attr = {"label": org.metabolite.get(id=product.id).name, "shape": "oval", "color": str((nodecounter % 8)+1)}
+                    graph.add_node(nodeDic[product.id], **attr)
 
                 if enzyme.id == objective:
-                    graph.add_nodes_from([(nodeDic[product], {"shape":"box"})])
+                    graph.add_nodes_from([(nodeDic[product.id], {"shape":"box"})])
 
             # Check if enzyme is objective
             for substrate in enzyme.substrates:
@@ -303,16 +299,16 @@ def calc_reactions(org, fluxResults):
 
                     attr = {"color": color, "penwidth": value, "label": u"{} ({})".format(enzyme.name, flux), "object": {"name":enzyme.name,"id":enzyme.id}}
 
-                    if enzyme.id == objective:
+                    if enzyme == objective:
                         attr["style"] = "dashed"
 
-                    graph.add_edge(nodeDic[substrate], nodeDic[product], attr)
+                    graph.add_edge(nodeDic[substrate.id], nodeDic[product.id], attr)
 
-                    if enzyme.id == objective:
-                        graph.add_edge(nodeDic[substrate], nodeDic[enzyme.id])
-                        graph.add_edge(nodeDic[enzyme.id], nodeDic[product])
+                    if enzyme == objective:
+                        graph.add_edge(nodeDic[substrate.id], nodeDic[enzyme.id])
+                        graph.add_edge(nodeDic[enzyme.id], nodeDic[product.id])
 
                     if enzyme.reversible:
-                        graph.add_edge(nodeDic[product], nodeDic[substrate], label=enzyme.id, object={"name":enzyme.name,"id":enzyme.id})
+                        graph.add_edge(nodeDic[product.id], nodeDic[substrate.id], label=enzyme.id, object={"name":enzyme.name,"id":enzyme.id})
 
     return graph, nodeDic

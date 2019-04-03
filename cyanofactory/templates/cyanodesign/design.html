@@ -647,15 +647,15 @@ Released under the MIT license
             var result = {
                 "changes": JSON.stringify(command_list),
                 "objectives": JSON.stringify([{
-                    "name": cdos,
+                    "id": cdos,
                     "maximize": $("#radio-maximize").prop("checked")
                 }]),
                 "design_objectives": JSON.stringify([{
-                    "name": cddos,
+                    "id": cddos,
                     "maximize": true
                 }]),
                 "target_reactions": JSON.stringify([{
-                    "name": cdto,
+                    "id": cdto,
                     "maximize": true
                 }]),
                 "type": JSON.stringify(getSimulationType()),
@@ -854,7 +854,7 @@ Released under the MIT license
                     for (var key in x["flux"]) {
                         if (x["flux"].hasOwnProperty(key)) {
                             if (key.indexOf("_transp") == -1)
-                            datatable_flux.row.add([Enzyme.instanceById(key).name, x["flux"][key]]);
+                                datatable_flux.row.add([MetabolicModel.model.reaction.get("id", key).name, x["flux"][key]]);
                         }
                     }
 
@@ -1800,7 +1800,7 @@ Released under the MIT license
             sortField: "name",
             searchField: ["name"],
             onChange: function(value) {
-                design_objective = Enzyme.instanceById(value);
+                design_objective = MetabolicModel.model.reaction.get("id", value);
             }
         };
 
