@@ -16,12 +16,10 @@
 #    You should have received a copy of the GNU General Public License
 #    along with PyNetMet.  If not, see <http://www.gnu.org/licenses/>.
 #
-#
+#    
 #    Please, cite us in your research!
 #
-from .util import python_2_unicode_compatible, create_sid
-
-import libsbml
+from .util import python_2_unicode_compatible
 
 @python_2_unicode_compatible
 class Enzyme(object):
@@ -29,23 +27,11 @@ class Enzyme(object):
     This class defines a chemical reaction object. The input should be an
     string containing a reaction in OptGene format.
     '''
-    def __init__(self, model, linea=None, reac=None, pathway="GP"):
+    def __init__(self, linea=None, pathway="GP"):
         from itertools import takewhile
         import re
 
-        self.model = model
-        self.transport = pathway == "_TRANSPORT_"
-
-        if reac is None:
-            self._sbml = model.createReaction()
-        else:
-            self._sbml = reac
-            if not self.meta_id:
-                self.meta_id = self.id
-            return
-
         if linea is None:
-            # Default ctor
             return
 
         # Tokenize
@@ -61,14 +47,12 @@ class Enzyme(object):
         line = line[1:]
         # Remove last char which is the :
         self.name = " ".join(name)[:-1].strip()
-        self.id = self.name
-        self.meta_id = self.name
         self.issues_info = []
         self.substrates = []
         self.products = []
         self.stoic = [[], []]
-        self.constraint = (0,0)
-        reversible = None
+        self.constraint = []
+        self.reversible = None
         self.pathway = pathway
 
         # 0 reading substrates, 1 reading products
@@ -105,45 +89,36 @@ class Enzyme(object):
 
             if len(metabolite) > 0:
                 if state == 0:
-                    target = self.substrate_list
+                    target = self.substrates
+                    target_s = self.stoic[0]
                 else:
-                    target = self.product_list
+                    target = self.products
+                    target_s = self.stoic[1]
 
                 # reference to reactants or products
                 # Check for duplicate metabolites first
                 for i, t in enumerate(target):
-                    if t.getSpecies() == metabolite:
-                        target[i].setStoichiometry(target[i].getStoichiometry() + value)
-                        if target[i].getStoichiometry() == 0:
+                    if t == metabolite:
+                        target_s[i] += value
+                        if target_s[i] == 0:
                             self.issues_info.append("Eliminated metabolite: " + t)
-                            target[i].removeFromParentAndDelete()
+                            target.pop(i)
+                            target_s.pop(i)
                         break
                 else:
                     # not found
-                    sr = libsbml.SpeciesReference(3,1)
-                    sid = create_sid(metabolite)
-                    sr.setSpecies(sid)
-                    sr.setMetaId(sid)
-                    sr.setStoichiometry(value)
-
-                    if not model.getSpecies(sid):
-                        species = model.createSpecies()
-                        species.setMetaId(sid)
-                        species.setId(sid)
-                        species.setName(metabolite)
-
-                    target.append(sr)
+                    target.append(metabolite)
+                    target_s.append(value)
 
             if len(line) == 0:
                 break
 
             # First line item is now on an operator
             if line[0] == "->" or line[0] == "<->":
-                if reversible is not None:
+                if self.reversible is not None:
                     raise ValueError("More then one reaction arrow: " + linea)
 
                 self.reversible = line[0] == "<->"
-                reversible = self.reversible
                 # Products
                 state = 1
 
@@ -162,7 +137,7 @@ class Enzyme(object):
                     self.issues_info.append("Metabolite " + su +
                                             " is both substrate and product")
 
-        if reversible is None:
+        if self.reversible is None:
             raise ValueError("No reaction arrow found: " + linea)
 
         if len(self.substrates) == 0 and self.reversible:
@@ -178,93 +153,15 @@ class Enzyme(object):
         else:
             self.constraint = (0., None)
 
-        if pathway:
-            self.pathway = pathway
-
-    def get_name_or_id(self):
-        return self.name or self.meta_id
-
-    @property
-    def meta_id(self):
-        return self._sbml.getMetaId()
-
-    @meta_id.setter
-    def meta_id(self, value):
-        self._sbml.setMetaId(create_sid(value))
-
-    @property
-    def id(self):
-        return self._sbml.getId()
-
-    @id.setter
-    def id(self, value):
-        self._sbml.setId(create_sid(value))
-
     @property
     def name(self):
-        return self._sbml.getName()
+        return self._name
 
     @name.setter
     def name(self, value):
-        if len(value) > 0 and value.strip()[-1] == ":":
+        if value.strip()[-1] == ":":
             raise ValueError(": not allowed at end of name")
-        self._sbml.setName(value)
-
-    @property
-    def reversible(self):
-        return self._sbml.getReversible()
-
-    @reversible.setter
-    def reversible(self, value):
-        self._sbml.setReversible(value)
-
-    @property
-    def substrates(self):
-        return list(map(lambda x: x.getSpecies(), self._sbml.getListOfReactants()))
-
-    @substrates.setter
-    def substrates(self, value):
-        self._sbml.getListOfReactants().clear(True)
-        for v in value:
-            r = self._sbml.createReactant()
-            r.setSpecies(v)
-
-    @property
-    def products(self):
-        return list(map(lambda x: x.getSpecies(), self._sbml.getListOfProducts()))
-
-    @products.setter
-    def products(self, value):
-        self._sbml.getListOfProducts().clear(True)
-        for v in value:
-            r = self._sbml.createProduct()
-            r.setSpecies(v)
-
-    @property
-    def stoic(self):
-        return [
-            list(map(lambda x: x.getStoichiometry(), self._sbml.getListOfReactants())),
-            list(map(lambda x: x.getStoichiometry(), self._sbml.getListOfProducts()))
-        ]
-
-    @property
-    def substrate_list(self):
-        return self._sbml.getListOfReactants()
-
-    @property
-    def product_list(self):
-        return self._sbml.getListOfProducts()
-
-    @property
-    def sbml(self):
-        return self._sbml
-
-    @stoic.setter
-    def stoic(self, value):
-        for s, v in zip(self._sbml.getListOfReactants(), value[0]):
-            s.setStoichiometry(v)
-        for s, v in zip(self._sbml.getListOfProducts(), value[1]):
-            s.setStoichiometry(v)
+        self._name = value
 
     @property
     def metabolites(self):
@@ -273,155 +170,6 @@ class Enzyme(object):
     @property
     def issues(self):
         return len(self.issues_info) > 0
-
-    @property
-    def constraint(self):
-        lb = self._sbml.getPlugin(0).getLowerFluxBound()
-        ub = self._sbml.getPlugin(0).getUpperFluxBound()
-
-        lb_changed = False
-        ub_changed = False
-
-        if lb == "cobra_default_lb":
-            lb = None
-            lb_changed = True
-        elif lb:
-            lb = self.model.getParameter(lb).getValue()
-            lb_changed = True
-
-        if ub == "cobra_default_ub":
-            ub = None
-            ub_changed = True
-        elif ub:
-            ub = self.model.getParameter(ub).getValue()
-            ub_changed = True
-
-        if not (lb_changed or ub_changed):
-            if len(self.substrates) == 0 and self.reversible:
-                return (None, None)
-            elif len(self.substrates) == 0 and not self.reversible:
-                return (0., None)
-            elif len(self.products) == 0 and self.reversible:
-                return (None, None)
-            elif len(self.products) == 0 and not self.reversible:
-                return (0., None)
-            elif self.reversible:
-                return (None, None)
-            else:
-                return (0., None)
-
-        return [lb, ub]
-
-    @constraint.setter
-    def constraint(self, val):
-        if len(val) < 2:
-            if len(self.substrates) == 0 and self.reversible:
-                self.constraint = (None, None)
-            elif len(self.substrates) == 0 and not self.reversible:
-                self.constraint = (0., None)
-            elif len(self.products) == 0 and self.reversible:
-                self.constraint = (None, None)
-            elif len(self.products) == 0 and not self.reversible:
-                self.constraint = (0., None)
-            elif self.reversible:
-                self.constraint = (None, None)
-            else:
-                self.constraint = (0., None)
-            return
-
-        lb = val[0]
-        ub = val[1]
-
-        if lb is None:
-            self._sbml.getPlugin(0).setLowerFluxBound(self.model.getParameter("cobra_default_lb").getId())
-        elif lb == 0:
-            self._sbml.getPlugin(0).setLowerFluxBound(self.model.getParameter("cobra_0_bound").getId())
-        else:
-            param = self.model.getParameter(self.meta_id + "_lower_bound")
-            if not param:
-                param = self.model.createParameter()
-                param.setId(self.meta_id + "_lower_bound")
-                param.setName(self.name + " lower bound")
-                param.setConstant(True)
-                param.setUnits("mmol_per_gDW_per_hr")
-                param.setValue(lb)
-            self._sbml.getPlugin(0).setLowerFluxBound(self.meta_id + "_lower_bound")
-
-        if ub is None:
-            self._sbml.getPlugin(0).setUpperFluxBound(self.model.getParameter("cobra_default_ub").getId())
-        elif ub == 0:
-            self._sbml.getPlugin(0).setUpperFluxBound(self.model.getParameter("cobra_0_bound").getId())
-        else:
-            param = self.model.getParameter(self.meta_id + "_upper_bound")
-            if not param:
-                param = self.model.createParameter()
-                param.setId(self.meta_id + "_upper_bound")
-                param.setName(self.name + " upper bound")
-                param.setConstant(True)
-                param.setUnits("mmol_per_gDW_per_hr")
-                param.setValue(ub)
-
-            self._sbml.getPlugin(0).setUpperFluxBound(self.meta_id + "_upper_bound")
-
-    @property
-    def pathway(self):
-        if self.transport:
-            return "_TRANSPORT_"
-
-        for g in self.model.getPlugin("groups").getListOfGroups():
-            m = g.getMemberByIdRef(self.meta_id)
-            if m:
-                return g.getName()
-
-        return ""
-
-    @pathway.setter
-    def pathway(self, val):
-        if val == "_TRANSPORT_":
-            self.transport = True
-            return
-
-        for g in self.model.getPlugin("groups").getListOfGroups():
-            m = g.getMemberByIdRef(self.meta_id)
-            if m:
-                m.removeFromParentAndDelete()
-                break
-
-        g = self.model.getPlugin("groups").getGroup(create_sid(val))
-
-        if not g:
-            g = self.model.getPlugin("groups").createGroup()
-            g.setId(create_sid(val))
-            g.setName(val)
-            g.setKind("partonomy")
-
-        m = g.createMember()
-        m.setIdRef(self.meta_id)
-
-    @property
-    def disabled(self):
-        return self.model.getParameter("celldesign_" + self.id + "_disabled") is not None
-
-    @disabled.setter
-    def disabled(self, val):
-        arg = "celldesign_" + self.id + "_disabled"
-
-        param = self.model.getParameter(arg)
-
-        if val:
-            if not param:
-                param = self.model.createParameter()
-            param.setId(arg)
-            param.setValue(1)
-
-            param.setUnits(("_" + str(self.constraint[0])+"X"+str(self.constraint[1])).replace(".", "_"))
-
-            self.constraint = [0, 0]
-        else:
-            if param:
-                const = param.getUnits()[1:].replace("_", ".").split("X")
-                self.constraint = [float(const[0]), float(const[1])]
-                param.removeFromParentAndDelete()
 
     def __str__(self):
         """
@@ -462,7 +210,7 @@ class Enzyme(object):
         nre.stoic[0] = [num*ele for ele in nre.stoic[0]]
         nre.stoic[1] = [num*ele for ele in nre.stoic[1]]
         return nre
-
+    
     def __add__(self, other, nname=""):
         """
         Sum of reactions. Sums substrates and products. Also eliminates
@@ -527,13 +275,13 @@ class Enzyme(object):
         if len(mets_cata):
             enz.issues_info.append("Possible catalyzers: "+", ".join(mets_cata))
         return enz
-
+    
     def __neg__(self, nname=""):
         """
         Return the reaction reversed.
         """
         return self.rev_reac(nname)
-
+    
     def __sub__(self, other, nname=""):
         """
         Sums the first reaction with the second one reversed.

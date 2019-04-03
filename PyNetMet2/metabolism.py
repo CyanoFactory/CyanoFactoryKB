@@ -15,7 +15,7 @@
 #    You should have received a copy of the GNU General Public License
 #    along with PyNetMet.  If not, see <http://www.gnu.org/licenses/>.
 #
-#
+#    
 #    Please, cite us in your research!
 #
 
@@ -23,12 +23,8 @@ from __future__ import print_function
 
 from codecs import open
 import os
-#.from network import *
-from collections import defaultdict
-
+from .network import *
 from .enzyme import *
-from .metabolite import *
-from .objective import *
 from xml.dom.minidom import parseString
 import re
 import six
@@ -40,19 +36,9 @@ class Metabolism(object):
         This class defines a metabolism object (set of chemical reactions,
         metabolites and a network).
     """
-    def __init__(self, filein, filetype="auto", fromfile=True, filename=None):
-        self._doc = libsbml.SBMLDocument(3, 1)
-        self._sbml = self._doc.createModel()
 
-        self._sbml.enablePackage("http://www.sbml.org/sbml/level3/version1/groups/version1", "groups", True)
-        self._sbml.enablePackage("http://www.sbml.org/sbml/level3/version1/fbc/version2", "fbc", True)
-
-        self.enzymes = []
-        self.metabolites = []
-        self.obj = None
-        self.design_obj = []
-        self.metabolite_mapping = {}
-
+    def __init__(self, filein, filetype="auto", reactions=list(), constraints=list(),
+                                     external=list(), objective=list(), design_objective=list(), fromfile=True):
         if fromfile:
             if filetype == "auto":
                 filetype = self.autodetect_format(filein)
@@ -60,63 +46,13 @@ class Metabolism(object):
             if filetype == "opt":
                 [reactions, constraints, external, objective, design_objective] = self.prepare_opt(filein)
             elif filetype == "sbml":
-                self._doc = self.prepare_sbml(filein)
-                self._sbml = self._doc.getModel()
-                self.calcs()
-                return
-                #[id, name, reactions, constraints, external, objective] = self.prepare_sbml(filein)
+                [reactions, constraints, external, objective] = self.prepare_sbml(filein)
 
-
-        # Create default parameters
-        param_lb = self._sbml.getParameter("cobra_default_lb")
-        if not param_lb:
-            param_lb = self._sbml.createParameter()
-            param_lb.setId("cobra_default_lb")
-            param_lb.setName("cobra default - lb")
-            param_lb.setConstant(True)
-            param_lb.setUnits("mmol_per_gDW_per_hr")
-            param_lb.setValue(-999999)
-
-        param_ub = self._sbml.getParameter("cobra_default_ub")
-        if not param_ub:
-            param_ub = self._sbml.createParameter()
-            param_ub.setId("cobra_default_ub")
-            param_ub.setName("cobra default - ub")
-            param_ub.setConstant(True)
-            param_ub.setUnits("mmol_per_gDW_per_hr")
-            param_ub.setValue(999999)
-
-        param_zero = self._sbml.getParameter("cobra_0_bound")
-        if not param_zero:
-            param_zero = self._sbml.createParameter()
-            param_zero.setId("cobra_0_bound")
-            param_zero.setName("cobra 0 - bound")
-            param_zero.setConstant(True)
-            param_zero.setUnits("mmol_per_gDW_per_hr")
-            param_zero.setValue(0)
-
-
-        # Create default compartments
-
-        c = self._sbml.createCompartment()
-        c.setName("Cytosol")
-        c.setMetaId("Cytosol")
-        c.setId("Cytosol")
-
-        c = self._sbml.createCompartment()
-        c.setName("Extra cellular")
-        c.setMetaId("Extra_cellular")
-        c.setId("Extra_cellular")
-
-        self.file_name = filename if filename else filein
-
-        file_name_only = "a" or os.path.splitext(os.path.basename(self.file_name))[0]
-        self._sbml.setName(file_name_only)
-        self._sbml.setId(create_sid(file_name_only))
-        self._sbml.setMetaId(self._sbml.getMetaId())
-
-        #self.objective = self._sbml.getPlugin(1).getListOfObjectives()
-        self.design_objective = []
+        self.file_name = filein
+        self.constraints = constraints
+        self.external = external
+        self.objective = objective
+        self.design_objective = design_objective
 
         # Get reactions and pathways
         pathnames = []
@@ -130,41 +66,14 @@ class Metabolism(object):
                     pathnames.append(comments)
                     pathna = comments
                 elif ":" in parts[0] and "->" in parts[0] and line[0] != "#":
-                    enzi = Enzyme(self._sbml, parts[0],pathna)
+                    enzi = Enzyme(parts[0],pathna)
                     enzymes.append(enzi)
             elif ":" in line and "->" in line:
-                enzi = Enzyme(self._sbml, line, pathway=pathna)
+                enzi = Enzyme(line,pathna)
                 enzymes.append(enzi)
 
         self.pathnames = pathnames
         self.enzymes = enzymes
-        self.metabolites = []
-
-        for metabolite in self._sbml.getListOfSpecies():
-            met = Metabolite(self._sbml, metabolite)
-            self.metabolites.append(Metabolite(self._sbml, metabolite))
-            met.compartment = "Cytosol"
-            met.external = False
-
-            if metabolite.getBoundaryCondition():
-                self.external.append(metabolite)
-
-        for line in external:
-            if not line.startswith("#"):
-                line = line.strip()
-
-                reac = self._sbml.getSpecies(create_sid(line))
-
-                if not reac:
-                    reac = self._sbml.createSpecies()
-                    reac.setId(create_sid(line))
-                    reac.setMetaId(create_sid(line))
-                    reac.setName(line)
-
-                reac.setCompartment("Extra_cellular")
-                reac.setBoundaryCondition(True)
-
-        self.external = list(filter(lambda x: x.external, self.metabolites))
 
         for line in constraints:
             if not line.startswith("#"):
@@ -186,7 +95,7 @@ class Metabolism(object):
 
         # Objective
         objs = []
-        for ele in objective:
+        for ele in self.objective:
             if ele[0] != "#":
                 if "#" in ele:
                     bla = ele.split("#")
@@ -203,7 +112,7 @@ class Metabolism(object):
 
         # Design objective
         design_objs = []
-        for ele in design_objective:
+        for ele in self.design_objective:
             if ele[0] != "#":
                 if "#" in ele:
                     bla = ele.split("#")
@@ -219,36 +128,10 @@ class Metabolism(object):
                     design_objs.append([line[0],"1"])
 
         self.design_obj = design_objs
-        self.obj = map(lambda x: Objective(self._sbml), objs)
-        for i, o in enumerate(self.obj):
-            o = objs[i]
+        self.obj = objs
 
         # Most attributes calculated in the calcs routine.
         self.calcs()
-
-    @property
-    def id(self):
-        return self._sbml.getId()
-
-    @id.setter
-    def id(self, val):
-        self._sbml.setId(create_sid(val))
-
-    @property
-    def meta_id(self):
-        return self._sbml.getMetaId()
-
-    @meta_id.setter
-    def meta_id(self, val):
-        self._sbml.setMetaId(create_sid(val))
-
-    @property
-    def name(self):
-        return self._sbml.getName()
-
-    @name.setter
-    def name(self, val):
-        self._sbml.setName(val)
 
     def __str__(self):
         """
@@ -262,45 +145,6 @@ class Metabolism(object):
         """
         Creates the metabolism attributes based on the enzymes list.
         """
-        # Remove transp reactions
-        for reac in self.enzymes:
-            if reac.transport:
-                reac._sbml.removeFromParentAndDelete()
-
-        self.enzymes = list(map(lambda x: Enzyme(model=self._sbml, reac=x), self._sbml.getListOfReactions()))
-        self.metabolites = list(map(lambda x: Metabolite(model=self._sbml, met=x), self._sbml.getListOfSpecies()))
-
-        self.objective = self._sbml.getPlugin("fbc").getListOfObjectives()
-
-        self.obj = list(map(lambda x: Objective(model=self._sbml, obj=x), self.objective))
-
-        param_lb = self._sbml.getParameter("cobra_default_lb")
-        if not param_lb:
-            param_lb = self._sbml.createParameter()
-            param_lb.setId("cobra_default_lb")
-            param_lb.setName("cobra default - lb")
-            param_lb.setConstant(True)
-            param_lb.setUnits("mmol_per_gDW_per_hr")
-            param_lb.setValue(-999999)
-
-        param_ub = self._sbml.getParameter("cobra_default_ub")
-        if not param_ub:
-            param_ub = self._sbml.createParameter()
-            param_ub.setId("cobra_default_ub")
-            param_ub.setName("cobra default - ub")
-            param_ub.setConstant(True)
-            param_ub.setUnits("mmol_per_gDW_per_hr")
-            param_ub.setValue(999999)
-
-        param_zero = self._sbml.getParameter("cobra_0_bound")
-        if not param_zero:
-            param_zero = self._sbml.createParameter()
-            param_zero.setId("cobra_0_bound")
-            param_zero.setName("cobra 0 - bound")
-            param_zero.setConstant(True)
-            param_zero.setUnits("mmol_per_gDW_per_hr")
-            param_zero.setValue(0)
-
         # Reads metabolites
         subs = {}
         metabol = []
@@ -333,17 +177,17 @@ class Metabolism(object):
         external_out = []
         transport = []
 
-        self.enzymes = [Enzyme(self._sbml, reac=x) for x in self._sbml.getListOfReactions()]
+        # Throw away transport reactions, they are regenerated
+        self.enzymes = [item for item in self.enzymes if item.pathway != "_TRANSPORT_"]
 
         enzinv = {}
         for ii, enzy in enumerate(self.enzymes):
-            enzinv[enzy.id] = ii
+            enzinv[enzy.name] = ii
 
             if enzy.reversible:
                 list_rev.append(ii)
             else:
                 list_irr.append(ii)
-        self.external = list(filter(lambda x: x.external, self.metabolites))
         self.external = list(set(self.external)|set(external_in))
         self.external = list(set(self.external)|set(external_out))
 
@@ -352,27 +196,28 @@ class Metabolism(object):
         self.pathnames = []
         self.pathnames.append("_TRANSPORT_")
         for line in self.external:
-            if (line not in external_in) and (line not in external_out) and (line.id in metabol):
-                self.enzymes.append(Enzyme(self._sbml, line.meta_id + "_transp : <-> " +
-                                           line.meta_id, pathway="_TRANSPORT_"))
-                enzinv[self.enzymes[-1].id]=enzisinv
-                list_rev.append(enzisinv)
-                transport.append(enzisinv)
-                external_in.append(line)
-                external_out.append(line)
-                enzisinv += 1
+            if line[0] != "#":
+                if (line not in external_in) and (line not in external_out) and (line in metabol):
+                    self.enzymes.append(Enzyme(line + "_transp : <-> " +
+                                               line, "_TRANSPORT_"))
+                    enzinv[line + "_transp"]=enzisinv
+                    list_rev.append(enzisinv)
+                    transport.append(enzisinv)
+                    external_in.append(line)
+                    external_out.append(line)
+                    enzisinv += 1
 
         # writes reactions in pathways
-        ##pathways = [[] for ele in self.pathnames]
-        ##for ii in range(len(self.enzymes)):
-        ##    pathway = self.enzymes[ii].pathway
-        ##    if pathway in self.pathnames:
-        ##        ipath = self.pathnames.index(pathway)
-        ##    else:
-        ##        self.pathnames.append(pathway)
-        ##        ipath = self.pathnames.index(pathway)
-        ##        pathways.append([])
-        ##    pathways[ipath].append(ii)
+        pathways = [[] for ele in self.pathnames]
+        for ii in range(len(self.enzymes)):
+            pathway = self.enzymes[ii].pathway
+            if pathway in self.pathnames:
+                ipath = self.pathnames.index(pathway)
+            else:
+                self.pathnames.append(pathway)
+                ipath = self.pathnames.index(pathway)
+                pathways.append([])
+            pathways[ipath].append(ii)
 
         # Constructs the M matrix (metabolites connections)
         nsubs = len(subs)
@@ -385,7 +230,7 @@ class Metabolism(object):
                         M[subs[pr]][subs[su]] = 1
 
         self.dic_enzs = enzinv
-        #self.pathways = pathways
+        self.pathways = pathways
         self.transport = transport
         self.dic_mets = subs
         self.mets = metabol
@@ -393,24 +238,19 @@ class Metabolism(object):
         self.external_out = external_out
         self.M = M
         self.reac_rev = list_rev
-        self.reac_irr = list_irr
+        self.reac_irr = list_irr    
         self.reac_per_met = reac_per_met
         self.reacs_per_met = reacs_per_met
         self._net = None
 
-        self.metabolite_mapping = {}
-
-        for m in self.metabolites:
-            self.metabolite_mapping[m.id] = m
-
         # Check for duplicated enzyme names and rename
-        ##non_uniq_run = False
-        ##non_uniq = filter(lambda x: self.has_reaction(x), self.mets)
-        ##for x in non_uniq:
-        ##    self.rename_reaction(x, x + "_r", no_update=True)
-        ##    non_uniq_run = True
-        ##if non_uniq_run:
-        ##    self.calcs()
+        non_uniq_run = False
+        non_uniq = filter(lambda x: self.has_reaction(x), self.mets)
+        for x in non_uniq:
+            self.rename_reaction(x, x + "_r", no_update=True)
+            non_uniq_run = True
+        if non_uniq_run:
+            self.calcs()
 
     @property
     def net(self):
@@ -429,64 +269,64 @@ class Metabolism(object):
         """
         # Reads metabolites
         for reac in reacs:
-            r = Enzyme(self._sbml, reac, pathway="GP")
+            r = Enzyme(reac,"GP")
             if r.name in self.dic_enzs:
                 raise ValueError("Reaction with same name already in model: " + r.name)
 
-        # subs = self.dic_mets
-        # metabol = self.mets
-        # reac_per_met = self.reac_per_met
-        # ii = len(self.mets)
-        # nreacs_old = len(self.enzymes)
-        # for jj, rea in enumerate(reacs):
-        #     reac = Enzyme(rea,"GP")
-        #     for sus in reac.substrates:
-        #         if sus not in metabol:
-        #             metabol.append(sus)
-        #             subs[sus] = ii
-        #             ii += 1
-        #             reac_per_met.append([reac.name])
-        #         else:
-        #             isus = metabol.index(sus)
-        #             reac_per_met[isus].append(reac.name)
-        #     for prod in reac.products:
-        #         if prod not in metabol:
-        #             metabol.append(prod)
-        #             subs[prod] = ii
-        #             ii += 1
-        #             reac_per_met.append([reac.name])
-        #         else:
-        #             iprod = metabol.index(prod)
-        #             reac_per_met[iprod].append(reac.name)
-        #     self.enzymes.append(reac)
-        #     if reac.reversible:
-        #         self.reac_rev.append(jj+nreacs_old)
-        #     else:
-        #         self.reac_irr.append(jj+nreacs_old)
-        # # Prepares external mets and M matrix
-        # for ii, enzy in enumerate(self.enzymes[nreacs_old:]):
-        #     self.dic_enzs[enzy.name] = ii+nreacs_old
-        #     if enzy.issues:
-        #         if len(enzy.products) == 0:
-        #             self.external_out.extend(enzy.metabolites)
-        #             self.transport.append(ii+nreacs_old)
-        #         elif len(enzy.substrates) == 0:
-        #             self.external_in.extend(enzy.metabolites)
-        #             self.transport.append(ii+nreacs_old)
-        # # writes reactions in pathways
-        # for ii in range(len(self.enzymes[nreacs_old:])):
-        #     pathway = self.enzymes[ii+nreacs_old].pathway
-        #     if pathway in self.pathnames:
-        #         ipath = self.pathnames.index(pathway)
-        #     else:
-        #         self.pathnames.append(pathway)
-        #         ipath = self.pathnames.index(pathway)
-        #         self.pathways.append([])
-        #     self.pathways[ipath].append(ii+nreacs_old)
-        # self.dic_mets = subs
-        # self.mets = metabol
-        # M = self.M_matrix()
-        # self.M = M
+        subs = self.dic_mets
+        metabol = self.mets
+        reac_per_met = self.reac_per_met
+        ii = len(self.mets)
+        nreacs_old = len(self.enzymes)
+        for jj, rea in enumerate(reacs):
+            reac = Enzyme(rea,"GP")
+            for sus in reac.substrates:
+                if sus not in metabol:
+                    metabol.append(sus)
+                    subs[sus] = ii
+                    ii += 1
+                    reac_per_met.append([reac.name])
+                else:
+                    isus = metabol.index(sus)
+                    reac_per_met[isus].append(reac.name)
+            for prod in reac.products:
+                if prod not in metabol:
+                    metabol.append(prod)
+                    subs[prod] = ii
+                    ii += 1
+                    reac_per_met.append([reac.name])
+                else:
+                    iprod = metabol.index(prod)
+                    reac_per_met[iprod].append(reac.name)
+            self.enzymes.append(reac)
+            if reac.reversible:
+                self.reac_rev.append(jj+nreacs_old)
+            else:
+                self.reac_irr.append(jj+nreacs_old)
+        # Prepares external mets and M matrix
+        for ii, enzy in enumerate(self.enzymes[nreacs_old:]):
+            self.dic_enzs[enzy.name] = ii+nreacs_old
+            if enzy.issues:
+                if len(enzy.products) == 0:
+                    self.external_out.extend(enzy.metabolites)
+                    self.transport.append(ii+nreacs_old)
+                elif len(enzy.substrates) == 0:
+                    self.external_in.extend(enzy.metabolites)
+                    self.transport.append(ii+nreacs_old)
+        # writes reactions in pathways
+        for ii in range(len(self.enzymes[nreacs_old:])):
+            pathway = self.enzymes[ii+nreacs_old].pathway
+            if pathway in self.pathnames:
+                ipath = self.pathnames.index(pathway)
+            else:
+                self.pathnames.append(pathway)
+                ipath = self.pathnames.index(pathway)
+                self.pathways.append([])
+            self.pathways[ipath].append(ii+nreacs_old)
+        self.dic_mets = subs
+        self.mets = metabol
+        M = self.M_matrix()
+        self.M = M
         self.calcs()
 
     def pop(self, iname):
@@ -549,10 +389,7 @@ class Metabolism(object):
         self.obj = list(filter(lambda x: x[0] != name, self.obj))
         self.design_obj = list(filter(lambda x: x[0] != name, self.obj))
 
-        reac = self._sbml.getReaction(name)
-        reac.removeFromParentAndDelete()
-
-        self.calcs()
+        self.pop(idx)
 
     def has_reaction(self, name):
         return self.get_reaction(name) is not None
@@ -567,12 +404,10 @@ class Metabolism(object):
         if re.match(r"(^\+ | \+ )", met_to):
             raise ValueError("Lonely + only allowed at end of name")
 
-        species_from = self._sbml.getSpecies(met_from)
-        if not species_from:
+        if not self.has_metabolite(met_from):
             raise ValueError("Metabolite not in model: " + met_from)
 
-        species_to = self._sbml.getSpecies(met_to)
-        if species_to:
+        if self.has_metabolite(met_to):
             raise ValueError("Metabolite already in model: " + met_to)
 
         for reaction in self.enzymes:
@@ -589,55 +424,30 @@ class Metabolism(object):
                     if line == met_from:
                         self.external[i] = met_to
 
-        species_from.name = met_to
-        species_from.id = create_sid(id)
-
         self.calcs()
-
-    def get_metabolite(self, name):
-        return self.metabolite_mapping.get(name)
 
     def has_metabolite(self, name):
-        return name in self.metabolite_mapping
-
-    def add_metabolite(self, name, external):
-        if self.has_metabolite(name):
-            raise ValueError("Metabolite already in model: " + name)
-
-        species = self._sbml.createSpecies()
-        species.setMetaId(create_sid(name))
-        species.setId(create_sid(name))
-        species.setName(name)
-        species.setBoundaryCondition(external)
-
-        self.metabolites.append(Metabolite(self._sbml, met=species))
-
-        self.calcs()
-
-    def remove_metabolite(self, name):
-        met = self._sbml.getSpecies(name)
-        if not met:
-            raise ValueError("Metabolite not in model: " + name)
-
-        met.removeFromParentAndDelete()
-
-        self.calcs()
+        return name in self.dic_mets
 
     def make_metabolite_external(self, name):
-        species = self._sbml.getSpecies(name)
-        if not species:
+        if not self.has_metabolite(name):
             raise ValueError("Metabolite not in model: " + name)
 
-        species.setBoundaryCondition(True)
+        for i, line in enumerate(self.external):
+            if line[0] != "#":
+                if line == name:
+                    # Already external
+                    return
+
+        self.external.append(name)
 
         self.calcs()
 
     def make_metabolite_internal(self, name):
-        species = self._sbml.getSpecies(name)
-        if not species:
+        if not self.has_metabolite(name):
             raise ValueError("Metabolite not in model: " + name)
 
-        species.setBoundaryCondition(False)
+        self.external = list(filter(lambda x: x[0] == "#" or x != name, self.external))
 
         self.calcs()
 
@@ -697,7 +507,7 @@ class Metabolism(object):
                 constraints.append(line)
             elif keyy == "-EXTERNAL METABOLITES" and line != keyy and on:
                 external.append(line)
-            elif keyy == "-OBJ" and line != keyy and on:
+            elif keyy == "-OBJ" or keyy == "-OBJECTIVE" and line != keyy and on:
                 objective.append(line)
             elif keyy == "-DESIGNOBJ" and line != keyy and on:
                 design_objective.append(line)
@@ -718,86 +528,111 @@ class Metabolism(object):
         """
             Reads information from sbml file.
         """
-        reader = libsbml.SBMLReader()
-
-        sbml_doc = reader.readSBMLFromString(filein.read())
-
-        sbml_doc.setLevelAndVersion(3, 1, False, False)
-        model = sbml_doc.getModel()
-
-        if sbml_doc.getPlugin("fbc"):
-            sbml_doc.enablePackage("http://www.sbml.org/sbml/level3/version1/groups/version1", "groups", True)
-            sbml_doc.enablePackage("http://www.sbml.org/sbml/level3/version1/fbc/version2", "fbc", True)
-
-            return sbml_doc
-
-        # Non-fbc SBML handler
-        sbml_doc.enablePackage("http://www.sbml.org/sbml/level3/version1/groups/version1", "groups", True)
-        sbml_doc.enablePackage("http://www.sbml.org/sbml/level3/version1/fbc/version2", "fbc", True)
-
-        sbml_reactions = model.getListOfReactions()
-
-        for reac in sbml_reactions:
-
-            kinetic = reac.getKineticLaw()
-
-            if kinetic:
-                # No idea why, but getListOfParameters returns []
-                for param in kinetic.getListOfAllElements():
-                    if param.getId() == "LOWER_BOUND":
-                        lb = param.getValue()
-                        if lb == -999999:
-                            reac.getPlugin("fbc").setLowerFluxBound("cobra_default_lb")
-                        elif lb == 0:
-                            reac.getPlugin("fbc").setLowerFluxBound("cobra_0_bound")
-                        else:
-                            param_name = reac.getId() + "_lower_bound"
-                            param = model.createParameter()
-                            param.setId(param_name)
-                            param.setUnits("mmol_per_gDW_per_hr")
-                            param.setValue(lb)
-                            reac.getPlugin("fbc").setLowerFluxBound(param_name)
-                    elif param.getId() == "UPPER_BOUND":
-                        ub = param.getValue()
-                        if ub == 999999:
-                            reac.getPlugin("fbc").setUpperFluxBound("cobra_default_ub")
-                        elif lb == 0:
-                            reac.getPlugin("fbc").setUpperFluxBound("cobra_0_bound")
-                        else:
-                            param_name = reac.getId() + "_upper_bound"
-                            param = model.createParameter()
-                            param.setId(param_name)
-                            param.setUnits("mmol_per_gDW_per_hr")
-                            param.setValue(ub)
-                            reac.getPlugin("fbc").setUpperFluxBound(param_name)
-                    elif param.getId() == "OBJECTIVE_COEFFICIENT":
-                        obj = model.getPlugin("fbc").createObjective()
-                        obj.setId("obj")
-                        obj.setType("maximize")
-                        fobj = obj.createFluxObjective()
-                        fobj.setCoefficient(param.getValue())
-                        fobj.setReaction(reac.getId())
-
-                kinetic.removeFromParentAndDelete()
-
-        return sbml_doc
-
-    def write_sbml(self, fileout="model.xml", fbc=True):
-        if isinstance(fileout, six.string_types):
-            f = open(fileout, "w", encoding='utf-8')
-        else:
-            f = fileout
-
-        for reac in self.enzymes:
-            if reac.transport:
-                reac._sbml.removeFromParentAndDelete()
-
-        writer = libsbml.SBMLWriter()
-        s = writer.writeSBMLToString(self._doc)
-        f.write(s)
-
-    def write_bioopt(self, fileout="model.txt"):
-        self.dump(fileout)
+        # Reads sbml
+        data = filein.read()
+        # Parse the file
+        dom = parseString(data)
+        reactions = dom.getElementsByTagName('reaction')
+        species = dom.getElementsByTagName('species')
+        nreacs = len(reactions)
+        # Dictionary with species
+        specie = {}
+        externals = []
+        for i in range(len(species)):
+           try:
+               iddd = species[i]._attrs["name"].value
+           except:
+               iddd = species[i]._attrs["id"].value
+           try:
+               bcon = species[i]._attrs["boundaryCondition"].value
+           except:
+               bcon = "false"
+           try:
+              compart = species[i]._attrs["compartment"].value
+           except:
+              compart = ""
+           specie[iddd] = (iddd, compart)
+           if bcon == "true":
+               externals.append(iddd)
+        # Prepares reactions in optgene format
+        reacts = ["# GPW"]
+        constrs = []
+        objs = []
+        for i in range(nreacs):
+           reacs = reactions[i].getElementsByTagName('listOfReactants')
+           prods = reactions[i].getElementsByTagName('listOfProducts')
+           params = reactions[i].getElementsByTagName('parameter')
+           try:
+              reacname = reactions[i]._attrs["name"].value
+           except:
+              reacname = reactions[i]._attrs["id"].value
+           try:
+              rever = reactions[i]._attrs["reversible"].value
+           except:
+              rever = "true"
+           sustrate = ""
+           for j in range(len(reacs)):
+              spe = reacs[j].getElementsByTagName('speciesReference')
+              for k in range(len(spe)):
+                 kk = spe[k]._attrs["species"].value
+                 try:
+                    stoic = spe[k]._attrs["stoichiometry"].value
+                 except:
+                    stoic = " 1 "
+                 sustrate += " + "+str(float(stoic))+" "+kk
+           product = ""
+           for j in range(len(prods)):
+              spe=prods[j].getElementsByTagName('speciesReference')
+              for k in range(len(spe)):
+                 kk = spe[k]._attrs["species"].value
+                 try:
+                    stoic = spe[k]._attrs["stoichiometry"].value
+                 except:
+                    stoic = " 1 "
+                 product += " + "+str(float(stoic))+" "+kk
+           stri = ""
+           sustrate = sustrate[3:len(sustrate)]
+           product = product[3:len(product)]
+           if rever == "false":
+              reacao = sustrate + " -> " + product
+           else:
+              reacao = sustrate + " <-> " + product
+           reacao = reacname + " : " + reacao
+           reacts.append(reacao)
+           try:
+              lbound = [ele._attrs["value"].value for ele in params \
+                                    if ele._attrs["id"].value == "LOWER_BOUND"]
+              ubound = [ele._attrs["value"].value for ele in params \
+                                    if ele._attrs["id"].value == "UPPER_BOUND"]
+              objcoe = [ele._attrs["value"].value for ele in params \
+                          if ele._attrs["id"].value == "OBJECTIVE_COEFFICIENT"]
+           except:
+              lbound = [ele._attrs["value"].value for ele in params \
+                                  if ele._attrs["name"].value == "LOWER_BOUND"]
+              ubound = [ele._attrs["value"].value for ele in params \
+                                  if ele._attrs["name"].value == "UPPER_BOUND"]
+              objcoe = [ele._attrs["value"].value for ele in params \
+                         if ele._attrs["name"].value == "OBJECTIVE_COEFFICIENT"]
+           try:
+               lbound = float(lbound[0])
+           except:
+               lbound = None
+           try:
+               ubound = float(ubound[0])
+           except:
+               ubound = None
+           try:
+               objcoe = float(objcoe[0])
+           except:
+               objcoe = None
+           if lbound != None and ubound != None:
+               constr = reacname+" ["+str(lbound)+", "+str(ubound)+"]" 
+               constrs.append(constr)
+           if objcoe != None and objcoe != 0.:
+               obj = reacname+" 1 "+str(objcoe)
+               objs.append(obj)
+        self.dic_specie = specie
+        return [reacts, constrs, externals, objs]
 
     def dump(self, fileout="model.txt", filetype="opt", printgenes=False, \
              dic_genes={}, alllimits=False, allobjs=False):
@@ -812,23 +647,14 @@ class Metabolism(object):
 
         if filetype == "opt":
             print("-REACTIONS", file=fil)
-
-            self.pathways = {}
-
-            for reac in self.enzymes:
-                if not reac.pathway in self.pathways:
-                    self.pathnames.append(reac.pathway)
-                    self.pathways[reac.pathway] = []
-                self.pathways[reac.pathway].append(reac)
-
             for ii, pathname in enumerate(self.pathnames):
                 if pathname == "_TRANSPORT_":
                     continue
                 print("", file=fil)
                 if pathname is not None:
                     print("# " + pathname, file=fil)
-                for reac in self.pathways[pathname]:
-                    fil.write(str(reac))
+                for reac in self.pathways[ii]:
+                    fil.write(str(self.enzymes[reac]))
                     fil.write("\n")
             print("", file=fil)
             print("-CONSTRAINTS", file=fil)
@@ -843,10 +669,10 @@ class Metabolism(object):
             exts = set(self.external) | set(self.external_in)
             exts = exts|set(self.external_out)
             exts = list(exts)
-            #exts.sort()
+            exts.sort()
             for ext in exts:
-                print(ext.name, file=fil)
-# GRAPH IST BUGGY + OBJECTIVE LOAD/SAVE
+                print(ext, file=fil)
+
             if self.obj:
                 print("", file=fil)
                 print("-OBJ", file=fil)
@@ -1122,7 +948,7 @@ class Metabolism(object):
         print(" Most connected Metabolites as products: ", file=probs)
         print("      ", file=probs)
         substr = [sum([met in reac.products for reac in self.enzymes]+
-                  [met in reac.substrates for reac in self.enzymes if
+                  [met in reac.substrates for reac in self.enzymes if 
                   reac.reversible]) for met in self.mets]
         con_met = sorted(range(len(self.mets)), key=lambda x:substr[x],
                          reverse=True)
