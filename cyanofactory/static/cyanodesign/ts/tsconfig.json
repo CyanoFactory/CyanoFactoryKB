@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+        "target": "ES6",
+        "module": "amd",
+        "declaration": true,
+        "outDir": "../js",
+        "strict": true,
+        "moduleResolution": "Node",
+        "baseUrl": ".",
+        "paths": {
+            "*": [
+                "../../cyano/node_modules/*",
+                "../../cyano/node_modules/@types/*",
+                "../../cyano/*",
+                "../../cyano/node_modules/blablub/*"
+            ]
+        }
+    }
+}

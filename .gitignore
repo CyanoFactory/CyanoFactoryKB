@@ -3,3 +3,5 @@
 utils
 /.idea
 /pyglpk-0.4-dev/build
+*.d.ts
+__pycache__/

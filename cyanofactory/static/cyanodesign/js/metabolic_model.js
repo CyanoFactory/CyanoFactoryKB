@@ -4,58 +4,61 @@ Hochschule Mittweida, University of Applied Sciences
 
 Released under the MIT license
 */
-var MetabolicModel;
-(function (MetabolicModel) {
-    MetabolicModel.LOWER_BOUND_LIMIT = -100000.0;
-    MetabolicModel.UPPER_BOUND_LIMIT = 100000.0;
-    class ClassBuilder {
-        constructor(typeObj) {
-            this.typeObj = typeObj;
-        }
-        create() {
-            return new this.typeObj();
-        }
-    }
-    class LstOp {
-        constructor(list) {
-            this.lst = list;
-        }
-        get(key, value) {
-            for (let item of this.lst) {
-                if (item[key] == value) {
-                    return item;
-                }
+define(["require", "exports"], function (require, exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.LOWER_BOUND_LIMIT = -100000.0;
+    exports.UPPER_BOUND_LIMIT = 100000.0;
+    var Internal;
+    (function (Internal) {
+        class ClassBuilder {
+            constructor(typeObj) {
+                this.typeObj = typeObj;
             }
-            return null;
-        }
-        has(key, value) {
-            for (const item of this.lst) {
-                if (item[key] == value) {
-                    return true;
-                }
+            create() {
+                return new this.typeObj();
             }
-            return false;
         }
-    }
-    class Helper {
-        static getById(id, lst) {
-            for (const item of lst) {
-                if (item.id == id) {
-                    return item;
-                }
+        Internal.ClassBuilder = ClassBuilder;
+        class LstOp {
+            constructor(list, typename) {
+                this.lst = list;
+                this.tname = typename;
             }
-            return null;
-        }
-        static getByName(id, lst) {
-            for (const item of lst) {
-                if (item.name == id) {
-                    return item;
+            get(key, value) {
+                for (let item of this.lst) {
+                    if (item[key] == value) {
+                        return item;
+                    }
                 }
+                return null;
             }
-            return null;
+            checked_get(key, value) {
+                let val = this.get(key, value);
+                if (val == null) {
+                    throw new Error(this.tname + ": No object (" + key + ", " + value + ") found");
+                }
+                return val;
+            }
+            has(key, value) {
+                for (const item of this.lst) {
+                    if (item[key] == value) {
+                        return true;
+                    }
+                }
+                return false;
+            }
         }
-    }
+        Internal.LstOp = LstOp;
+    })(Internal || (Internal = {}));
     class ElementBase {
+        constructor() {
+            this.id = "";
+            this.metaid = "";
+            this.name = "";
+            this.sbo_term = "";
+            this.description = "";
+        }
         read_common_attribute(k, v) {
             if (k == "id") {
                 this.id = v;
@@ -87,16 +90,16 @@ var MetabolicModel;
             this.parameters = [];
         }
         get metabolite() {
-            return new LstOp(this.metabolites);
+            return new Internal.LstOp(this.metabolites, "Metabolites");
         }
         get reaction() {
-            return new LstOp(this.reactions);
+            return new Internal.LstOp(this.reactions, "Reactions");
         }
         get compartment() {
-            return new LstOp(this.compartments);
+            return new Internal.LstOp(this.compartments, "Compartments");
         }
         get parameter() {
-            return new LstOp(this.parameters);
+            return new Internal.LstOp(this.parameters, "Parameters");
         }
         //objectives;
         //groups;
@@ -105,10 +108,10 @@ var MetabolicModel;
         }
         fromJson(j) {
             this.readAttributes(j);
-            this.read_list(j["listOfSpecies"], this.metabolites, new ClassBuilder(Metabolite));
-            this.read_list(j["listOfReactions"], this.reactions, new ClassBuilder(Reaction));
-            this.read_list(j["listOfCompartments"], this.compartments, new ClassBuilder(Compartment));
-            this.read_list(j["listOfParameters"], this.parameters, new ClassBuilder(Parameter));
+            this.read_list(j["listOfSpecies"], this.metabolites, new Internal.ClassBuilder(Metabolite));
+            this.read_list(j["listOfReactions"], this.reactions, new Internal.ClassBuilder(Reaction));
+            this.read_list(j["listOfCompartments"], this.compartments, new Internal.ClassBuilder(Compartment));
+            this.read_list(j["listOfParameters"], this.parameters, new Internal.ClassBuilder(Parameter));
             this.refreshConstraints();
         }
         getExternalMetabolites() {
@@ -128,8 +131,13 @@ var MetabolicModel;
             }
         }
     }
-    MetabolicModel.Model = Model;
+    exports.Model = Model;
     class Compartment extends ElementBase {
+        constructor() {
+            super(...arguments);
+            this.constant = false;
+            this.units = "";
+        }
         readAttributes(attrs) {
             for (const k in attrs) {
                 if (attrs.hasOwnProperty(k)) {
@@ -150,18 +158,24 @@ var MetabolicModel;
             this.readAttributes(j);
         }
     }
-    MetabolicModel.Compartment = Compartment;
+    exports.Compartment = Compartment;
     class Reaction extends ElementBase {
         constructor() {
             super(...arguments);
+            this.lower_bound = null;
+            this.upper_bound = null;
+            this.lower_bound_name = "";
+            this.upper_bound_name = "";
+            this.reversible = false;
+            this.fast = false;
             this.substrates = [];
             this.products = [];
             //gene_products;
             this.enabled = true;
         }
         static fromBioOptString(bioopt_string) {
-            var takeWhile = function (predicate, iterable, inclusive) {
-                var arr = [];
+            function takeWhile(predicate, iterable, inclusive) {
+                let arr = [];
                 iterable.every(function (x) {
                     if (predicate(x)) {
                         arr.push(x);
@@ -175,24 +189,26 @@ var MetabolicModel;
                     return true;
                 });
                 return [arr, iterable.slice(arr.length)];
-            };
-            var enzyme = new Reaction();
-            var line = bioopt_string.split(/\s+/g);
-            var res = takeWhile(function (x) { return x.indexOf(":") != x.length - 1; }, line, true);
+            }
+            let enzyme = new Reaction();
+            let line = bioopt_string.split(/\s+/g);
+            let res = takeWhile(function (x) {
+                return x.indexOf(":") != x.length - 1;
+            }, line, true);
             enzyme.name = res[0].join(" ").slice(0, -1).trim();
             enzyme.id = enzyme.name;
             line = res[1];
             if (line.length == 0) {
                 throw { "enzyme": enzyme, "message": "Invalid reaction" };
             }
-            var reactants = [];
-            var arrow = "";
-            var products = [];
-            var state = 0;
+            let reactants = [];
+            let arrow = "";
+            let products = [];
+            let state = 0;
             while (line.length > 0) {
-                var value = 1;
+                let value = 1;
                 if (line[0].indexOf("/") != -1) {
-                    var fl = line[0].split(/\//g);
+                    let fl = line[0].split(/\//g);
                     value = +(fl[0]) / +(fl[1]);
                     if (isNaN(value)) {
                         value = 1;
@@ -211,12 +227,16 @@ var MetabolicModel;
                     }
                 }
                 // Identifier...
-                res = takeWhile(function (x) { return x != "+" && x != "->" && x != "<->"; }, line, false);
+                res = takeWhile(function (x) {
+                    return x != "+" && x != "->" && x != "<->";
+                }, line, false);
                 // Parser is now on +, -> or <-> or EOL
-                var mname = res[0].join(" ");
+                let mname = res[0].join(" ");
                 line = res[1];
                 // Test if there a multiple operators and reject them
-                res = takeWhile(function (x) { return x == "+" && x == "->" && x == "<->"; }, line, false);
+                res = takeWhile(function (x) {
+                    return x == "+" || x == "->" || x == "<->";
+                }, line, false);
                 // Parser is now on the next metabolite (number or name) or EOL
                 if (res[0].length > 0) {
                     if (res[0].length > 1) {
@@ -238,9 +258,11 @@ var MetabolicModel;
                 else {
                     target = enzyme.products;
                 }
-                target.push(new MetaboliteReference().fromJson({
+                let mr = new MetaboliteReference();
+                mr.fromJson({
                     "stoichiometry": value, "id": mname, "name": mname
-                }));
+                });
+                target.push(mr);
                 if (line.length == 0) {
                     break;
                 }
@@ -254,7 +276,6 @@ var MetabolicModel;
                 // Remove the operator
                 line = line.slice(1);
             }
-            ;
             if (arrow == "") {
                 throw { "enzyme": enzyme, message: "No arrow found" };
             }
@@ -302,30 +323,30 @@ var MetabolicModel;
         }
         fromJson(j) {
             this.readAttributes(j);
-            this.read_list(j["listOfReactants"], this.substrates, new ClassBuilder(MetaboliteReference));
-            this.read_list(j["listOfProducts"], this.products, new ClassBuilder(MetaboliteReference));
+            this.read_list(j["listOfReactants"], this.substrates, new Internal.ClassBuilder(MetaboliteReference));
+            this.read_list(j["listOfProducts"], this.products, new Internal.ClassBuilder(MetaboliteReference));
         }
         isConstrained() {
-            return this.lower_bound != MetabolicModel.LOWER_BOUND_LIMIT && this.upper_bound != MetabolicModel.UPPER_BOUND_LIMIT;
+            return this.lower_bound != exports.LOWER_BOUND_LIMIT && this.upper_bound != exports.UPPER_BOUND_LIMIT;
         }
         makeUnconstrained() {
-            this.lower_bound = MetabolicModel.LOWER_BOUND_LIMIT;
-            this.upper_bound = MetabolicModel.UPPER_BOUND_LIMIT;
+            this.lower_bound = exports.LOWER_BOUND_LIMIT;
+            this.upper_bound = exports.UPPER_BOUND_LIMIT;
         }
-        toHTML() {
+        toHTML(model) {
             let element = document.createElement("div");
             if (!this.enabled) {
                 element.classList.add("cyano-reaction-disabled");
             }
             for (let i = 0; i < this.substrates.length; ++i) {
-                element.appendChild(this.substrates[i].toHtml());
+                element.appendChild(this.substrates[i].toHtml(model));
                 if (i != this.substrates.length - 1) {
                     element.appendChild(document.createTextNode(" + "));
                 }
             }
             element.appendChild(document.createTextNode(this.reversible ? " ↔ " : " → "));
             for (let i = 0; i < this.products.length; ++i) {
-                element.appendChild(this.products[i].toHtml());
+                element.appendChild(this.products[i].toHtml(model));
                 if (i != this.products.length - 1) {
                     element.appendChild(document.createTextNode(" + "));
                 }
@@ -352,7 +373,7 @@ var MetabolicModel;
         }
         ;
         toString() {
-            var element = "";
+            let element = "";
             element = element.concat(this.name + " : ");
             element = element.concat(this.reactionToString());
             return element;
@@ -365,12 +386,12 @@ var MetabolicModel;
                 return "[" + this.lower_bound + ", " + this.upper_bound + "]";
             }
         }
-        clearMetaboliteReference() {
-            var affected_mets = [];
-            var that = this;
+        clearMetaboliteReference(model) {
+            let affected_mets = [];
+            let that = this;
             // Clear refs
-            MetabolicModel.model.metabolites.forEach(function (metabolite) {
-                var index = metabolite.consumed.indexOf(that);
+            model.metabolites.forEach(function (metabolite) {
+                let index = metabolite.consumed.indexOf(that);
                 if (index > -1) {
                     metabolite.consumed.splice(index, 1);
                     affected_mets.push(metabolite);
@@ -386,19 +407,19 @@ var MetabolicModel;
             return affected_mets;
         }
         ;
-        updateMetaboliteReference() {
-            var affected_mets = [];
-            affected_mets = affected_mets.concat(this.clearMetaboliteReference());
-            var that = this;
+        updateMetaboliteReference(model) {
+            let affected_mets = [];
+            affected_mets = affected_mets.concat(this.clearMetaboliteReference(model));
+            const that = this;
             // Add refs
             this.substrates.forEach(function (substrate) {
-                var substrateObj = Helper.getById(substrate.id, MetabolicModel.model.metabolites);
+                let substrateObj = model.metabolite.checked_get("id", substrate.id);
                 substrateObj.consumed.push(that);
                 affected_mets.push(substrateObj);
                 substrateObj.consumed = substrateObj.consumed.sort(Reaction.nameComparator);
             });
             this.products.forEach(function (product) {
-                var productObj = Helper.getById(product.id, MetabolicModel.model.metabolites);
+                let productObj = model.metabolite.checked_get("id", product.id);
                 productObj.produced.push(that);
                 affected_mets.push(productObj);
                 productObj.produced = productObj.produced.sort(Reaction.nameComparator);
@@ -406,22 +427,22 @@ var MetabolicModel;
             return affected_mets;
         }
         ;
-        remove() {
-            this.clearMetaboliteReference();
-            var index = MetabolicModel.model.reactions.indexOf(this);
+        remove(model) {
+            this.clearMetaboliteReference(model);
+            let index = model.reactions.indexOf(this);
             if (index > -1) {
-                MetabolicModel.model.reactions.splice(index, 1);
+                model.reactions.splice(index, 1);
                 return true;
             }
             return false;
         }
         ;
-        getMetabolites() {
-            var nameProp = function (arg) {
+        getMetabolites(model) {
+            let nameProp = function (arg) {
                 return arg.name;
             };
-            var idGetter = function (arg) {
-                Helper.getById(arg, MetabolicModel.model.metabolites);
+            let idGetter = function (arg) {
+                model.metabolite.get("id", arg);
             };
             return this.substrates.map(nameProp)
                 .concat(this.products.map(nameProp))
@@ -429,8 +450,13 @@ var MetabolicModel;
         }
         ;
     }
-    MetabolicModel.Reaction = Reaction;
+    exports.Reaction = Reaction;
     class MetaboliteReference extends ElementBase {
+        constructor() {
+            super(...arguments);
+            this.constant = false;
+            this.stoichiometry = 1;
+        }
         readAttributes(attrs) {
             for (const k in attrs) {
                 if (attrs.hasOwnProperty(k)) {
@@ -453,9 +479,9 @@ var MetabolicModel;
         fromJson(j) {
             this.readAttributes(j);
         }
-        toHtml() {
-            var amount = this.stoichiometry + " ";
-            var inst = Helper.getById(this.id, MetabolicModel.model.metabolites);
+        toHtml(model) {
+            let amount = this.stoichiometry + " ";
+            let inst = model.metabolite.checked_get("id", this.id);
             let span = document.createElement("span");
             span.classList.add("cyano-metabolite");
             span.append(amount + inst.name);
@@ -470,10 +496,16 @@ var MetabolicModel;
         }
         ;
     }
-    MetabolicModel.MetaboliteReference = MetaboliteReference;
+    exports.MetaboliteReference = MetaboliteReference;
     class Metabolite extends ElementBase {
         constructor() {
             super(...arguments);
+            this.compartment = "";
+            this.charge = 0;
+            this.formula = "";
+            this.constant = false;
+            this.boundary_condition = false;
+            this.has_only_substance_units = false;
             this.produced = [];
             this.consumed = [];
         }
@@ -508,8 +540,8 @@ var MetabolicModel;
         fromJson(j) {
             this.readAttributes(j);
         }
-        updateName(new_name) {
-            let idx = Helper.getByName(new_name, MetabolicModel.model.metabolites);
+        updateName(new_name, model) {
+            let idx = model.metabolite.get("name", new_name);
             if (idx != null) {
                 let that = this;
                 this.consumed.concat(this.produced).forEach(function (enzyme) {
@@ -532,26 +564,26 @@ var MetabolicModel;
             }
             return false;
         }
-        remove() {
+        remove(model) {
             let that = this;
             // Clear refs
             this.consumed.forEach(function (enzyme) {
-                for (var i = 0; i < enzyme.substrates.length; ++i) {
+                for (let i = 0; i < enzyme.substrates.length; ++i) {
                     if (that.name == enzyme.substrates[i].name) {
                         enzyme.substrates.splice(i, 1);
                         break;
                     }
                 }
-                for (var i = 0; i < enzyme.products.length; ++i) {
+                for (let i = 0; i < enzyme.products.length; ++i) {
                     if (that.name == enzyme.products[i].name) {
                         enzyme.products.splice(i, 1);
                         break;
                     }
                 }
             });
-            var index = MetabolicModel.model.metabolites.indexOf(this);
+            let index = model.metabolites.indexOf(this);
             if (index > -1) {
-                MetabolicModel.model.metabolites.splice(index, 1);
+                model.metabolites.splice(index, 1);
                 return true;
             }
             return false;
@@ -566,8 +598,14 @@ var MetabolicModel;
             return this.compartment == "e";
         }
     }
-    MetabolicModel.Metabolite = Metabolite;
+    exports.Metabolite = Metabolite;
     class Parameter extends ElementBase {
+        constructor() {
+            super(...arguments);
+            this.constant = false;
+            this.units = "";
+            this.value = 0;
+        }
         readAttributes(attrs) {
             for (const k in attrs) {
                 if (attrs.hasOwnProperty(k)) {
@@ -591,6 +629,5 @@ var MetabolicModel;
             this.readAttributes(j);
         }
     }
-    MetabolicModel.Parameter = Parameter;
-    MetabolicModel.model = new Model();
-})(MetabolicModel || (MetabolicModel = {}));
+    exports.Parameter = Parameter;
+});
