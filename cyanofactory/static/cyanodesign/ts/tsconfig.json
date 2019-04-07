@@ -4,7 +4,7 @@
         "module": "amd",
         "declaration": true,
         "outDir": "../js",
-        "strict": true,
+        "strict": false,
         "moduleResolution": "Node",
         "baseUrl": ".",
         "paths": {
