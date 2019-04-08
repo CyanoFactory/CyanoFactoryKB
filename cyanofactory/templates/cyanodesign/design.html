@@ -129,7 +129,7 @@ Released under the MIT license
 
         $($("#filter_row_flux").text()).appendTo($("#cyano-flux-list_wrapper").children()[1]);
 
-        $.fn.dataTable.ext.search.push(
+        /*$.fn.dataTable.ext.search.push(
             function( settings, data, dataIndex ) {
                 if (settings.nTable == table_flux[0]) {
                     var min = parseFloat($("#filter-flux-min").val());
@@ -151,7 +151,7 @@ Released under the MIT license
 
                 return true;
             }
-        );
+        );*/
 
         $("#filter-flux-min").change(function() { datatable_flux.draw(); });
         $("#filter-flux-max").change(function() { datatable_flux.draw(); });
@@ -211,7 +211,7 @@ Released under the MIT license
             }
         } );*/
 
-        $.fn.dataTable.ext.search.push(
+        /*$.fn.dataTable.ext.search.push(
             function( settings, data, dataIndex ) {
                 if (settings.nTable == table_enzymes[0]) {
                     var arr = $("#cyano-enzyme-list-filter-reactions").find("option").map(function () {
@@ -232,7 +232,7 @@ Released under the MIT license
 
                 return true;
             }
-        );
+        );*/
 
         $($("#filter_row_metabolites").text()).appendTo($("#cyano-metabolite-list_wrapper").children()[1]);
 
@@ -259,7 +259,7 @@ Released under the MIT license
             }
         });
 
-        $.fn.dataTable.ext.search.push(
+        /*$.fn.dataTable.ext.search.push(
             function( settings, data, dataIndex ) {
                 if (settings.nTable == table_metabolites[0]) {
                     var arr = $("#cyano-metabolite-list-filter-reactions").find("option").map(function () {
@@ -278,7 +278,7 @@ Released under the MIT license
 
                 return true;
             }
-        );
+        );*/
 
         $( ".check" ).button();
 

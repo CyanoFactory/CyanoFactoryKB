@@ -53,7 +53,7 @@ export class Page {
         this.table_element_flux = <HTMLElement>where.getElementsByClassName("cyano-flux-list")[0]!;
         this.app = app;
 
-        this.datatable_flux = $(this.table_element_flux).DataTable({
+        this.datatable_flux = $(this.table_element_flux).DataTable(<any>{
             "deferRender": true,
             "displayLength": 25,
             "order": [[ 1, 'desc' ]],

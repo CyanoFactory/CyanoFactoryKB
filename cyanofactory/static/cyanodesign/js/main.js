@@ -2,9 +2,17 @@ const cyano_prefix = "../../cyano/node_modules/";
 
 requirejs.config({
     paths: {
-        jquery: cyano_prefix + 'jquery/dist/jquery',
-        "datatables.net": cyano_prefix + 'datatables.net/js/jquery.dataTables'
     }
+});
+
+// ignore datatables.net and jQuery, already included via script-tag
+// causes havoc because jQuery is otherwise loaded twice
+define('datatables.net', function() {
+    return undefined;
+});
+
+define('jquery', function() {
+    return $;
 });
 
 define([

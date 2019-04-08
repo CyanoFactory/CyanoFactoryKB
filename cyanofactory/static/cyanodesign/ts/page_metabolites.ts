@@ -40,7 +40,7 @@ export class Page {
         this.table_element = <HTMLElement>where.getElementsByClassName("cyano-metabolite-list")[0]!;
         this.app = app;
 
-        this.datatable = $(this.table_element).DataTable({
+        this.datatable = $(this.table_element).DataTable(<any>{
             "deferRender": true,
             columns: [
                     {},
