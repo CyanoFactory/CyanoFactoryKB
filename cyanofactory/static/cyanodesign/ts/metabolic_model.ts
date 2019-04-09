@@ -86,6 +86,10 @@ abstract class ElementBase {
             dst_list.push(obj);
         }
     }
+
+    get_name_or_id(): string {
+        return this.name.length == 0 ? this.id : this.name;
+    }
 }
 
 export class Model extends ElementBase {

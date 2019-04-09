@@ -203,13 +203,16 @@ export class Page {
         this.datatable.rows.add(this.app.model.reactions);
         this.datatable.draw();
 
+        for (let reaction of this.app.model.reactions) {
+            reaction.updateMetaboliteReference(this.app.model);
+        }
+
         /*var old_design_objective = design_objective;
         model.reactions.forEach(function(item) {
             cyano_design_objective_select[0].selectize.addOption(item);
             cyano_design_design_objective_select[0].selectize.addOption(item);
             design_objective_visible_combobox[0].selectize.addOption(item);
             cyano_design_target_objective_select[0].selectize.addOption(item);
-            item.updateMetaboliteReference(model);
         });
         cyano_design_objective_select[0].selectize.refreshOptions();
         cyano_design_design_objective_select[0].selectize.refreshOptions();

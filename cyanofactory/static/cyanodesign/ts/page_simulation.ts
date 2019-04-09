@@ -3,6 +3,10 @@ import * as mm from "./metabolic_model";
 import * as $ from "jquery";
 import "datatables.net";
 
+declare var c3;
+declare var Viz;
+declare var svgPanZoom;
+
 let template = document.createElement('template');
 template.innerHTML = `
 <div class="checkbox">
@@ -24,10 +28,10 @@ template.innerHTML = `
 <div class="simulation-result">
 </div>
 
-<div class="visual_graph">
+<div class="visual-graph">
 </div>
 
-<div class="visual_fba">
+<div class="visual-fba">
 </div>
 
 <table class="cyano-flux-list table table-striped table-hover">
@@ -44,13 +48,26 @@ export class Page {
     readonly app: app.AppManager;
     readonly datatable_flux: DataTables.Api;
     readonly source_element: HTMLElement;
+    readonly simulation_result_element: HTMLElement;
+    readonly visual_graph_element: HTMLElement;
+    readonly visual_fba_element: HTMLElement;
     readonly table_element_flux: HTMLElement;
+
+    last_sim_type: string = "";
+    last_sim_flux: number = 0;
+    simulation_chart: any = null;
+
+    is_dragging: boolean = false;
 
     constructor(where: HTMLElement, app: app.AppManager) {
         this.source_element = where;
         where.appendChild(template.content.cloneNode(true));
 
         this.table_element_flux = <HTMLElement>where.getElementsByClassName("cyano-flux-list")[0]!;
+        this.simulation_result_element = <HTMLElement>where.getElementsByClassName("simulation-result")[0]!;
+        this.visual_graph_element = <HTMLElement>where.getElementsByClassName("visual-graph")[0]!;
+        this.visual_fba_element = <HTMLElement>where.getElementsByClassName("visual-fba")[0]!;
+        
         this.app = app;
 
         this.datatable_flux = $(this.table_element_flux).DataTable(<any>{
@@ -94,8 +111,191 @@ export class Page {
                 }
             ]
         });
+
+        let self: Page = this;
+
+        /*FIXME$("#visual_fba").on("click", "g.node", function() {
+            var idx = Metabolite.indexByName($(this).children("text").text());
+            if (!isDragging & idx > -1) {
+                showEditMetaboliteDialog(model.metabolites[idx]);
+            }
+        });
+
+        $("#visual_fba").on("click", "g.edge text", function() {
+            // remove flux value
+            var idx = Enzyme.indexByName($(this).text().replace(/ \(-?[0-9]+(\.[0-9]+)?\)$/, ""));
+            if (!isDragging & idx > -1) {
+                showEditEnzymeDialog(model.reactions[idx], false);
+            }
+        });
+
+        $("#visual_fba").on("mousedown", "g", function(event) {
+            isDragging = false;
+            $(this).data('page', {x: event.pageX, y: event.pageY})
+        });
+        $("#visual_fba").on("mousemove", "g", function(event) {
+            var p = $(this).data('page');
+            if (p !== undefined) {
+                if (Math.abs(p.x - event.pageX) > 4 ||
+                    Math.abs(p.y - event.pageY) > 4) {
+                    isDragging = true;
+                }
+            }
+        });*/
     }
 
     update() {
+    }
+
+    updateLabels() {
+        if (this.simulation_chart == null) {
+            return;
+        }
+
+        this.simulation_chart.axis.labels({
+            x: $("#mba-x-label").val(),
+            y: $("#mba-y-label").val(),
+            y2: $("#mba-y2-label").val()
+        });
+    };
+
+    notifyInfo(text: string) {
+        this.simulation_result_element.innerHTML = '<div class="alert alert-info" role="alert">\
+            <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>\
+            <span class="sr-only">Info:</span>' + text + '</div>';
+    }
+
+    notifyWarning(text: string) {
+        this.simulation_result_element.innerHTML = '<div class="alert alert-warning" role="alert">\
+            <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>\
+            <span class="sr-only">Info:</span>' + text + '</div>';
+    }
+
+    notifyError(text: string) {
+        this.simulation_result_element.innerHTML = '<div class="alert alert-danger" role="alert">\
+            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>\
+            <span class="sr-only">Error:</span>' + text + '</div>';
+    }
+
+    simulate(simulation_result: any) {
+        let symtype = this.app.settings_page.getSimulationType();
+        this.last_sim_type = symtype;
+
+        if (symtype == "fba") {
+            let graph = Viz(simulation_result["graphstr"], "svg", "dot");
+
+            if (simulation_result["solution"] == "Optimal") {
+                var obj = this.app.settings_page.getObjective().id;
+                this.notifyInfo("The solution is " + simulation_result["solution"] + ". Flux of objective is " + simulation_result["flux"][obj].toFixed(4));
+            } else {
+                this.notifyWarning("The solution is " + simulation_result["solution"] + ". Check if your constraints are too strict.");
+            }
+
+            $(this.visual_graph_element).hide();
+            $(this.visual_fba_element).show();
+            this.visual_fba_element.innerHTML = graph;
+
+            $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
+            let svgPan: any = svgPanZoom('.visual-fba > svg', {minZoom: 0.1, fit: false});
+            svgPan.zoom(1);
+
+            this.datatable_flux.clear();
+
+            for (let key in simulation_result["flux"]) {
+                if (simulation_result["flux"].hasOwnProperty(key)) {
+                    if (key.indexOf("_transp") == -1)
+                        this.datatable_flux.row.add([this.app.model.reaction.get("id", key).name, simulation_result["flux"][key]]);
+                }
+            }
+
+            this.datatable_flux.draw();
+        /*$("svg").find(".edge text").each(function() {
+                if ($(this).text().indexOf(cyano_design_objective_select.val() + " ") == 0) {
+                    var new_x = ($("svg").width() / 2) - $(this).attr("x");
+                    var new_y = ($("svg").height() / 2) - $(this).attr("y");
+                    svgPan.pan({x: new_x, y: new_y});
+                }
+            });*/
+        } else if (symtype == "mba") {
+            $(this.visual_graph_element).show();
+            $(this.visual_fba_element).hide();
+
+            if (!$("#remember-simulation").prop("checked") || this.simulation_chart === undefined) {
+                var chart = {
+                    bindto: '#visual_graph',
+                    data: {
+                        x: 'x',
+                        columns: simulation_result["graph"],
+                        type: 'bar',
+                        axes: {}/*,
+                        onclick: chart_clicked*/
+                    },
+                    axis: {
+                        x: {
+                            label: {
+                                position: "outer-center"
+                            },
+                            type: 'category'
+                        },
+                        y: {
+                            label: {
+                                position: "outer-middle"
+                            }
+                        }
+                    }
+                };
+                chart["data"]["axes"][this.app.settings_page.getObjective().id] = "y";
+
+                this.simulation_chart = c3.generate(chart);
+            } else {
+                this.simulation_chart.load({
+                    columns: [
+                        //FIXME[cyano_design_design_objective_select.val()].concat(simulation_result["graph"][1])
+                    ],
+                    type: 'bar'
+                });
+            }
+            this.last_sim_flux = simulation_result["flux"];
+            this.updateLabels();
+        } else if (symtype == "sa") {
+            $(this.visual_graph_element).show();
+            $(this.visual_fba_element).hide();
+
+            let chart = {
+                bindto: '#visual_graph',
+                data: {
+                    x: 'x',
+                    columns: simulation_result["graph"],
+                    type: 'bar',
+                    axes: {}/*,
+                    onclick: chart_clicked*/
+                },
+                axis: {
+                    x: {
+                        label: {
+                            position: "outer-center"
+                        },
+                        type: 'category'
+                    },
+                    y: {
+                        label: {
+                            position: "outer-middle"
+                        }
+                    },
+                    y2: {
+                        label: {
+                            position: "outer-middle"
+                        },
+                        show: true
+                    }
+                }
+            };
+            chart["data"]["axes"][this.app.settings_page.getObjective().id] = "y";
+            //FIXMEchart["data"]["axes"][cyano_design_design_objective_select.val()] = "y2";
+
+            this.simulation_chart = c3.generate(chart);
+            this.last_sim_flux = simulation_result["flux"];
+            this.updateLabels();
+        }
     }
 }

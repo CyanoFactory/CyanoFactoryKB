@@ -80,6 +80,9 @@ define(["require", "exports"], function (require, exports) {
                 dst_list.push(obj);
             }
         }
+        get_name_or_id() {
+            return this.name.length == 0 ? this.id : this.name;
+        }
     }
     class Model extends ElementBase {
         constructor() {
