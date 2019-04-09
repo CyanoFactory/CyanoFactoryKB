@@ -33,7 +33,7 @@ Released under the MIT license
     "use strict";
 
     var MetabolicModel = undefined;
-    var model = undefined;
+    var app = undefined;
     var startup = undefined;
 
     var enzymes_design = [];
@@ -98,24 +98,6 @@ Released under the MIT license
         function(e) { return !e.isExternal() },
         function(e) { return e.isExternal() }
     ];
-
-    function notifyInfo(text) {
-        $("#simulation-result").html('<div class="alert alert-info" role="alert">\
-            <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>\
-            <span class="sr-only">Info:</span>' + text + '</div>');
-    }
-
-    function notifyWarning(text) {
-        $("#simulation-result").html('<div class="alert alert-warning" role="alert">\
-            <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>\
-            <span class="sr-only">Info:</span>' + text + '</div>');
-    }
-
-    function notifyError(text) {
-        $("#simulation-result").html('<div class="alert alert-danger" role="alert">\
-            <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>\
-            <span class="sr-only">Error:</span>' + text + '</div>');
-    }
 
     $(function () {
         cyano_design_objective_select = $("#cyano-design-objective-select");
@@ -362,27 +344,25 @@ Released under the MIT license
             else
                 waitIndicator.show(wait_position);
 
-            var cdos = cyano_design_objective_select.val();
-            var cddos = cyano_design_design_objective_select.val();
-            var cdto = cyano_design_target_objective_select.val();
-
-            var result = {
+            let result = {
                 "changes": JSON.stringify(command_list),
                 "objectives": JSON.stringify([{
-                    "id": cdos,
-                    "maximize": $("#radio-maximize").prop("checked")
+                    "id": app.settings_page.getObjective().id,
+                    "maximize": app.settings_page.maximizeObjective()
                 }]),
                 "design_objectives": JSON.stringify([{
-                    "id": cddos,
+                    "id": "",
                     "maximize": true
                 }]),
                 "target_reactions": JSON.stringify([{
-                    "id": cdto,
+                    "id": "",
                     "maximize": true
                 }]),
                 "type": JSON.stringify(getSimulationType()),
-                "display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
-                "auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
+                //"display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
+                //"auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
+                "display": JSON.stringify([]),
+                "auto_flux": JSON.stringify(true)
             };
 
             if (revision !== undefined) {
@@ -418,7 +398,7 @@ Released under the MIT license
                 }
 
                 endRequest();
-            }).error(function(x) {
+            }).fail(function(x) {
                 $("#visual_graph").hide();
                 $("#visual_fba").hide();
                 notifyError(x.responseText);
@@ -534,7 +514,7 @@ Released under the MIT license
                 datatable_flux.draw();
 
                 endRequest();
-            }).error(function(x) {
+            }).fail(function(x) {
                 $("#visual_graph").hide();
                 $("#visual_fba").hide();
                 notifyError(x.responseText);
@@ -542,142 +522,6 @@ Released under the MIT license
             });
         };
 
-        $("#design-submit").click(function(event) {
-            var data = beginRequest();
-
-            $.ajax({
-                url: "{% url "cyanodesign:simulate" pk=pk %}",
-                type: "POST",
-                data: data
-            }).done(function(x) {
-                var symtype = getSimulationType();
-                last_symtype = symtype;
-
-                if (symtype == "fba") {
-                    var graph = Viz(x["graphstr"], "svg", "dot");
-
-                    if (x["solution"] == "Optimal") {
-                        var obj = cyano_design_objective_select.val();
-                        notifyInfo("The solution is " + x["solution"] + ". Flux of objective is " + x["flux"][obj].toFixed(4));
-                    } else {
-                        notifyWarning("The solution is " + x["solution"] + ". Check if your constraints are too strict.");
-                    }
-
-                    $("#visual_graph").hide();
-                    $("#visual_fba").show();
-                    document.getElementById("visual_fba").innerHTML = graph;
-
-                    $("#visual_fba").attr("width", "100%").attr("height", "400px");
-                    var svgPan = svgPanZoom('#visual_fba > svg', {minZoom: 0.1, fit: false});
-                    svgPan.zoom(1);
-
-                    datatable_flux.clear();
-
-                    for (var key in x["flux"]) {
-                        if (x["flux"].hasOwnProperty(key)) {
-                            if (key.indexOf("_transp") == -1)
-                                datatable_flux.row.add([model.reaction.get("id", key).name, x["flux"][key]]);
-                        }
-                    }
-
-                    datatable_flux.draw();
-                /*$("svg").find(".edge text").each(function() {
-                        if ($(this).text().indexOf(cyano_design_objective_select.val() + " ") == 0) {
-                            var new_x = ($("svg").width() / 2) - $(this).attr("x");
-                            var new_y = ($("svg").height() / 2) - $(this).attr("y");
-                            svgPan.pan({x: new_x, y: new_y});
-                        }
-                    });*/
-                } else if (symtype == "mba") {
-                    $("#visual_graph").show();
-                    $("#visual_fba").hide();
-
-                    if (!$("#remember-simulation").prop("checked") || simulation_chart === undefined) {
-                        var chart = {
-                            bindto: '#visual_graph',
-                            data: {
-                                x: 'x',
-                                columns: x["graph"],
-                                type: 'bar',
-                                axes: {},
-                                onclick: chart_clicked
-                            },
-                            axis: {
-                                x: {
-                                    label: {
-                                        position: "outer-center"
-                                    },
-                                    type: 'category'
-                                },
-                                y: {
-                                    label: {
-                                        position: "outer-middle"
-                                    }
-                                }
-                            }
-                        };
-                        chart["data"]["axes"][cyano_design_objective_select.val()] = "y";
-
-                        simulation_chart = c3.generate(chart);
-                    } else {
-                        simulation_chart.load({
-                            columns: [
-                                [cyano_design_design_objective_select.val()].concat(x["graph"][1])
-                            ],
-                            type: 'bar'
-                        });
-                    }
-                    last_sim_flux = x["flux"];
-                    updateLabels();
-                } else if (symtype == "sa") {
-                    $("#visual_graph").show();
-                    $("#visual_fba").hide();
-
-                    var chart = {
-                        bindto: '#visual_graph',
-                        data: {
-                            x: 'x',
-                            columns: x["graph"],
-                            type: 'bar',
-                            axes: {},
-                            onclick: chart_clicked
-                        },
-                        axis: {
-                            x: {
-                                label: {
-                                    position: "outer-center"
-                                },
-                                type: 'category'
-                            },
-                            y: {
-                                label: {
-                                    position: "outer-middle"
-                                }
-                            },
-                            y2: {
-                                label: {
-                                    position: "outer-middle"
-                                },
-                                show: true
-                            }
-                        }
-                    };
-                    chart["data"]["axes"][cyano_design_objective_select.val()] = "y";
-                    chart["data"]["axes"][cyano_design_design_objective_select.val()] = "y2";
-
-                    simulation_chart = c3.generate(chart);
-                    last_sim_flux = x["flux"];
-                    updateLabels();
-                }
-
-                endRequest();
-            }).error(function(x) {
-                $("#visual_graph").hide();
-                $("#visual_fba").hide();
-                notifyError(x.responseText);
-                endRequest();
-            });
-        });
 
         $("#design-save").click(function(event) {
             var txt = "";
@@ -717,7 +561,7 @@ Released under the MIT license
                 endRequest($("#dialog-save-model").find(".modal-content"));
                 $("#simulation-result").html("")
                 command_list = [];
-            }).error(function(x) {
+            }).fail(function(x) {
                 $("#dialog-save-model").modal("hide");
                 $("#visual_graph").hide();
                 $("#visual_fba").hide();
@@ -742,7 +586,7 @@ Released under the MIT license
                     location.replace(x['url'])
                 }
                 endRequest($("#dialog-saveas-model").find(".modal-content"));
-            }).error(function(x) {
+            }).fail(function(x) {
                 $("#visual_graph").hide();
                 $("#visual_fba").hide();
                 notifyError(x.responseText);
@@ -1332,10 +1176,28 @@ Released under the MIT license
                 url: "{% url "cyanodesign:get_reactions" pk=pk %}{% if revision %}?revision={{ revision.pk }}{% endif %}",
                 context: document.body
             }).done(function(x) {
-                model = new MetabolicModel.Model();
+                let model = new MetabolicModel.Model();
                 model.fromJson(x);
 
                 callback(model);
+
+                $(".design-submit").click(function(event) {
+                    var data = beginRequest();
+
+                    $.ajax({
+                        url: "{% url "cyanodesign:simulate" pk=pk %}",
+                        type: "POST",
+                        data: data
+                    }).done(function(x) {
+                        app.simulation_page.simulate(x);
+                        endRequest();
+                    }).fail(function(x) {
+                        $("#visual_graph").hide();
+                        $("#visual_fba").hide();
+                        notifyError(x.responseText);
+                        endRequest();
+                    });
+                });
 
                 waitIndicator.hide($("#content"));
             });
@@ -1343,49 +1205,6 @@ Released under the MIT license
 
         //table_enzymes.css("width", "");
         //table_metabolites.css("width", "");
-
-        var isDragging = false;
-
-        $("#visual_fba").on("click", "g.node", function() {
-            var idx = Metabolite.indexByName($(this).children("text").text());
-            if (!isDragging & idx > -1) {
-                showEditMetaboliteDialog(model.metabolites[idx]);
-            }
-        });
-
-        $("#visual_fba").on("click", "g.edge text", function() {
-            // remove flux value
-            var idx = Enzyme.indexByName($(this).text().replace(/ \(-?[0-9]+(\.[0-9]+)?\)$/, ""));
-            if (!isDragging & idx > -1) {
-                showEditEnzymeDialog(model.reactions[idx], false);
-            }
-        });
-
-        $("#visual_fba").on("mousedown", "g", function(event) {
-            isDragging = false;
-            $(this).data('page', {x: event.pageX, y: event.pageY})
-        });
-        $("#visual_fba").on("mousemove", "g", function(event) {
-            var p = $(this).data('page');
-            if (p !== undefined) {
-                if (Math.abs(p.x - event.pageX) > 4 ||
-                    Math.abs(p.y - event.pageY) > 4) {
-                    isDragging = true;
-                }
-            }
-        });
-
-        var updateLabels = function () {
-            if (typeof(simulation_chart) === "undefined") {
-                return;
-            }
-
-            simulation_chart.axis.labels({
-                x: $("#mba-x-label").val(),
-                y: $("#mba-y-label").val(),
-                y2: $("#mba-y2-label").val()
-            });
-        };
 
         $("#mba-x-label").change(function() {
             updateLabels();

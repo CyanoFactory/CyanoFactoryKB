@@ -207,7 +207,9 @@ def get_selected_reaction(jsonGraph, nodeDic, reacIDs, org):
     # Get substrates and products of all reacs
     metabolites = []
     for reac in reacIDs:
-        metabolites += org.reaction.get(id=reac).metabolites
+        r = org.reaction.get(id=reac)
+        metabolites += r.substrates
+        metabolites += r.products
 
     met_ids = list(map(lambda x: nodeDic[x.id], metabolites))
     g = json_graph.node_link_graph(jsonGraph)
