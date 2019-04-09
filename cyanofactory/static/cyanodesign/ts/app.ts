@@ -21,6 +21,7 @@ export class AppManager {
     readonly settings_page: settings.Page;
     readonly simulation_page: simulation.Page;
     readonly model: mm.Model;
+    readonly command_list: any = [];
 
     constructor(model: mm.Model) {
         this.dialog_reaction = new dialog_reaction.Dialog(model);

@@ -35,25 +35,7 @@ Released under the MIT license
     var MetabolicModel = undefined;
     var app = undefined;
     var startup = undefined;
-
-    var enzymes_design = [];
-    var design_objective = undefined;
-    var cyano_design_objective_select;
-    var cyano_design_design_objective_select;
-    var cyano_design_target_objective_select;
-    var design_objective_visible_combobox;
-    var constraints_div;
-    var create_new_enzyme = false;
-    var command_list = [];
-    var svg;
-    var table_flux;
-    var table_chemical;
-    var datatable_flux;
-    var submit_form;
     var revision = {% if revision %}{{ revision.pk }}{% else %}undefined{% endif %};
-    var simulation_chart = undefined;
-    var last_symtype;
-    var last_sim_flux;
 
     /*Enzyme.prototype.invalidate = function() {
         this.getMetabolites().forEach(function (obj) {
@@ -85,30 +67,8 @@ Released under the MIT license
         }).remove();
     };*/
 
-    var reaction_filter = [
-        function(e) { return e.enabled },
-        function(e) { return !e.enabled },
-        function(e) { return e.isConstrained() },
-        function(e) { return !e.isConstrained() },
-        function(e) { return e.reversible },
-        function(e) { return !e.reversible }
-    ];
-
-    var metabolite_filter = [
-        function(e) { return !e.isExternal() },
-        function(e) { return e.isExternal() }
-    ];
 
     $(function () {
-        cyano_design_objective_select = $("#cyano-design-objective-select");
-        cyano_design_design_objective_select = $("#cyano-design-design-objective-select");
-        cyano_design_target_objective_select = $("#cyano-design-target-objective-select");
-        design_objective_visible_combobox = $("#design-objective-visible-combobox");
-        constraints_div = $("#constraints-min-max");
-        table_flux = $('#cyano-flux-list');
-        table_chemical = $('#cyano-chemical-list');
-        submit_form = $('#submit-form');
-
         $($("#filter_row_flux").text()).appendTo($("#cyano-flux-list_wrapper").children()[1]);
 
         /*$.fn.dataTable.ext.search.push(
@@ -135,12 +95,6 @@ Released under the MIT license
             }
         );*/
 
-        $("#filter-flux-min").change(function() { datatable_flux.draw(); });
-        $("#filter-flux-max").change(function() { datatable_flux.draw(); });
-
-        $("#radio-fba").change(updateSettingsVisibility);
-        $("#radio-mba").change(updateSettingsVisibility);
-        $("#radio-sa").change(updateSettingsVisibility);
 
         $($("#filter_row").text()).appendTo($("#cyano-enzyme-list_wrapper").children()[1]);
 
@@ -644,110 +598,7 @@ Released under the MIT license
             doExport("csv");
         });
 
-        function updateTips(o, t) {
-            if (typeof o !== "undefined") {
-                o.parent(".form-group").addClass("has-error");
-                o.siblings(".help-block").remove();
-                $("<div></div>").addClass("help-block").text(t).insertAfter(o);
-            }
-        }
 
-        function checkLength(o, n, min, max) {
-            if (o.val().length > max || o.val().length < min) {
-                o.addClass("ui-state-error");
-                updateTips(o, "Length of " + n + " must be between " +
-                        min + " and " + max + ".");
-                return false;
-            } else {
-                return true;
-            }
-        }
-
-        function checkBool(o, bool, error) {
-            if (bool) {
-                return true;
-            } else {
-                updateTips(o, error);
-                return false;
-            }
-        }
-
-        function checkRegexpPos(o, regexp, n) {
-            if ( regexp.test(o.val()) ) {
-                updateTips(o, n);
-                return false;
-            } else {
-                return true;
-            }
-        }
-
-        function checkRegexp(o, regexp, n) {
-            if (!( regexp.test(o.val()) )) {
-                updateTips(o, n);
-                return false;
-            } else {
-                return true;
-            }
-        }
-
-        function getEnzymeByName(name) {
-            return model.reactions.find(function(obj) {
-                return obj.name == name;
-            });
-        }
-
-        function updateEnzymeDesignList() {
-            $(".cyano-design-reactions").text("");
-            enzymes_design.forEach(function(obj) {
-                $("<div></div>").addClass("cyano-design-reaction").text(obj.name).appendTo(".cyano-design-reactions");
-            });
-        }
-
-        function updateSettingsVisibility() {
-            $("#fba-settings-panel").hide();
-            $("#sa-settings-panel").hide();
-            $("#sa-settings-axis-panel").hide();
-
-            if ($("#radio-fba").prop("checked")) {
-                $("#fba-settings-panel").show();
-            } else if ($("#radio-mba").prop("checked")) {
-                $("#sa-settings-panel").show();
-                $("#sa-settings-target-function-panel").hide();
-                $("#sa-settings-axis-panel").show();
-            } else if ($("#radio-sa").prop("checked")) {
-                $("#sa-settings-panel").show();
-                $("#sa-settings-target-function-panel").show();
-                $("#sa-settings-axis-panel").show();
-            }
-        }
-
-        function getSimulationType() {
-            if ($("#radio-fba").prop("checked")) {
-                return "fba";
-            } else if ($("#radio-mba").prop("checked")) {
-                return "mba";
-            } else if ($("#radio-sa").prop("checked")) {
-                return "sa";
-            }
-
-            return "fba";
-        }
-
-        function setSimulationType(t) {
-            if (t == "fba") {
-                $("#radio-fba").prop("checked", true);
-            } else if (t == "mba") {
-                $("#radio-mba").prop("checked", true);
-            } else if (t == "sa") {
-                $("#radio-sa").prop("checked", true);
-            }
-
-            updateSettingsVisibility();
-        }
-
-        $("#radio-fba").change(updateSettingsVisibility);
-        $("#radio-mba").change(updateSettingsVisibility);
-        $("#radio-sa").change(updateSettingsVisibility);
 /*
         dialog_enzyme.on('shown.bs.modal', function() {
             dialog_enzyme.find("input").blur();
@@ -770,288 +621,6 @@ Released under the MIT license
             dialog_metabolite_edit.find("#metabolite-name").focus().val("").val(val);
         });
 
-        dialog_enzyme.find(".btn-primary").click(function() {
-            var name = dialog_enzyme.find("#enzyme-name");
-            var constrained = dialog_enzyme.find("#constrained");
-            var constrained_min = dialog_enzyme.find("#constrained-min");
-            var constrained_max = dialog_enzyme.find("#constrained-max");
-            var substrates = dialog_enzyme.find("#reaction-substrates");
-            var substrates_sel = substrates[0].selectize;
-            var products = dialog_enzyme.find("#reaction-products");
-            var products_sel = products[0].selectize;
-            var create_new_enzyme = dialog_enzyme.data("create");
-
-            var bValid = true;
-
-            var numeric = /^\-?[0-9]+$/;
-
-            dialog_enzyme.find("div").removeClass("has-error");
-            dialog_enzyme.find(".help-block").remove();
-
-            for (var i = 0; i < model.reactions.length; ++i) {
-                var enz = model.reactions[i];
-
-                if (enz === dialog_enzyme.data("object")) {
-                    continue;
-                }
-
-                if (name.val() == enz.name) {
-                     bValid &= checkBool(name, enz === dialog_enzyme.data("object"), "Name already in use");
-                }
-            }
-
-            bValid &= checkRegexp(name, /^[^:]+$/, "Name must not contain a colon (:)");
-            bValid &= checkLength(name, "Name", 1, 100);
-
-            if (constrained.prop("checked")) {
-                var cmin_float = isFinite(parseFloat(constrained_min.val()));
-                var cmax_float = isFinite(parseFloat(constrained_max.val()));
-                bValid &= checkBool(constrained_min, cmin_float, "Min constraint must be numeric");
-                bValid &= checkBool(constrained_max, cmax_float, "Max constraint must be numeric");
-                if (bValid) {
-                    bValid &= checkBool(constrained_min, parseFloat(constrained_min.val()) <= parseFloat(constrained_max.val()), "Min constraint > Max constraint");
-                }
-            }
-
-            if (substrates_sel.getValue().length > 0) {
-                substrates_sel.getValue().split('\x00').forEach(function (a) {
-                    var is_float = isFinite(parseFloat(substrates_sel.options[a].item.amount));
-                    bValid &= checkBool(substrates, is_float, "Stoichiometry must be numeric");
-                });
-            } else {
-                bValid &= checkBool(substrates, substrates_sel.getValue().length > 0, "No substrates defined");
-            }
-
-            if (products_sel.getValue().length > 0) {
-                products_sel.getValue().split('\x00').forEach(function (a) {
-                    var is_float = isFinite(parseFloat(products_sel.options[a].item.amount));
-                    bValid &= checkBool(products, is_float, "Stoichiometry must be numeric");
-                });
-            } else {
-                bValid &= checkBool(products, products_sel.getValue().length > 0, "No products defined");
-            }
-
-            if (bValid) {
-                var reaction = dialog_enzyme.data("object");
-                var old_name = reaction.id;
-
-                var old_pathway = reaction.pathway;
-                saveEnzyme(reaction);
-                reaction.convertToFloat();
-
-                var command = {
-                    "type": "reaction",
-                    "id": old_name,
-                    "object": jQuery.extend(true, {}, reaction)
-                };
-
-                if (create_new_enzyme) {
-                    model.reactions.push(reaction);
-
-                    datatable_enzymes.row.add(reaction);
-                    datatable_enzymes.sort();
-                    datatable_enzymes.draw();
-
-                    command["op"] = "add";
-                    command["id"] = reaction.id;
-
-                    command_list.push(command);
-                } else {
-                    command["op"] = "edit";
-
-                    command_list.push(command);
-
-                    if (old_pathway != reaction.pathway) {
-                        datatable_enzymes.draw();
-                    }
-                }
-
-                dialog_enzyme.modal("hide");
-            }
-        });
-
-        dialog_metabolite_add.find(".btn-primary").click(function() {
-            var name = dialog_metabolite_add.find("#add-metabolite-name");
-            var external = dialog_metabolite_add.find("#add-external");
-
-            var valid = checkLength(name, "Name", 1, 100);
-            valid &= checkRegexpPos(name, /(^[0-9])/, "Name must not begin with a number");
-            valid &= checkRegexpPos(name, /(^<?\-> | <?\-> | <?\->$)/, "Name must not contain lonely <-> or ->");
-            valid &= checkRegexpPos(name, /(^\+ | \+ )/, "Lonely + only allowed at end of name");
-
-            var met_idx = Metabolite.indexByName(name.val());
-
-            if (met_idx != -1) {
-                valid = checkBool(name, false, "Name already in use");
-            }
-
-            if (valid) {
-                var metabolite = new Metabolite(name.val(), name.val(), external.prop("checked"));
-                model.metabolites.push(metabolite);
-
-                command_list.push({
-                    "type": "metabolite",
-                    "op": "add",
-                    "id": metabolite.id,
-                    "object": {
-                        "name": metabolite.name,
-                        "external": metabolite.external,
-                        "chemical": metabolite.chemical
-                    }
-                });
-
-                datatable_metabolites.row.add(metabolite);
-                datatable_metabolites.sort();
-                datatable_metabolites.draw();
-
-                dialog_metabolite_add.modal("hide");
-            }
-        });
-
-        dialog_metabolite_edit.find(".btn-primary").click(function() {
-            var name = dialog_metabolite_edit.find("#metabolite-name");
-            var external = dialog_metabolite_edit.find("#external");
-
-            var valid = checkLength(name, "Name", 1, 100);
-            valid &= checkRegexpPos(name, /(^[0-9])/, "Name must not begin with a number");
-            valid &= checkRegexpPos(name, /(^<?\-> | <?\-> | <?\->$)/, "Name must not contain lonely <-> or ->");
-            valid &= checkRegexpPos(name, /(^\+ | \+ )/, "Lonely + only allowed at end of name");
-
-            var met_idx = Metabolite.indexByName(name.val());
-
-            if (met_idx != -1) {
-                valid &= checkBool(name, model.metabolites[met_idx] === dialog_metabolite_edit.data("object"), "Name already in use");
-            }
-
-            if (valid) {
-                var metabolite = dialog_metabolite_edit.data("object");
-                var old_name = metabolite.id;
-                metabolite.updateName(name.val());
-                var old_external = metabolite.external;
-                metabolite.external = external.prop("checked");
-
-                if (old_name != metabolite.name || old_external != metabolite.external) {
-                    command_list.push({
-                        "type": "metabolite",
-                        "op": "edit",
-                        "id": old_name,
-                        "object": {
-                            "id": metabolite.id,
-                            "name": metabolite.name,
-                            "external": metabolite.external,
-                            "chemical": metabolite.chemical
-                        }
-                    });
-                }
-
-                metabolite.invalidate();
-
-                dialog_metabolite_edit.modal("hide");
-            }
-        });*/
-
-        // First col
-        /*table_enzymes.delegate('tr td:first-child', 'click', function() {
-            var tr = $(this).closest("tr");
-            if (tr.hasClass("group")) {
-                return;
-            }
-            var row = datatable_enzymes.row(tr);
-
-            showEditEnzymeDialog(row.data(), false);
-        });
-
-        // Metabolite in 2nd
-        table_enzymes.on("click", ".cyano-metabolite", function(event) {
-            var met = Metabolite.indexByName($(this).text());
-            if (met >= 0) {
-                showEditMetaboliteDialog(model.metabolites[met]);
-            }
-        });
-
-        // Enabled in 4th col
-        table_enzymes.delegate('tr td:nth-child(4) input', 'change', function() {
-            var row = datatable_enzymes.row($(this).closest("tr"));
-
-            row.data().enabled = ($(this).is(":checked"));
-
-            command_list.push({
-                "type": "reaction",
-                "op": "edit",
-                "id": row.data().id,
-                "object": {
-                    "id": row.data().id,
-                    "enabled": row.data().enabled
-                }
-            });
-
-            row.data().invalidate();
-        });*/
-
-        // First col
-        /*.delegate('tr td:first-child', 'click', function() {
-            var row = datatable_metabolites.row($(this).closest("tr"));
-
-            showEditMetaboliteDialog(row.data());
-        });
-
-        // 4th col
-        table_metabolites.delegate('tr td:nth-child(4) input', 'change', function() {
-            var row = datatable_metabolites.row($(this).closest("tr"));
-
-            row.data().external = $(this).is(":checked");
-
-            command_list.push({
-                "type": "metabolite",
-                "op": "edit",
-                "id": row.data().id,
-                "object": {
-                    "id": row.data().id,
-                    "name": row.data().name,
-                    "external": row.data().external
-                }
-            });
-
-            row.data().invalidate();
-        });
-
-        // Enzyme in 2nd or 3rd col
-        table_metabolites.on("click", ".cyano-enzyme", function(event) {
-            var enzyme = Enzyme.indexByName($(this).text());
-            if (enzyme >= 0) {
-                showEditEnzymeDialog(model.reactions[enzyme], false);
-            }
-        });
-        */
-        $(".create-enzyme-button").click(function (event) {
-            showAddEnzymeDialog();
-        });
-        $(".create-metabolite-button").click(function (event) {
-            showAddMetaboliteDialog();
-        });
-
-        $(".delete-metabolites-button").click(function (event) {
-            $("#dialog-delete-metabolites").modal('show');
-        });
-
-        $("#dialog-delete-metabolites").find(".btn-primary").click(function() {
-            model.metabolites.filter(function(m) {
-                return m.isUnused();
-            }).forEach(function(m) {
-                m.remove();
-                m.removeFromList();
-
-                command_list.push({
-                    "type": "metabolite",
-                    "op": "delete",
-                    "id": m.id,
-                    "object": {}
-                });
-            });
-            datatable_metabolites.draw();
-
-            $("#dialog-delete-metabolites").modal("hide");
-        });
 
         $(".cyano-design-reactions").on("click", ".cyano-design-reaction", function() {
             var index = enzymes_design.indexOf(getEnzymeByName($(this).text()));
@@ -1077,14 +646,6 @@ Released under the MIT license
             }
         });
 */
-        $("#auto_flux").prop("checked", true);
-        $(".cyano-design-reaction-filter").hide();
-        $("#auto_flux").change(function() {
-            $(".cyano-design-reaction-filter").hide();
-        });
-        $("#manual_flux").change(function() {
-            $(".cyano-design-reaction-filter").show();
-        });
 
         // delete button clicked
         /*datatable_enzymes.on("click", ".delete-button", function(event) {
@@ -1139,38 +700,6 @@ Released under the MIT license
             dialog_delete.data("parent").fadeOut(200, function() { datatable_enzymes.row(this).remove().draw(); });
         });
 
-        var cdos = {
-            delimiter: ',',
-            labelField: "name",
-            valueField: "id",
-            sortField: "name",
-            searchField: ["name"],
-            onChange: function(value) {
-                design_objective = model.reaction.get("id", value);
-            }
-        };
-
-        cyano_design_objective_select.selectize(cdos);
-        cyano_design_design_objective_select.selectize(cdos);
-        cyano_design_target_objective_select.selectize(cdos);
-
-        design_objective_visible_combobox.selectize({
-            delimiter: '\x00',
-            labelField: "name",
-            valueField: "id",
-            searchField: ["name"],
-            plugins: ['drag_drop', 'remove_button', 'restore_on_backspace'],
-            maxItems: 20
-        });
-
-       /* dialog_enzyme.find("#reaction-pathway").selectize({
-            labelField: "text",
-            valueField: "id",
-            sortField: "text",
-            searchField: ["text"],
-            create: true
-        });*/
-
         let load_model = function(callback) {
             $.ajax({
                 url: "{% url "cyanodesign:get_reactions" pk=pk %}{% if revision %}?revision={{ revision.pk }}{% endif %}",
@@ -1205,16 +734,6 @@ Released under the MIT license
 
         //table_enzymes.css("width", "");
         //table_metabolites.css("width", "");
-
-        $("#mba-x-label").change(function() {
-            updateLabels();
-        });
-         $("#mba-y-label").change(function() {
-            updateLabels();
-        });
-         $("#mba-y2-label").change(function() {
-            updateLabels();
-        });
 
         $("#enzyme_regex").click(function() {
             datatable_enzymes.search("", $(this).prop("checked"), true).draw();
@@ -1270,167 +789,11 @@ Released under the MIT license
             });
         });
 
-        $("#dialog-reaction-bulkadd").on("click", ".btn-primary", function(event) {
-            var lines = $("#enzyme-bulkdata").val().split(/\r*\n/);
-
-            $("#enzyme-bulkadd-preview").empty();
-            lines.forEach(function(line) {
-                try {
-                    var mlen = model.metabolites.length;
-                    var reaction = Enzyme.fromBioOptString(line);
-
-                    Metabolite.fromReaction(reaction);
-                    if (model.metabolites.length > mlen) {
-                        model.metabolites.slice(mlen).forEach(function (metabolite) {
-                            command_list.push({
-                                "type": "metabolite",
-                                "op": "add",
-                                "id": metabolite.id,
-                                "object": {
-                                    "id": metabolite.id,
-                                    "name": metabolite.name,
-                                    "external": metabolite.external
-                                }
-                            });
-
-                            datatable_metabolites.row.add(metabolite);
-                        });
-                    }
-
-                    reaction.convertToFloat();
-
-                    var command = {
-                        "type": "reaction",
-                        "id": reaction.id,
-                        "object": jQuery.extend(true, {}, reaction)
-                    };
-
-                    if (Enzyme.indexByName(reaction.name) != -1) {
-                        // Reaction exists
-                        var orig_enzyme = model.reactions[Enzyme.indexByName(reaction.name)];
-
-                        orig_enzyme.name = reaction.name;
-                        orig_enzyme.substrates = reaction.substrates;
-                        orig_enzyme.products = reaction.products;
-                        orig_enzyme.reversible = reaction.reversible;
-
-                        command["op"] = "edit";
-                    } else {
-
-                        model.reactions.push(reaction);
-
-                        datatable_enzymes.row.add(reaction);
-
-                        cyano_design_objective_select[0].selectize.addOption(reaction);
-                        cyano_design_objective_select[0].selectize.refreshOptions();
-                        cyano_design_design_objective_select[0].selectize.addOption(reaction);
-                        cyano_design_design_objective_select[0].selectize.refreshOptions();
-                        design_objective_visible_combobox[0].selectize.addOption(reaction);
-                        design_objective_visible_combobox[0].selectize.refreshOptions();
-                        cyano_design_target_objective_select[0].selectize.addOption(reaction);
-                        cyano_design_target_objective_select[0].selectize.refreshOptions();
-
-                        command["op"] = "add";
-                    }
-
-                    command_list.push(command);
-
-                    reaction.updateMetaboliteReference(model).forEach(function(m) {
-                        m.invalidate();
-                    });
-                    reaction.invalidate();
-                } catch (err) {
-
-                }
-            });
-
-            datatable_metabolites.sort();
-            datatable_metabolites.draw();
-
-            datatable_enzymes.sort();
-            datatable_enzymes.draw();
-
-            $("#dialog-reaction-bulkadd").modal("hide");
-        });
-
         waitIndicator.show($("#content"));
         startup = load_model;
     });
 </script>
 
-<script id="filter_row" type="text/plain">
-<div class="col-sm-6">
-<label for="cyano-enzyme-list-filter-reactions">Filter reactions</label>
-<select id="cyano-enzyme-list-filter-reactions" class="form-control combobox" multiple="multiple">
-    <optgroup label="Enabled">
-    <option selected="selected">Active</option>
-    <option selected="selected">Inactive</option>
-    </optgroup>
-    <optgroup label="Constraints">
-    <option selected="selected">Constraint</option>
-    <option selected="selected">Unconstraint</option>
-    </optgroup>
-    <optgroup label="Reversible">
-    <option selected="selected">Reversible</option>
-    <option selected="selected">Irreversible</option>
-    </optgroup>
-</select>
-</div>
-<div class="col-sm-6">
-    <div class="dataTables_filter">
-    <div class="checkbox">
-    <input id="enzyme_regex" type="checkbox">
-    <label for="enzyme_regex">Search with RegExp</label>
-    </div>
-    </div>
-</div>
-</script>
-
-<script id="filter_row_metabolites" type="text/plain">
-<div class="col-sm-6">
-<label for="cyano-metabolite-list-filter-reactions">Filter metabolites</label>
-<select id="cyano-metabolite-list-filter-reactions" class="form-control combobox" multiple="multiple">
-    <option selected="selected">Is internal</option>
-    <option selected="selected">Is external</option>
-</select>
-</div>
-<div class="col-sm-6">
-    <div class="dataTables_filter">
-    <div class="checkbox">
-    <input id="metabolite_regex" type="checkbox">
-    <label for="metabolite_regex">Search with RegExp</label>
-    </div>
-    </div>
-</div>
-</script>
-
-<script id="filter_row_flux" type="text/plain">
-<div class="col-sm-3">
-    <div class="form-group">
-        <label class="control-label" for="filter-flux-min">Min Flux:</label>
-        <input id="filter-flux-min" class="form-control" type="text">
-    </div>
-</div>
-<div class="col-sm-3">
-        <label class="control-label" for="filter-flux-max">Max Flux:</label>
-        <input id="filter-flux-max" class="form-control" type="text">
-</div>
-<!--
-<label for="cyano-metabolite-list-filter-reactions">Filter metabolites</label>
-<select id="cyano-metabolite-list-filter-reactions" class="form-control combobox" multiple="multiple">
-    <option selected="selected">Is internal</option>
-    <option selected="selected">Is external</option>
-</select>-->
-</div>
-<div class="col-sm-6">
-    <div class="dataTables_filter">
-    <div class="checkbox">
-    <input id="flux_regex" type="checkbox">
-    <label for="flux_regex">Search with RegExp</label>
-    </div>
-    </div>
-</div>
-</script>
 {% endblock %}
 
 {% block extrastyles %}

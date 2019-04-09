@@ -44,6 +44,36 @@ template.innerHTML = `
 </table>
 `;
 
+/*
+<script id="filter_row_flux" type="text/plain">
+<div class="col-sm-3">
+    <div class="form-group">
+        <label class="control-label" for="filter-flux-min">Min Flux:</label>
+        <input id="filter-flux-min" class="form-control" type="text">
+    </div>
+</div>
+<div class="col-sm-3">
+        <label class="control-label" for="filter-flux-max">Max Flux:</label>
+        <input id="filter-flux-max" class="form-control" type="text">
+</div>
+<!--
+<label for="cyano-metabolite-list-filter-reactions">Filter metabolites</label>
+<select id="cyano-metabolite-list-filter-reactions" class="form-control combobox" multiple="multiple">
+    <option selected="selected">Is internal</option>
+    <option selected="selected">Is external</option>
+</select>-->
+</div>
+<div class="col-sm-6">
+    <div class="dataTables_filter">
+    <div class="checkbox">
+    <input id="flux_regex" type="checkbox">
+    <label for="flux_regex">Search with RegExp</label>
+    </div>
+    </div>
+</div>
+</script>
+ */
+
 export class Page {
     readonly app: app.AppManager;
     readonly datatable_flux: DataTables.Api;
@@ -141,7 +171,11 @@ export class Page {
                     isDragging = true;
                 }
             }
-        });*/
+        });
+
+        $("#filter-flux-min").change(function() { datatable_flux.draw(); });
+        $("#filter-flux-max").change(function() { datatable_flux.draw(); });
+*/
     }
 
     update() {

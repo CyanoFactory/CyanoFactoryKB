@@ -35,6 +35,51 @@ Create new metabolite
 </button>
 `;
 
+/*
+
+<script id="filter_row" type="text/plain">
+<div class="col-sm-6">
+<label for="cyano-enzyme-list-filter-reactions">Filter reactions</label>
+<select id="cyano-enzyme-list-filter-reactions" class="form-control combobox" multiple="multiple">
+    <optgroup label="Enabled">
+    <option selected="selected">Active</option>
+    <option selected="selected">Inactive</option>
+    </optgroup>
+    <optgroup label="Constraints">
+    <option selected="selected">Constraint</option>
+    <option selected="selected">Unconstraint</option>
+    </optgroup>
+    <optgroup label="Reversible">
+    <option selected="selected">Reversible</option>
+    <option selected="selected">Irreversible</option>
+    </optgroup>
+</select>
+</div>
+<div class="col-sm-6">
+    <div class="dataTables_filter">
+    <div class="checkbox">
+    <input id="enzyme_regex" type="checkbox">
+    <label for="enzyme_regex">Search with RegExp</label>
+    </div>
+    </div>
+</div>
+</script>
+
+
+ */
+
+/*
+
+    var reaction_filter = [
+        function(e) { return e.enabled },
+        function(e) { return !e.enabled },
+        function(e) { return e.isConstrained() },
+        function(e) { return !e.isConstrained() },
+        function(e) { return e.reversible },
+        function(e) { return !e.reversible }
+    ];
+ */
+
 export class Page {
     readonly app: app.AppManager;
     readonly datatable: DataTables.Api;
@@ -183,7 +228,7 @@ export class Page {
             ]
         });
 
-        // Register event handler
+        /* Register event handler */
         const self: Page = this;
 
         $(this.table_element).delegate('tr td:first-child', 'click', function() {
@@ -196,6 +241,49 @@ export class Page {
 
             self.app.dialog_reaction.show();//(row.data(), false);
         });
+
+
+        /*table_enzymes.on("click", ".cyano-metabolite", function(event) {
+            // Any Metabolite in 2nd column was clicked
+            var met = Metabolite.indexByName($(this).text());
+            if (met >= 0) {
+                showEditMetaboliteDialog(model.metabolites[met]);
+            }
+        });*/
+
+
+        // First col
+        /*table_enzymes.delegate('tr td:first-child', 'click', function() {
+            var tr = $(this).closest("tr");
+            if (tr.hasClass("group")) {
+                return;
+            }
+            var row = datatable_enzymes.row(tr);
+
+            showEditEnzymeDialog(row.data(), false);
+        });
+
+
+
+        // Enabled in 4th col
+        table_enzymes.delegate('tr td:nth-child(4) input', 'change', function() {
+            var row = datatable_enzymes.row($(this).closest("tr"));
+
+            row.data().enabled = ($(this).is(":checked"));
+
+            command_list.push({
+                "type": "reaction",
+                "op": "edit",
+                "id": row.data().id,
+                "object": {
+                    "id": row.data().id,
+                    "enabled": row.data().enabled
+                }
+            });
+
+            row.data().invalidate();
+        });*/
+
     }
 
     update() {

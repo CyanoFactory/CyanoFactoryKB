@@ -3,6 +3,7 @@ define(["require", "exports", "./page_reactions", "./page_metabolites", "./page_
     Object.defineProperty(exports, "__esModule", { value: true });
     class AppManager {
         constructor(model) {
+            this.command_list = [];
             this.dialog_reaction = new dialog_reaction.Dialog(model);
             this.dialog_reaction_bulk = new dialog_reaction_bulkadd.Dialog(model);
             this.dialog_metabolite = new dialog_metabolite.Dialog(model);

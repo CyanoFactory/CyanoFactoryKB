@@ -127,13 +127,70 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             this.source_element = where;
             where.appendChild(template.content.cloneNode(true));
             this.main_obj_element = where.getElementsByClassName("cyano-design-objective-select")[0];
+            this.design_obj_element = where.getElementsByClassName("cyano-design-design-objective-select")[0];
+            this.target_obj_element = where.getElementsByClassName("cyano-design-target-objective-select")[0];
             this.maximize_element = where.getElementsByClassName("radio-maximize")[0];
             this.fba_sim_element = where.getElementsByClassName("radio-fba")[0];
             $(this.maximize_element).prop("checked", true);
             $(this.fba_sim_element).prop("checked", true);
+            /*function updateSettingsVisibility() {
+                $("#fba-settings-panel").hide();
+                $("#sa-settings-panel").hide();
+                $("#sa-settings-axis-panel").hide();
+    
+                if ($("#radio-fba").prop("checked")) {
+                    $("#fba-settings-panel").show();
+                } else if ($("#radio-mba").prop("checked")) {
+                    $("#sa-settings-panel").show();
+                    $("#sa-settings-target-function-panel").hide();
+                    $("#sa-settings-axis-panel").show();
+                } else if ($("#radio-sa").prop("checked")) {
+                    $("#sa-settings-panel").show();
+                    $("#sa-settings-target-function-panel").show();
+                    $("#sa-settings-axis-panel").show();
+                }
+            }
+    
+            function setSimulationType(t) {
+                if (t == "fba") {
+                    $("#radio-fba").prop("checked", true);
+                } else if (t == "mba") {
+                    $("#radio-mba").prop("checked", true);
+                } else if (t == "sa") {
+                    $("#radio-sa").prop("checked", true);
+                }
+    
+                updateSettingsVisibility();
+            }
+    
+            $("#radio-fba").change(updateSettingsVisibility);
+            $("#radio-mba").change(updateSettingsVisibility);
+            $("#radio-sa").change(updateSettingsVisibility);*/
+            /*For display list
+                    design_objective_visible_combobox.selectize({
+                        delimiter: '\x00',
+                        labelField: "name",
+                        valueField: "id",
+                        searchField: ["name"],
+                        plugins: ['drag_drop', 'remove_button', 'restore_on_backspace'],
+                        maxItems: 20
+                    });*/
+            /*
+            
+                    $("#mba-x-label").change(function() {
+                        updateLabels();
+                    });
+                     $("#mba-y-label").change(function() {
+                        updateLabels();
+                    });
+                     $("#mba-y2-label").change(function() {
+                        updateLabels();
+                    });
+            
+             */
         }
         update() {
-            $(this.main_obj_element)["selectize"]({
+            const obj_options = {
                 maxItems: 1,
                 valueField: 'id',
                 searchField: ['name', 'id'],
@@ -146,7 +203,10 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                         return "<div>" + escape(item.get_name_or_id()) + "</div>";
                     }
                 }
-            });
+            };
+            $(this.main_obj_element)["selectize"](obj_options);
+            $(this.design_obj_element)["selectize"](obj_options);
+            $(this.target_obj_element)["selectize"](obj_options);
         }
         getObjective() {
             return this.app.model.reaction.checked_get("id", this.main_obj_element["selectize"].getValue());

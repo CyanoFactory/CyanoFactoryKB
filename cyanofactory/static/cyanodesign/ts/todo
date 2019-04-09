@@ -1,0 +1,44 @@
+List:
+- Export as BioOpt
+
+Design:
+- Save
+- Save as
+
+Reactions:
+- Filter
+- Suche
+- Clicking metabolites
+- Enable checkbox
+- Delete button
+
+Metabolites:
+- Consumed by Tooltips
+- External checkbox
+- Clicking metabolites
+- Delete unused metabolites
+-- Shared buttons:
+- Create new reaction
+- Create new metabolite
+
+Settings:
+- Max/Min Toggle
+- Sim Type Toggle
+- FBA settings Toggle
+- FBA select vis reaction
+- Axis labeling
+
+Simulation:
+- Export as image
+- Export as vector
+- MBA sim
+- RA sim
+- Combine with previous sim
+
+Dialog Reaction:
+- Create new reaction
+- Edit reaction
+
+Dialog Metabolites:
+- Create new metabolite
+- edit metabolites

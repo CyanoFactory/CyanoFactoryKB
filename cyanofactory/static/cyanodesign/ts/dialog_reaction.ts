@@ -147,6 +147,105 @@ export class Dialog {
     }
 
     /*
+        dialog_enzyme.find(".btn-primary").click(function() {
+            var name = dialog_enzyme.find("#enzyme-name");
+            var constrained = dialog_enzyme.find("#constrained");
+            var constrained_min = dialog_enzyme.find("#constrained-min");
+            var constrained_max = dialog_enzyme.find("#constrained-max");
+            var substrates = dialog_enzyme.find("#reaction-substrates");
+            var substrates_sel = substrates[0].selectize;
+            var products = dialog_enzyme.find("#reaction-products");
+            var products_sel = products[0].selectize;
+            var create_new_enzyme = dialog_enzyme.data("create");
+
+            var bValid = true;
+
+            var numeric = /^\-?[0-9]+$/;
+
+            dialog_enzyme.find("div").removeClass("has-error");
+            dialog_enzyme.find(".help-block").remove();
+
+            for (var i = 0; i < model.reactions.length; ++i) {
+                var enz = model.reactions[i];
+
+                if (enz === dialog_enzyme.data("object")) {
+                    continue;
+                }
+
+                if (name.val() == enz.name) {
+                     bValid &= checkBool(name, enz === dialog_enzyme.data("object"), "Name already in use");
+                }
+            }
+
+            bValid &= checkRegexp(name, /^[^:]+$/, "Name must not contain a colon (:)");
+            bValid &= checkLength(name, "Name", 1, 100);
+
+            if (constrained.prop("checked")) {
+                var cmin_float = isFinite(parseFloat(constrained_min.val()));
+                var cmax_float = isFinite(parseFloat(constrained_max.val()));
+                bValid &= checkBool(constrained_min, cmin_float, "Min constraint must be numeric");
+                bValid &= checkBool(constrained_max, cmax_float, "Max constraint must be numeric");
+                if (bValid) {
+                    bValid &= checkBool(constrained_min, parseFloat(constrained_min.val()) <= parseFloat(constrained_max.val()), "Min constraint > Max constraint");
+                }
+            }
+
+            if (substrates_sel.getValue().length > 0) {
+                substrates_sel.getValue().split('\x00').forEach(function (a) {
+                    var is_float = isFinite(parseFloat(substrates_sel.options[a].item.amount));
+                    bValid &= checkBool(substrates, is_float, "Stoichiometry must be numeric");
+                });
+            } else {
+                bValid &= checkBool(substrates, substrates_sel.getValue().length > 0, "No substrates defined");
+            }
+
+            if (products_sel.getValue().length > 0) {
+                products_sel.getValue().split('\x00').forEach(function (a) {
+                    var is_float = isFinite(parseFloat(products_sel.options[a].item.amount));
+                    bValid &= checkBool(products, is_float, "Stoichiometry must be numeric");
+                });
+            } else {
+                bValid &= checkBool(products, products_sel.getValue().length > 0, "No products defined");
+            }
+
+            if (bValid) {
+                var reaction = dialog_enzyme.data("object");
+                var old_name = reaction.id;
+
+                var old_pathway = reaction.pathway;
+                saveEnzyme(reaction);
+                reaction.convertToFloat();
+
+                var command = {
+                    "type": "reaction",
+                    "id": old_name,
+                    "object": jQuery.extend(true, {}, reaction)
+                };
+
+                if (create_new_enzyme) {
+                    model.reactions.push(reaction);
+
+                    datatable_enzymes.row.add(reaction);
+                    datatable_enzymes.sort();
+                    datatable_enzymes.draw();
+
+                    command["op"] = "add";
+                    command["id"] = reaction.id;
+
+                    command_list.push(command);
+                } else {
+                    command["op"] = "edit";
+
+                    command_list.push(command);
+
+                    if (old_pathway != reaction.pathway) {
+                        datatable_enzymes.draw();
+                    }
+                }
+
+                dialog_enzyme.modal("hide");
+            }
+        });
 
         function saveEnzyme(enzyme) {
             var name = dialog_enzyme.find("#enzyme-name");

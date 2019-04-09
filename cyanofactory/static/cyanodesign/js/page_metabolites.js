@@ -24,6 +24,32 @@ Create new metabolite
 Delete unused metabolites
 </button>
 `;
+    /*
+    <script id="filter_row_metabolites" type="text/plain">
+    <div class="col-sm-6">
+    <label for="cyano-metabolite-list-filter-reactions">Filter metabolites</label>
+    <select id="cyano-metabolite-list-filter-reactions" class="form-control combobox" multiple="multiple">
+        <option selected="selected">Is internal</option>
+        <option selected="selected">Is external</option>
+    </select>
+    </div>
+    <div class="col-sm-6">
+        <div class="dataTables_filter">
+        <div class="checkbox">
+        <input id="metabolite_regex" type="checkbox">
+        <label for="metabolite_regex">Search with RegExp</label>
+        </div>
+        </div>
+    </div>
+    </script>
+     */
+    /*
+    
+        var metabolite_filter = [
+            function(e) { return !e.isExternal() },
+            function(e) { return e.isExternal() }
+        ];
+     */
     class Page {
         constructor(where, app) {
             this.source_element = where;
@@ -122,8 +148,9 @@ Delete unused metabolites
                     }
                 ]
             });
-            // Event handler
+            /* Event handler */
             const self = this;
+            // Tooltip on reaction hover
             $(this.table_element).on({
                 mouseenter: function () {
                     $(this).data("toggle", "tooltip");
@@ -136,6 +163,72 @@ Delete unused metabolites
                 mouseleave: function () {
                 }
             }, ".cyano-enzyme");
+            // 1st column clicked
+            $(this.table_element).delegate('tr td:first-child', 'click', function () {
+                let row = self.datatable.row($(this).closest("tr"));
+                app.dialog_metabolite.show(row.data());
+            });
+            /*
+    // 4th col
+    table_metabolites.delegate('tr td:nth-child(4) input', 'change', function() {
+        var row = datatable_metabolites.row($(this).closest("tr"));
+    
+        row.data().external = $(this).is(":checked");
+    
+        command_list.push({
+            "type": "metabolite",
+            "op": "edit",
+            "id": row.data().id,
+            "object": {
+                "id": row.data().id,
+                "name": row.data().name,
+                "external": row.data().external
+            }
+        });
+    
+        row.data().invalidate();
+    });
+    
+    // Enzyme in 2nd or 3rd col
+    table_metabolites.on("click", ".cyano-enzyme", function(event) {
+        var enzyme = Enzyme.indexByName($(this).text());
+        if (enzyme >= 0) {
+            showEditEnzymeDialog(model.reactions[enzyme], false);
+        }
+    });
+    
+    
+            $(".create-enzyme-button").click(function (event) {
+                showAddEnzymeDialog();
+            });
+            $(".create-metabolite-button").click(function (event) {
+                showAddMetaboliteDialog();
+            });
+    
+            $(".delete-metabolites-button").click(function (event) {
+                $("#dialog-delete-metabolites").modal('show');
+            });
+    
+            $("#dialog-delete-metabolites").find(".btn-primary").click(function() {
+                model.metabolites.filter(function(m) {
+                    return m.isUnused();
+                }).forEach(function(m) {
+                    m.remove();
+                    m.removeFromList();
+    
+                    command_list.push({
+                        "type": "metabolite",
+                        "op": "delete",
+                        "id": m.id,
+                        "object": {}
+                    });
+                });
+                datatable_metabolites.draw();
+    
+                $("#dialog-delete-metabolites").modal("hide");
+            });
+    
+    */
         }
         update() {
             this.datatable.clear();

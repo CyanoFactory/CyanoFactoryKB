@@ -39,6 +39,92 @@ define(["require", "exports", "datatables.net"], function (require, exports) {
             document.body.appendChild(template.content.cloneNode(true));
             this.dialog_element = document.body.getElementsByClassName("dialog-reaction-bulkadd")[0];
             this.model = model;
+            /*
+    
+            $("#dialog-reaction-bulkadd").on("click", ".btn-primary", function(event) {
+                var lines = $("#enzyme-bulkdata").val().split(/\r*\n/);
+    
+                $("#enzyme-bulkadd-preview").empty();
+                lines.forEach(function(line) {
+                    try {
+                        var mlen = model.metabolites.length;
+                        var reaction = Enzyme.fromBioOptString(line);
+    
+                        Metabolite.fromReaction(reaction);
+                        if (model.metabolites.length > mlen) {
+                            model.metabolites.slice(mlen).forEach(function (metabolite) {
+                                command_list.push({
+                                    "type": "metabolite",
+                                    "op": "add",
+                                    "id": metabolite.id,
+                                    "object": {
+                                        "id": metabolite.id,
+                                        "name": metabolite.name,
+                                        "external": metabolite.external
+                                    }
+                                });
+    
+                                datatable_metabolites.row.add(metabolite);
+                            });
+                        }
+    
+                        reaction.convertToFloat();
+    
+                        var command = {
+                            "type": "reaction",
+                            "id": reaction.id,
+                            "object": jQuery.extend(true, {}, reaction)
+                        };
+    
+                        if (Enzyme.indexByName(reaction.name) != -1) {
+                            // Reaction exists
+                            var orig_enzyme = model.reactions[Enzyme.indexByName(reaction.name)];
+    
+                            orig_enzyme.name = reaction.name;
+                            orig_enzyme.substrates = reaction.substrates;
+                            orig_enzyme.products = reaction.products;
+                            orig_enzyme.reversible = reaction.reversible;
+    
+                            command["op"] = "edit";
+                        } else {
+    
+                            model.reactions.push(reaction);
+    
+                            datatable_enzymes.row.add(reaction);
+    
+                            cyano_design_objective_select[0].selectize.addOption(reaction);
+                            cyano_design_objective_select[0].selectize.refreshOptions();
+                            cyano_design_design_objective_select[0].selectize.addOption(reaction);
+                            cyano_design_design_objective_select[0].selectize.refreshOptions();
+                            design_objective_visible_combobox[0].selectize.addOption(reaction);
+                            design_objective_visible_combobox[0].selectize.refreshOptions();
+                            cyano_design_target_objective_select[0].selectize.addOption(reaction);
+                            cyano_design_target_objective_select[0].selectize.refreshOptions();
+    
+                            command["op"] = "add";
+                        }
+    
+                        command_list.push(command);
+    
+                        reaction.updateMetaboliteReference(model).forEach(function(m) {
+                            m.invalidate();
+                        });
+                        reaction.invalidate();
+                    } catch (err) {
+    
+                    }
+                });
+    
+                datatable_metabolites.sort();
+                datatable_metabolites.draw();
+    
+                datatable_enzymes.sort();
+                datatable_enzymes.draw();
+    
+                $("#dialog-reaction-bulkadd").modal("hide");
+            });
+    
+             */
         }
     }
     exports.Dialog = Dialog;
