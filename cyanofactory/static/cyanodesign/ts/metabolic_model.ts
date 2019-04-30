@@ -53,6 +53,28 @@ namespace Internal {
             }
             return false;
         }
+
+        index(key: string, value: any): number | null {
+            let i = 0;
+            for (const item of this.lst) {
+                if (item[key] == value) {
+                    return i;
+                }
+                ++i;
+            }
+            return null;
+        }
+
+        checked_index(key: string, value: any): number {
+            let i = 0;
+            for (const item of this.lst) {
+                if (item[key] == value) {
+                    return i;
+                }
+                ++i;
+            }
+            throw new Error(this.tname + ": No object (" + key + ", " + value + ") found");
+        }
     }
 }
 
@@ -364,7 +386,7 @@ export class Reaction extends ElementBase {
         this.upper_bound = UPPER_BOUND_LIMIT;
     }
 
-    toHTML(model: Model): HTMLDivElement {
+    toHtml(model: Model): HTMLDivElement {
         let element = document.createElement("div");
         if (!this.enabled) {
             element.classList.add("cyano-reaction-disabled");
@@ -581,34 +603,36 @@ export class Metabolite extends ElementBase {
         this.readAttributes(j);
     }
 
-    updateName(new_name: string, model: Model) {
-        let idx = model.metabolite.get("name", new_name);
+    updateId(new_id: string, model: Model) {
+        if (new_id == this.id) {
+            return;
+        }
+
+        let idx = model.metabolite.get("id", new_id);
 
         if (idx != null) {
-            let that = this;
-
-            this.consumed.concat(this.produced).forEach(function (enzyme) {
-                for (let i = 0; i < enzyme.substrates.length; ++i) {
-                    if (that.name == enzyme.substrates[i].name) {
-                        enzyme.substrates[i].name = new_name;
-                        break;
-                    }
-                }
-
-                for (let i = 0; i < enzyme.products.length; ++i) {
-                    if (that.name == enzyme.products[i].name) {
-                        enzyme.products[i].name = new_name;
-                        break;
-                    }
-                }
-            });
-
-            this.id = new_name;
-            this.name = new_name;
-
-            return true;
+            throw new Error("Metabolite with ID " + new_id + " already exists");
         }
-        return false;
+
+        let that = this;
+
+        this.consumed.concat(this.produced).forEach(function (enzyme) {
+            for (let enz of enzyme.substrates) {
+                if (that.id == enz.id) {
+                    enz.id = new_id;
+                    break;
+                }
+            }
+
+            for (let enz of enzyme.products) {
+                if (that.id == enz.id) {
+                    enz.id = new_id;
+                    break;
+                }
+            }
+        });
+
+        this.id = new_id;
     }
 
     remove(model: Model) {
@@ -643,7 +667,7 @@ export class Metabolite extends ElementBase {
         return this.consumed.length == 0 && this.produced.length == 0;
     }
 
-    getEnzymes() {
+    getReactions(): Reaction[] {
         return this.consumed.concat(this.produced);
     }
 

@@ -52,14 +52,6 @@ Released under the MIT license
         }).remove();
     };
 
-    Metabolite.prototype.invalidate = function() {
-        this.getEnzymes().forEach(function (obj) {
-            datatable_enzymes.row(model.reactions.indexOf(obj)).invalidate();
-        });
-
-        datatable_metabolites.row(model.metabolites.indexOf(this)).invalidate();
-    };
-
     Metabolite.prototype.removeFromList = function() {
         var that = this;
         datatable_metabolites.row(function(idx, data, node) {
@@ -164,52 +156,6 @@ Released under the MIT license
                     return ((arr[0] ? f[0](d) : !f[0](d)) || (arr[1] ? f[1](d) : !f[1](d))) &&
                             ((arr[2] ? f[2](d) : !f[2](d)) || (arr[3] ? f[3](d) : !f[3](d))) &&
                             ((arr[4] ? f[4](d) : !f[4](d)) || (arr[5] ? f[5](d) : !f[5](d)));
-                }
-
-                return true;
-            }
-        );*/
-
-        $($("#filter_row_metabolites").text()).appendTo($("#cyano-metabolite-list_wrapper").children()[1]);
-
-        $("#cyano-metabolite-list-filter-reactions").multiselect({
-            buttonClass: 'btn btn-default btn-xs',
-            onChange: function(option, checked, select) {
-                datatable_metabolites.draw();
-            },
-            buttonText: function(options, select) {
-                if (options.length === 0) {
-                    return 'No option selected';
-                }
-                else if (options.length === 2) {
-                    return 'No filter applied';
-                }
-                else {
-                    var labels = [];
-
-                    options.each(function() {
-                        labels.push($(this).html());
-                    });
-                    return labels.join(' ') + '';
-                }
-            }
-        });
-
-        /*$.fn.dataTable.ext.search.push(
-            function( settings, data, dataIndex ) {
-                if (settings.nTable == table_metabolites[0]) {
-                    var arr = $("#cyano-metabolite-list-filter-reactions").find("option").map(function () {
-                        return this.selected;
-                    }).get();
-
-                    var d = datatable_metabolites.data()[dataIndex];
-                    var f = metabolite_filter;
-
-                    if (!(arr[0] || arr[1])) {
-                        return false;
-                    }
-
-                    return ((arr[0] ? f[0](d) : !f[0](d)) || (arr[1] ? f[1](d) : !f[1](d)));
                 }
 
                 return true;
@@ -737,10 +683,6 @@ Released under the MIT license
 
         $("#enzyme_regex").click(function() {
             datatable_enzymes.search("", $(this).prop("checked"), true).draw();
-        });
-
-        $("#metabolite_regex").click(function() {
-            datatable_metabolites.search("", $(this).prop("checked"), true).draw();
         });
 
         $("#flux_regex").click(function() {

@@ -15,11 +15,12 @@ Reactions:
 Metabolites:
 - Consumed by Tooltips
 - External checkbox
-- Clicking metabolites
+- Clicking reactions
 - Delete unused metabolites
 -- Shared buttons:
 - Create new reaction
 - Create new metabolite
+- Compartment handling
 
 Settings:
 - Max/Min Toggle
@@ -41,4 +42,3 @@ Dialog Reaction:
 
 Dialog Metabolites:
 - Create new metabolite
-- edit metabolites

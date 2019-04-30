@@ -114,7 +114,7 @@ Create new metabolite
                             return rowData;
                         },
                         render: function (data) {
-                            return $(data.toHTML(app.model)).wrap("<p>").parent().html();
+                            return $(data.toHtml(app.model)).wrap("<p>").parent().html();
                         }
                     },
                     {
@@ -219,7 +219,7 @@ Create new metabolite
                     return;
                 }
                 let row = self.datatable.row(tr);
-                self.app.dialog_reaction.show(); //(row.data(), false);
+                self.app.dialog_reaction.show(row.data());
             });
             /*table_enzymes.on("click", ".cyano-metabolite", function(event) {
                 // Any Metabolite in 2nd column was clicked
@@ -282,6 +282,14 @@ Create new metabolite
             if (old_design_objective !== undefined) {
                 cyano_design_objective_select[0].selectize.setValue(old_design_objective.name, false);
             }*/
+        }
+        invalidate(reaction) {
+            /*for (let reac of metabolite.getReactions()) {
+    
+                datatable_enzymes.row(Enzyme.enzymes.indexOf(obj)).invalidate()
+            }
+            //metabolite.getEnzymes()*/
+            this.datatable.row(this.app.model.reaction.checked_index("id", reaction.id)).invalidate();
         }
     }
     exports.Page = Page;

@@ -24,33 +24,26 @@ Create new metabolite
 Delete unused metabolites
 </button>
 `;
-    /*
-    <script id="filter_row_metabolites" type="text/plain">
-    <div class="col-sm-6">
-    <label for="cyano-metabolite-list-filter-reactions">Filter metabolites</label>
-    <select id="cyano-metabolite-list-filter-reactions" class="form-control combobox" multiple="multiple">
-        <option selected="selected">Is internal</option>
-        <option selected="selected">Is external</option>
-    </select>
+    let template_filter = document.createElement('template');
+    template_filter.innerHTML = `
+<div class="col-sm-6">
+<label for="cyano-list-filter">Filter metabolites</label>
+<select class="cyano-list-filter form-control combobox" multiple="multiple">
+    <option selected="selected">Is internal</option>
+    <option selected="selected">Is external</option>
+</select>
+</div>
+<div class="col-sm-6">
+    <div class="dataTables_filter">
+    <div class="checkbox">
+    <input class="cyano-regex" type="checkbox">
+    <label for="cyano-regex">Search with RegExp</label>
     </div>
-    <div class="col-sm-6">
-        <div class="dataTables_filter">
-        <div class="checkbox">
-        <input id="metabolite_regex" type="checkbox">
-        <label for="metabolite_regex">Search with RegExp</label>
-        </div>
-        </div>
     </div>
-    </script>
-     */
-    /*
-    
-        var metabolite_filter = [
-            function(e) { return !e.isExternal() },
-            function(e) { return e.isExternal() }
-        ];
-     */
+</div>
+`;
     class Page {
+        //readonly filter_element: HTMLElement;
         constructor(where, app) {
             this.source_element = where;
             where.appendChild(template.content.cloneNode(true));
@@ -148,8 +141,51 @@ Delete unused metabolites
                     }
                 ]
             });
-            /* Event handler */
+            /* Filter */
+            where.children[0].children[1].appendChild(template_filter.content.cloneNode(true));
             const self = this;
+            $(where.getElementsByClassName("cyano-list-filter")[0]).multiselect({
+                buttonClass: 'btn btn-default btn-xs',
+                onChange: function (option, checked, select) {
+                    self.datatable.draw();
+                },
+                buttonText: function (options, select) {
+                    if (options.length === 0) {
+                        return 'No option selected';
+                    }
+                    else if (options.length === 2) {
+                        return 'No filter applied';
+                    }
+                    else {
+                        let labels = [];
+                        options.each(function () {
+                            labels.push($(this).html());
+                        });
+                        return labels.join(' ') + '';
+                    }
+                }
+            });
+            $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+                if (settings.nTable == self.table_element) {
+                    let arr = $(where).find(".cyano-list-filter").find("option").map(function () {
+                        return this.selected;
+                    }).get();
+                    let d = self.datatable.data()[dataIndex];
+                    let f = [
+                        function (e) { return !e.isExternal(); },
+                        function (e) { return e.isExternal(); }
+                    ];
+                    if (!(arr[0] || arr[1])) {
+                        return false;
+                    }
+                    return ((arr[0] ? f[0](d) : !f[0](d)) || (arr[1] ? f[1](d) : !f[1](d)));
+                }
+                return true;
+            });
+            where.getElementsByClassName("cyano-regex")[0].addEventListener("click", function () {
+                self.datatable.search(self.datatable.search(), $(this).prop("checked"), true).draw();
+            });
+            /* Event handler */
             // Tooltip on reaction hover
             $(this.table_element).on({
                 mouseenter: function () {
@@ -168,72 +204,95 @@ Delete unused metabolites
                 let row = self.datatable.row($(this).closest("tr"));
                 app.dialog_metabolite.show(row.data());
             });
-            /*
-    // 4th col
-    table_metabolites.delegate('tr td:nth-child(4) input', 'change', function() {
-        var row = datatable_metabolites.row($(this).closest("tr"));
-    
-        row.data().external = $(this).is(":checked");
-    
-        command_list.push({
-            "type": "metabolite",
-            "op": "edit",
-            "id": row.data().id,
-            "object": {
-                "id": row.data().id,
-                "name": row.data().name,
-                "external": row.data().external
-            }
-        });
-    
-        row.data().invalidate();
-    });
-    
-    // Enzyme in 2nd or 3rd col
-    table_metabolites.on("click", ".cyano-enzyme", function(event) {
-        var enzyme = Enzyme.indexByName($(this).text());
-        if (enzyme >= 0) {
-            showEditEnzymeDialog(model.reactions[enzyme], false);
-        }
-    });
-    
-    
-            $(".create-enzyme-button").click(function (event) {
-                showAddEnzymeDialog();
-            });
-            $(".create-metabolite-button").click(function (event) {
-                showAddMetaboliteDialog();
-            });
-    
-            $(".delete-metabolites-button").click(function (event) {
-                $("#dialog-delete-metabolites").modal('show');
-            });
-    
-            $("#dialog-delete-metabolites").find(".btn-primary").click(function() {
-                model.metabolites.filter(function(m) {
-                    return m.isUnused();
-                }).forEach(function(m) {
-                    m.remove();
-                    m.removeFromList();
-    
-                    command_list.push({
-                        "type": "metabolite",
-                        "op": "delete",
-                        "id": m.id,
-                        "object": {}
-                    });
+            // 4th column: External checkbox
+            $(this.table_element).delegate('tr td:nth-child(4) input', 'change', function () {
+                let row = self.datatable.row($(this).closest("tr"));
+                let metabolite = row.data();
+                metabolite.compartment = $(this).is(":checked") ? "e" : "c";
+                app.command_list.push({
+                    "type": "metabolite",
+                    "op": "edit",
+                    "id": metabolite.id,
+                    "object": {
+                        "id": metabolite.id,
+                        "name": metabolite.name,
+                        "external": metabolite.isExternal()
+                    }
                 });
-                datatable_metabolites.draw();
-    
-                $("#dialog-delete-metabolites").modal("hide");
+                self.invalidate(metabolite);
             });
-    
-    */
+            /*
+            // Enzyme in 2nd or 3rd col
+            table_metabolites.on("click", ".cyano-enzyme", function(event) {
+                var enzyme = Enzyme.indexByName($(this).text());
+                if (enzyme >= 0) {
+                    showEditEnzymeDialog(model.reactions[enzyme], false);
+                }
+            });
+            
+            
+                    $(".create-enzyme-button").click(function (event) {
+                        showAddEnzymeDialog();
+                    });
+                    $(".create-metabolite-button").click(function (event) {
+                        showAddMetaboliteDialog();
+                    });
+            
+                    $(".delete-metabolites-button").click(function (event) {
+                        $("#dialog-delete-metabolites").modal('show');
+                    });
+            
+                    $("#dialog-delete-metabolites").find(".btn-primary").click(function() {
+                        model.metabolites.filter(function(m) {
+                            return m.isUnused();
+                        }).forEach(function(m) {
+                            m.remove();
+                            m.removeFromList();
+            
+                            command_list.push({
+                                "type": "metabolite",
+                                "op": "delete",
+                                "id": m.id,
+                                "object": {}
+                            });
+                        });
+                        datatable_metabolites.draw();
+            
+                        $("#dialog-delete-metabolites").modal("hide");
+                    });
+            
+            */
         }
         update() {
             this.datatable.clear();
             this.datatable.rows.add(this.app.model.metabolites);
             this.datatable.draw();
+        }
+        /*
+            Enzyme.prototype.invalidate = function() {
+            this.getMetabolites().forEach(function (obj) {
+                datatable_metabolites.row(Metabolite.metabolites.indexOf(obj)).invalidate();
+            });
+            datatable_enzymes.row(Enzyme.enzymes.indexOf(this)).invalidate();
+        };
+        Enzyme.prototype.removeFromList = function() {
+            var that = this;
+            datatable_enzymes.row(function(idx, data, node) {
+                return data.name == that.name;
+            }).remove();
+        };
+        Metabolite.prototype.invalidate = function() {
+            this.getEnzymes().forEach(function (obj) {
+                datatable_enzymes.row(Enzyme.enzymes.indexOf(obj)).invalidate();
+            });
+            datatable_metabolites.row(Metabolite.metabolites.indexOf(this)).invalidate();
+        };
+         */
+        invalidate(metabolite) {
+            for (let reac of metabolite.getReactions()) {
+                this.app.reaction_page.datatable.row(this.app.model.reaction.checked_index("id", reac.id)).invalidate("data");
+            }
+            this.datatable.row(this.app.model.metabolite.checked_index("id", metabolite.id)).invalidate("data");
         }
     }
     exports.Page = Page;

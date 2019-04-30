@@ -48,6 +48,26 @@ define(["require", "exports"], function (require, exports) {
                 }
                 return false;
             }
+            index(key, value) {
+                let i = 0;
+                for (const item of this.lst) {
+                    if (item[key] == value) {
+                        return i;
+                    }
+                    ++i;
+                }
+                return null;
+            }
+            checked_index(key, value) {
+                let i = 0;
+                for (const item of this.lst) {
+                    if (item[key] == value) {
+                        return i;
+                    }
+                    ++i;
+                }
+                throw new Error(this.tname + ": No object (" + key + ", " + value + ") found");
+            }
         }
         Internal.LstOp = LstOp;
     })(Internal || (Internal = {}));
@@ -336,7 +356,7 @@ define(["require", "exports"], function (require, exports) {
             this.lower_bound = exports.LOWER_BOUND_LIMIT;
             this.upper_bound = exports.UPPER_BOUND_LIMIT;
         }
-        toHTML(model) {
+        toHtml(model) {
             let element = document.createElement("div");
             if (!this.enabled) {
                 element.classList.add("cyano-reaction-disabled");
@@ -543,29 +563,30 @@ define(["require", "exports"], function (require, exports) {
         fromJson(j) {
             this.readAttributes(j);
         }
-        updateName(new_name, model) {
-            let idx = model.metabolite.get("name", new_name);
-            if (idx != null) {
-                let that = this;
-                this.consumed.concat(this.produced).forEach(function (enzyme) {
-                    for (let i = 0; i < enzyme.substrates.length; ++i) {
-                        if (that.name == enzyme.substrates[i].name) {
-                            enzyme.substrates[i].name = new_name;
-                            break;
-                        }
-                    }
-                    for (let i = 0; i < enzyme.products.length; ++i) {
-                        if (that.name == enzyme.products[i].name) {
-                            enzyme.products[i].name = new_name;
-                            break;
-                        }
-                    }
-                });
-                this.id = new_name;
-                this.name = new_name;
-                return true;
+        updateId(new_id, model) {
+            if (new_id == this.id) {
+                return;
             }
-            return false;
+            let idx = model.metabolite.get("id", new_id);
+            if (idx != null) {
+                throw new Error("Metabolite with ID " + new_id + " already exists");
+            }
+            let that = this;
+            this.consumed.concat(this.produced).forEach(function (enzyme) {
+                for (let enz of enzyme.substrates) {
+                    if (that.id == enz.id) {
+                        enz.id = new_id;
+                        break;
+                    }
+                }
+                for (let enz of enzyme.products) {
+                    if (that.id == enz.id) {
+                        enz.id = new_id;
+                        break;
+                    }
+                }
+            });
+            this.id = new_id;
         }
         remove(model) {
             let that = this;
@@ -594,7 +615,7 @@ define(["require", "exports"], function (require, exports) {
         isUnused() {
             return this.consumed.length == 0 && this.produced.length == 0;
         }
-        getEnzymes() {
+        getReactions() {
             return this.consumed.concat(this.produced);
         }
         isExternal() {

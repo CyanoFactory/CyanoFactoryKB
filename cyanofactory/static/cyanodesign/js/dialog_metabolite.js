@@ -16,7 +16,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                 <form>
                     <fieldset>
                         <div class="form-group">
-                            <label for="add-metabolite-name">Identifier</label>
+                            <label for="metabolite-id">Identifier</label>
                             <input type="text" class="metabolite-id form-control">
                         </div>
                     
@@ -52,30 +52,14 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             document.body.appendChild(template.content.cloneNode(true));
             this.dialog_element = document.body.getElementsByClassName("dialog-metabolite")[0];
             this.model = model;
-        }
-        get id() {
-            return $(this.dialog_element).find(".metabolite-id").val();
-        }
-        set id(id) {
-            $(this.dialog_element).find(".metabolite-id").val(id);
-        }
-        get name() {
-            return $(this.dialog_element).find(".metabolite-name").val();
-        }
-        set name(name) {
-            $(this.dialog_element).find(".metabolite-name").val(name);
-        }
-        get external() {
-            return $(this.dialog_element).find(".metabolite-external").prop("checked");
-        }
-        set external(external) {
-            $(this.dialog_element).find(".metabolite-external").prop("checked", external);
-        }
-        get formula() {
-            return $(this.dialog_element).find(".metabolite-chemical").val();
-        }
-        set formula(name) {
-            $(this.dialog_element).find(".metabolite-chemical").val(name);
+            let self = this;
+            $(this.dialog_element).find(".btn-primary").click(function () {
+                self.validate();
+            });
+            this.id = dialog_helper_1.ElementWrapper.byClass("metabolite-id", this.dialog_element);
+            this.name = dialog_helper_1.ElementWrapper.byClass("metabolite-name", this.dialog_element);
+            this.external = dialog_helper_1.ElementWrapper.byClass("metabolite-external", this.dialog_element);
+            this.formula = dialog_helper_1.ElementWrapper.byClass("metabolite-chemical", this.dialog_element);
         }
         show(metabolite = null) {
             if (metabolite == null) {
@@ -87,10 +71,10 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                 this.create = false;
             }
             // Copy to dialog
-            this.id = this.item.id;
-            this.name = this.item.name;
-            this.external = this.item.isExternal();
-            this.formula = this.item.formula;
+            this.id.value = this.item.id;
+            this.name.value = this.item.name;
+            this.external.value = this.item.isExternal();
+            this.formula.value = this.item.formula;
             // clean up
             $(this.dialog_element).find("div").removeClass("has-error");
             $(this.dialog_element).find(".help-block").remove();
@@ -98,74 +82,44 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             $(this.dialog_element)["modal"]("show");
         }
         validate() {
-            let name = $(this.dialog_element).find(".metabolite-name");
-            let valid = dialog_helper_1.DialogHelper.checkLength(name, "Name", 1, 100);
-            valid = valid || dialog_helper_1.DialogHelper.checkRegexpPos(name, /(^[0-9])/, "Name must not begin with a number");
-            valid = valid || dialog_helper_1.DialogHelper.checkRegexpPos(name, /(^<?\-> | <?\-> | <?\->$)/, "Name must not contain lonely <-> or ->");
-            valid = valid || dialog_helper_1.DialogHelper.checkRegexpPos(name, /(^\+ | \+ )/, "Lonely + only allowed at end of name");
-            let met_with_id = this.model.metabolite.get("id", this.id);
+            let valid = dialog_helper_1.DialogHelper.checkId(this.id.element);
+            valid = valid && dialog_helper_1.DialogHelper.checkLength(this.name.element, "Name", 1, 255);
+            valid = valid && dialog_helper_1.DialogHelper.checkRegexpPos(this.name.element, /(^[0-9])/, "Name must not begin with a number");
+            valid = valid && dialog_helper_1.DialogHelper.checkRegexpPos(this.name.element, /(^<?\-> | <?\-> | <?\->$)/, "Name must not contain lonely <-> or ->");
+            valid = valid && dialog_helper_1.DialogHelper.checkRegexpPos(this.name.element, /(^\+ | \+ )/, "Lonely + only allowed at end of name");
+            let met_with_id = this.model.metabolite.get("id", this.id.value);
             if (met_with_id != null) {
-                valid = valid || dialog_helper_1.DialogHelper.checkBool(name, met_with_id == this.item, "Name already in use");
+                valid = valid && dialog_helper_1.DialogHelper.checkBool(this.id.element, met_with_id == this.item, "Identifier already in use");
             }
             if (valid) {
-                var metabolite = dialog_metabolite_edit.data("object");
-                var old_name = metabolite.id;
-                metabolite.updateName(name.val());
-                var old_external = metabolite.external;
-                metabolite.external = external.prop("checked");
-                if (old_name != metabolite.name || old_external != metabolite.external) {
-                    command_list.push({
+                let metabolite = this.item;
+                let any_changed = metabolite.id != this.id.value ||
+                    metabolite.name != this.name.value ||
+                    metabolite.isExternal() != this.external.value ||
+                    metabolite.formula != this.formula.value;
+                let old_id = metabolite.id;
+                metabolite.updateId(this.id.value, this.model);
+                // FIXME: Compartment configuration?
+                metabolite.compartment = this.external.value ? "e" : "c";
+                metabolite.name = this.name.value;
+                metabolite.formula = this.formula.value;
+                if (any_changed) {
+                    app.command_list.push({
                         "type": "metabolite",
                         "op": "edit",
-                        "id": old_name,
+                        "id": old_id,
                         "object": {
                             "id": metabolite.id,
                             "name": metabolite.name,
                             "external": metabolite.external,
-                            "chemical": metabolite.chemical
+                            "formula": metabolite.formula
                         }
                     });
+                    app.metabolite_page.invalidate(metabolite);
                 }
-                metabolite.invalidate();
-                dialog_metabolite_edit.modal("hide");
+                $(this.dialog_element)["modal"]("hide");
             }
-            /*
-            
-                    var name = dialog_metabolite_add.find("#add-metabolite-name");
-                    var external = dialog_metabolite_add.find("#add-external");
-            
-                    var valid = checkLength(name, "Name", 1, 100);
-                    valid &= checkRegexpPos(name, /(^[0-9])/, "Name must not begin with a number");
-                    valid &= checkRegexpPos(name, /(^<?\-> | <?\-> | <?\->$)/, "Name must not contain lonely <-> or ->");
-                    valid &= checkRegexpPos(name, /(^\+ | \+ )/, "Lonely + only allowed at end of name");
-            
-                    var met_idx = Metabolite.indexByName(name.val());
-            
-                    if (met_idx != -1) {
-                        valid = checkBool(name, false, "Name already in use");
-                    }
-            
-                    if (valid) {
-                        var metabolite = new Metabolite(name.val(), name.val(), external.prop("checked"));
-                        model.metabolites.push(metabolite);
-            
-                        command_list.push({
-                            "type": "metabolite",
-                            "op": "add",
-                            "id": metabolite.id,
-                            "object": {
-                                "name": metabolite.name,
-                                "external": metabolite.external,
-                                "chemical": metabolite.chemical
-                            }
-                        });
-            
-                        datatable_metabolites.row.add(metabolite);
-                        datatable_metabolites.sort();
-                        datatable_metabolites.draw();
-            
-                        dialog_metabolite_add.modal("hide");
-                    }*/
+            return valid;
         }
     }
     exports.Dialog = Dialog;

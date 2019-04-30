@@ -77,7 +77,25 @@ export class Dialog {
         this.model = model;
     }
 
-    show() {
+    get id(): string {
+        return <string>$(this.dialog_element).find(".enzyme-id").val();
+    }
+
+    set id(id: string) {
+        $(this.dialog_element).find(".enzyme-id").val(id);
+    }
+
+    get name(): string {
+        return <string>$(this.dialog_element).find(".enzyme-name").val();
+    }
+
+    set name(name: string) {
+        $(this.dialog_element).find(".enzyme-name").val(name);
+    }
+
+    show(reaction: mm.Reaction) {
+        //dialog_enzyme.find(".enzyme-name").val(enzyme.id);
+
         /*dialog_enzyme.data("object", enzyme);
         dialog_enzyme.data("create", create_new);
         dialog_enzyme.find("#enzyme-name").val(enzyme.id);
@@ -145,6 +163,7 @@ export class Dialog {
 
         $(this.dialog_element)["modal"]("show");
     }
+
 
     /*
         dialog_enzyme.find(".btn-primary").click(function() {

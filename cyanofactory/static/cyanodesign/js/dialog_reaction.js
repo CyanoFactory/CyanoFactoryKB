@@ -70,7 +70,20 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             this.dialog_element = document.body.getElementsByClassName("dialog-reaction")[0];
             this.model = model;
         }
-        show() {
+        get id() {
+            return $(this.dialog_element).find(".enzyme-id").val();
+        }
+        set id(id) {
+            $(this.dialog_element).find(".enzyme-id").val(id);
+        }
+        get name() {
+            return $(this.dialog_element).find(".enzyme-name").val();
+        }
+        set name(name) {
+            $(this.dialog_element).find(".enzyme-name").val(name);
+        }
+        show(reaction) {
+            //dialog_enzyme.find(".enzyme-name").val(enzyme.id);
             /*dialog_enzyme.data("object", enzyme);
             dialog_enzyme.data("create", create_new);
             dialog_enzyme.find("#enzyme-name").val(enzyme.id);
