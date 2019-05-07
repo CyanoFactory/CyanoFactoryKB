@@ -6,15 +6,10 @@ Design:
 - Save as
 
 Reactions:
-- Filter
-- Suche
-- Clicking metabolites
-- Enable checkbox
 - Delete button
 
 Metabolites:
 - Consumed by Tooltips
-- External checkbox
 - Clicking reactions
 - Delete unused metabolites
 -- Shared buttons:

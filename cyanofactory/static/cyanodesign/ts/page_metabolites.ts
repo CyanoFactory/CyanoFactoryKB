@@ -185,12 +185,12 @@ export class Page {
         $.fn.dataTable.ext.search.push(
             function(settings, data, dataIndex) {
                 if (settings.nTable == self.table_element) {
-                    let arr = $(where).find(".cyano-list-filter").find("option").map(function () {
+                    const arr = $(where).find(".cyano-list-filter").find("option").map(function () {
                         return (<any>this).selected;
                     }).get();
 
-                    let d = self.datatable.data()[dataIndex];
-                    let f = [
+                    const d = self.datatable.data()[dataIndex];
+                    const f = [
                         function(e) { return !e.isExternal() },
                         function(e) { return e.isExternal() }
                     ];

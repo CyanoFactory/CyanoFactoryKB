@@ -507,6 +507,7 @@ define(["require", "exports"], function (require, exports) {
             let inst = model.metabolite.checked_get("id", this.id);
             let span = document.createElement("span");
             span.classList.add("cyano-metabolite");
+            span.dataset.id = this.id;
             span.append(amount + inst.name);
             if (inst.isExternal()) {
                 span.classList.add("cyano-external-metabolite");
