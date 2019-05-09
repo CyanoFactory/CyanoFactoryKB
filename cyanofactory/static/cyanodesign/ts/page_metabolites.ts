@@ -330,4 +330,5 @@ table_metabolites.on("click", ".cyano-enzyme", function(event) {
 
         (<any>this.datatable.row(this.app.model.metabolite.checked_index("id", metabolite.id))).invalidate("data");
     }
+
 }

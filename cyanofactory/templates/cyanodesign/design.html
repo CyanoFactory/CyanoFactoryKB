@@ -24,7 +24,7 @@ Released under the MIT license
 <script src="{% get_static_prefix %}cyanodesign/js/c3.js"></script>
 <script async src="{% get_static_prefix %}cyanodesign/js/viz.js"></script>
 <script type="text/javascript" src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
-<script src="{% get_static_prefix %}/cyanodesign/node_modules/requirejs/require.js"
+<script src="{% get_static_prefix %}cyanodesign/node_modules/requirejs/require.js"
         data-main="{% get_static_prefix %}cyanodesign/js/main"></script>
 <!--<script src="{% get_static_prefix %}cyanodesign/js/metabolic_model.js"></script>-->
 <script src="{% get_static_prefix %}cyanodesign/js/mba_chart.js"></script>
@@ -508,13 +508,6 @@ Released under the MIT license
             dialog_metabolite_edit.data("object", item);
 
             dialog_metabolite_edit.dialog("open");
-        });
-        dialog_enzyme.find("#constrained:checkbox").change(function() {
-            if ($(this).is(":checked")) {
-                constraints_div.show();
-            } else {
-                constraints_div.hide();
-            }
         });
 */
 

@@ -33,7 +33,8 @@ Simulation:
 
 Dialog Reaction:
 - Create new reaction
-- Edit reaction
+- Edit reaction (FIXME: stoichiometry)
+- UX for changing Metabolite amount and creating new metabolites
 
 Dialog Metabolites:
 - Create new metabolite

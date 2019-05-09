@@ -56,6 +56,12 @@ export class DialogHelper {
         }
         return true;
     }
+
+    static getFloat(value: string): float {
+        if (/^([-+])?([0-9]+(\.[0-9]+)?)$/.test(value))
+            return Number(value);
+        return NaN;
+    };
 }
 
 export class ElementWrapper<T> {

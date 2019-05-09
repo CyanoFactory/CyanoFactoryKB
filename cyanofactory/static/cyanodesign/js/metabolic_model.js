@@ -356,6 +356,16 @@ define(["require", "exports"], function (require, exports) {
             this.lower_bound = exports.LOWER_BOUND_LIMIT;
             this.upper_bound = exports.UPPER_BOUND_LIMIT;
         }
+        updateId(new_id, model) {
+            if (new_id == this.id) {
+                return;
+            }
+            let idx = model.reaction.get("id", new_id);
+            if (idx != null) {
+                throw new Error("Reaction with ID " + new_id + " already exists");
+            }
+            this.id = new_id;
+        }
         toHtml(model) {
             let element = document.createElement("div");
             if (!this.enabled) {
@@ -460,16 +470,12 @@ define(["require", "exports"], function (require, exports) {
             return false;
         }
         ;
+        getMetaboliteIds(model) {
+            return this.substrates.concat(this.products).map(m => m.id);
+        }
+        ;
         getMetabolites(model) {
-            let nameProp = function (arg) {
-                return arg.name;
-            };
-            let idGetter = function (arg) {
-                model.metabolite.get("id", arg);
-            };
-            return this.substrates.map(nameProp)
-                .concat(this.products.map(nameProp))
-                .map(idGetter);
+            return this.substrates.concat(this.products).map(m => model.metabolite.checked_get("id", m.id));
         }
         ;
     }
@@ -502,9 +508,12 @@ define(["require", "exports"], function (require, exports) {
         fromJson(j) {
             this.readAttributes(j);
         }
+        getMetabolite(model) {
+            return model.metabolite.checked_get("id", this.id);
+        }
         toHtml(model) {
             let amount = this.stoichiometry + " ";
-            let inst = model.metabolite.checked_get("id", this.id);
+            let inst = this.getMetabolite(model);
             let span = document.createElement("span");
             span.classList.add("cyano-metabolite");
             span.dataset.id = this.id;

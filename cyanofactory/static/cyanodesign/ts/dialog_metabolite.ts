@@ -67,7 +67,7 @@ export class Dialog {
         document.body.appendChild(template.content.cloneNode(true));
         this.dialog_element = <HTMLElement>document.body.getElementsByClassName("dialog-metabolite")[0]!;
         this.model = model;
-        let self: Dialog = this;
+        const self: Dialog = this;
         $(this.dialog_element).find(".btn-primary").click(function () {
             self.validate();
         });
@@ -102,6 +102,11 @@ export class Dialog {
     }
 
     validate(): boolean {
+        // clean up
+        $(this.dialog_element).find("div").removeClass("has-error");
+        $(this.dialog_element).find(".help-block").remove();
+
+        // validate
         let valid = DialogHelper.checkId(this.id.element);
         valid = valid && DialogHelper.checkLength(this.name.element, "Name", 1, 255);
         valid = valid && DialogHelper.checkRegexpPos(this.name.element, /(^[0-9])/, "Name must not begin with a number");
@@ -114,42 +119,44 @@ export class Dialog {
             valid = valid && DialogHelper.checkBool(this.id.element, met_with_id == this.item, "Identifier already in use");
         }
 
-        if (valid) {
-            let metabolite = this.item;
-
-            let any_changed: boolean =
-                metabolite.id != this.id.value ||
-                metabolite.name != this.name.value ||
-                metabolite.isExternal() != this.external.value ||
-                metabolite.formula != this.formula.value;
-
-            let old_id = metabolite.id;
-            metabolite.updateId(this.id.value, this.model);
-            // FIXME: Compartment configuration?
-            metabolite.compartment = this.external.value ? "e" : "c";
-
-            metabolite.name = this.name.value;
-            metabolite.formula = this.formula.value;
-
-            if (any_changed) {
-                app.command_list.push({
-                    "type": "metabolite",
-                    "op": "edit",
-                    "id": old_id,
-                    "object": {
-                        "id": metabolite.id,
-                        "name": metabolite.name,
-                        "external": metabolite.external,
-                        "formula": metabolite.formula
-                    }
-                });
-
-                app.metabolite_page.invalidate(metabolite);
-            }
-
-            $(this.dialog_element)["modal"]("hide");
+        if (!valid) {
+            return false;
         }
 
-        return valid;
+        let metabolite = this.item;
+
+        let any_changed: boolean =
+            metabolite.id != this.id.value ||
+            metabolite.name != this.name.value ||
+            metabolite.isExternal() != this.external.value ||
+            metabolite.formula != this.formula.value;
+
+        let old_id = metabolite.id;
+        metabolite.updateId(this.id.value, this.model);
+        // FIXME: Compartment configuration?
+        metabolite.compartment = this.external.value ? "e" : "c";
+
+        metabolite.name = this.name.value;
+        metabolite.formula = this.formula.value;
+
+        if (any_changed) {
+            app.command_list.push({
+                "type": "metabolite",
+                "op": "edit",
+                "id": old_id,
+                "object": {
+                    "id": metabolite.id,
+                    "name": metabolite.name,
+                    "external": metabolite.external,
+                    "formula": metabolite.formula
+                }
+            });
+
+            app.metabolite_page.invalidate(metabolite);
+        }
+
+        $(this.dialog_element)["modal"]("hide");
+
+        return true;
     }
 }

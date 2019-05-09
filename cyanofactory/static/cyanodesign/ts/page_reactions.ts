@@ -392,9 +392,12 @@ export class Page {
     }
 
     invalidate(reaction: mm.Reaction) {
-        for (let met of reaction.getMetabolites(this.app.model)) {
-            (<any>this.app.metabolite_page.datatable.row(this.app.model.metabolite.checked_index("id", met.id))).invalidate("data");
+        for (let met_id of reaction.getMetaboliteIds(this.app.model)) {
+            let idx = this.app.model.metabolite.checked_index("id", met_id);
+            this.app.metabolite_page.datatable.row(idx).invalidate("data");
         }
+
+        this.app.metabolite_page.datatable.draw();
 
         (<any>this.datatable.row(this.app.model.reaction.checked_index("id", reaction.id))).invalidate();
     }

@@ -386,6 +386,20 @@ export class Reaction extends ElementBase {
         this.upper_bound = UPPER_BOUND_LIMIT;
     }
 
+    updateId(new_id: string, model: Model) {
+        if (new_id == this.id) {
+            return;
+        }
+
+        let idx = model.reaction.get("id", new_id);
+
+        if (idx != null) {
+            throw new Error("Reaction with ID " + new_id + " already exists");
+        }
+
+        this.id = new_id;
+    }
+
     toHtml(model: Model): HTMLDivElement {
         let element = document.createElement("div");
         if (!this.enabled) {
@@ -508,17 +522,13 @@ export class Reaction extends ElementBase {
         return false;
     };
 
-    getMetabolites(model: Model) {
-        let nameProp = function (arg: MetaboliteReference): string {
-            return arg.name;
-        };
-        let idGetter = function (arg: string) {
-            model.metabolite.get("id", arg);
-        };
+    getMetaboliteIds(model: Model): string[] {
+        return this.substrates.concat(this.products).map(m => m.id);
+    };
 
-        return this.substrates.map(nameProp)
-            .concat(this.products.map(nameProp))
-            .map(idGetter);
+    getMetabolites(model: Model): Metabolite[] {
+        return this.substrates.concat(this.products).map(
+            m => model.metabolite.checked_get("id", m.id));
     };
 }
 
@@ -547,11 +557,16 @@ export class MetaboliteReference extends ElementBase {
         this.readAttributes(j);
     }
 
+    getMetabolite(model: Model): Metabolite {
+        return model.metabolite.checked_get("id", this.id);
+    }
+
     toHtml(model: Model): HTMLSpanElement {
         let amount = this.stoichiometry + " ";
-        let inst = model.metabolite.checked_get("id", this.id);
+        let inst = this.getMetabolite(model);
         let span = document.createElement("span");
         span.classList.add("cyano-metabolite");
+        span.dataset.id = this.id;
         span.append(amount + inst.name);
 
         if (inst.isExternal()) {
