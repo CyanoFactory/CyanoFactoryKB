@@ -134,6 +134,7 @@ export class Dialog {
         if (reaction == null) {
             this.item = new mm.Reaction();
             this.create = true;
+            this.item.makeUnconstrained();
         } else {
             this.item = reaction;
             this.create = false;
@@ -271,8 +272,13 @@ export class Dialog {
         }
 
         let reaction: mm.Reaction = this.item;
+        if (this.create) {
+            reaction.id = this.id.value;
+            this.model.reactions.push(reaction);
+        }
 
-        let any_changed: boolean = true || /* FIXME: substrates & products */
+        let any_changed: boolean = this.create ||
+            true || /* FIXME: substrates & products */
             reaction.id != this.id.value ||
             reaction.name != this.id.value ||
             reaction.enabled != this.enabled.value ||
@@ -313,8 +319,7 @@ export class Dialog {
                     met = new mm.Metabolite();
                     met.id = i; // Todo: Sluggify
                     met.name = i;
-                    app.metabolite_page.datatable.rows.add(<any>met);
-
+                    app.metabolite_page.datatable.row.add(<any>met);
                     this.model.metabolites.push(met);
                 }
 
@@ -330,12 +335,15 @@ export class Dialog {
         met_adder(substrates_selectize.items, reaction.substrates);
         met_adder(products_selectize.items, reaction.products);
 
+        app.metabolite_page.datatable.sort();
+        app.metabolite_page.datatable.draw();
+
         reaction.updateMetaboliteReference(this.model);
 
         if (any_changed) {
             app.command_list.push({
                 "type": "reaction",
-                "op": "edit",
+                "op": this.create ? "create" : "edit",
                 "id": old_id,
                 "object": {
                     "id": reaction.id,
@@ -350,6 +358,12 @@ export class Dialog {
             });
 
             app.reaction_page.invalidate(reaction);
+        }
+
+        if (this.create) {
+            app.reaction_page.datatable.row.add(reaction);
+            app.reaction_page.datatable.sort();
+            app.reaction_page.datatable.draw();
         }
 
         $(this.dialog_element)["modal"]("hide");

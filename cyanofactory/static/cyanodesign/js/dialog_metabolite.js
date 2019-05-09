@@ -99,7 +99,12 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                 return false;
             }
             let metabolite = this.item;
-            let any_changed = metabolite.id != this.id.value ||
+            if (this.create) {
+                metabolite.id = this.id.value;
+                this.model.metabolites.push(metabolite);
+            }
+            let any_changed = this.create ||
+                metabolite.id != this.id.value ||
                 metabolite.name != this.name.value ||
                 metabolite.isExternal() != this.external.value ||
                 metabolite.formula != this.formula.value;
@@ -112,7 +117,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             if (any_changed) {
                 app.command_list.push({
                     "type": "metabolite",
-                    "op": "edit",
+                    "op": this.create ? "create" : "edit",
                     "id": old_id,
                     "object": {
                         "id": metabolite.id,
@@ -122,6 +127,11 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                     }
                 });
                 app.metabolite_page.invalidate(metabolite);
+            }
+            if (this.create) {
+                app.metabolite_page.datatable.row.add(metabolite);
+                app.metabolite_page.datatable.sort();
+                app.metabolite_page.datatable.draw();
             }
             $(this.dialog_element)["modal"]("hide");
             return true;

@@ -217,8 +217,9 @@ export class Page {
                 $(this).data("toggle", "tooltip");
                 $(this).data("placement", "top");
 
+
                 let reaction: mm.Reaction = self.app.model.reaction.checked_get("name", $(this).text());
-                let text: string = reaction.toString();
+                let text: string = reaction.toString(self.app.model);
 
                 $(this).prop("title", text);
                 $(this)["tooltip"]("show");
@@ -231,6 +232,13 @@ export class Page {
         $(this.table_element).delegate('tr td:first-child', 'click', function() {
             let row = self.datatable.row($(this).closest("tr"));
             app.dialog_metabolite.show(<mm.Metabolite>row.data());
+        });
+
+        // Enzyme in 2nd or 3rd col
+        $(this.table_element).on("click", ".cyano-enzyme", function(event) {
+            // FIXME: should use ID
+            let reaction: mm.Reaction = self.app.model.reaction.checked_get("name", $(this).text());
+            app.dialog_reaction.show(reaction);
         });
 
         // 4th column: External checkbox
@@ -253,47 +261,6 @@ export class Page {
 
             self.invalidate(metabolite);
         });
-/*
-// Enzyme in 2nd or 3rd col
-table_metabolites.on("click", ".cyano-enzyme", function(event) {
-    var enzyme = Enzyme.indexByName($(this).text());
-    if (enzyme >= 0) {
-        showEditEnzymeDialog(model.reactions[enzyme], false);
-    }
-});
-
-
-        $(".create-enzyme-button").click(function (event) {
-            showAddEnzymeDialog();
-        });
-        $(".create-metabolite-button").click(function (event) {
-            showAddMetaboliteDialog();
-        });
-
-        $(".delete-metabolites-button").click(function (event) {
-            $("#dialog-delete-metabolites").modal('show');
-        });
-
-        $("#dialog-delete-metabolites").find(".btn-primary").click(function() {
-            model.metabolites.filter(function(m) {
-                return m.isUnused();
-            }).forEach(function(m) {
-                m.remove();
-                m.removeFromList();
-
-                command_list.push({
-                    "type": "metabolite",
-                    "op": "delete",
-                    "id": m.id,
-                    "object": {}
-                });
-            });
-            datatable_metabolites.draw();
-
-            $("#dialog-delete-metabolites").modal("hide");
-        });
-
-*/
     }
 
     update() {

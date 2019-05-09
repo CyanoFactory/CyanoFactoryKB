@@ -170,7 +170,7 @@ Released under the MIT license
                 waitIndicator.show(wait_position);
 
             let result = {
-                "changes": JSON.stringify(command_list),
+                "changes": JSON.stringify(app.command_list),
                 "objectives": JSON.stringify([{
                     "id": app.settings_page.getObjective().id,
                     "maximize": app.settings_page.maximizeObjective()
@@ -254,9 +254,9 @@ Released under the MIT license
 
                 command["object"].constraints = [constraint, constraint];
 
-                command_list.push(command);
+                app.command_list.push(command);
                 var data = beginRequest();
-                command_list.pop();
+                app.command_list.pop();
             } else if (getSimulationType() == "sa") {
                 // Limit target reaction to measured growth
                 var reaction = getEnzymeByName(cyano_design_target_objective_select.val());
@@ -275,7 +275,7 @@ Released under the MIT license
 
                 command["object"].constraints[1] = last_sim_flux[last_sim_flux.length - 1] * last_sim_flux[d.index][0];
 
-                command_list.push(command);
+                app.command_list.push(command);
 
                 reaction = getEnzymeByName(cyano_design_objective_select.val());
                 constraint = last_sim_flux[d.index][1][reaction.name];
@@ -289,12 +289,12 @@ Released under the MIT license
 
                 command["object"].constraints = [constraint, constraint];
 
-                command_list.push(command);
+                app.command_list.push(command);
 
                 var data = beginRequest();
 
-                command_list.pop();
-                command_list.pop();
+                app.command_list.pop();
+                app.command_list.pop();
             }
 
             data["type"] = JSON.stringify("fba");
@@ -385,7 +385,7 @@ Released under the MIT license
                 $("#dialog-save-model").modal("hide");
                 endRequest($("#dialog-save-model").find(".modal-content"));
                 $("#simulation-result").html("")
-                command_list = [];
+                app.command_list = [];
             }).fail(function(x) {
                 $("#dialog-save-model").modal("hide");
                 $("#visual_graph").hide();
@@ -493,36 +493,33 @@ Released under the MIT license
         });
 
 
-        $(".cyano-design-reactions").on("click", ".cyano-design-reaction", function() {
-            var index = enzymes_design.indexOf(getEnzymeByName($(this).text()));
-            if (index > -1) {
-                enzymes_design.splice(index, 1);
-            }
-            updateEnzymeDesignList();
-        });
-        /*dialog_enzyme.on("click", "div.cyano-metabolite", function(event) {
-            var item = $(event.target).data("object");
-            saveEnzyme(dialog_enzyme.data("object"));
-            dialog_metabolite_edit.find("input.name").val(item.name);
-            dialog_metabolite_edit.find("#external").prop("checked", item.external);
-            dialog_metabolite_edit.data("object", item);
-
-            dialog_metabolite_edit.dialog("open");
-        });
 */
 
-        // delete button clicked
-        /*datatable_enzymes.on("click", ".delete-button", function(event) {
-            var parent = $(this).closest("tr");
-            var dialog_delete = $("#dialog-delete");
-            var row = datatable_enzymes.row(parent);
+        $(".delete-metabolites-button").on("click", function (event) {
+            $("#dialog-delete-metabolites").modal('show');
+        });
 
-            dialog_delete.data("parent", parent);
-            dialog_delete.find(".reaction-name").text(row.data().name);
-            dialog_delete.modal('show');
-        });*/
+        $("#dialog-delete-metabolites").find(".btn-primary").click(function() {
+            app.model.metabolites.filter(function(m) {
+                return m.isUnused();
+            }).forEach(function(m) {
+                var idx = app.model.metabolite.checked_index("id", m.id);
+                app.metabolite_page.datatable.row(idx).remove();
+                m.remove(app.model);
 
-        $("#dialog-delete").find(".btn-primary").click(function () {
+                app.command_list.push({
+                    "type": "metabolite",
+                    "op": "delete",
+                    "id": m.id,
+                    "object": {}
+                });
+            });
+            app.metabolite_page.datatable.draw();
+
+            $("#dialog-delete-metabolites").modal("hide");
+        });
+
+        /*$("#dialog-delete").find(".btn-primary").click(function () {
             var dialog_delete = $("#dialog-delete");
 
             var reaction = datatable_enzymes.row(dialog_delete.data("parent")).data();
@@ -530,7 +527,7 @@ Released under the MIT license
             var del_mets = dialog_delete.find("input").prop("checked");
             reaction.remove();
 
-            command_list.push({
+            app.command_list.push({
                 "op": "delete",
                 "type": "reaction",
 	            "id": reaction.id,
@@ -544,7 +541,7 @@ Released under the MIT license
                 m.remove();
                 m.removeFromList();
 
-                command_list.push({
+                app.command_list.push({
                     "type": "metabolite",
                     "op": "delete",
                     "id": m.id,
@@ -562,7 +559,7 @@ Released under the MIT license
             dialog_delete.modal("hide");
 
             dialog_delete.data("parent").fadeOut(200, function() { datatable_enzymes.row(this).remove().draw(); });
-        });
+        });*/
 
         let load_model = function(callback) {
             $.ajax({

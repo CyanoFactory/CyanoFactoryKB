@@ -192,7 +192,7 @@ Delete unused metabolites
                     $(this).data("toggle", "tooltip");
                     $(this).data("placement", "top");
                     let reaction = self.app.model.reaction.checked_get("name", $(this).text());
-                    let text = reaction.toString();
+                    let text = reaction.toString(self.app.model);
                     $(this).prop("title", text);
                     $(this)["tooltip"]("show");
                 },
@@ -203,6 +203,12 @@ Delete unused metabolites
             $(this.table_element).delegate('tr td:first-child', 'click', function () {
                 let row = self.datatable.row($(this).closest("tr"));
                 app.dialog_metabolite.show(row.data());
+            });
+            // Enzyme in 2nd or 3rd col
+            $(this.table_element).on("click", ".cyano-enzyme", function (event) {
+                // FIXME: should use ID
+                let reaction = self.app.model.reaction.checked_get("name", $(this).text());
+                app.dialog_reaction.show(reaction);
             });
             // 4th column: External checkbox
             $(this.table_element).delegate('tr td:nth-child(4) input', 'change', function () {
@@ -221,47 +227,6 @@ Delete unused metabolites
                 });
                 self.invalidate(metabolite);
             });
-            /*
-            // Enzyme in 2nd or 3rd col
-            table_metabolites.on("click", ".cyano-enzyme", function(event) {
-                var enzyme = Enzyme.indexByName($(this).text());
-                if (enzyme >= 0) {
-                    showEditEnzymeDialog(model.reactions[enzyme], false);
-                }
-            });
-            
-            
-                    $(".create-enzyme-button").click(function (event) {
-                        showAddEnzymeDialog();
-                    });
-                    $(".create-metabolite-button").click(function (event) {
-                        showAddMetaboliteDialog();
-                    });
-            
-                    $(".delete-metabolites-button").click(function (event) {
-                        $("#dialog-delete-metabolites").modal('show');
-                    });
-            
-                    $("#dialog-delete-metabolites").find(".btn-primary").click(function() {
-                        model.metabolites.filter(function(m) {
-                            return m.isUnused();
-                        }).forEach(function(m) {
-                            m.remove();
-                            m.removeFromList();
-            
-                            command_list.push({
-                                "type": "metabolite",
-                                "op": "delete",
-                                "id": m.id,
-                                "object": {}
-                            });
-                        });
-                        datatable_metabolites.draw();
-            
-                        $("#dialog-delete-metabolites").modal("hide");
-                    });
-            
-            */
         }
         update() {
             this.datatable.clear();

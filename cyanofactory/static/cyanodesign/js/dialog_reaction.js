@@ -107,6 +107,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             if (reaction == null) {
                 this.item = new mm.Reaction();
                 this.create = true;
+                this.item.makeUnconstrained();
             }
             else {
                 this.item = reaction;
@@ -224,7 +225,12 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                 return false;
             }
             let reaction = this.item;
-            let any_changed = true || /* FIXME: substrates & products */
+            if (this.create) {
+                reaction.id = this.id.value;
+                this.model.reactions.push(reaction);
+            }
+            let any_changed = this.create ||
+                true || /* FIXME: substrates & products */
                 reaction.id != this.id.value ||
                 reaction.name != this.id.value ||
                 reaction.enabled != this.enabled.value ||
@@ -260,7 +266,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                         met = new mm.Metabolite();
                         met.id = i; // Todo: Sluggify
                         met.name = i;
-                        app.metabolite_page.datatable.rows.add(met);
+                        app.metabolite_page.datatable.row.add(met);
                         this.model.metabolites.push(met);
                     }
                     let metref = new mm.MetaboliteReference();
@@ -272,11 +278,13 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             };
             met_adder(substrates_selectize.items, reaction.substrates);
             met_adder(products_selectize.items, reaction.products);
+            app.metabolite_page.datatable.sort();
+            app.metabolite_page.datatable.draw();
             reaction.updateMetaboliteReference(this.model);
             if (any_changed) {
                 app.command_list.push({
                     "type": "reaction",
-                    "op": "edit",
+                    "op": this.create ? "create" : "edit",
                     "id": old_id,
                     "object": {
                         "id": reaction.id,
@@ -290,6 +298,11 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                     }
                 });
                 app.reaction_page.invalidate(reaction);
+            }
+            if (this.create) {
+                app.reaction_page.datatable.row.add(reaction);
+                app.reaction_page.datatable.sort();
+                app.reaction_page.datatable.draw();
             }
             $(this.dialog_element)["modal"]("hide");
             return true;

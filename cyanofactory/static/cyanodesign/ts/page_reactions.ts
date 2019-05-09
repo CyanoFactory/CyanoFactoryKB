@@ -332,17 +332,6 @@ export class Page {
             self.app.dialog_metabolite.show(met);
         });
 
-        // First col
-        /*table_enzymes.delegate('tr td:first-child', 'click', function() {
-            var tr = $(this).closest("tr");
-            if (tr.hasClass("group")) {
-                return;
-            }
-            var row = datatable_enzymes.row(tr);
-
-            showEditEnzymeDialog(row.data(), false);
-        });*/
-
         // Enabled in 4th col
         $(this.table_element).delegate('tr td:nth-child(4) input', 'change', function() {
             let row = self.datatable.row($(this).closest("tr"));
@@ -363,6 +352,17 @@ export class Page {
             self.invalidate(reaction);
         });
 
+        // 5th col: delete button clicked
+        $(this.table_element).on("click", ".delete-button", function() {
+            // FIXME
+            let parent = $(this).closest("tr");
+            let dialog_delete = $("#dialog-delete");
+            let row = self.datatable.row(parent);
+
+            dialog_delete.data("parent", parent);
+            dialog_delete.find(".reaction-name").text(row.data().name);
+            dialog_delete["modal"]('show');
+        });
     }
 
     update() {

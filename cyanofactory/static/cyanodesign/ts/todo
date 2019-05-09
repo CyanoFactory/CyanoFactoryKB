@@ -9,12 +9,8 @@ Reactions:
 - Delete button
 
 Metabolites:
-- Consumed by Tooltips
-- Clicking reactions
-- Delete unused metabolites
--- Shared buttons:
-- Create new reaction
-- Create new metabolite
+- Consumed by Tooltips uses name, not id
+- Clicking reactions uses name, not id
 - Compartment handling
 
 Settings:
@@ -32,9 +28,9 @@ Simulation:
 - Combine with previous sim
 
 Dialog Reaction:
-- Create new reaction
 - Edit reaction (FIXME: stoichiometry)
 - UX for changing Metabolite amount and creating new metabolites
+- Constraints min/max must be from model
+- Invalidate rendering of metabolites that are not used anymore
 
-Dialog Metabolites:
-- Create new metabolite
+Dialog Bulk add reaction

@@ -46,4 +46,16 @@ export function run(model: mm.Model) {
     app.stoichiometry_page.update();
     app.settings_page.update();
     app.simulation_page.update();
+
+    $(".create-enzyme-button").on("click", function () {
+        app.dialog_reaction.show(null);
+    });
+
+    $(".create-metabolite-button").on("click", function () {
+        app.dialog_metabolite.show(null);
+    });
+
+    $(".delete-metabolites-button").click(function (event) {
+        $("#dialog-delete-metabolites").modal('show');
+    });
 }

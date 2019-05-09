@@ -424,32 +424,36 @@ export class Reaction extends ElementBase {
         return element;
     };
 
-    reactionToString(): string {
+    reactionToString(model: Model): string {
         let element = "";
 
         for (let i = 0; i < this.substrates.length; ++i) {
-            element.concat(this.substrates[i].toString());
+            element = element.concat(this.substrates[i].stoichiometry + " ");
+
+            element = element.concat(this.substrates[i].getMetabolite(model).get_name_or_id());
             if (i != this.substrates.length - 1) {
-                element.concat(" + ");
+                element = element.concat(" + ");
             }
         }
 
         element = element.concat(this.reversible ? " <-> " : " -> ");
 
         for (let i = 0; i < this.products.length; ++i) {
-            element.concat(this.products[i].toString());
+            element = element.concat(this.products[i].stoichiometry + " ");
+
+            element = element.concat(this.products[i].getMetabolite(model).get_name_or_id());
             if (i != this.products.length - 1) {
-                element.concat(" + ");
+                element = element.concat(" + ");
             }
         }
 
         return element;
     };
 
-    toString(): string {
+    toString(model: Model): string {
         let element = "";
-        element = element.concat(this.name + " : ");
-        element = element.concat(this.reactionToString());
+        element = element.concat(this.get_name_or_id() + " : ");
+        element = element.concat(this.reactionToString(model));
         return element;
     }
 

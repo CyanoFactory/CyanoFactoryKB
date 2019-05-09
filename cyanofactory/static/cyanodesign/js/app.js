@@ -1,4 +1,4 @@
-define(["require", "exports", "./page_reactions", "./page_metabolites", "./page_stoichiometry", "./page_settings", "./page_simulation", "./dialog_reaction", "./dialog_reaction_bulkadd", "./dialog_metabolite"], function (require, exports, reactions, metabolites, stoichiometry, settings, simulation, dialog_reaction, dialog_reaction_bulkadd, dialog_metabolite) {
+define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites", "./page_stoichiometry", "./page_settings", "./page_simulation", "./dialog_reaction", "./dialog_reaction_bulkadd", "./dialog_metabolite"], function (require, exports, $, reactions, metabolites, stoichiometry, settings, simulation, dialog_reaction, dialog_reaction_bulkadd, dialog_metabolite) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class AppManager {
@@ -23,6 +23,15 @@ define(["require", "exports", "./page_reactions", "./page_metabolites", "./page_
         app.stoichiometry_page.update();
         app.settings_page.update();
         app.simulation_page.update();
+        $(".create-enzyme-button").on("click", function () {
+            app.dialog_reaction.show(null);
+        });
+        $(".create-metabolite-button").on("click", function () {
+            app.dialog_metabolite.show(null);
+        });
+        $(".delete-metabolites-button").click(function (event) {
+            $("#dialog-delete-metabolites").modal('show');
+        });
     }
     exports.run = run;
 });

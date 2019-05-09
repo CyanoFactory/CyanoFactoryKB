@@ -123,9 +123,13 @@ export class Dialog {
             return false;
         }
 
-        let metabolite = this.item;
+        let metabolite: mm.Metabolite = this.item;
+        if (this.create) {
+            metabolite.id = this.id.value;
+            this.model.metabolites.push(metabolite);
+        }
 
-        let any_changed: boolean =
+        let any_changed: boolean = this.create ||
             metabolite.id != this.id.value ||
             metabolite.name != this.name.value ||
             metabolite.isExternal() != this.external.value ||
@@ -133,6 +137,7 @@ export class Dialog {
 
         let old_id = metabolite.id;
         metabolite.updateId(this.id.value, this.model);
+
         // FIXME: Compartment configuration?
         metabolite.compartment = this.external.value ? "e" : "c";
 
@@ -142,7 +147,7 @@ export class Dialog {
         if (any_changed) {
             app.command_list.push({
                 "type": "metabolite",
-                "op": "edit",
+                "op": this.create ? "create" : "edit",
                 "id": old_id,
                 "object": {
                     "id": metabolite.id,
@@ -153,6 +158,12 @@ export class Dialog {
             });
 
             app.metabolite_page.invalidate(metabolite);
+        }
+
+        if (this.create) {
+            app.metabolite_page.datatable.row.add(metabolite);
+            app.metabolite_page.datatable.sort();
+            app.metabolite_page.datatable.draw();
         }
 
         $(this.dialog_element)["modal"]("hide");
