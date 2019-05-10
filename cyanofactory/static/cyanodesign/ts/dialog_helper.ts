@@ -1,4 +1,5 @@
 import * as $ from "jquery";
+import "selectize";
 
 export class DialogHelper {
     static updateTips(o: HTMLElement, txt: string) {
@@ -57,7 +58,7 @@ export class DialogHelper {
         return true;
     }
 
-    static getFloat(value: string): float {
+    static getFloat(value: string): number {
         if (/^([-+])?([0-9]+(\.[0-9]+)?)$/.test(value))
             return Number(value);
         return NaN;
@@ -74,8 +75,8 @@ export class ElementWrapper<T> {
             throw new Error("ElementWrapper: " + classname + " not found");
         }
 
-        if (elem.tagName != "INPUT") {
-            throw new Error("ElementWrapper: " + classname + " must be input element")
+        if (elem.tagName != "INPUT" && elem.tagName != "SELECT") {
+            throw new Error("ElementWrapper: " + classname + " must be input element but is " + elem.tagName);
         }
 
         return new ElementWrapper<T>(<HTMLInputElement>elem);
@@ -83,10 +84,15 @@ export class ElementWrapper<T> {
 
     constructor(element: HTMLInputElement) {
         this.html_element = element;
-        this.type = element.attributes["type"].value;
+        if (element.tagName == "SELECT") {
+            this.type = "text";
+        } else {
+            this.type = element.attributes["type"].value;
+        }
 
         if (this.type != "text" &&
-            this.type != "checkbox") {
+            this.type != "checkbox" &&
+            this.type != "radio") {
             throw new Error("Unsupported input type " + this.type);
         }
     }
@@ -94,7 +100,7 @@ export class ElementWrapper<T> {
     get value(): T {
         if (this.type == "text") {
             return <T>(<any>this.html_element).value;
-        } else if (this.type == "checkbox") {
+        } else if (this.type == "checkbox" || this.type == "radio") {
             return <T>(<any>this.html_element).checked;
         }
 
@@ -104,7 +110,7 @@ export class ElementWrapper<T> {
     set value(val: T) {
         if (this.type == "text") {
             (<any>this.html_element).value = val;
-        } else if (this.type == "checkbox") {
+        } else if (this.type == "checkbox" || this.type == "radio") {
             (<any>this.html_element).checked = val;
         } else {
             throw new Error("BUG: Unreachable code path taken");

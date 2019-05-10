@@ -30,7 +30,7 @@ export class Page {
         this.app = app;
     }
 
-    update() {
+    init() {
         //this.datatable.clear();
         //this.datatable.rows.add(this.model.reactions);
         //this.datatable.draw();

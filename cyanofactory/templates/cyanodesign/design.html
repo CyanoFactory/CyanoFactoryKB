@@ -32,33 +32,9 @@ Released under the MIT license
 <script type="text/javascript">
     "use strict";
 
-    var MetabolicModel = undefined;
     var app = undefined;
     var startup = undefined;
     var revision = {% if revision %}{{ revision.pk }}{% else %}undefined{% endif %};
-
-    /*Enzyme.prototype.invalidate = function() {
-        this.getMetabolites().forEach(function (obj) {
-            datatable_metabolites.row(model.metabolites.indexOf(obj)).invalidate();
-        });
-
-        datatable_enzymes.row(model.reactions.indexOf(this)).invalidate();
-    };
-
-    Enzyme.prototype.removeFromList = function() {
-        var that = this;
-        datatable_enzymes.row(function(idx, data, node) {
-            return data.name == that.name;
-        }).remove();
-    };
-
-    Metabolite.prototype.removeFromList = function() {
-        var that = this;
-        datatable_metabolites.row(function(idx, data, node) {
-            return data.name == that.name;
-        }).remove();
-    };*/
-
 
     $(function () {
         $($("#filter_row_flux").text()).appendTo($("#cyano-flux-list_wrapper").children()[1]);
@@ -139,21 +115,6 @@ Released under the MIT license
             };
         };
 
-        /*selectize_options["onItemAdd"] = item_add(dialog_enzyme.find("#reaction-substrates")[0]);
-        dialog_enzyme.find("#reaction-substrates").selectize(selectize_options);
-        dialog_enzyme.find("#reaction-products").text("");
-        selectize_options["onItemAdd"] = item_add(dialog_enzyme.find("#reaction-products")[0]);
-        dialog_enzyme.find("#reaction-products").selectize(selectize_options);
-
-        dialog_enzyme.find("#reaction-substrates").editable();*/
-
-        // Array Remove - By John Resig (MIT Licensed)
-        Array.prototype.remove = function(from, to) {
-          var rest = this.slice((to || from) + 1 || this.length);
-          this.length = from < 0 ? this.length + from : from;
-          return this.push.apply(this, rest);
-        };
-
         //$(".spinner").spinedit();
         $(".checkbox").button();
         $(".validateTips").hide();
@@ -162,40 +123,6 @@ Released under the MIT license
             .click(function( event ) {
                 event.preventDefault();
             });
-
-        var beginRequest = function(wait_position) {
-            if (wait_position === undefined)
-                waitIndicator.show($("#content"));
-            else
-                waitIndicator.show(wait_position);
-
-            let result = {
-                "changes": JSON.stringify(app.command_list),
-                "objectives": JSON.stringify([{
-                    "id": app.settings_page.getObjective().id,
-                    "maximize": app.settings_page.maximizeObjective()
-                }]),
-                "design_objectives": JSON.stringify([{
-                    "id": "",
-                    "maximize": true
-                }]),
-                "target_reactions": JSON.stringify([{
-                    "id": "",
-                    "maximize": true
-                }]),
-                "type": JSON.stringify(getSimulationType()),
-                //"display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
-                //"auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
-                "display": JSON.stringify([]),
-                "auto_flux": JSON.stringify(true)
-            };
-
-            if (revision !== undefined) {
-                result["revision"] = revision;
-            }
-
-            return result;
-        };
 
         var doExport = function(format) {
             var data = beginRequest();
@@ -469,97 +396,15 @@ Released under the MIT license
             doExport("csv");
         });
 
+        let startup_handler = function(callback, metabolic_model_cls, urls) {
+            urls.simulate = "{% url "cyanodesign:simulate" pk=pk %}";
+            urls.save = "{% url "cyanodesign:save" pk=pk %}";
+            urls.save_as = "{% url "cyanodesign:save_as" pk=pk %}";
+            urls.design = "{% url "cyanodesign:design" pk=pk %}";
+            urls.get_reactions = "{% url "cyanodesign:get_reactions" pk=pk %}{% if revision %}?revision={{ revision.pk }}{% endif %}";
 
-/*
-        dialog_enzyme.on('shown.bs.modal', function() {
-            dialog_enzyme.find("input").blur();
-
-            dialog_enzyme.find("#reaction-substrates")[0].selectize.close();
-            dialog_enzyme.find("#reaction-products")[0].selectize.close();
-
-            var val = dialog_enzyme.find("#enzyme-name").val();
-            // move cursor to end
-            dialog_enzyme.find("#enzyme-name").focus().val("").val(val);
-        });
-
-        dialog_metabolite_add.on('shown.bs.modal', function() {
-            var val = dialog_metabolite_add.find("#add-metabolite-name").val();
-            dialog_metabolite_add.find("#add-metabolite-name").focus().val("").val(val);
-        });
-
-        dialog_metabolite_edit.on('shown.bs.modal', function() {
-            var val = dialog_metabolite_edit.find("#metabolite-name").val();
-            dialog_metabolite_edit.find("#metabolite-name").focus().val("").val(val);
-        });
-
-
-*/
-
-        $(".delete-metabolites-button").on("click", function (event) {
-            $("#dialog-delete-metabolites").modal('show');
-        });
-
-        $("#dialog-delete-metabolites").find(".btn-primary").click(function() {
-            app.model.metabolites.filter(function(m) {
-                return m.isUnused();
-            }).forEach(function(m) {
-                var idx = app.model.metabolite.checked_index("id", m.id);
-                app.metabolite_page.datatable.row(idx).remove();
-                m.remove(app.model);
-
-                app.command_list.push({
-                    "type": "metabolite",
-                    "op": "delete",
-                    "id": m.id,
-                    "object": {}
-                });
-            });
-            app.metabolite_page.datatable.draw();
-
-            $("#dialog-delete-metabolites").modal("hide");
-        });
-
-        /*$("#dialog-delete").find(".btn-primary").click(function () {
-            var dialog_delete = $("#dialog-delete");
-
-            var reaction = datatable_enzymes.row(dialog_delete.data("parent")).data();
-            var rmets = reaction.getMetabolites();
-            var del_mets = dialog_delete.find("input").prop("checked");
-            reaction.remove();
-
-            app.command_list.push({
-                "op": "delete",
-                "type": "reaction",
-	            "id": reaction.id,
-                "object": {}
-            });
-
-            rmets.filter(function(m) {
-                m.invalidate();
-                return del_mets && m.isUnused();
-            }).forEach(function(m) {
-                m.remove();
-                m.removeFromList();
-
-                app.command_list.push({
-                    "type": "metabolite",
-                    "op": "delete",
-                    "id": m.id,
-                    "object": {}
-                });
-            });
-
-            cyano_design_objective_select[0].selectize.removeOption(reaction.name);
-            cyano_design_design_objective_select[0].selectize.removeOption(reaction.name);
-            design_objective_visible_combobox[0].selectize.removeOption(reaction.name);
-            cyano_design_target_objective_select[0].selectize.removeOption(reaction.name);
-
-            datatable_metabolites.draw();
-
-            dialog_delete.modal("hide");
-
-            dialog_delete.data("parent").fadeOut(200, function() { datatable_enzymes.row(this).remove().draw(); });
-        });*/
+            callback(metabolic_model_cls, urls);
+        };
 
         let load_model = function(callback) {
             $.ajax({
@@ -571,7 +416,7 @@ Released under the MIT license
 
                 callback(model);
 
-                $(".design-submit").click(function(event) {
+                /*$(".design-submit").click(function(event) {
                     var data = beginRequest();
 
                     $.ajax({
@@ -587,7 +432,7 @@ Released under the MIT license
                         notifyError(x.responseText);
                         endRequest();
                     });
-                });
+                });*/
 
                 waitIndicator.hide($("#content"));
             });
@@ -604,50 +449,8 @@ Released under the MIT license
             datatable_flux.search("", $(this).prop("checked"), true).draw();
         });
 
-        $("#create-enzyme-bulk-button").click(function() {
-            $("#enzyme-bulkdata").val("");
-            $("#dialog-reaction-bulkadd").modal("show");
-        });
-
-        $("#enzyme-bulkdata").keyup(function() {
-            var lines = $("#enzyme-bulkdata").val().split(/\r*\n/);
-
-            $("#enzyme-bulkadd-preview").empty();
-            var buffered_line = "";
-            lines.forEach(function(line) {
-                var e;
-                try {
-                    var last = line.split(/\s+/g).pop();
-                    if (last === "undefined") {
-                        return;
-                    }
-                    if (last == "<->" || last == "->" || last == "+") {
-                        buffered_line += " " + line;
-                        return;
-                    }
-
-                    buffered_line += " " + line;
-
-                    buffered_line = buffered_line.trim();
-
-                    if (buffered_line.length == 0) {
-                        return;
-                    }
-
-                    e = Enzyme.fromBioOptString(buffered_line).toString();
-
-                    buffered_line = "";
-                } catch (err) {
-                    e = err["enzyme"].toString() + " Error: " + err["message"];
-                }
-                if (e !== 'undefined') {
-                    $("<div>").text(e).appendTo($("#enzyme-bulkadd-preview"));
-                }
-            });
-        });
-
         waitIndicator.show($("#content"));
-        startup = load_model;
+        startup = startup_handler;
     });
 </script>
 
@@ -740,34 +543,6 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
 </div>
 
 <!-- Modal -->
-<div class="modal fade" id="dialog-delete" tabindex="-1" role="dialog" aria-labelledby="dialog-delete-label"
-     aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
-                        aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="dialog-delete-label">Delete <span class="reaction-name"></span></h4>
-            </div>
-            <div class="modal-body">
-                Do you really want to delete reaction <span class="reaction-name"></span>?
-
-                <div class="form-group">
-                <div class="checkbox">
-                    <input id="dialog-delete-unused-metabolites" type="checkbox">
-                    <label for="dialog-delete-unused-metabolites">Delete unused metabolites</label>
-                </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary btn-danger">Delete</button>
-                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-
 <div class="modal fade" id="dialog-delete-metabolites" tabindex="-1" role="dialog" aria-labelledby="dialog-delete-metabolites-label"
      aria-hidden="true">
     <div class="modal-dialog">

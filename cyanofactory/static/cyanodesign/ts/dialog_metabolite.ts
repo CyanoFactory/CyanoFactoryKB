@@ -1,10 +1,8 @@
+import * as app from "./app"
 import * as mm from "./metabolic_model";
 import { DialogHelper, ElementWrapper } from "./dialog_helper";
 import * as $ from "jquery";
 import "datatables.net";
-import {AppManager} from "./app";
-
-declare var app : AppManager;
 
 let template = document.createElement('template');
 template.innerHTML = `
@@ -52,7 +50,7 @@ template.innerHTML = `
 `;
 
 export class Dialog {
-    readonly model: mm.Model;
+    readonly app: app.AppManager;
     readonly datatable: DataTables.Api;
     readonly dialog_element: HTMLElement;
     item: mm.Metabolite = null;
@@ -63,10 +61,11 @@ export class Dialog {
     readonly external: ElementWrapper<boolean>;
     readonly formula: ElementWrapper<string>;
 
-    constructor(model: mm.Model) {
+    constructor(app: app.AppManager) {
+        this.app = app;
+
         document.body.appendChild(template.content.cloneNode(true));
         this.dialog_element = <HTMLElement>document.body.getElementsByClassName("dialog-metabolite")[0]!;
-        this.model = model;
         const self: Dialog = this;
         $(this.dialog_element).find(".btn-primary").click(function () {
             self.validate();
@@ -113,7 +112,7 @@ export class Dialog {
         valid = valid && DialogHelper.checkRegexpPos(this.name.element, /(^<?\-> | <?\-> | <?\->$)/, "Name must not contain lonely <-> or ->");
         valid = valid && DialogHelper.checkRegexpPos(this.name.element, /(^\+ | \+ )/, "Lonely + only allowed at end of name");
 
-        let met_with_id = this.model.metabolite.get("id", this.id.value);
+        let met_with_id = this.app.model.metabolite.get("id", this.id.value);
 
         if (met_with_id != null) {
             valid = valid && DialogHelper.checkBool(this.id.element, met_with_id == this.item, "Identifier already in use");
@@ -126,7 +125,7 @@ export class Dialog {
         let metabolite: mm.Metabolite = this.item;
         if (this.create) {
             metabolite.id = this.id.value;
-            this.model.metabolites.push(metabolite);
+            this.app.model.metabolites.push(metabolite);
         }
 
         let any_changed: boolean = this.create ||
@@ -136,7 +135,7 @@ export class Dialog {
             metabolite.formula != this.formula.value;
 
         let old_id = metabolite.id;
-        metabolite.updateId(this.id.value, this.model);
+        metabolite.updateId(this.id.value, this.app.model);
 
         // FIXME: Compartment configuration?
         metabolite.compartment = this.external.value ? "e" : "c";
@@ -145,7 +144,7 @@ export class Dialog {
         metabolite.formula = this.formula.value;
 
         if (any_changed) {
-            app.command_list.push({
+            this.app.command_list.push({
                 "type": "metabolite",
                 "op": this.create ? "create" : "edit",
                 "id": old_id,
@@ -157,13 +156,13 @@ export class Dialog {
                 }
             });
 
-            app.metabolite_page.invalidate(metabolite);
+            this.app.metabolite_page.invalidate(metabolite);
         }
 
         if (this.create) {
-            app.metabolite_page.datatable.row.add(metabolite);
-            app.metabolite_page.datatable.sort();
-            app.metabolite_page.datatable.draw();
+            this.app.metabolite_page.datatable.row.add(metabolite);
+            this.app.metabolite_page.datatable.sort();
+            this.app.metabolite_page.datatable.draw();
         }
 
         $(this.dialog_element)["modal"]("hide");

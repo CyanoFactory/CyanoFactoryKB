@@ -20,7 +20,7 @@ define(["require", "exports", "datatables.net"], function (require, exports) {
             this.table_element = where.getElementsByClassName("cyano-chemical-list")[0];
             this.app = app;
         }
-        update() {
+        init() {
             //this.datatable.clear();
             //this.datatable.rows.add(this.model.reactions);
             //this.datatable.draw();

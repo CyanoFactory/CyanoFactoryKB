@@ -121,6 +121,9 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                 ]
             });
             let self = this;
+            $(this.source_element).find(".design-submit").click(function (event) {
+                app.request_handler.simulate();
+            });
             /*FIXME$("#visual_fba").on("click", "g.node", function() {
                 var idx = Metabolite.indexByName($(this).children("text").text());
                 if (!isDragging & idx > -1) {
@@ -154,7 +157,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             $("#filter-flux-max").change(function() { datatable_flux.draw(); });
     */
         }
-        update() {
+        init() {
         }
         updateLabels() {
             if (this.simulation_chart == null) {
@@ -188,7 +191,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             if (symtype == "fba") {
                 let graph = Viz(simulation_result["graphstr"], "svg", "dot");
                 if (simulation_result["solution"] == "Optimal") {
-                    var obj = this.app.settings_page.getObjective().id;
+                    var obj = this.app.settings_page.getObjective();
                     this.notifyInfo("The solution is " + simulation_result["solution"] + ". Flux of objective is " + simulation_result["flux"][obj].toFixed(4));
                 }
                 else {
@@ -243,7 +246,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                             }
                         }
                     };
-                    chart["data"]["axes"][this.app.settings_page.getObjective().id] = "y";
+                    chart["data"]["axes"][this.app.settings_page.getObjective()] = "y";
                     this.simulation_chart = c3.generate(chart);
                 }
                 else {
@@ -289,7 +292,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                         }
                     }
                 };
-                chart["data"]["axes"][this.app.settings_page.getObjective().id] = "y";
+                chart["data"]["axes"][this.app.settings_page.getObjective()] = "y";
                 //FIXMEchart["data"]["axes"][cyano_design_design_objective_select.val()] = "y2";
                 this.simulation_chart = c3.generate(chart);
                 this.last_sim_flux = simulation_result["flux"];

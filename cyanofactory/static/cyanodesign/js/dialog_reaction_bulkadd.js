@@ -1,4 +1,4 @@
-define(["require", "exports", "datatables.net"], function (require, exports) {
+define(["require", "exports", "./metabolic_model", "jquery", "datatables.net"], function (require, exports, mm, $) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     let template = document.createElement('template');
@@ -17,10 +17,10 @@ define(["require", "exports", "datatables.net"], function (require, exports) {
                     <fieldset>
                         Enter reactions in BioOpt format for adding them to the model. Constraints can be put after the reactions.<br>
                         <div class="form-group">
-                            <label class="control-label" for="enzyme-bulkdata">BioOpt data:</label>
-                            <textarea class="form-control" id="enzyme-bulkdata" placeholder="reac1: a + 2 b -> 3.5 c [-1, 1]" rows="5"></textarea>
+                            <label class="control-label" for="bulkdata">BioOpt data:</label>
+                            <textarea class="bulkdata form-control" placeholder="reac1: a + 2 b -> 3.5 c [-1, 1]" rows="5"></textarea>
                         </div>
-                        <div class="form-group" id="enzyme-bulkadd-preview">
+                        <div class="bulkadd-preview form-group">
 
                         </div>
                     </fieldset>
@@ -35,96 +35,146 @@ define(["require", "exports", "datatables.net"], function (require, exports) {
 </div>
 `;
     class Dialog {
-        constructor(model) {
+        constructor(app) {
+            this.app = app;
             document.body.appendChild(template.content.cloneNode(true));
             this.dialog_element = document.body.getElementsByClassName("dialog-reaction-bulkadd")[0];
-            this.model = model;
-            /*
-    
-            $("#dialog-reaction-bulkadd").on("click", ".btn-primary", function(event) {
-                var lines = $("#enzyme-bulkdata").val().split(/\r*\n/);
-    
-                $("#enzyme-bulkadd-preview").empty();
-                lines.forEach(function(line) {
-                    try {
-                        var mlen = model.metabolites.length;
-                        var reaction = Enzyme.fromBioOptString(line);
-    
-                        Metabolite.fromReaction(reaction);
-                        if (model.metabolites.length > mlen) {
-                            model.metabolites.slice(mlen).forEach(function (metabolite) {
-                                command_list.push({
-                                    "type": "metabolite",
-                                    "op": "add",
-                                    "id": metabolite.id,
-                                    "object": {
-                                        "id": metabolite.id,
-                                        "name": metabolite.name,
-                                        "external": metabolite.external
-                                    }
-                                });
-    
-                                datatable_metabolites.row.add(metabolite);
-                            });
-                        }
-    
-                        reaction.convertToFloat();
-    
-                        var command = {
-                            "type": "reaction",
-                            "id": reaction.id,
-                            "object": jQuery.extend(true, {}, reaction)
-                        };
-    
-                        if (Enzyme.indexByName(reaction.name) != -1) {
-                            // Reaction exists
-                            var orig_enzyme = model.reactions[Enzyme.indexByName(reaction.name)];
-    
-                            orig_enzyme.name = reaction.name;
-                            orig_enzyme.substrates = reaction.substrates;
-                            orig_enzyme.products = reaction.products;
-                            orig_enzyme.reversible = reaction.reversible;
-    
-                            command["op"] = "edit";
-                        } else {
-    
-                            model.reactions.push(reaction);
-    
-                            datatable_enzymes.row.add(reaction);
-    
-                            cyano_design_objective_select[0].selectize.addOption(reaction);
-                            cyano_design_objective_select[0].selectize.refreshOptions();
-                            cyano_design_design_objective_select[0].selectize.addOption(reaction);
-                            cyano_design_design_objective_select[0].selectize.refreshOptions();
-                            design_objective_visible_combobox[0].selectize.addOption(reaction);
-                            design_objective_visible_combobox[0].selectize.refreshOptions();
-                            cyano_design_target_objective_select[0].selectize.addOption(reaction);
-                            cyano_design_target_objective_select[0].selectize.refreshOptions();
-    
-                            command["op"] = "add";
-                        }
-    
-                        command_list.push(command);
-    
-                        reaction.updateMetaboliteReference(model).forEach(function(m) {
-                            m.invalidate();
-                        });
-                        reaction.invalidate();
-                    } catch (err) {
-    
-                    }
-                });
-    
-                datatable_metabolites.sort();
-                datatable_metabolites.draw();
-    
-                datatable_enzymes.sort();
-                datatable_enzymes.draw();
-    
-                $("#dialog-reaction-bulkadd").modal("hide");
+            this.bulkdata_element = document.body.getElementsByClassName("bulkdata")[0];
+            this.bulkdata_preview_element = document.body.getElementsByClassName("bulkadd-preview")[0];
+            const self = this;
+            $(this.dialog_element).find(".btn-primary").click(function () {
+                self.validate();
             });
-    
-             */
+            // event handlers
+            $(this.bulkdata_element).keyup(function () {
+                const lines = $(this).val().split(/\r*\n/);
+                $(self.bulkdata_preview_element).empty();
+                let buffered_line = "";
+                for (const line of lines) {
+                    let e = "";
+                    try {
+                        let last = line.split(/\s+/g).pop();
+                        if (last == null) {
+                            continue;
+                        }
+                        if (last == "<->" || last == "->" || last == "+") {
+                            buffered_line += " " + line;
+                            return;
+                        }
+                        buffered_line += " " + line;
+                        buffered_line = buffered_line.trim();
+                        if (buffered_line.length == 0) {
+                            return;
+                        }
+                        e = mm.Reaction.fromBioOptString(buffered_line).toString(app.model);
+                        buffered_line = "";
+                    }
+                    catch (err) {
+                        e = err["enzyme"].toString() + " Error: " + err["message"];
+                    }
+                    if (e !== 'undefined') {
+                        $("<div>").text(e).appendTo(".bulkadd-preview");
+                    }
+                }
+            });
+        }
+        show() {
+            // clean up
+            $(this.dialog_element).find("div").removeClass("has-error");
+            $(this.dialog_element).find(".help-block").remove();
+            $(this.bulkdata_preview_element).empty();
+            // show
+            $(this.dialog_element)["modal"]("show");
+        }
+        validate() {
+            // clean up
+            $(this.dialog_element).find("div").removeClass("has-error");
+            $(this.dialog_element).find(".help-block").remove();
+            const lines = $(this.bulkdata_element).val().split(/\r*\n/);
+            $(this.bulkdata_preview_element).empty();
+            for (const line of lines) {
+                //try {
+                let mlen = this.app.model.metabolites.length;
+                let reaction = mm.Reaction.fromBioOptString(line);
+            }
+            /*lines.forEach(function(line) {
+                try {
+
+                    Metabolite.fromReaction(reaction);
+                    if (model.metabolites.length > mlen) {
+                        model.metabolites.slice(mlen).forEach(function (metabolite) {
+                            command_list.push({
+                                "type": "metabolite",
+                                "op": "add",
+                                "id": metabolite.id,
+                                "object": {
+                                    "id": metabolite.id,
+                                    "name": metabolite.name,
+                                    "external": metabolite.external
+                                }
+                            });
+
+                            datatable_metabolites.row.add(metabolite);
+                        });
+                    }
+
+                    reaction.convertToFloat();
+
+                    var command = {
+                        "type": "reaction",
+                        "id": reaction.id,
+                        "object": jQuery.extend(true, {}, reaction)
+                    };
+
+                    if (Enzyme.indexByName(reaction.name) != -1) {
+                        // Reaction exists
+                        var orig_enzyme = model.reactions[Enzyme.indexByName(reaction.name)];
+
+                        orig_enzyme.name = reaction.name;
+                        orig_enzyme.substrates = reaction.substrates;
+                        orig_enzyme.products = reaction.products;
+                        orig_enzyme.reversible = reaction.reversible;
+
+                        command["op"] = "edit";
+                    } else {
+
+                        model.reactions.push(reaction);
+
+                        datatable_enzymes.row.add(reaction);
+
+                        cyano_design_objective_select[0].selectize.addOption(reaction);
+                        cyano_design_objective_select[0].selectize.refreshOptions();
+                        cyano_design_design_objective_select[0].selectize.addOption(reaction);
+                        cyano_design_design_objective_select[0].selectize.refreshOptions();
+                        design_objective_visible_combobox[0].selectize.addOption(reaction);
+                        design_objective_visible_combobox[0].selectize.refreshOptions();
+                        cyano_design_target_objective_select[0].selectize.addOption(reaction);
+                        cyano_design_target_objective_select[0].selectize.refreshOptions();
+
+                        command["op"] = "add";
+                    }
+
+                    command_list.push(command);
+
+                    reaction.updateMetaboliteReference(model).forEach(function(m) {
+                        m.invalidate();
+                    });
+                    reaction.invalidate();
+                } catch (err) {
+
+                }
+            });
+
+            datatable_metabolites.sort();
+            datatable_metabolites.draw();
+
+            datatable_enzymes.sort();
+            datatable_enzymes.draw();
+
+            $("#dialog-reaction-bulkadd").modal("hide");
+        });*/
+            $(this.dialog_element)["modal"]("hide");
+            return true;
         }
     }
     exports.Dialog = Dialog;

@@ -261,11 +261,41 @@ export class Page {
 
             self.invalidate(metabolite);
         });
+
+        // delete unused metabolites button
+        $(this.source_element).find(".delete-metabolites-button").click(function (event) {
+            $("#dialog-delete-metabolites")["modal"]('show');
+        });
+
+        $("#dialog-delete-metabolites").find(".btn-primary").click(function() {
+            app.model.metabolites.filter(function(m) {
+                return m.isUnused();
+            }).forEach(function(m) {
+                var idx = app.model.metabolite.checked_index("id", m.id);
+                app.metabolite_page.datatable.row(idx).remove();
+                m.remove(app.model);
+
+                app.command_list.push({
+                    "type": "metabolite",
+                    "op": "delete",
+                    "id": m.id,
+                    "object": {}
+                });
+            });
+            app.metabolite_page.datatable.draw();
+
+            $("#dialog-delete-metabolites")["modal"]("hide");
+        });
     }
 
-    update() {
+    init() {
         this.datatable.clear();
         this.datatable.rows.add(this.app.model.metabolites);
+        this.refresh();
+    }
+
+    refresh() {
+        this.datatable.sort();
         this.datatable.draw();
     }
 

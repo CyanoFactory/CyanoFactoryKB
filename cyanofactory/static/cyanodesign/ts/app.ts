@@ -7,13 +7,16 @@ import * as settings from "./page_settings"
 import * as simulation from "./page_simulation"
 import * as dialog_reaction from "./dialog_reaction"
 import * as dialog_reaction_bulkadd from "./dialog_reaction_bulkadd"
+import * as dialog_reaction_delete from "./dialog_reaction_delete"
 import * as dialog_metabolite from "./dialog_metabolite"
+import { RequestHandler } from "./request_handler"
 
 declare var app : AppManager;
 
 export class AppManager {
     readonly dialog_reaction: dialog_reaction.Dialog;
     readonly dialog_reaction_bulk: dialog_reaction_bulkadd.Dialog;
+    readonly dialog_reaction_delete: dialog_reaction_delete.Dialog;
     readonly dialog_metabolite: dialog_metabolite.Dialog;
     readonly reaction_page: reactions.Page;
     readonly metabolite_page: metabolites.Page;
@@ -22,40 +25,55 @@ export class AppManager {
     readonly simulation_page: simulation.Page;
     readonly model: mm.Model;
     readonly command_list: any = [];
+    readonly urls: any;
+    readonly request_handler: RequestHandler;
 
-    constructor(model: mm.Model) {
-        this.dialog_reaction = new dialog_reaction.Dialog(model);
-        this.dialog_reaction_bulk = new dialog_reaction_bulkadd.Dialog(model);
-        this.dialog_metabolite = new dialog_metabolite.Dialog(model);
+    constructor(model: mm.Model, urls: any) {
+        this.model = model;
+        this.urls = urls;
+        this.request_handler = new RequestHandler(this, -1);
+
+        this.dialog_reaction = new dialog_reaction.Dialog(this);
+        this.dialog_reaction_bulk = new dialog_reaction_bulkadd.Dialog(this);
+        this.dialog_reaction_delete = new dialog_reaction_delete.Dialog(this);
+        this.dialog_metabolite = new dialog_metabolite.Dialog(this);
 
         this.reaction_page = new reactions.Page(document.getElementById("reaction-tab")!, this);
         this.metabolite_page = new metabolites.Page(document.getElementById("metabolite-tab")!, this);
         this.stoichiometry_page = new stoichiometry.Page(document.getElementById("chemical-tab")!, this);
         this.settings_page = new settings.Page(document.getElementById("settings-tab")!, this);
         this.simulation_page = new simulation.Page(document.getElementById("simulation-tab")!, this);
-
-        this.model = model;
     }
 }
 
-export function run(model: mm.Model) {
-    app = new AppManager(model);
+export function run(mm_cls: any, urls: any) {
+    $.ajax({
+        url: urls.get_reactions,
+        context: document.body
+    }).done(function(x) {
+        let model = new mm_cls.Model();
+        model.fromJson(x);
 
-    app.reaction_page.update();
-    app.metabolite_page.update();
-    app.stoichiometry_page.update();
-    app.settings_page.update();
-    app.simulation_page.update();
+        app = new AppManager(model, urls);
 
-    $(".create-enzyme-button").on("click", function () {
-        app.dialog_reaction.show(null);
-    });
+        app.reaction_page.init();
+        app.metabolite_page.init();
+        app.stoichiometry_page.init();
+        app.settings_page.init();
+        app.simulation_page.init();
 
-    $(".create-metabolite-button").on("click", function () {
-        app.dialog_metabolite.show(null);
-    });
+        $(".create-enzyme-button").on("click", function () {
+            app.dialog_reaction.show(null);
+        });
 
-    $(".delete-metabolites-button").click(function (event) {
-        $("#dialog-delete-metabolites").modal('show');
+        $(".create-metabolite-button").on("click", function () {
+            app.dialog_metabolite.show(null);
+        });
+
+        $(".create-enzyme-bulk-button").on("click", function () {
+            app.dialog_reaction_bulk.show();
+        });
+
+        app.request_handler.endRequest($("#content"));
     });
 }

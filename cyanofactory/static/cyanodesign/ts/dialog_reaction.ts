@@ -1,10 +1,9 @@
+import * as app from "./app"
 import * as mm from "./metabolic_model";
 import { DialogHelper, ElementWrapper } from "./dialog_helper";
 import * as $ from "jquery";
 import "datatables.net";
-import {AppManager} from "./app";
-
-declare var app : AppManager;
+import "selectize";
 
 let template = document.createElement('template');
 template.innerHTML = `
@@ -75,7 +74,7 @@ template.innerHTML = `
 `;
 
 export class Dialog {
-    readonly model: mm.Model;
+    readonly app: app.AppManager;
     readonly datatable: DataTables.Api;
     readonly dialog_element: HTMLElement;
     item: mm.Reaction = null;
@@ -94,10 +93,11 @@ export class Dialog {
     readonly substrate_refs: mm.MetaboliteReference[] = [];
     readonly product_refs: mm.MetaboliteReference[] = [];
 
-    constructor(model: mm.Model) {
+    constructor(app: app.AppManager) {
+        this.app = app;
+
         document.body.appendChild(template.content.cloneNode(true));
         this.dialog_element = <HTMLElement>document.body.getElementsByClassName("dialog-reaction")[0]!;
-        this.model = model;
         const self: Dialog = this;
         $(this.dialog_element).find(".btn-primary").click(function () {
             self.validate();
@@ -113,7 +113,7 @@ export class Dialog {
         this.constrained_min = ElementWrapper.byClass<string>("constrained-min", this.dialog_element);
         this.constrained_max = ElementWrapper.byClass<string>("constrained-max", this.dialog_element);
 
-        for (const met of model.metabolites) {
+        for (const met of this.app.model.metabolites) {
             let sref = new mm.MetaboliteReference();
             let pref = new mm.MetaboliteReference();
 
@@ -133,6 +133,7 @@ export class Dialog {
     show(reaction: mm.Reaction) {
         if (reaction == null) {
             this.item = new mm.Reaction();
+            reaction = this.item;
             this.create = true;
             this.item.makeUnconstrained();
         } else {
@@ -195,8 +196,8 @@ export class Dialog {
            }
         };
 
-        $(this.substrates.element)["selectize"](obj_options);
-        let substrates_selectize: any = (<any>$(this.substrates.element)[0]).selectize;
+        $(this.substrates.element).selectize(obj_options);
+        let substrates_selectize: any = this.substrates.element.selectize;
         substrates_selectize.clear();
 
         for (const metref of reaction.substrates) {
@@ -204,7 +205,7 @@ export class Dialog {
         }
 
         $(this.products.element)["selectize"](obj_options);
-        let products_selectize: any = (<any>$(this.products.element)[0]).selectize;
+        let products_selectize: any = this.products.element.selectize;
         products_selectize.clear();
 
         for (const metref of reaction.products) {
@@ -248,7 +249,7 @@ export class Dialog {
         valid = valid && DialogHelper.checkLength(this.name.element, "Name", 1, 255);
         valid = valid && DialogHelper.checkRegexp(this.name.element, /^[^:]+$/, "Name must not contain a colon (:)");
 
-        let reac_with_id = this.model.reaction.get("id", this.id.value);
+        let reac_with_id = this.app.model.reaction.get("id", this.id.value);
 
         if (reac_with_id != null) {
             valid = valid && DialogHelper.checkBool(this.id.element, reac_with_id == this.item, "Identifier already in use");
@@ -274,7 +275,7 @@ export class Dialog {
         let reaction: mm.Reaction = this.item;
         if (this.create) {
             reaction.id = this.id.value;
-            this.model.reactions.push(reaction);
+            this.app.model.reactions.push(reaction);
         }
 
         let any_changed: boolean = this.create ||
@@ -288,7 +289,7 @@ export class Dialog {
             reaction.upper_bound != cmax_float;
 
         let old_id = reaction.id;
-        reaction.updateId(this.id.value, this.model);
+        reaction.updateId(this.id.value, this.app.model);
 
         reaction.name = this.name.value;
         reaction.enabled = this.enabled.value;
@@ -303,8 +304,8 @@ export class Dialog {
         }
 
         /* substrates & products */
-        let substrates_selectize: any = (<any>$(this.substrates.element)[0]).selectize;
-        let products_selectize: any = (<any>$(this.products.element)[0]).selectize;
+        let substrates_selectize: any = this.substrates.element.selectize;
+        let products_selectize: any = this.products.element.selectize;
 
         // remove all metabolites
         reaction.substrates = [];
@@ -313,14 +314,14 @@ export class Dialog {
         // add metabolites
         const met_adder = (mets: string[], target: mm.MetaboliteReference[]) => {
             for (const i of mets) {
-                let met: mm.Metabolite | null = this.model.metabolite.get("id", i);
+                let met: mm.Metabolite | null = this.app.model.metabolite.get("id", i);
                 if (met == null) {
                     // is a new metabolite
                     met = new mm.Metabolite();
                     met.id = i; // Todo: Sluggify
                     met.name = i;
-                    app.metabolite_page.datatable.row.add(<any>met);
-                    this.model.metabolites.push(met);
+                    this.app.metabolite_page.datatable.row.add(<any>met);
+                    this.app.model.metabolites.push(met);
                 }
 
                 let metref = new mm.MetaboliteReference();
@@ -335,13 +336,13 @@ export class Dialog {
         met_adder(substrates_selectize.items, reaction.substrates);
         met_adder(products_selectize.items, reaction.products);
 
-        app.metabolite_page.datatable.sort();
-        app.metabolite_page.datatable.draw();
+        this.app.metabolite_page.datatable.sort();
+        this.app.metabolite_page.datatable.draw();
 
-        reaction.updateMetaboliteReference(this.model);
+        reaction.updateMetaboliteReference(this.app.model);
 
         if (any_changed) {
-            app.command_list.push({
+            this.app.command_list.push({
                 "type": "reaction",
                 "op": this.create ? "create" : "edit",
                 "id": old_id,
@@ -357,101 +358,19 @@ export class Dialog {
                 }
             });
 
-            app.reaction_page.invalidate(reaction);
+            this.app.reaction_page.invalidate(reaction);
         }
 
         if (this.create) {
-            app.reaction_page.datatable.row.add(reaction);
-            app.reaction_page.datatable.sort();
-            app.reaction_page.datatable.draw();
+            this.app.reaction_page.datatable.row.add(reaction);
+            this.app.reaction_page.datatable.sort();
+            this.app.reaction_page.datatable.draw();
+
+            this.app.settings_page.refresh();
         }
 
         $(this.dialog_element)["modal"]("hide");
 
         return true;
     }
-
-    /*
-        function saveEnzyme(enzyme) {
-            var name = dialog_enzyme.find("#enzyme-name");
-            var reversible = dialog_enzyme.find("#reversible");
-            var enabled = dialog_enzyme.find("#enabled");
-            var constrained = dialog_enzyme.find("#constrained");
-            var constrained_min = dialog_enzyme.find("#constrained-min");
-            var constrained_max = dialog_enzyme.find("#constrained-max");
-            var substrates = dialog_enzyme.find("#reaction-substrates")[0].selectize;
-            var products = dialog_enzyme.find("#reaction-products")[0].selectize;
-            var pathway = dialog_enzyme.find("#reaction-pathway");
-
-            var old_design_objective = design_objective;
-
-            var visible_value = undefined;
-            if (design_objective_visible_combobox[0].selectize.getValue().split('\x00').indexOf(enzyme.name) > -1) {
-                visible_value = enzyme;
-            }
-            cyano_design_objective_select[0].selectize.removeOption(enzyme.name);
-            cyano_design_design_objective_select[0].selectize.removeOption(enzyme.name);
-            design_objective_visible_combobox[0].selectize.removeOption(enzyme.name);
-            cyano_design_target_objective_select[0].selectize.removeOption(enzyme.name);
-
-            if (enzyme.name != name.val()) {
-                enzyme.id = name.val();
-                enzyme.name = name.val();
-            }
-
-            cyano_design_objective_select[0].selectize.addOption(enzyme);
-            cyano_design_objective_select[0].selectize.refreshOptions();
-            cyano_design_design_objective_select[0].selectize.addOption(enzyme);
-            cyano_design_design_objective_select[0].selectize.refreshOptions();
-            design_objective_visible_combobox[0].selectize.addOption(enzyme);
-            design_objective_visible_combobox[0].selectize.refreshOptions();
-            cyano_design_target_objective_select[0].selectize.addOption(enzyme);
-            cyano_design_target_objective_select[0].selectize.refreshOptions();
-
-            if (visible_value !== undefined) {
-                design_objective_visible_combobox[0].selectize.addItem(visible_value.name);
-            }
-
-            if (old_design_objective !== undefined) {
-                cyano_design_objective_select[0].selectize.setValue(old_design_objective.name, false);
-            }
-
-            enzyme.reversible = reversible.prop("checked");
-            if (constrained.prop("checked")) {
-                enzyme.constraints[0] = constrained_min.val();
-                enzyme.constraints[1] = constrained_max.val();
-            } else {
-                enzyme.makeUnconstrained();
-            }
-
-            enzyme.enabled = enabled.prop("checked");
-
-            enzyme.substrates = [];
-            enzyme.products = [];
-
-            substrates.getValue().split('\x00').forEach(function(a) {
-                enzyme.substrates.push({
-                    "id": substrates.options[a].item.obj.id,
-                    "name": substrates.options[a].item.obj.name,
-                    "stoichiometry": substrates.options[a].item.amount
-                });
-            });
-
-            products.getValue().split('\x00').forEach(function(a) {
-                enzyme.products.push({
-                    "id": products.options[a].item.obj.id,
-                    "name": products.options[a].item.obj.name,
-                    "stoichiometry": products.options[a].item.amount
-                });
-            });
-
-            enzyme.pathway = pathway.val();
-
-            enzyme.updateMetaboliteReference(model).forEach(function(m) {
-                m.invalidate();
-            });
-            enzyme.invalidate();
-        }
-
-     */
 }

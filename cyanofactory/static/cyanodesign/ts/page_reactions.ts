@@ -26,7 +26,7 @@ template.innerHTML = `
         <span class="sr-only">Toggle Dropdown</span>
     </button>
     <ul class="dropdown-menu">
-        <li><a href="#" id="create-enzyme-bulk-button">Bulk add reactions</a></li>
+        <li><a href="#" class="create-enzyme-bulk-button">Bulk add reactions</a></li>
     </ul>
 </div>
 
@@ -354,41 +354,27 @@ export class Page {
 
         // 5th col: delete button clicked
         $(this.table_element).on("click", ".delete-button", function() {
-            // FIXME
-            let parent = $(this).closest("tr");
-            let dialog_delete = $("#dialog-delete");
-            let row = self.datatable.row(parent);
+            let row = self.datatable.row($(this).closest("tr"));
+            let reaction = (<mm.Reaction>row.data());
 
-            dialog_delete.data("parent", parent);
-            dialog_delete.find(".reaction-name").text(row.data().name);
-            dialog_delete["modal"]('show');
+            self.app.dialog_reaction_delete.show(reaction);
         });
     }
 
-    update() {
+    init() {
         this.datatable.clear();
         this.datatable.rows.add(this.app.model.reactions);
-        this.datatable.draw();
 
         for (let reaction of this.app.model.reactions) {
             reaction.updateMetaboliteReference(this.app.model);
         }
 
-        /*var old_design_objective = design_objective;
-        model.reactions.forEach(function(item) {
-            cyano_design_objective_select[0].selectize.addOption(item);
-            cyano_design_design_objective_select[0].selectize.addOption(item);
-            design_objective_visible_combobox[0].selectize.addOption(item);
-            cyano_design_target_objective_select[0].selectize.addOption(item);
-        });
-        cyano_design_objective_select[0].selectize.refreshOptions();
-        cyano_design_design_objective_select[0].selectize.refreshOptions();
-        design_objective_visible_combobox[0].selectize.refreshOptions();
-        cyano_design_target_objective_select[0].selectize.refreshOptions();
+        this.refresh();
+    }
 
-        if (old_design_objective !== undefined) {
-            cyano_design_objective_select[0].selectize.setValue(old_design_objective.name, false);
-        }*/
+    refresh() {
+        this.datatable.sort();
+        this.datatable.draw();
     }
 
     invalidate(reaction: mm.Reaction) {

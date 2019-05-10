@@ -1,4 +1,4 @@
-define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", "datatables.net"], function (require, exports, mm, dialog_helper_1, $) {
+define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", "datatables.net", "selectize"], function (require, exports, mm, dialog_helper_1, $) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     let template = document.createElement('template');
@@ -69,14 +69,14 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
 </div>
 `;
     class Dialog {
-        constructor(model) {
+        constructor(app) {
             this.item = null;
             this.create = true;
             this.substrate_refs = [];
             this.product_refs = [];
+            this.app = app;
             document.body.appendChild(template.content.cloneNode(true));
             this.dialog_element = document.body.getElementsByClassName("dialog-reaction")[0];
-            this.model = model;
             const self = this;
             $(this.dialog_element).find(".btn-primary").click(function () {
                 self.validate();
@@ -90,7 +90,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             this.constrained = dialog_helper_1.ElementWrapper.byClass("constrained", this.dialog_element);
             this.constrained_min = dialog_helper_1.ElementWrapper.byClass("constrained-min", this.dialog_element);
             this.constrained_max = dialog_helper_1.ElementWrapper.byClass("constrained-max", this.dialog_element);
-            for (const met of model.metabolites) {
+            for (const met of this.app.model.metabolites) {
                 let sref = new mm.MetaboliteReference();
                 let pref = new mm.MetaboliteReference();
                 sref.id = met.id;
@@ -106,6 +106,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
         show(reaction) {
             if (reaction == null) {
                 this.item = new mm.Reaction();
+                reaction = this.item;
                 this.create = true;
                 this.item.makeUnconstrained();
             }
@@ -163,14 +164,14 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                     return met;
                 }
             };
-            $(this.substrates.element)["selectize"](obj_options);
-            let substrates_selectize = $(this.substrates.element)[0].selectize;
+            $(this.substrates.element).selectize(obj_options);
+            let substrates_selectize = this.substrates.element.selectize;
             substrates_selectize.clear();
             for (const metref of reaction.substrates) {
                 substrates_selectize.addItem(metref.id);
             }
             $(this.products.element)["selectize"](obj_options);
-            let products_selectize = $(this.products.element)[0].selectize;
+            let products_selectize = this.products.element.selectize;
             products_selectize.clear();
             for (const metref of reaction.products) {
                 products_selectize.addItem(metref.id);
@@ -206,7 +207,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             let valid = dialog_helper_1.DialogHelper.checkId(this.id.element);
             valid = valid && dialog_helper_1.DialogHelper.checkLength(this.name.element, "Name", 1, 255);
             valid = valid && dialog_helper_1.DialogHelper.checkRegexp(this.name.element, /^[^:]+$/, "Name must not contain a colon (:)");
-            let reac_with_id = this.model.reaction.get("id", this.id.value);
+            let reac_with_id = this.app.model.reaction.get("id", this.id.value);
             if (reac_with_id != null) {
                 valid = valid && dialog_helper_1.DialogHelper.checkBool(this.id.element, reac_with_id == this.item, "Identifier already in use");
             }
@@ -227,7 +228,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             let reaction = this.item;
             if (this.create) {
                 reaction.id = this.id.value;
-                this.model.reactions.push(reaction);
+                this.app.model.reactions.push(reaction);
             }
             let any_changed = this.create ||
                 true || /* FIXME: substrates & products */
@@ -239,7 +240,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                 reaction.lower_bound != cmin_float ||
                 reaction.upper_bound != cmax_float;
             let old_id = reaction.id;
-            reaction.updateId(this.id.value, this.model);
+            reaction.updateId(this.id.value, this.app.model);
             reaction.name = this.name.value;
             reaction.enabled = this.enabled.value;
             reaction.reversible = this.reversible.value;
@@ -252,22 +253,22 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                 reaction.upper_bound = cmax_float;
             }
             /* substrates & products */
-            let substrates_selectize = $(this.substrates.element)[0].selectize;
-            let products_selectize = $(this.products.element)[0].selectize;
+            let substrates_selectize = this.substrates.element.selectize;
+            let products_selectize = this.products.element.selectize;
             // remove all metabolites
             reaction.substrates = [];
             reaction.products = [];
             // add metabolites
             const met_adder = (mets, target) => {
                 for (const i of mets) {
-                    let met = this.model.metabolite.get("id", i);
+                    let met = this.app.model.metabolite.get("id", i);
                     if (met == null) {
                         // is a new metabolite
                         met = new mm.Metabolite();
                         met.id = i; // Todo: Sluggify
                         met.name = i;
-                        app.metabolite_page.datatable.row.add(met);
-                        this.model.metabolites.push(met);
+                        this.app.metabolite_page.datatable.row.add(met);
+                        this.app.model.metabolites.push(met);
                     }
                     let metref = new mm.MetaboliteReference();
                     metref.id = i;
@@ -278,11 +279,11 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             };
             met_adder(substrates_selectize.items, reaction.substrates);
             met_adder(products_selectize.items, reaction.products);
-            app.metabolite_page.datatable.sort();
-            app.metabolite_page.datatable.draw();
-            reaction.updateMetaboliteReference(this.model);
+            this.app.metabolite_page.datatable.sort();
+            this.app.metabolite_page.datatable.draw();
+            reaction.updateMetaboliteReference(this.app.model);
             if (any_changed) {
-                app.command_list.push({
+                this.app.command_list.push({
                     "type": "reaction",
                     "op": this.create ? "create" : "edit",
                     "id": old_id,
@@ -297,12 +298,13 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                         "products": reaction.products.map((m) => m.id)
                     }
                 });
-                app.reaction_page.invalidate(reaction);
+                this.app.reaction_page.invalidate(reaction);
             }
             if (this.create) {
-                app.reaction_page.datatable.row.add(reaction);
-                app.reaction_page.datatable.sort();
-                app.reaction_page.datatable.draw();
+                this.app.reaction_page.datatable.row.add(reaction);
+                this.app.reaction_page.datatable.sort();
+                this.app.reaction_page.datatable.draw();
+                this.app.settings_page.refresh();
             }
             $(this.dialog_element)["modal"]("hide");
             return true;

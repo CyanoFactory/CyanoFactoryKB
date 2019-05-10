@@ -1,7 +1,11 @@
 import * as app from "./app"
 import * as mm from "./metabolic_model";
+import { ElementWrapper } from "./dialog_helper";
 import * as $ from "jquery";
 import "datatables.net";
+import "selectize";
+
+type SelectizeType = Selectize.IApi<any, any>;
 
 let template = document.createElement('template');
 template.innerHTML = `
@@ -53,12 +57,12 @@ template.innerHTML = `
     </div>
 </div>
 
-<div class="panel panel-default" class="fba-settings-panel">
+<div class="panel panel-default fba-settings-panel">
     <div class="panel-heading">
         <h3 class="panel-title">FBA settings</h3>
     </div>
 
-    <div class="panel-body" class="settings-fba">
+    <div class="panel-body settings-fba">
         <div>
             The main objective is always displayed in the simulation.
         </div>
@@ -85,12 +89,12 @@ template.innerHTML = `
     </div>
 </div>
 
-<div class="panel panel-default" class="sa-settings-panel">
+<div class="panel panel-default sa-settings-panel">
     <div class="panel-heading">
         <h3 class="panel-title">Sensitivity/RA settings</h3>
     </div>
 
-    <div class="panel-body" class="settings-mba">
+    <div class="panel-body settings-mba">
         <fieldset>
             <div class="form-group">
                 <label class="control-label" for="cyano-design-design-objective-select">Design objective</label>
@@ -104,7 +108,7 @@ template.innerHTML = `
     </div>
 </div>
 
-<div class="panel panel-default" class="sa-settings-axis-panel">
+<div class="panel panel-default sa-settings-axis-panel">
     <div class="panel-heading">
         <h3 class="panel-title">Axis label</h3>
     </div>
@@ -127,60 +131,36 @@ template.innerHTML = `
 export class Page {
     readonly app: app.AppManager;
     readonly source_element: HTMLElement;
-    readonly main_obj_element: HTMLElement;
-    readonly design_obj_element: HTMLElement;
-    readonly target_obj_element: HTMLElement;
-    readonly maximize_element: HTMLElement;
-    readonly fba_sim_element: HTMLElement;
+    readonly main_obj: ElementWrapper<string>;
+    readonly design_obj: ElementWrapper<string>;
+    readonly target_obj: ElementWrapper<string>;
+    readonly maximize: ElementWrapper<boolean>;
+    readonly fba_sim: ElementWrapper<boolean>;
+    readonly mba_sim: ElementWrapper<boolean>;
+    readonly sa_sim: ElementWrapper<boolean>;
 
     constructor(where: HTMLElement, app: app.AppManager) {
         this.app = app;
         this.source_element = where;
         where.appendChild(template.content.cloneNode(true));
 
-        this.main_obj_element = <HTMLElement>where.getElementsByClassName("cyano-design-objective-select")[0]!;
-        this.design_obj_element = <HTMLElement>where.getElementsByClassName("cyano-design-design-objective-select")[0]!;
-        this.target_obj_element = <HTMLElement>where.getElementsByClassName("cyano-design-target-objective-select")[0]!;
-        this.maximize_element = <HTMLElement>where.getElementsByClassName("radio-maximize")[0]!;
-        this.fba_sim_element = <HTMLElement>where.getElementsByClassName("radio-fba")[0]!;
+        this.main_obj = ElementWrapper.byClass<string>("cyano-design-objective-select", this.source_element);
+        this.design_obj = ElementWrapper.byClass<string>("cyano-design-design-objective-select", this.source_element);
+        this.target_obj = ElementWrapper.byClass<string>("cyano-design-target-objective-select", this.source_element);
+        this.maximize = ElementWrapper.byClass<boolean>("radio-maximize", this.source_element);
+        this.fba_sim = ElementWrapper.byClass<boolean>("radio-fba", this.source_element);
+        this.mba_sim = ElementWrapper.byClass<boolean>("radio-mba", this.source_element);
+        this.sa_sim = ElementWrapper.byClass<boolean>("radio-sa", this.source_element);
 
-        $(this.maximize_element).prop("checked", true);
-        $(this.fba_sim_element).prop("checked", true);
+        this.maximize.value = true;
+        this.fba_sim.value = true;
 
+        $(this.fba_sim.element).change(() => Page.updateSettingsVisibility(this));
+        $(this.mba_sim.element).change(() => Page.updateSettingsVisibility(this));
+        $(this.sa_sim.element).change(() => Page.updateSettingsVisibility(this));
 
-        /*function updateSettingsVisibility() {
-            $("#fba-settings-panel").hide();
-            $("#sa-settings-panel").hide();
-            $("#sa-settings-axis-panel").hide();
+        Page.updateSettingsVisibility(this);
 
-            if ($("#radio-fba").prop("checked")) {
-                $("#fba-settings-panel").show();
-            } else if ($("#radio-mba").prop("checked")) {
-                $("#sa-settings-panel").show();
-                $("#sa-settings-target-function-panel").hide();
-                $("#sa-settings-axis-panel").show();
-            } else if ($("#radio-sa").prop("checked")) {
-                $("#sa-settings-panel").show();
-                $("#sa-settings-target-function-panel").show();
-                $("#sa-settings-axis-panel").show();
-            }
-        }
-
-        function setSimulationType(t) {
-            if (t == "fba") {
-                $("#radio-fba").prop("checked", true);
-            } else if (t == "mba") {
-                $("#radio-mba").prop("checked", true);
-            } else if (t == "sa") {
-                $("#radio-sa").prop("checked", true);
-            }
-
-            updateSettingsVisibility();
-        }
-
-        $("#radio-fba").change(updateSettingsVisibility);
-        $("#radio-mba").change(updateSettingsVisibility);
-        $("#radio-sa").change(updateSettingsVisibility);*/
 /*For display list
         design_objective_visible_combobox.selectize({
             delimiter: '\x00',
@@ -206,12 +186,11 @@ export class Page {
  */
     }
 
-    update() {
+    init() {
         const obj_options: any = {
             maxItems: 1,
             valueField: 'id',
             searchField: ['name', 'id'],
-            options: this.app.model.reactions,
             render: {
                 item: function(item: mm.Reaction, escape: any) {
                     return "<div>" + escape(item.get_name_or_id()) + "</div>";
@@ -222,27 +201,81 @@ export class Page {
             }
         };
 
-        $(this.main_obj_element)["selectize"](obj_options);
-        $(this.design_obj_element)["selectize"](obj_options);
-        $(this.target_obj_element)["selectize"](obj_options);
+        $(this.main_obj.element).selectize(obj_options);
+        $(this.design_obj.element).selectize(obj_options);
+        $(this.target_obj.element).selectize(obj_options);
+
+        this.refresh();
     }
 
-    getObjective(): mm.Reaction | null {
-        return this.app.model.reaction.checked_get("id", this.main_obj_element["selectize"].getValue());
+    refresh(reactions: mm.Reaction[] = null) {
+        let main_obj_selectize: SelectizeType = this.main_obj.element.selectize;
+        let design_obj_selectize: SelectizeType = this.design_obj.element.selectize;
+        let target_obj_selectize: SelectizeType = this.target_obj.element.selectize;
+
+        if (reactions == null) {
+            const fn_c = (s: SelectizeType) => {
+                s.clearOptions();
+            };
+            const fn = (r: mm.Reaction, s: SelectizeType) => {
+                s.addOption(r);
+            };
+
+            fn_c(main_obj_selectize);
+            fn_c(design_obj_selectize);
+            fn_c(target_obj_selectize);
+
+            for (const reac of this.app.model.reactions) {
+                fn(reac, main_obj_selectize);
+                fn(reac, design_obj_selectize);
+                fn(reac, target_obj_selectize);
+            }
+        } else {
+            const fn = (r: mm.Reaction, s: SelectizeType) => {
+                if (r.id == s.getValue()) {
+                    s.clear();
+                }
+                s.removeOption(r.id);
+            };
+
+            for (const reac of reactions) {
+                fn(reac, main_obj_selectize);
+                fn(reac, design_obj_selectize);
+                fn(reac, target_obj_selectize);
+            }
+        }
+    }
+
+    getObjective(): string {
+        return this.main_obj.element.selectize.getValue();
     }
 
     maximizeObjective(): boolean {
-        return $(this.maximize_element).prop("checked");
+        return this.maximize.value;
     }
 
     getSimulationType(): string {
-        if ($(this.fba_sim_element).prop("checked")) {
+        if (this.fba_sim.value) {
             return "fba";
-        } else if ($(<HTMLElement>this.source_element.getElementsByClassName("radio-mba")[0]!).prop("checked")) {
+        } else if (this.mba_sim.value) {
             return "mba";
-        } else {
+        } else if (this.sa_sim.value) {
             return "ra";
         }
+        // unreachable path
+        throw new Error("getSimulationType: BUG! No type selected");
+    }
+
+    setSimulationType(t: string) {
+        if (t == "fba") {
+            this.fba_sim.value = true;
+        } else if (t == "mba") {
+            this.mba_sim.value = true;
+        } else if (t == "sa") {
+            this.sa_sim.value = true;
+        }
+
+        Page.updateSettingsVisibility(this);
     }
 
     getFbaSettings(): { highest_flux: boolean, selection: mm.Reaction[] | null } {
@@ -266,4 +299,22 @@ export class Page {
             y_right: ""
         }
     }
+
+    static updateSettingsVisibility(self: Page) {
+        $(self.source_element).find(".fba-settings-panel").hide();
+        $(self.source_element).find(".sa-settings-panel").hide();
+        $(self.source_element).find(".sa-settings-axis-panel").hide();
+
+        if (self.fba_sim.value) {
+            $(self.source_element).find(".fba-settings-panel").show();
+        } else if (self.mba_sim.value) {
+            $(self.source_element).find(".sa-settings-panel").show();
+            $(self.source_element).find(".sa-settings-target-function-panel").hide();
+            $(self.source_element).find(".sa-settings-axis-panel").show();
+        } else if (self.sa_sim.value) {
+            $(self.source_element).find(".sa-settings-panel").show();
+            $(self.source_element).find(".sa-settings-target-function-panel").show();
+            $(self.source_element).find(".sa-settings-axis-panel").show();
+        }
+    };
 }

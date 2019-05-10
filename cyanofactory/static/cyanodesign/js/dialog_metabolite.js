@@ -46,12 +46,12 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
 </div>
 `;
     class Dialog {
-        constructor(model) {
+        constructor(app) {
             this.item = null;
             this.create = true;
+            this.app = app;
             document.body.appendChild(template.content.cloneNode(true));
             this.dialog_element = document.body.getElementsByClassName("dialog-metabolite")[0];
-            this.model = model;
             const self = this;
             $(this.dialog_element).find(".btn-primary").click(function () {
                 self.validate();
@@ -91,7 +91,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             valid = valid && dialog_helper_1.DialogHelper.checkRegexpPos(this.name.element, /(^[0-9])/, "Name must not begin with a number");
             valid = valid && dialog_helper_1.DialogHelper.checkRegexpPos(this.name.element, /(^<?\-> | <?\-> | <?\->$)/, "Name must not contain lonely <-> or ->");
             valid = valid && dialog_helper_1.DialogHelper.checkRegexpPos(this.name.element, /(^\+ | \+ )/, "Lonely + only allowed at end of name");
-            let met_with_id = this.model.metabolite.get("id", this.id.value);
+            let met_with_id = this.app.model.metabolite.get("id", this.id.value);
             if (met_with_id != null) {
                 valid = valid && dialog_helper_1.DialogHelper.checkBool(this.id.element, met_with_id == this.item, "Identifier already in use");
             }
@@ -101,7 +101,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             let metabolite = this.item;
             if (this.create) {
                 metabolite.id = this.id.value;
-                this.model.metabolites.push(metabolite);
+                this.app.model.metabolites.push(metabolite);
             }
             let any_changed = this.create ||
                 metabolite.id != this.id.value ||
@@ -109,13 +109,13 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                 metabolite.isExternal() != this.external.value ||
                 metabolite.formula != this.formula.value;
             let old_id = metabolite.id;
-            metabolite.updateId(this.id.value, this.model);
+            metabolite.updateId(this.id.value, this.app.model);
             // FIXME: Compartment configuration?
             metabolite.compartment = this.external.value ? "e" : "c";
             metabolite.name = this.name.value;
             metabolite.formula = this.formula.value;
             if (any_changed) {
-                app.command_list.push({
+                this.app.command_list.push({
                     "type": "metabolite",
                     "op": this.create ? "create" : "edit",
                     "id": old_id,
@@ -126,12 +126,12 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                         "formula": metabolite.formula
                     }
                 });
-                app.metabolite_page.invalidate(metabolite);
+                this.app.metabolite_page.invalidate(metabolite);
             }
             if (this.create) {
-                app.metabolite_page.datatable.row.add(metabolite);
-                app.metabolite_page.datatable.sort();
-                app.metabolite_page.datatable.draw();
+                this.app.metabolite_page.datatable.row.add(metabolite);
+                this.app.metabolite_page.datatable.sort();
+                this.app.metabolite_page.datatable.draw();
             }
             $(this.dialog_element)["modal"]("hide");
             return true;

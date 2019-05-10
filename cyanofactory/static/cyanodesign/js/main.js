@@ -15,9 +15,15 @@ define('jquery', function() {
     return $;
 });
 
+// already loaded via scripts tag
+define('selectize', function() {
+    return undefined;
+});
+
 define([
     "./app",
     "./metabolic_model",
+    "./urls",
     "./page_reactions",
     "./page_metabolites",
     "./page_stoichiometry",
@@ -25,8 +31,8 @@ define([
     "./page_simulation",
     "./dialog_reaction",
     "./dialog_reaction_bulkadd",
-    "./dialog_metabolite"
-], function(app, mm) {
-    MetabolicModel = mm;
-    startup(app.run);
+    "./dialog_metabolite",
+    "./request_handler",
+], function(app, mm, url) {
+    startup(app.run, mm, url);
 });
