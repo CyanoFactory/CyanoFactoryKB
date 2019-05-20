@@ -115,7 +115,7 @@ export class Dialog {
         $(this.dialog_element).find("div").removeClass("has-error");
         $(this.dialog_element).find(".help-block").remove();
 
-        const lines: string[] = $(this.bulkdata_element).val().split(/\r*\n/);
+        const lines: string[] = (<string>$(this.bulkdata_element).val()).split(/\r*\n/);
         $(this.bulkdata_preview_element).empty();
 
         for (const line of lines) {

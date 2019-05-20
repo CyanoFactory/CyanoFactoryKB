@@ -260,6 +260,8 @@ export class Page {
             });
 
             self.invalidate(metabolite);
+
+            self.app.history_page.refresh();
         });
 
         // delete unused metabolites button
@@ -284,6 +286,8 @@ export class Page {
             });
             app.metabolite_page.datatable.draw();
 
+            self.app.history_page.refresh();
+
             $("#dialog-delete-metabolites")["modal"]("hide");
         });
     }
@@ -298,27 +302,6 @@ export class Page {
         this.datatable.sort();
         this.datatable.draw();
     }
-
-    /*
-        Enzyme.prototype.invalidate = function() {
-        this.getMetabolites().forEach(function (obj) {
-            datatable_metabolites.row(Metabolite.metabolites.indexOf(obj)).invalidate();
-        });
-        datatable_enzymes.row(Enzyme.enzymes.indexOf(this)).invalidate();
-    };
-    Enzyme.prototype.removeFromList = function() {
-        var that = this;
-        datatable_enzymes.row(function(idx, data, node) {
-            return data.name == that.name;
-        }).remove();
-    };
-    Metabolite.prototype.invalidate = function() {
-        this.getEnzymes().forEach(function (obj) {
-            datatable_enzymes.row(Enzyme.enzymes.indexOf(obj)).invalidate();
-        });
-        datatable_metabolites.row(Metabolite.metabolites.indexOf(this)).invalidate();
-    };
-     */
 
     invalidate(metabolite: mm.Metabolite) {
         for (let reac of metabolite.getReactions()) {

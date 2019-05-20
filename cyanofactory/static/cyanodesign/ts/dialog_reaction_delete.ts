@@ -98,12 +98,14 @@ export class Dialog {
                     "id": m.id,
                     "object": {}
                 });
+
             });
         }
 
         this.app.reaction_page.refresh();
         this.app.metabolite_page.refresh();
         this.app.settings_page.refresh([this.item]);
+        this.app.history_page.refresh();
 
         $(this.dialog_element)["modal"]("hide");
     }

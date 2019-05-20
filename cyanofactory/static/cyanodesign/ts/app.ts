@@ -5,6 +5,7 @@ import * as metabolites from "./page_metabolites"
 import * as stoichiometry from "./page_stoichiometry"
 import * as settings from "./page_settings"
 import * as simulation from "./page_simulation"
+import * as history from "./page_history"
 import * as dialog_reaction from "./dialog_reaction"
 import * as dialog_reaction_bulkadd from "./dialog_reaction_bulkadd"
 import * as dialog_reaction_delete from "./dialog_reaction_delete"
@@ -23,13 +24,19 @@ export class AppManager {
     readonly stoichiometry_page: stoichiometry.Page;
     readonly settings_page: settings.Page;
     readonly simulation_page: simulation.Page;
+    readonly history_page: history.Page;
     readonly model: mm.Model;
+    readonly original_model: mm.Model;
     readonly command_list: any = [];
     readonly urls: any;
     readonly request_handler: RequestHandler;
 
-    constructor(model: mm.Model, urls: any) {
-        this.model = model;
+    constructor(mm_cls: any, model_json: any, urls: any) {
+        this.model = new mm_cls.Model();
+        this.model.fromJson(model_json);
+        this.original_model = new mm_cls.Model();
+        this.original_model.fromJson(model_json);
+
         this.urls = urls;
         this.request_handler = new RequestHandler(this, -1);
 
@@ -40,8 +47,9 @@ export class AppManager {
 
         this.reaction_page = new reactions.Page(document.getElementById("reaction-tab")!, this);
         this.metabolite_page = new metabolites.Page(document.getElementById("metabolite-tab")!, this);
-        this.stoichiometry_page = new stoichiometry.Page(document.getElementById("chemical-tab")!, this);
+        //this.stoichiometry_page = new stoichiometry.Page(document.getElementById("chemical-tab")!, this);
         this.settings_page = new settings.Page(document.getElementById("settings-tab")!, this);
+        this.history_page = new history.Page(document.getElementById("history-tab")!, this);
         this.simulation_page = new simulation.Page(document.getElementById("simulation-tab")!, this);
     }
 }
@@ -50,16 +58,14 @@ export function run(mm_cls: any, urls: any) {
     $.ajax({
         url: urls.get_reactions,
         context: document.body
-    }).done(function(x) {
-        let model = new mm_cls.Model();
-        model.fromJson(x);
-
-        app = new AppManager(model, urls);
+    }).done(function(x: any) {
+        app = new AppManager(mm_cls, x, urls);
 
         app.reaction_page.init();
         app.metabolite_page.init();
-        app.stoichiometry_page.init();
+        //app.stoichiometry_page.init();
         app.settings_page.init();
+        app.history_page.init();
         app.simulation_page.init();
 
         $(".create-enzyme-button").on("click", function () {

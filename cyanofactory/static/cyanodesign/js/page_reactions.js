@@ -309,6 +309,7 @@ Create new metabolite
                     }
                 });
                 self.invalidate(reaction);
+                self.app.history_page.refresh();
             });
             // 5th col: delete button clicked
             $(this.table_element).on("click", ".delete-button", function () {

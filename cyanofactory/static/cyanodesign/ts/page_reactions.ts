@@ -350,6 +350,8 @@ export class Page {
             });
 
             self.invalidate(reaction);
+
+            self.app.history_page.refresh();
         });
 
         // 5th col: delete button clicked

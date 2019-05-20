@@ -133,6 +133,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                 this.app.metabolite_page.datatable.sort();
                 this.app.metabolite_page.datatable.draw();
             }
+            this.app.history_page.refresh();
             $(this.dialog_element)["modal"]("hide");
             return true;
         }

@@ -29,6 +29,7 @@ define([
     "./page_stoichiometry",
     "./page_settings",
     "./page_simulation",
+    "./page_history",
     "./dialog_reaction",
     "./dialog_reaction_bulkadd",
     "./dialog_metabolite",

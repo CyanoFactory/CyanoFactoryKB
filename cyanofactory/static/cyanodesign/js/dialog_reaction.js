@@ -306,6 +306,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                 this.app.reaction_page.datatable.draw();
                 this.app.settings_page.refresh();
             }
+            this.app.history_page.refresh();
             $(this.dialog_element)["modal"]("hide");
             return true;
         }
