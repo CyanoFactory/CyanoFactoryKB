@@ -416,24 +416,6 @@ Released under the MIT license
 
                 callback(model);
 
-                /*$(".design-submit").click(function(event) {
-                    var data = beginRequest();
-
-                    $.ajax({
-                        url: "{% url "cyanodesign:simulate" pk=pk %}",
-                        type: "POST",
-                        data: data
-                    }).done(function(x) {
-                        app.simulation_page.simulate(x);
-                        endRequest();
-                    }).fail(function(x) {
-                        $("#visual_graph").hide();
-                        $("#visual_fba").hide();
-                        notifyError(x.responseText);
-                        endRequest();
-                    });
-                });*/
-
                 waitIndicator.hide($("#content"));
             });
         };
@@ -522,7 +504,7 @@ Viewing old model from {{ revision.date }}. Simulating and saving will be based 
     <li role="presentation"><a href="#metabolite-tab" role="tab" data-toggle="tab">Metabolites</a></li>
     <li role="presentation"><a href="#settings-tab" role="tab" data-toggle="tab">Settings</a></li>
     <!--<li role="presentation"><a href="#chemical-tab" role="tab" data-toggle="tab">Stoichiometry</a></li>-->
-    <li role="presentation"><a href="#history-tab" role="tab" data-toggle="tab">History</a></li>
+    <!--<li role="presentation"><a href="#history-tab" role="tab" data-toggle="tab">History</a></li>-->
     <li role="presentation"><a href="#simulation-tab" role="tab" data-toggle="tab">Simulation</a></li>
 </ul>
 
