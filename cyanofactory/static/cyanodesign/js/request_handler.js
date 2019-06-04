@@ -1,4 +1,4 @@
-define(["require", "exports", "jquery"], function (require, exports, $) {
+define(["require", "exports", "./app", "jquery"], function (require, exports, app, $) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class RequestHandler {
@@ -57,6 +57,56 @@ define(["require", "exports", "jquery"], function (require, exports, $) {
                 //$("#visual_fba").hide();
                 self.app.simulation_page.notifyError(x.responseText);
                 self.endRequest();
+            });
+        }
+        save() {
+            let form = $("#dialog-save-model").find("form");
+            let data = this.beginRequest($("#dialog-save-model").find(".modal-content"));
+            const self = this;
+            data["summary"] = form.find("#id_save_summary").val();
+            $.ajax({
+                url: self.app.urls.save,
+                type: "POST",
+                data: data
+            }).done(function (x) {
+                /*if (revision !== undefined) {
+                    location.replace(self.app.urls.design);
+                }*/
+                $("#dialog-save-model")["modal"]("hide");
+                endRequest($("#dialog-save-model").find(".modal-content"));
+                $("#simulation-result").html("");
+                app.command_list = [];
+            }).fail(function (x) {
+                $("#dialog-save-model")["modal"]("hide");
+                $("#visual_graph").hide();
+                $("#visual_fba").hide();
+                //notifyError(JSON.parse(x.responseText)["message"]);
+                self.endRequest($("#dialog-save-model").find(".modal-content"));
+            });
+        }
+        saveas() {
+            let form = $("#dialog-saveas-model").find("form");
+            let data = this.beginRequest($("#dialog-saveas-model").find(".modal-content"));
+            data["saveas_name"] = form.find("#id_saveas_name").val();
+            data["saveas_summary"] = form.find("#id_saveas_summary").val();
+            const self = this;
+            $.ajax({
+                url: this.app.urls.saveas,
+                type: "POST",
+                data: data
+            }).done(function (x) {
+                if (!(x['success'])) {
+                    form.replaceWith(x['form_html']);
+                }
+                else {
+                    location.replace(x['url']);
+                }
+                self.endRequest($("#dialog-saveas-model").find(".modal-content"));
+            }).fail(function (x) {
+                $("#visual_graph").hide();
+                $("#visual_fba").hide();
+                //DialogHelper.notnotifyError(x.responseText);
+                self.endRequest($("#dialog-saveas-model").find(".modal-content"));
             });
         }
     }
