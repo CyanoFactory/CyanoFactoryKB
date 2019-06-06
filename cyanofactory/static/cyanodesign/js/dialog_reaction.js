@@ -286,7 +286,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             if (any_changed) {
                 this.app.command_list.push({
                     "type": "reaction",
-                    "op": this.create ? "create" : "edit",
+                    "op": this.create ? "add" : "edit",
                     "id": old_id,
                     "object": {
                         "id": reaction.id,
@@ -295,8 +295,8 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                         "reversible": reaction.reversible,
                         "lower_bound": reaction.lower_bound,
                         "upper_bound": reaction.upper_bound,
-                        "substrates": reaction.substrates.map((m) => m.id),
-                        "products": reaction.products.map((m) => m.id)
+                        "substrates": reaction.substrates,
+                        "products": reaction.products
                     }
                 });
                 this.app.reaction_page.invalidate(reaction);

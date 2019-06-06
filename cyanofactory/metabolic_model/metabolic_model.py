@@ -123,7 +123,7 @@ class LstOp:
         self.lst.append(obj)
 
     def has(self, **kwargs):
-        return self.get() is not None
+        return self.get(**kwargs) is not None
 
     def get(self, **kwargs):
         return model_getter(self.lst, **kwargs)
@@ -138,7 +138,7 @@ class LstOp:
         if obj is None:
             raise ValueError("{} not in list".format(kwargs))
 
-        if self.has(new_id, **kwargs):
+        if self.has(id=new_id):
             raise ValueError("Can't change ID to {}, already in list".format(new_id))
 
         obj.id = new_id

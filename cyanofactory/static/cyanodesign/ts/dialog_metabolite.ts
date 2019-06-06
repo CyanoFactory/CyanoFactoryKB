@@ -146,7 +146,7 @@ export class Dialog {
         if (any_changed) {
             this.app.command_list.push({
                 "type": "metabolite",
-                "op": this.create ? "create" : "edit",
+                "op": this.create ? "add" : "edit",
                 "id": old_id,
                 "object": {
                     "id": metabolite.id,

@@ -20,8 +20,8 @@ from cyano.decorators import ajax_required, global_permission_required
 from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error, render_crispy_form
 from cyano.models import UserProfile
 from cyanodesign.forms import UploadModelForm, ModelFromTemplateForm, SaveModelAsForm, SaveModelForm
-from cyanodesign.helpers import model_from_string, apply_commandlist, calc_reactions, get_selected_reaction, \
-    compress_command_list
+from cyanodesign.helpers import calc_reactions, get_selected_reaction
+from cyanodesign.command_list import apply_commandlist, compress_commandlist
 from metabolic_model.optgene import OptGeneParser
 from metabolic_model.sbml_xml_generator import SbmlXMLGenerator
 from .models import DesignModel, Revision, DesignTemplate
@@ -149,9 +149,10 @@ def simulate(request, pk):
 
     try:
         apply_commandlist(org, changes)
-        org = metabolic_model.MetabolicModel.from_json(revision.sbml)
-        changes = compress_command_list(changes)
-        apply_commandlist(org, changes)
+        # FIXME and do testing
+        #org = metabolic_model.MetabolicModel.from_json(revision.sbml)
+        #changes = compress_commandlist(changes)
+        #apply_commandlist(org, changes)
         flux_objectives = []
 
         if not objectives:

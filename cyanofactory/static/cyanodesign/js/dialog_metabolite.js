@@ -117,7 +117,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             if (any_changed) {
                 this.app.command_list.push({
                     "type": "metabolite",
-                    "op": this.create ? "create" : "edit",
+                    "op": this.create ? "add" : "edit",
                     "id": old_id,
                     "object": {
                         "id": metabolite.id,
