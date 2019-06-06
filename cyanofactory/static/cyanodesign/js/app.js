@@ -1,4 +1,4 @@
-define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites", "./page_settings", "./page_simulation", "./page_history", "./dialog_reaction", "./dialog_reaction_bulkadd", "./dialog_reaction_delete", "./dialog_metabolite", "./request_handler"], function (require, exports, $, reactions, metabolites, settings, simulation, history, dialog_reaction, dialog_reaction_bulkadd, dialog_reaction_delete, dialog_metabolite, request_handler_1) {
+define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites", "./page_settings", "./page_simulation", "./page_history", "./dialog_reaction", "./dialog_reaction_bulkadd", "./dialog_reaction_delete", "./dialog_metabolite", "./dialog_save", "./request_handler"], function (require, exports, $, reactions, metabolites, settings, simulation, history, dialog_reaction, dialog_reaction_bulkadd, dialog_reaction_delete, dialog_metabolite, dialog_save, request_handler_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class AppManager {
@@ -14,6 +14,7 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
             this.dialog_reaction_bulk = new dialog_reaction_bulkadd.Dialog(this);
             this.dialog_reaction_delete = new dialog_reaction_delete.Dialog(this);
             this.dialog_metabolite = new dialog_metabolite.Dialog(this);
+            this.dialog_save = new dialog_save.Dialog(this);
             this.reaction_page = new reactions.Page(document.getElementById("reaction-tab"), this);
             this.metabolite_page = new metabolites.Page(document.getElementById("metabolite-tab"), this);
             //this.stoichiometry_page = new stoichiometry.Page(document.getElementById("chemical-tab")!, this);
@@ -43,6 +44,9 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
             });
             $(".create-enzyme-bulk-button").on("click", function () {
                 app.dialog_reaction_bulk.show();
+            });
+            $("#design-save").on("click", function () {
+                app.dialog_save.show();
             });
             app.request_handler.endRequest($("#content"));
         });

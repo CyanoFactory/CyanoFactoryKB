@@ -218,6 +218,12 @@ define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "se
         getObjective() {
             return this.main_obj.element.selectize.getValue();
         }
+        getDesignObjective() {
+            return this.design_obj.element.selectize.getValue();
+        }
+        getTargetObjective() {
+            return this.target_obj.element.selectize.getValue();
+        }
         maximizeObjective() {
             return this.maximize.value;
         }

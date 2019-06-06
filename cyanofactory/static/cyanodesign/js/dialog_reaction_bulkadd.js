@@ -1,4 +1,4 @@
-define(["require", "exports", "./metabolic_model", "jquery", "datatables.net"], function (require, exports, mm, $) {
+define(["require", "exports", "./metabolic_model", "jquery", "./metabolic_model", "datatables.net"], function (require, exports, mm, $, metabolic_model_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     let template = document.createElement('template');
@@ -70,7 +70,7 @@ define(["require", "exports", "./metabolic_model", "jquery", "datatables.net"], 
                         buffered_line = "";
                     }
                     catch (err) {
-                        e = err["enzyme"].toString() + " Error: " + err["message"];
+                        e = err["enzyme"].toString(self.app.model) + " Error: " + err["message"];
                     }
                     if (e !== 'undefined') {
                         $("<div>").text(e).appendTo(".bulkadd-preview");
@@ -93,86 +93,95 @@ define(["require", "exports", "./metabolic_model", "jquery", "datatables.net"], 
             const lines = $(this.bulkdata_element).val().split(/\r*\n/);
             $(this.bulkdata_preview_element).empty();
             for (const line of lines) {
-                //try {
-                let mlen = this.app.model.metabolites.length;
-                let reaction = mm.Reaction.fromBioOptString(line);
-            }
-            /*lines.forEach(function(line) {
                 try {
-
-                    Metabolite.fromReaction(reaction);
-                    if (model.metabolites.length > mlen) {
-                        model.metabolites.slice(mlen).forEach(function (metabolite) {
-                            command_list.push({
+                    let mlen = this.app.model.metabolites.length;
+                    let reaction = mm.Reaction.fromBioOptString(line);
+                    for (const substrate of reaction.substrates) {
+                        if (!this.app.model.metabolite.has("id", substrate.id)) {
+                            let metabolite = new metabolic_model_1.Metabolite();
+                            metabolite.id = substrate.id;
+                            metabolite.name = substrate.name;
+                            this.app.model.metabolites.push(metabolite);
+                            this.app.command_list.push({
                                 "type": "metabolite",
                                 "op": "add",
                                 "id": metabolite.id,
                                 "object": {
                                     "id": metabolite.id,
                                     "name": metabolite.name,
-                                    "external": metabolite.external
+                                    "external": false,
+                                    "formula": metabolite.formula
                                 }
                             });
-
-                            datatable_metabolites.row.add(metabolite);
-                        });
+                            this.app.metabolite_page.invalidate(metabolite);
+                            this.app.metabolite_page.datatable.row.add(metabolite);
+                        }
                     }
-
-                    reaction.convertToFloat();
-
-                    var command = {
+                    for (const product of reaction.products) {
+                        if (!this.app.model.metabolite.has("id", product.id)) {
+                            let metabolite = new metabolic_model_1.Metabolite();
+                            metabolite.id = product.id;
+                            metabolite.name = product.name;
+                            this.app.model.metabolites.push(metabolite);
+                            this.app.command_list.push({
+                                "type": "metabolite",
+                                "op": "add",
+                                "id": metabolite.id,
+                                "object": {
+                                    "id": metabolite.id,
+                                    "name": metabolite.name,
+                                    "external": false,
+                                    "formula": metabolite.formula
+                                }
+                            });
+                            this.app.metabolite_page.invalidate(metabolite);
+                            this.app.metabolite_page.datatable.row.add(metabolite);
+                        }
+                    }
+                    this.app.metabolite_page.datatable.sort();
+                    this.app.metabolite_page.datatable.draw();
+                    let command = {
                         "type": "reaction",
                         "id": reaction.id,
-                        "object": jQuery.extend(true, {}, reaction)
+                        "op": "add",
+                        "object": {
+                            "id": reaction.id,
+                            "name": reaction.name,
+                            "enabled": reaction.enabled,
+                            "reversible": reaction.reversible,
+                            "lower_bound": reaction.lower_bound,
+                            "upper_bound": reaction.upper_bound,
+                            "substrates": reaction.substrates,
+                            "products": reaction.products
+                        }
                     };
-
-                    if (Enzyme.indexByName(reaction.name) != -1) {
-                        // Reaction exists
-                        var orig_enzyme = model.reactions[Enzyme.indexByName(reaction.name)];
-
-                        orig_enzyme.name = reaction.name;
-                        orig_enzyme.substrates = reaction.substrates;
-                        orig_enzyme.products = reaction.products;
-                        orig_enzyme.reversible = reaction.reversible;
-
+                    let orig_reac = this.app.model.reaction.get("id", reaction.id);
+                    if (orig_reac != null) {
                         command["op"] = "edit";
-                    } else {
-
-                        model.reactions.push(reaction);
-
-                        datatable_enzymes.row.add(reaction);
-
-                        cyano_design_objective_select[0].selectize.addOption(reaction);
-                        cyano_design_objective_select[0].selectize.refreshOptions();
-                        cyano_design_design_objective_select[0].selectize.addOption(reaction);
-                        cyano_design_design_objective_select[0].selectize.refreshOptions();
-                        design_objective_visible_combobox[0].selectize.addOption(reaction);
-                        design_objective_visible_combobox[0].selectize.refreshOptions();
-                        cyano_design_target_objective_select[0].selectize.addOption(reaction);
-                        cyano_design_target_objective_select[0].selectize.refreshOptions();
-
-                        command["op"] = "add";
+                        orig_reac.substrates = reaction.substrates;
+                        orig_reac.products = reaction.products;
+                        orig_reac.reversible = reaction.reversible;
+                        this.app.reaction_page.invalidate(orig_reac);
+                        for (const met of orig_reac.updateMetaboliteReference(this.app.model)) {
+                            this.app.metabolite_page.invalidate(met);
+                        }
                     }
-
-                    command_list.push(command);
-
-                    reaction.updateMetaboliteReference(model).forEach(function(m) {
-                        m.invalidate();
-                    });
-                    reaction.invalidate();
-                } catch (err) {
-
+                    else {
+                        this.app.model.reactions.push(reaction);
+                        this.app.reaction_page.datatable.row.add(reaction);
+                        for (const met of reaction.updateMetaboliteReference(this.app.model)) {
+                            this.app.metabolite_page.invalidate(met);
+                        }
+                    }
+                    this.app.command_list.push(command);
+                    this.app.metabolite_page.datatable.draw();
+                    this.app.reaction_page.datatable.sort();
+                    this.app.reaction_page.datatable.draw();
                 }
-            });
-
-            datatable_metabolites.sort();
-            datatable_metabolites.draw();
-
-            datatable_enzymes.sort();
-            datatable_enzymes.draw();
-
-            $("#dialog-reaction-bulkadd").modal("hide");
-        });*/
+                catch (err) {
+                }
+            }
+            this.app.settings_page.refresh();
             $(this.dialog_element)["modal"]("hide");
             return true;
         }

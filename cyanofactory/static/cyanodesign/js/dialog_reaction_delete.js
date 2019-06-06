@@ -61,7 +61,9 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                 "op": "delete",
                 "type": "reaction",
                 "id": this.item.id,
-                "object": {}
+                "object": {
+                    "id": this.item.id
+                }
             });
             if (del_mets) {
                 rmets.filter((m) => {

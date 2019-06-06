@@ -10,6 +10,7 @@ import * as dialog_reaction from "./dialog_reaction"
 import * as dialog_reaction_bulkadd from "./dialog_reaction_bulkadd"
 import * as dialog_reaction_delete from "./dialog_reaction_delete"
 import * as dialog_metabolite from "./dialog_metabolite"
+import * as dialog_save from "./dialog_save"
 import { RequestHandler } from "./request_handler"
 
 declare var app : AppManager;
@@ -19,6 +20,7 @@ export class AppManager {
     readonly dialog_reaction_bulk: dialog_reaction_bulkadd.Dialog;
     readonly dialog_reaction_delete: dialog_reaction_delete.Dialog;
     readonly dialog_metabolite: dialog_metabolite.Dialog;
+    readonly dialog_save: dialog_save.Dialog;
     readonly reaction_page: reactions.Page;
     readonly metabolite_page: metabolites.Page;
     readonly stoichiometry_page: stoichiometry.Page;
@@ -27,9 +29,9 @@ export class AppManager {
     readonly history_page: history.Page;
     readonly model: mm.Model;
     readonly original_model: mm.Model;
-    readonly command_list: any = [];
     readonly urls: any;
     readonly request_handler: RequestHandler;
+    public command_list: any = [];
 
     constructor(mm_cls: any, model_json: any, urls: any) {
         this.model = new mm_cls.Model();
@@ -44,6 +46,7 @@ export class AppManager {
         this.dialog_reaction_bulk = new dialog_reaction_bulkadd.Dialog(this);
         this.dialog_reaction_delete = new dialog_reaction_delete.Dialog(this);
         this.dialog_metabolite = new dialog_metabolite.Dialog(this);
+        this.dialog_save = new dialog_save.Dialog(this);
 
         this.reaction_page = new reactions.Page(document.getElementById("reaction-tab")!, this);
         this.metabolite_page = new metabolites.Page(document.getElementById("metabolite-tab")!, this);
@@ -78,6 +81,10 @@ export function run(mm_cls: any, urls: any) {
 
         $(".create-enzyme-bulk-button").on("click", function () {
             app.dialog_reaction_bulk.show();
+        });
+
+        $("#design-save").on("click", function() {
+            app.dialog_save.show();
         });
 
         app.request_handler.endRequest($("#content"));

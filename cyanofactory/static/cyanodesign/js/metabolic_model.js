@@ -291,7 +291,7 @@ define(["require", "exports"], function (require, exports) {
                 }
                 if (line[0] == "->" || line[0] == "<->") {
                     if (arrow != "") {
-                        throw { "enzyme": enzyme, message: "More then one reaction arrow" };
+                        throw { "enzyme": enzyme, message: "More than one reaction arrow" };
                     }
                     arrow = line[0];
                     state = 1;
@@ -309,6 +309,7 @@ define(["require", "exports"], function (require, exports) {
                 throw { "enzyme": enzyme, message: "No products found" };
             }
             enzyme.reversible = arrow == "<->";
+            enzyme.makeUnconstrained();
             return enzyme;
         }
         ;
@@ -391,7 +392,7 @@ define(["require", "exports"], function (require, exports) {
             let element = "";
             for (let i = 0; i < this.substrates.length; ++i) {
                 element = element.concat(this.substrates[i].stoichiometry + " ");
-                element = element.concat(this.substrates[i].getMetabolite(model).get_name_or_id());
+                element = element.concat(this.substrates[i].getMetabolite(model, true).get_name_or_id());
                 if (i != this.substrates.length - 1) {
                     element = element.concat(" + ");
                 }
@@ -399,7 +400,7 @@ define(["require", "exports"], function (require, exports) {
             element = element.concat(this.reversible ? " <-> " : " -> ");
             for (let i = 0; i < this.products.length; ++i) {
                 element = element.concat(this.products[i].stoichiometry + " ");
-                element = element.concat(this.products[i].getMetabolite(model).get_name_or_id());
+                element = element.concat(this.products[i].getMetabolite(model, true).get_name_or_id());
                 if (i != this.products.length - 1) {
                     element = element.concat(" + ");
                 }
@@ -510,7 +511,16 @@ define(["require", "exports"], function (require, exports) {
         fromJson(j) {
             this.readAttributes(j);
         }
-        getMetabolite(model) {
+        getMetabolite(model, ignore_errors = false) {
+            if (ignore_errors) {
+                let met = model.metabolite.get("id", this.id);
+                if (met == null) {
+                    met = new Metabolite();
+                    met.id = this.id;
+                    met.name = this.id;
+                }
+                return met;
+            }
             return model.metabolite.checked_get("id", this.id);
         }
         toHtml(model) {

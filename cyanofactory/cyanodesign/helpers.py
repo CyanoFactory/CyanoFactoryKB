@@ -73,7 +73,7 @@ def calc_reactions(org: metabolic_model.MetabolicModel, fluxResults: metabolic_m
     graph = DiGraph()
 
     for enzyme in enzymes:
-        if not enzyme.id.endswith("_transp"):
+        if enzyme.enabled and not enzyme.id.endswith("_transp"):
             nodecounter += 1
             nodeDic[enzyme.id] = nodecounter
             if enzyme == objective:

@@ -79,7 +79,9 @@ export class Dialog {
             "op": "delete",
             "type": "reaction",
             "id": this.item.id,
-            "object": {}
+            "object": {
+                "id": this.item.id
+            }
         });
 
         if (del_mets) {

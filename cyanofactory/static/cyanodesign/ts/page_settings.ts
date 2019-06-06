@@ -250,6 +250,14 @@ export class Page {
         return this.main_obj.element.selectize.getValue();
     }
 
+    getDesignObjective(): string {
+        return this.design_obj.element.selectize.getValue();
+    }
+
+    getTargetObjective(): string {
+        return this.target_obj.element.selectize.getValue();
+    }
+
     maximizeObjective(): boolean {
         return this.maximize.value;
     }

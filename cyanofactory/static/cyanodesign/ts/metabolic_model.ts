@@ -315,7 +315,7 @@ export class Reaction extends ElementBase {
 
             if (line[0] == "->" || line[0] == "<->") {
                 if (arrow != "") {
-                    throw {"enzyme": enzyme, message: "More then one reaction arrow"};
+                    throw {"enzyme": enzyme, message: "More than one reaction arrow"};
                 }
 
                 arrow = line[0];
@@ -339,6 +339,7 @@ export class Reaction extends ElementBase {
         }
 
         enzyme.reversible = arrow == "<->";
+        enzyme.makeUnconstrained();
 
         return enzyme;
     };
@@ -430,7 +431,7 @@ export class Reaction extends ElementBase {
         for (let i = 0; i < this.substrates.length; ++i) {
             element = element.concat(this.substrates[i].stoichiometry + " ");
 
-            element = element.concat(this.substrates[i].getMetabolite(model).get_name_or_id());
+            element = element.concat(this.substrates[i].getMetabolite(model, true).get_name_or_id());
             if (i != this.substrates.length - 1) {
                 element = element.concat(" + ");
             }
@@ -441,7 +442,7 @@ export class Reaction extends ElementBase {
         for (let i = 0; i < this.products.length; ++i) {
             element = element.concat(this.products[i].stoichiometry + " ");
 
-            element = element.concat(this.products[i].getMetabolite(model).get_name_or_id());
+            element = element.concat(this.products[i].getMetabolite(model, true).get_name_or_id());
             if (i != this.products.length - 1) {
                 element = element.concat(" + ");
             }
@@ -490,7 +491,7 @@ export class Reaction extends ElementBase {
         return affected_mets;
     };
 
-    updateMetaboliteReference(model: Model) {
+    updateMetaboliteReference(model: Model): Metabolite[] {
         let affected_mets: Metabolite[] = [];
 
         affected_mets = affected_mets.concat(this.clearMetaboliteReference(model));
@@ -561,7 +562,17 @@ export class MetaboliteReference extends ElementBase {
         this.readAttributes(j);
     }
 
-    getMetabolite(model: Model): Metabolite {
+    getMetabolite(model: Model, ignore_errors: boolean = false): Metabolite {
+        if (ignore_errors) {
+            let met: Metabolite | null = model.metabolite.get("id", this.id);
+            if (met == null) {
+                met = new Metabolite();
+                met.id = this.id;
+                met.name = this.id;
+            }
+            return met;
+        }
+
         return model.metabolite.checked_get("id", this.id);
     }
 

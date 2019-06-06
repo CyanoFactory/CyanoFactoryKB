@@ -276,17 +276,6 @@ Released under the MIT license
         };
 
 
-        $("#design-save").click(function(event) {
-            var txt = "";
-
-            if (revision !== undefined) {
-                txt = "Rollback to revision " + revision;
-            }
-
-            $("#id_save_summary").val(txt);
-            $("#dialog-save-model").modal("show");
-        });
-
         $("#design-saveas").click(function(event) {
             var txt = "";
 
@@ -296,31 +285,6 @@ Released under the MIT license
 
             $("#id_saveas_summary").val(txt);
             $("#dialog-saveas-model").modal("show");
-        });
-
-        $("#dialog-save-model").on("click", ".btn-primary", function(event) {
-            var form = $("#dialog-save-model").find("form");
-            var data = beginRequest($("#dialog-save-model").find(".modal-content"));
-            data["summary"] = form.find("#id_save_summary").val();
-            $.ajax({
-                url: "{% url "cyanodesign:save" pk=pk %}",
-                type: "POST",
-                data: data
-            }).done(function(x) {
-                if (revision !== undefined) {
-                    location.replace("{% url "cyanodesign:design" pk=pk %}");
-                }
-                $("#dialog-save-model").modal("hide");
-                endRequest($("#dialog-save-model").find(".modal-content"));
-                $("#simulation-result").html("")
-                app.command_list = [];
-            }).fail(function(x) {
-                $("#dialog-save-model").modal("hide");
-                $("#visual_graph").hide();
-                $("#visual_fba").hide();
-                notifyError(JSON.parse(x.responseText)["message"]);
-                endRequest($("#dialog-save-model").find(".modal-content"));
-            });
         });
 
         $("#dialog-saveas-model").on("click", ".btn-primary", function(event) {

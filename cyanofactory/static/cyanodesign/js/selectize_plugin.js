@@ -21,14 +21,32 @@
  */
 
 Selectize.define('add_option_hook', function(options) {
-	var self = this;
+	const self = this;
 
 	const registerOptionOrig = this.registerOption;
+	const addOptionOrig = this.addOption;
 
 	const hash_key = function(value) {
 		if (typeof value === 'undefined' || value === null) return null;
 		if (typeof value === 'boolean') return value ? '1' : '0';
 		return value + '';
+	};
+
+	this.addOption = function(data) {
+		let i, n, value, self = this;
+
+		if ($.isArray(data)) {
+			for (i = 0, n = data.length; i < n; i++) {
+				self.addOption(data[i]);
+			}
+			return;
+		}
+
+		if (value = self.registerOption(data)) {
+			self.userOptions[value] = true;
+			self.lastQuery = null;
+			self.trigger('option_add', value, data);
+		}
 	};
 
 	this.registerOption = function(data) {
@@ -37,9 +55,9 @@ Selectize.define('add_option_hook', function(options) {
 	    data.$order = data.$order || ++this.order;
 	    this.options[key] = data;
 
-	    /*if (this.options.hasOwnProperty(key)) {
+	    if (this.options.hasOwnProperty(key)) {
 	        return false;
-        }*/
+        }
 
 	    return key;
     };
