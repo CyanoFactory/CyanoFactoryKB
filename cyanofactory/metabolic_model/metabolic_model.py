@@ -533,6 +533,9 @@ class Reaction(ElementBase):
 
         super().__init__()
 
+    def is_constrained(self, model: MetabolicModel):
+        return self.lower_bound != model.lower_bound_ref.value or self.upper_bound != model.upper_bound_ref
+
     def update_parameters_from_bounds(self, model: MetabolicModel):
         if self.lower_bound is None or self.lower_bound == model.lower_bound_ref.value:
             self.lower_bound_name = model.lower_bound_ref.id
