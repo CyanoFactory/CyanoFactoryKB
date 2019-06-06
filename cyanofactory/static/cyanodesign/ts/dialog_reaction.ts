@@ -345,7 +345,7 @@ export class Dialog {
         if (any_changed) {
             this.app.command_list.push({
                 "type": "reaction",
-                "op": this.create ? "create" : "edit",
+                "op": this.create ? "add" : "edit",
                 "id": old_id,
                 "object": {
                     "id": reaction.id,
@@ -354,8 +354,8 @@ export class Dialog {
                     "reversible": reaction.reversible,
                     "lower_bound": reaction.lower_bound,
                     "upper_bound": reaction.upper_bound,
-                    "substrates": reaction.substrates.map((m: mm.MetaboliteReference) => m.id),
-                    "products": reaction.products.map((m: mm.MetaboliteReference) => m.id)
+                    "substrates": reaction.substrates,
+                    "products": reaction.products
                 }
             });
 

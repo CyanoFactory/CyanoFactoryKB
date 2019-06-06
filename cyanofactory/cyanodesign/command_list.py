@@ -5,20 +5,11 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
-import metabolic_model
-
-def create_sid(name):
-    name = re.sub('[^0-9a-zA-Z]+', '_', name)
-    if len(name) > 0 and name[0].isdigit():
-        name = "_" + name
-    return name
-
+from metabolic_model import metabolic_model
 
 def verify_object(obj, command):
     if "id" not in obj:
         raise ValueError("id not in command {}".format(command))
-    elif "name" not in obj:
-        raise ValueError("name not in command {}".format(command))
 
 """
 Command format:
@@ -38,8 +29,6 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
             op = command["op"]
             typ = command["type"]
             idd = command["id"]
-            name = command["name"]
-            cid = create_sid(name)
             obj = command["object"]
         except KeyError:
             raise ValueError("Bad command " + str(command))
@@ -59,15 +48,15 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
                 if reaction is not None:
                     raise ValueError("Reaction already in model: " + idd)
                 if idd != obj["id"]:
-                    raise ValueError("Reaction name mismatch: " + idd)
+                    raise ValueError("Reaction ID mismatch: " + idd)
 
-                model.reactions.append(metabolic_model.Reaction.from_json(**obj))
+                model.reactions.append(metabolic_model.Reaction.from_json(obj))
             elif op == "edit":
                 if reaction is None:
                     raise ValueError("Reaction not in model: " + idd)
 
                 if obj["id"] != reaction.id:
-                    model.reaction.change_id(id=reaction.id, new_name=obj["id"])
+                    model.reaction.change_id(obj["id"], id=reaction.id)
 
                 reaction.id = obj["id"]
                 if "name" in obj:
@@ -75,9 +64,9 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
 
                 if "substrates" in obj and "products" in obj:
                     reaction.substrates = list(
-                        metabolic_model.MetaboliteReference.from_json(j) for j in reaction["substrates"])
+                        metabolic_model.MetaboliteReference.from_json(j) for j in obj["substrates"])
                     reaction.products = list(
-                        metabolic_model.MetaboliteReference.from_json(j) for j in reaction["products"])
+                        metabolic_model.MetaboliteReference.from_json(j) for j in obj["products"])
 
                 try:
                     reaction.reversible = obj["reversible"]
@@ -85,8 +74,8 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
                     pass
 
                 try:
-                    reaction.lower_bound = obj["constraints"][0]
-                    reaction.upper_bound = obj["constraints"][1]
+                    reaction.lower_bound = obj["lower_bound"]
+                    reaction.upper_bound = obj["upper_bound"]
                 except KeyError:
                     pass
 
@@ -97,7 +86,7 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
                 #    pass
 
                 try:
-                    reaction.enabled = not obj["disabled"]
+                    reaction.enabled = obj["enabled"]
                 except KeyError:
                     pass
             elif op == "delete":
@@ -111,9 +100,9 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
 
             if op == "add":
                 if idd != obj["id"]:
-                    raise ValueError("Metabolite name mismatch: " + idd)
+                    raise ValueError("Metabolite ID mismatch: " + idd)
 
-                model.metabolite.add(metabolic_model.Metabolite.from_json(**obj))
+                model.metabolite.add(metabolic_model.Metabolite.from_json(obj))
             elif op == "edit":
                 metabolite = model.metabolite.get(id=idd)
                 if metabolite is None:
@@ -130,7 +119,16 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
                     pass
 
                 if idd != obj["id"]:
-                    model.metabolite.change_id(id=idd, new_name=obj["id"])
+                    model.metabolite.change_id(obj["id"], id=idd)
+
+                    for reac in model.reactions:
+                        for substrate in reac.substrates:
+                            if substrate.id == idd:
+                                substrate.id = obj["id"]
+                        for product in reac.products:
+                            if product.id == idd:
+                                product.id = obj["id"]
+
             elif op == "delete":
                 model.metabolite.remove(idd)
             else:
@@ -154,7 +152,7 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
 
     return model
 
-def compress_command_list(commandlist):
+def compress_commandlist(commandlist):
     """
     :type model: json_model.JsonModel
     """
@@ -210,9 +208,3 @@ def compress_command_list(commandlist):
 
     new_commandlist += pending_commands
     return new_commandlist
-
-def model_from_string(model_str):
-    return JsonModel.from_json(model_str)
-
-def flatten(li):
-    return [item for sublist in li for item in sublist]
