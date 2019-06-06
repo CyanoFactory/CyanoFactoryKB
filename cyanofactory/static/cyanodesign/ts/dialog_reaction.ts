@@ -164,7 +164,8 @@ export class Dialog {
                     'text': function(item: mm.MetaboliteReference) {
                         return item.toString();
                     }
-                }
+                },
+                'add_option_hook' : {}
             },
             render: {
                 item: function(item: mm.MetaboliteReference, escape: any) {

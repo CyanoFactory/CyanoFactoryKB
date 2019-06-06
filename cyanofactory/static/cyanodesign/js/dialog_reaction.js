@@ -136,7 +136,8 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                         'text': function (item) {
                             return item.toString();
                         }
-                    }
+                    },
+                    'add_option_hook': {}
                 },
                 render: {
                     item: function (item, escape) {
