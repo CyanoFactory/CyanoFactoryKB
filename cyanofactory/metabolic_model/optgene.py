@@ -407,6 +407,8 @@ class OptGeneParser(object):
                 raise ValueError("Only one objective supported: " + line)
 
             self.objective = self.get_reaction(m.group(1))
+            if self.objective is None:
+                raise ValueError("The specified objective is not in the reaction list: " + line)
             self.objective.comments["objective"] = self.temp_comment_storage
             self.temp_comment_storage = []
         else:
@@ -418,6 +420,8 @@ class OptGeneParser(object):
             if self.design_objective is not None:
                 raise ValueError("Only one design objective supported: " + line)
 
+            if self.design_objective is None:
+                raise ValueError("The specified design objective is not in the reaction list: " + line)
             self.design_objective = self.get_reaction(m.group(1))
             self.design_objective.comments["design objective"] = self.temp_comment_storage
             self.temp_comment_storage = []
