@@ -173,26 +173,26 @@ def simulate(request, pk):
             if simtype == "mba" or simtype == "sa":
                 org.design_obj = []
                 for obj in design_objectives:
-                    obj_reaction = org.get_reaction(obj["name"])
+                    obj_reaction = org.reaction.get(id=obj["id"])
                     if obj_reaction is None:
-                        raise ValueError("Design objective not in model: " + obj["name"])
+                        raise ValueError("Design objective not in model: " + obj["id"])
 
                     if not obj_reaction.enabled:
                         return HttpResponseBadRequest("Design objective disabled: " + obj_reaction.name)
 
-                    org.design_obj.append([obj["name"], "1" if obj["maximize"] else "0"])
+                    org.design_obj.append([obj["id"], "1" if obj["maximize"] else "0"])
 
                 org.target_reactions = []
             if simtype == "sa":
                 for obj in target_reactions:
-                    obj_reaction = org.get_reaction(obj["name"])
+                    obj_reaction = org.reaction.get(id=obj["id"])
                     if obj_reaction is None:
-                        raise ValueError("Target reaction not in model: " + obj["name"])
+                        raise ValueError("Target reaction not in model: " + obj["id"])
 
                     if not obj_reaction.enabled:
                         return HttpResponseBadRequest("Target reaction disabled: " + obj_reaction.name)
 
-                    org.target_reactions.append([obj["name"], "1" if obj["maximize"] else "0"])
+                    org.target_reactions.append([obj["id"], "1" if obj["maximize"] else "0"])
 
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + str(e))
@@ -210,7 +210,7 @@ def simulate(request, pk):
 
         full_g, nodeIDs = calc_reactions(org, fba, obj_reaction)
 
-        display = list(filter(lambda x: len(x) > 0 and org.reaction.has(x), display))
+        display = list(filter(lambda x: len(x) > 0 and org.reaction.has(id=x), display))
 
         dflux = {}
         for res in fba.results:
@@ -281,7 +281,6 @@ def simulate(request, pk):
             return HttpResponseBadRequest("Unknown format")
     elif simtype == "mba":
         # Determine optimal steps
-        obj = org.obj[:]
         dobj = org.design_obj[:]
 
         # Absolute
@@ -443,18 +442,18 @@ def save(request, pk):
     try:
         model = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
     except ObjectDoesNotExist:
-        raise BadRequest("Bad Model")
+        return HttpResponseBadRequest("Bad Model")
 
     try:
         revision = request.POST["revision"]
         try:
             revision = Revision.objects.get(model=model, pk=revision)
         except ObjectDoesNotExist:
-            raise BadRequest("Bad Revision")
+            return HttpResponseBadRequest("Bad Revision")
     except KeyError:
         revision = model.get_latest_revision()
 
-    org = Metabolism(StringIO(revision.content))
+    org = metabolic_model.MetabolicModel.from_json(revision.sbml)
 
     try:
         changes = json.loads(request.POST["changes"])
@@ -466,32 +465,34 @@ def save(request, pk):
 
     try:
         apply_commandlist(org, changes)
-        org = Metabolism(StringIO(revision.content))
-        changes = compress_command_list(changes)
-        apply_commandlist(org, changes)
+        # FIXME
+        #org = Metabolism(StringIO(revision.content))
+        #changes = compress_command_list(changes)
+        #apply_commandlist(org, changes)
 
-        if objectives:
-            org.objectives = []
-            for obj in objectives:
-                if len(obj["name"]) > 0:
-                    obj_reac = org.get_reaction(obj["name"])
-                    if obj_reac is None:
-                        raise BadRequest("Objective not in model: " + obj["name"])
+        #if objectives:
+        #    org.objectives = []
+        #    for obj in objectives:
+        #        if len(obj["name"]) > 0:
+        #            obj_reac = org.get_reaction(obj["name"])
+        #            if obj_reac is None:
+        #                raise BadRequest("Objective not in model: " + obj["name"])
 
-                    org.obj = []
-                    org.obj.append([obj_reac.id, "1" if obj["maximize"] else "-1"])
+        #            org.obj = []
+        #            org.obj.append([obj_reac.id, "1" if obj["maximize"] else "-1"])
     except ValueError as e:
         raise BadRequest("Model error: " + str(e))
 
     if len(changes) == 0:
         raise BadRequest("Model not saved: No changes found")
 
-    sio = StringIO()
-    org.write_sbml(fileout=sio)
+    for reac in org.reactions:
+        reac.update_parameters_from_bounds(org)
 
     Revision(
         model=model,
-        content=sio.getvalue(),
+        content="",
+        sbml=org.to_json(),
         changes=dict(changes=changes,objectives=objectives),
         reason=summary
     ).save()
@@ -568,9 +569,11 @@ def upload(request, pk):
 
                 binary.seek(0)
 
+                import codecs
+
                 def skip_bom(s):
+                    # fixme
                     s.seek(0)
-                    s.read(1)
 
                 try:
                     ss = TextIOWrapper(binary, encoding='utf-8')

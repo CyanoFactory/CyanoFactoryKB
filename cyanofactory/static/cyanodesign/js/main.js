@@ -32,6 +32,7 @@ define([
     "./page_history",
     "./dialog_reaction",
     "./dialog_reaction_bulkadd",
+    "./dialog_save",
     "./dialog_metabolite",
     "./request_handler",
 ], function(app, mm, url) {

@@ -122,8 +122,39 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             this.constrained.value = this.item.isConstrained();
             this.constrained_min.value = this.item.lower_bound.toString();
             this.constrained_max.value = this.item.upper_bound.toString();
+            this.substrate_refs = [];
+            this.product_refs = [];
+            for (const met of this.app.model.metabolites) {
+                let sref = new mm.MetaboliteReference();
+                let pref = new mm.MetaboliteReference();
+                sref.id = met.id;
+                sref.name = met.name;
+                sref.stoichiometry = 1;
+                pref.id = met.id;
+                pref.name = met.name;
+                pref.stoichiometry = 1;
+                this.substrate_refs.push(sref);
+                this.product_refs.push(pref);
+            }
+            // FIXME: HACK
+            for (let substrate of this.item.substrates) {
+                for (let ref of this.substrate_refs) {
+                    if (substrate.id == ref.id) {
+                        ref.stoichiometry = substrate.stoichiometry;
+                        break;
+                    }
+                }
+            }
+            for (let product of this.item.products) {
+                for (let ref of this.product_refs) {
+                    if (product.id == ref.id) {
+                        ref.stoichiometry = product.stoichiometry;
+                        break;
+                    }
+                }
+            }
             // Update dropdowns
-            const obj_options = {
+            let obj_options = {
                 valueField: 'id',
                 labelField: 'name',
                 searchField: ['name', 'id'],
@@ -167,12 +198,21 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             };
             $(this.substrates.element).selectize(obj_options);
             let substrates_selectize = this.substrates.element.selectize;
+            substrates_selectize.clearOptions();
+            for (let ref of this.substrate_refs) {
+                substrates_selectize.addOption(ref);
+            }
             substrates_selectize.clear();
             for (const metref of reaction.substrates) {
                 substrates_selectize.addItem(metref.id);
             }
+            obj_options["options"] = this.product_refs;
             $(this.products.element)["selectize"](obj_options);
             let products_selectize = this.products.element.selectize;
+            products_selectize.clearOptions();
+            for (let ref of this.product_refs) {
+                products_selectize.addOption(ref);
+            }
             products_selectize.clear();
             for (const metref of reaction.products) {
                 products_selectize.addItem(metref.id);
@@ -261,7 +301,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             reaction.products = [];
             // add metabolites
             const met_adder = (mets, target) => {
-                for (const i of mets) {
+                for (const i of mets.items) {
                     let met = this.app.model.metabolite.get("id", i);
                     if (met == null) {
                         // is a new metabolite
@@ -270,16 +310,26 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                         met.name = i;
                         this.app.metabolite_page.datatable.row.add(met);
                         this.app.model.metabolites.push(met);
+                        this.app.command_list.push({
+                            "type": "metabolite",
+                            "op": "add",
+                            "id": met.id,
+                            "object": {
+                                "id": met.id,
+                                "name": met.name,
+                                "external": met.external,
+                                "formula": met.formula
+                            }
+                        });
                     }
                     let metref = new mm.MetaboliteReference();
                     metref.id = i;
-                    // FIXME!
-                    metref.stoichiometry = 1;
+                    metref.stoichiometry = mets.options[metref.id].stoichiometry;
                     target.push(metref);
                 }
             };
-            met_adder(substrates_selectize.items, reaction.substrates);
-            met_adder(products_selectize.items, reaction.products);
+            met_adder(substrates_selectize, reaction.substrates);
+            met_adder(products_selectize, reaction.products);
             this.app.metabolite_page.datatable.sort();
             this.app.metabolite_page.datatable.draw();
             reaction.updateMetaboliteReference(this.app.model);

@@ -1,4 +1,4 @@
-define(["require", "exports", "./app", "jquery"], function (require, exports, app, $) {
+define(["require", "exports", "jquery"], function (require, exports, $) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class RequestHandler {
@@ -18,11 +18,11 @@ define(["require", "exports", "./app", "jquery"], function (require, exports, ap
                         "maximize": this.app.settings_page.maximizeObjective()
                     }]),
                 "design_objectives": JSON.stringify([{
-                        "id": "",
+                        "id": this.app.settings_page.getDesignObjective(),
                         "maximize": true
                     }]),
                 "target_reactions": JSON.stringify([{
-                        "id": "",
+                        "id": this.app.settings_page.getTargetObjective(),
                         "maximize": true
                     }]),
                 "type": JSON.stringify(this.app.settings_page.getSimulationType()),
@@ -59,11 +59,10 @@ define(["require", "exports", "./app", "jquery"], function (require, exports, ap
                 self.endRequest();
             });
         }
-        save() {
-            let form = $("#dialog-save-model").find("form");
-            let data = this.beginRequest($("#dialog-save-model").find(".modal-content"));
+        save(summary) {
+            let data = this.beginRequest();
             const self = this;
-            data["summary"] = form.find("#id_save_summary").val();
+            data["summary"] = summary;
             $.ajax({
                 url: self.app.urls.save,
                 type: "POST",
@@ -72,16 +71,17 @@ define(["require", "exports", "./app", "jquery"], function (require, exports, ap
                 /*if (revision !== undefined) {
                     location.replace(self.app.urls.design);
                 }*/
-                $("#dialog-save-model")["modal"]("hide");
+                /*$("#dialog-save-model")["modal"]("hide");
                 endRequest($("#dialog-save-model").find(".modal-content"));
-                $("#simulation-result").html("");
-                app.command_list = [];
+                $("#simulation-result").html("")*/
+                self.app.command_list = [];
+                self.endRequest();
             }).fail(function (x) {
-                $("#dialog-save-model")["modal"]("hide");
+                /*$("#dialog-save-model")["modal"]("hide");
                 $("#visual_graph").hide();
-                $("#visual_fba").hide();
+                $("#visual_fba").hide();*/
                 //notifyError(JSON.parse(x.responseText)["message"]);
-                self.endRequest($("#dialog-save-model").find(".modal-content"));
+                self.endRequest();
             });
         }
         saveas() {
