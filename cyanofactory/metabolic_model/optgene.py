@@ -691,13 +691,14 @@ class OptGeneParser(object):
 
             optgene.reactions.append(OptGeneParser.Reaction(
                 name,
-                reactants=list(map(lambda x: metabolite_builder(x.get_metabolite(model)), reaction.substrates)),
+                reactants=list(map(lambda x: metabolite_builder(model.metabolite.get(id=x.id)), reaction.substrates)),
                 reactants_stoic=list(map(lambda x: x.stoichiometry, reaction.substrates)),
-                products=list(map(lambda x: metabolite_builder(x.get_metabolite(model)), reaction.products)),
+                products=list(map(lambda x: metabolite_builder(model.metabolite.get(id=x.id)), reaction.products)),
                 products_stoic=list(map(lambda x: x.stoichiometry, reaction.products)),
                 reversible=reaction.reversible,
                 disabled=False
             ))
+            optgene.reactions[-1].constraint = reaction.lower_bound, reaction.upper_bound
 
         return optgene
 

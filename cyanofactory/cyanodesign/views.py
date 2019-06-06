@@ -373,7 +373,7 @@ def simulate(request, pk):
 
 @global_permission_required("access_cyanodesign")
 def export(request, pk):
-    form = request.GET.get("format", "bioopt")
+    form = request.GET.get("format")
 
     if form not in ["bioopt", "sbml", "json"]:
         return HttpResponseBadRequest("Bad format")
@@ -399,11 +399,13 @@ def export(request, pk):
 
         export_data = out.getvalue()
     elif form == "bioopt":
-        return HttpResponseBadRequest("TODO: Currently unsupported")
+        parsed_model = metabolic_model.MetabolicModel.from_json(content)
+        out = StringIO()
+        OptGeneParser.from_model(parsed_model, include_compartment=False).write(out)
+
+        export_data = out.getvalue()
     elif form == "json":
         export_data = json.dumps(content, indent='\t')
-
-    #org.to_model().dump(fileout=ss, filetype="opt" if form == "bioopt" else "sbml")
 
     types = dict(
         bioopt="application/x-bioopt",
@@ -411,12 +413,20 @@ def export(request, pk):
         json="application/json"
     )
 
+    exts = dict(
+        bioopt=".txt",
+        sbml=".xml",
+        json=".json"
+    )
+
     response = HttpResponse(
         export_data,
         content_type=types[form]
     )
 
-    response['Content-Disposition'] = "attachment; filename=" + model.filename
+    filename = os.path.splitext(model.filename)[0] + exts[form]
+
+    response['Content-Disposition'] = "attachment; filename=" + filename
 
     return response
 
