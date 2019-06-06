@@ -5,7 +5,7 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 """
 
-from io import StringIO
+from io import StringIO, BytesIO, TextIOWrapper
 import os
 import tempfile
 from django.contrib.auth.decorators import login_required
@@ -552,38 +552,60 @@ def upload(request, pk):
                 freq = request.FILES['file']
                 filename = freq.name
 
-                ss = StringIO()
+                binary = BytesIO()
                 for chunk in freq.chunks():
-                    try:
-                        ss.write(smart_str(chunk))
-                    except UnicodeDecodeError:
-                        form.add_error("file", "File does not have UTF-8 encoding")
-                        form_html = render_crispy_form(form, context=request)
-                        return {'success': False, 'form_html': form_html}
+                    binary.write(chunk)
+                binary.seek(0)
 
-                ss.seek(0)
+                if binary.read(1) == b'\x1f' and binary.read(1) == b'\x8b':
+                    # gzip
+                    binary.seek(0)
+                    import gzip
+                    data = gzip.decompress(binary.getvalue())
+                    binary = BytesIO()
+                    binary.write(data)
+
+                binary.seek(0)
+
+                def skip_bom(s):
+                    s.seek(0)
+                    s.read(1)
 
                 try:
-                    if ss.readline().startswith("<?xml"):
-                        format = "sbml"
-                    format = "opt"
-                finally:
-                    ss.seek(0)
+                    ss = TextIOWrapper(binary, encoding='utf-8')
+                    skip_bom(ss)
 
-                if format == "sbml":
-                    sbml_handler = sbml_parser.SbmlHandler()
-                    sbml_parser.push_handler(sbml_handler)
-                    content = ss.getvalue()
-                    # closes ss
-                    sbml_parser.parser.parse(ss)
-                    model = sbml_handler.model
-                else:
-                    content = ss.getvalue()
-                    bioopt = OptGeneParser(ss)
-                    model = bioopt.to_model()
+                    try:
+                        if ss.readline().startswith("<?xml"):
+                            format = "sbml"
+                        else:
+                            format = "opt"
+                    finally:
+                        skip_bom(ss)
+
+                    if format == "sbml":
+                        sbml_handler = sbml_parser.SbmlHandler()
+                        sbml_parser.push_handler(sbml_handler)
+                        content = ss.read()
+                        skip_bom(ss)
+                        # closes ss
+                        sbml_parser.parser.parse(ss)
+                        model = sbml_handler.model
+                    else:
+                        content = ss.read()
+                        skip_bom(ss)
+                        bioopt = OptGeneParser(ss)
+                        model = bioopt.to_model()
+                except UnicodeDecodeError:
+                    form.add_error("file", "File does not have UTF-8 encoding")
+                    form_html = render_crispy_form(form, context=request)
+                    return {'success': False, 'form_html': form_html}
 
                 if len(model.reactions) == 0 or len(model.metabolites) == 0:
-                    raise ValueError("Model is empty")
+                    form.add_error("file", "Model is empty")
+                    form_html = render_crispy_form(form, context=request)
+                    return {'success': False, 'form_html': form_html}
+
                 #except Exception as e:
                 #    form.add_error("file", "Not a valid model: " + str(e))
                 #    form_html = render_crispy_form(form, context=request)
