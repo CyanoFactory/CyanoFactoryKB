@@ -50,7 +50,16 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
                 if idd != obj["id"]:
                     raise ValueError("Reaction ID mismatch: " + idd)
 
+                obj["listOfReactants"] = obj["substrates"]
+                obj["listOfProducts"] = obj["products"]
+
+                del obj["substrates"]
+                del obj["products"]
+
                 model.reactions.append(metabolic_model.Reaction.from_json(obj))
+
+                model.reactions[-1].lower_bound = obj["lower_bound"]
+                model.reactions[-1].upper_bound = obj["upper_bound"]
             elif op == "edit":
                 if reaction is None:
                     raise ValueError("Reaction not in model: " + idd)
@@ -102,6 +111,8 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
                 if idd != obj["id"]:
                     raise ValueError("Metabolite ID mismatch: " + idd)
 
+                if "external" in obj:
+                    obj["compartment"] = "e" if obj["external"] else "c"
                 model.metabolite.add(metabolic_model.Metabolite.from_json(obj))
             elif op == "edit":
                 metabolite = model.metabolite.get(id=idd)
@@ -111,6 +122,8 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
                 try:
                     metabolite.compartment = obj["compartment"]
                 except KeyError:
+                    if "external" in obj:
+                        metabolite.compartment = "e" if obj["external"] else "c"
                     pass
 
                 try:
