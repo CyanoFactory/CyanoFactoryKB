@@ -428,6 +428,55 @@ class MetabolicModel(ElementBase):
 
         return res
 
+    def design_fba(self, objective=None, design_objective=None, units=None):
+        if objective is None:
+            raise ValueError("No objective specified")
+        if design_objective is None:
+            raise ValueError("No design objective specified")
+
+        #saved_obj = self.obj[:]
+        all_flux = []
+
+        for obj_idx, r in enumerate(filter(lambda x: x.enabled, self.reactions[:])):
+            if r is objective:
+                break
+
+        #for obj in self.obj:
+        #    iobj = self.reac_names.index(obj[0])
+        #    saved_constr.append(self.constr[iobj][:])
+
+        if units is None:
+            # Determine max and min of obj by constraining obj from 0 to nothing
+            flux_res: SimulationResult = self.fba(objective=objective)
+            max_flux = flux_res.results[obj_idx].flux
+
+            units = []
+
+            for i in range(0, 9):
+                units.append(round(max_flux * (i / 9), 2))
+
+            units.append(round(max_flux, 2))
+
+        for unit in units:
+            # TODO: Erster Durchlauf ohne Constraints
+            # TODO: Aufhören mit FBA wenn unfeasible
+            objective.lower_bound = unit
+            objective.upper_bound = unit
+
+            flux_res: SimulationResult = self.fba(objective=design_objective)
+            if flux_res.solution_text() != "Optimal":
+                continue
+
+            all_flux.append([unit, flux_res.results])
+
+        # Restore previous settings
+        #self.obj = saved_obj
+        #for i, obj in enumerate(self.obj):
+        #    iobj = self.reac_names.index(obj[0])
+        #    self.constr[iobj] = saved_constr[i]
+
+        return all_flux
+
 
 # Single compartment in listOfCompartments
 class Compartment(ElementBase):

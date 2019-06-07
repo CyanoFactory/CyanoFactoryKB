@@ -224,7 +224,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                 $(this.visual_fba_element).hide();
                 if (!$("#remember-simulation").prop("checked") || this.simulation_chart === undefined) {
                     var chart = {
-                        bindto: '#visual_graph',
+                        bindto: ".visual-graph",
                         data: {
                             x: 'x',
                             columns: simulation_result["graph"],
@@ -264,7 +264,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                 $(this.visual_graph_element).show();
                 $(this.visual_fba_element).hide();
                 let chart = {
-                    bindto: '#visual_graph',
+                    bindto: '.visual-graph',
                     data: {
                         x: 'x',
                         columns: simulation_result["graph"],

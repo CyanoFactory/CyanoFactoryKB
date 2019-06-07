@@ -171,28 +171,28 @@ def simulate(request, pk):
             flux_objectives[-1].coefficient =  1 if obj["maximize"] else -1
 
             if simtype == "mba" or simtype == "sa":
-                org.design_obj = []
+                #org.design_obj = []
                 for obj in design_objectives:
-                    obj_reaction = org.reaction.get(id=obj["id"])
-                    if obj_reaction is None:
+                    design_obj_reaction = org.reaction.get(id=obj["id"])
+                    if design_obj_reaction is None:
                         raise ValueError("Design objective not in model: " + obj["id"])
 
-                    if not obj_reaction.enabled:
-                        return HttpResponseBadRequest("Design objective disabled: " + obj_reaction.name)
+                    if not design_obj_reaction.enabled:
+                        return HttpResponseBadRequest("Design objective disabled: " + design_obj_reaction.name)
 
-                    org.design_obj.append([obj["id"], "1" if obj["maximize"] else "0"])
+                    #org.design_obj.append([obj["id"], "1" if obj["maximize"] else "0"])
 
-                org.target_reactions = []
+                #org.target_reactions = []
             if simtype == "sa":
                 for obj in target_reactions:
-                    obj_reaction = org.reaction.get(id=obj["id"])
-                    if obj_reaction is None:
+                    target_obj_reaction = org.reaction.get(id=obj["id"])
+                    if target_obj_reaction is None:
                         raise ValueError("Target reaction not in model: " + obj["id"])
 
-                    if not obj_reaction.enabled:
-                        return HttpResponseBadRequest("Target reaction disabled: " + obj_reaction.name)
+                    if not target_obj_reaction.enabled:
+                        return HttpResponseBadRequest("Target reaction disabled: " + target_obj_reaction.name)
 
-                    org.target_reactions.append([obj["id"], "1" if obj["maximize"] else "0"])
+                    #org.target_reactions.append([obj["id"], "1" if obj["maximize"] else "0"])
 
     except ValueError as e:
         return HttpResponseBadRequest("Model error: " + str(e))
@@ -205,7 +205,7 @@ def simulate(request, pk):
     if simtype == "fba":
         if dry_run:
             return HttpResponse(
-                json.dumps({"solution": fba.get_status()}),
+                json.dumps({"solution": fba.summary}),
                 content_type="application/json")
 
         full_g, nodeIDs = calc_reactions(org, fba, obj_reaction)
@@ -281,31 +281,30 @@ def simulate(request, pk):
             return HttpResponseBadRequest("Unknown format")
     elif simtype == "mba":
         # Determine optimal steps
-        dobj = org.design_obj[:]
 
         # Absolute
-        design_result = [["x"], [dobj[0][0]]]
+        design_result = [["x"], [design_obj_reaction.name]]
         #design_result[0] += [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1]
-        sim_result = fba.design_fba()
+        sim_result = org.design_fba(objective=obj_reaction, design_objective=design_obj_reaction)
         #dflux = [list(str(x[fba.reac_names.index(obj[0][0])]) for x in sim_result),
         #         list(x[fba.reac_names.index(dobj[0][0])] for x in sim_result)]
 
         dflux = list([x[0]] for x in sim_result)
         for lst, sim_res in zip(dflux, sim_result):
             lst.append({})
-            for name, flux in zip(fba.reac_names, sim_res[1]):
-                lst[1][name] = flux
+            for res in sim_res[1]:
+                lst[1][res.reaction] = res.flux
 
-        graph = [["x"], [dobj[0][0]]]
+        graph = [["x"], [design_obj_reaction.name]]
 
         for d in dflux:
             graph[0].append(d[0])
-            graph[1].append(d[1][dobj[0][0]])
+            graph[1].append(d[1][design_obj_reaction.name])
 
         if output_format == "json":
             return HttpResponse(json.dumps(
                 {
-                "solution": fba.get_status(),
+                "solution": fba.solution_text(),
                 "flux": dflux,
                 "graph": graph
                 }),
@@ -316,35 +315,41 @@ def simulate(request, pk):
     elif simtype == "sa":
         # Percentage
         # 1. WT conditions
-        obj = org.obj[:]
-        dobj = org.design_obj[:]
-        tobj = target_reactions[0]["name"]
-        obj_r = org.get_reaction(obj[0][0])
-        target = org.get_reaction(tobj)
-        target_flux = fba.flux[fba.reac_names.index(target.id)]
+        for tobj_idx, r in enumerate(filter(lambda x: x.enabled, org.reactions)):
+            if r is target_obj_reaction:
+                break
+        for obj_idx, r in enumerate(filter(lambda x: x.enabled, org.reactions)):
+            if r is obj_reaction:
+                break
+        for dobj_idx, r in enumerate(filter(lambda x: x.enabled, org.reactions)):
+            if r is design_obj_reaction:
+                break
 
-        design_result = [["x"], [obj[0][0]], [dobj[0][0]], ["Yield"]]
+        target_flux = fba.results[tobj_idx].flux
+
+        design_result = [["x"], [obj_reaction.id], [design_obj_reaction.id], ["Yield"]]
 
         dflux = list([x] for x in [1.0, 0.8, 0.6, 0.4, 0.2, 0.0])
 
         # 2. Limit target reaction
         for i, limit in enumerate([1.0, 0.8, 0.6, 0.4, 0.2, 0.0]):
             # Limit to a % of the target flux
-            target.constraint = (target.constraint[0], target_flux * limit)
+            target_obj_reaction.upper_bound = target_flux * limit
 
             # Optimize limited growth
-            org.obj = obj
-            fba = org.fba()
-            growth = fba.Z
+            org.obj = obj_reaction
+            res = org.fba(objective=obj_reaction)
+            growth = res.results[obj_idx].flux
 
             # Optimize production
-            obj_r.constraint = (growth, growth)
-            org.obj = dobj
-            fba = org.fba()
-            production =  fba.Z
+            obj_reaction.lower_bound = growth
+            obj_reaction.upper_bound = growth
+            res = org.fba(objective=design_obj_reaction)
+            production = res.results[dobj_idx].flux
 
             # Reset production constraint
-            obj_r.constraint = (0, None)
+            obj_reaction.lower_bound = 0
+            obj_reaction.upper_bound = None
 
             design_result[0].append(str(int(limit * 100)) + "%")
             design_result[1].append(round(growth, 4))
@@ -353,15 +358,15 @@ def simulate(request, pk):
 
             dflux[i].append({})
 
-            for reac, flux in zip(map(lambda x: x.name, fba.reacs), fba.flux):
-                dflux[i][-1][reac] = flux
+            for simres in res.results:
+                dflux[i][-1][simres.reaction] = simres.flux
 
         dflux.append(target_flux)
 
         if output_format == "json":
             return HttpResponse(json.dumps(
                 {
-                "solution": fba.get_status(),
+                "solution": fba.solution_text(),
                 "flux": dflux,
                 "graph": design_result
                 }),
