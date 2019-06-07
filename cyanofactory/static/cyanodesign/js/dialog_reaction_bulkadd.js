@@ -140,6 +140,7 @@ define(["require", "exports", "./metabolic_model", "jquery", "./metabolic_model"
                     }
                     this.app.metabolite_page.datatable.sort();
                     this.app.metabolite_page.datatable.draw();
+                    reaction.makeUnconstrained();
                     let command = {
                         "type": "reaction",
                         "id": reaction.id,
