@@ -235,7 +235,7 @@ define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "se
                 return "mba";
             }
             else if (this.sa_sim.value) {
-                return "ra";
+                return "sa";
             }
             // unreachable path
             throw new Error("getSimulationType: BUG! No type selected");

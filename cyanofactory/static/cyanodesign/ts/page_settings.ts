@@ -268,7 +268,7 @@ export class Page {
         } else if (this.mba_sim.value) {
             return "mba";
         } else if (this.sa_sim.value) {
-            return "ra";
+            return "sa";
         }
         // unreachable path
         throw new Error("getSimulationType: BUG! No type selected");
