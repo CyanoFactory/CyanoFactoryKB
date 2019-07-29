@@ -22,7 +22,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
 <div class="simulation-result">
 </div>
 
-<div class="visual-graph">
+<div class="visual-graph" style="width: 900px; height: 500px">
 </div>
 
 <div class="visual-fba">
@@ -186,10 +186,70 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             <span class="sr-only">Error:</span>' + text + '</div>';
         }
         simulate(simulation_result) {
+            /*cytoscape.use( euler );
+            let elements : cytoscape.ElementDefinition[] = [];
+    
+            for (const met of this.app.model.metabolites) {
+                elements.push({
+                    data: {
+                        id: met.id
+                    }
+                });
+            }
+    
+            for (const reac of this.app.model.reactions) {
+                for (const subst of reac.substrates) {
+                    for (const prod of reac.products) {
+                        elements.push({
+                            data: {
+                                id: reac.id + "|" + subst.id + "|" + prod.id,
+                                source: subst.id,
+                                target: prod.id
+                            }
+                        });
+                    }
+                }
+            }
+    
+            this.graph = cytoscape({
+                container: this.visual_graph_element,
+                elements: elements,
+                style: [
+                    {
+                        selector: 'node',
+                        style: {
+                            'background-color': '#666',
+                            'label': 'data(id)'
+                        }
+                    },
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 3,
+                            'line-color': '#ccc',
+                            'target-arrow-color': '#ccc',
+                            'target-arrow-shape': 'triangle'
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'euler',
+                    directed: true,
+                }
+            });*/
             let symtype = this.app.settings_page.getSimulationType();
             this.last_sim_type = symtype;
             if (symtype == "fba") {
-                let graph = Viz(simulation_result["graphstr"], "svg", "dot");
+                let viz = new Viz({ workerURL: this.app.urls.viz_full_render });
+                let graph = null; // Viz(simulation_result["graphstr"], "svg", "dot");
+                const self = this;
+                viz.renderSVGElement(simulation_result["graphstr"], { engine: 'fdp' }).then(function (element) {
+                    graph = element;
+                    $(self.visual_fba_element).show();
+                    $(self.visual_fba_element).empty();
+                    self.visual_fba_element.appendChild(graph);
+                    $(self.visual_fba_element).attr("width", "100%").attr("height", "400px");
+                });
                 if (simulation_result["solution"] == "Optimal") {
                     var obj = this.app.settings_page.getObjective();
                     this.notifyInfo("The solution is " + simulation_result["solution"] + ". Flux of objective is " + simulation_result["flux"][obj].toFixed(4));
@@ -198,11 +258,8 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                     this.notifyWarning("The solution is " + simulation_result["solution"] + ". Check if your constraints are too strict.");
                 }
                 $(this.visual_graph_element).hide();
-                $(this.visual_fba_element).show();
-                this.visual_fba_element.innerHTML = graph;
-                $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
-                let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
-                svgPan.zoom(1);
+                //let svgPan: any = svgPanZoom('.visual-fba > svg', {minZoom: 0.1, fit: false});
+                //svgPan.zoom(1);
                 this.datatable_flux.clear();
                 for (let key in simulation_result["flux"]) {
                     if (simulation_result["flux"].hasOwnProperty(key)) {

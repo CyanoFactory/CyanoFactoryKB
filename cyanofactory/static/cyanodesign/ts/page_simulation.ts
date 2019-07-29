@@ -2,6 +2,8 @@ import * as app from "./app"
 import * as mm from "./metabolic_model";
 import * as $ from "jquery";
 import "datatables.net";
+/*import * as cytoscape from "cytoscape";
+import euler from 'cytoscape-euler';*/
 
 declare var c3;
 declare var Viz;
@@ -28,7 +30,7 @@ template.innerHTML = `
 <div class="simulation-result">
 </div>
 
-<div class="visual-graph">
+<div class="visual-graph" style="width: 900px; height: 500px">
 </div>
 
 <div class="visual-fba">
@@ -83,6 +85,7 @@ export class Page {
     readonly visual_fba_element: HTMLElement;
     readonly table_element_flux: HTMLElement;
 
+    graph: cytoscape.Core;
     last_sim_type: string = "";
     last_sim_flux: number = 0;
     simulation_chart: any = null;
@@ -216,11 +219,72 @@ export class Page {
     }
 
     simulate(simulation_result: any) {
+        /*cytoscape.use( euler );
+        let elements : cytoscape.ElementDefinition[] = [];
+
+        for (const met of this.app.model.metabolites) {
+            elements.push({
+                data: {
+                    id: met.id
+                }
+            });
+        }
+
+        for (const reac of this.app.model.reactions) {
+            for (const subst of reac.substrates) {
+                for (const prod of reac.products) {
+                    elements.push({
+                        data: {
+                            id: reac.id + "|" + subst.id + "|" + prod.id,
+                            source: subst.id,
+                            target: prod.id
+                        }
+                    });
+                }
+            }
+        }
+
+        this.graph = cytoscape({
+            container: this.visual_graph_element,
+            elements: elements,
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': '#666',
+                        'label': 'data(id)'
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 3,
+                        'line-color': '#ccc',
+                        'target-arrow-color': '#ccc',
+                        'target-arrow-shape': 'triangle'
+                    }
+                }
+            ],
+            layout: {
+                name: 'euler',
+                directed: true,
+            }
+        });*/
+
         let symtype = this.app.settings_page.getSimulationType();
         this.last_sim_type = symtype;
 
         if (symtype == "fba") {
-            let graph = Viz(simulation_result["graphstr"], "svg", "dot");
+            let viz = new Viz({ workerURL: this.app.urls.viz_full_render });
+            let graph = null; // Viz(simulation_result["graphstr"], "svg", "dot");
+            const self : Page = this;
+            viz.renderSVGElement(simulation_result["graphstr"], {engine: 'fdp'}).then(function(element) {
+                graph = element;
+                $(self.visual_fba_element).show();
+                $(self.visual_fba_element).empty();
+                self.visual_fba_element.appendChild(graph);
+                $(self.visual_fba_element).attr("width", "100%").attr("height", "400px");
+            });
 
             if (simulation_result["solution"] == "Optimal") {
                 var obj = this.app.settings_page.getObjective();
@@ -230,12 +294,9 @@ export class Page {
             }
 
             $(this.visual_graph_element).hide();
-            $(this.visual_fba_element).show();
-            this.visual_fba_element.innerHTML = graph;
 
-            $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
-            let svgPan: any = svgPanZoom('.visual-fba > svg', {minZoom: 0.1, fit: false});
-            svgPan.zoom(1);
+            //let svgPan: any = svgPanZoom('.visual-fba > svg', {minZoom: 0.1, fit: false});
+            //svgPan.zoom(1);
 
             this.datatable_flux.clear();
 

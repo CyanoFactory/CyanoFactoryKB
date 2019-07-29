@@ -218,19 +218,20 @@ def simulate(request, pk):
 
         # Auto filter by FBA
         if auto_flux:
-            if len(full_g.edges()) <= 30:
-                full_eg = full_g
-            else:
-                full_eg = nx.ego_graph(full_g.reverse(), nodeIDs[obj_reaction.id], radius=3, center=False, undirected=False)
+            #if len(full_g.edges()) <= 30:
+            full_eg = full_g
+            #else:
+            #    full_eg = nx.ego_graph(full_g.reverse(), nodeIDs[obj_reaction.id], radius=3, center=False, undirected=False)
 
-            full_g.remove_edges_from(full_g.in_edges(nodeIDs[obj_reaction.id]) + full_g.out_edges(nodeIDs[obj_reaction.id]))
+            full_g.remove_edges_from(list(full_g.in_edges(nodeIDs[obj_reaction.id])))
+            full_g.remove_edges_from(list(full_g.out_edges(nodeIDs[obj_reaction.id])))
             all_edges = map(lambda x: full_eg.get_edge_data(*x)["object"]["id"], full_eg.edges())
             # Get fluxes of "edges"
             flux = []
             for reac in set(all_edges):
                 flux.append([reac, dflux[reac]])
             flux = sorted(flux, key=lambda x: -x[1])
-            display = list(map(lambda x: x[0], flux[:30]))
+            display = list(map(lambda x: x[0], flux))
         else:
             full_g.remove_edges_from(full_g.in_edges(nodeIDs[obj_reaction.id]) + full_g.out_edges(nodeIDs[obj_reaction.id]))
 

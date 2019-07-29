@@ -99,16 +99,15 @@ def calc_reactions(org: metabolic_model.MetabolicModel, fluxResults: metabolic_m
                 if enzyme.id == objective:
                     graph.add_nodes_from([(nodeDic[product.id], {"shape":"box"})])
 
-            # Check if enzyme is objective
             for substrate in enzyme.substrates:
                 for product in enzyme.products:
                     flux = changeDic[enzyme.id]
 
-                    color = "black"
+                    color = "#00000040"
                     if flux < 0:
-                        color = "red"
+                        color = "#FF000040"
                     elif flux > 0:
-                        color = "green"
+                        color = "#00FF0040"
 
                     value = flux
                     if value != 0:
@@ -121,7 +120,7 @@ def calc_reactions(org: metabolic_model.MetabolicModel, fluxResults: metabolic_m
                     if enzyme == objective:
                         attr["style"] = "dashed"
 
-                    graph.add_edge(nodeDic[substrate.id], nodeDic[product.id], attr)
+                    graph.add_edge(nodeDic[substrate.id], nodeDic[product.id], **attr)
 
                     if enzyme == objective:
                         graph.add_edge(nodeDic[substrate.id], nodeDic[enzyme.id])

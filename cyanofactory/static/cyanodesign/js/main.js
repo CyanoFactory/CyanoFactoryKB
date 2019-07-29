@@ -2,6 +2,12 @@ const cyano_prefix = "../../cyano/node_modules/";
 
 requirejs.config({
     paths: {
+        /*cytoscape: [
+            "../node_modules/cytoscape/dist/cytoscape.umd"
+        ],
+        "cytoscape-euler": [
+            "../node_modules/cytoscape-euler/cytoscape-euler"
+        ]*/
     }
 });
 
