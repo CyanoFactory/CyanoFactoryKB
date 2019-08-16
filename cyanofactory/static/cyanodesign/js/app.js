@@ -2,7 +2,7 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class AppManager {
-        constructor(mm_cls, model_json, urls) {
+        constructor(mm_cls, model_json, urls, glpk_worker) {
             this.command_list = [];
             this.model = new mm_cls.Model();
             this.model.fromJson(model_json);
@@ -10,6 +10,7 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
             this.original_model.fromJson(model_json);
             this.urls = urls;
             this.request_handler = new request_handler_1.RequestHandler(this, -1);
+            this.glpk_worker = glpk_worker;
             this.dialog_reaction = new dialog_reaction.Dialog(this);
             this.dialog_reaction_bulk = new dialog_reaction_bulkadd.Dialog(this);
             this.dialog_reaction_delete = new dialog_reaction_delete.Dialog(this);
@@ -26,12 +27,12 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
         }
     }
     exports.AppManager = AppManager;
-    function run(mm_cls, urls) {
+    function run(mm_cls, urls, glpk_worker) {
         $.ajax({
             url: urls.get_reactions,
             context: document.body
         }).done(function (x) {
-            app = new AppManager(mm_cls, x, urls);
+            app = new AppManager(mm_cls, x, urls, glpk_worker);
             app.reaction_page.init();
             app.metabolite_page.init();
             app.compartment_page.init();

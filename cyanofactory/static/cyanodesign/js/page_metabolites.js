@@ -277,6 +277,7 @@ Delete unused metabolites
                 this.app.reaction_page.datatable.row(this.app.model.reaction.checked_index("id", reac.id)).invalidate("data");
             }
             this.datatable.row(this.app.model.metabolite.checked_index("id", metabolite.id)).invalidate("data");
+            this.app.reaction_page.solve();
         }
     }
     exports.Page = Page;

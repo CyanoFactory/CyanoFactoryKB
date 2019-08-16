@@ -258,7 +258,9 @@ Released under the MIT license
             urls.design = "{% url "cyanodesign:design" pk=pk %}";
             urls.get_reactions = "{% url "cyanodesign:get_reactions" pk=pk %}{% if revision %}?revision={{ revision.pk }}{% endif %}";
 
-            callback(metabolic_model_cls, urls);
+            const glpk_worker = new Worker("{% get_static_prefix %}cyanodesign/node_modules/glpk.js/glpk-worker.js");
+
+            callback(metabolic_model_cls, urls, glpk_worker);
         };
 
         let load_model = function(callback) {

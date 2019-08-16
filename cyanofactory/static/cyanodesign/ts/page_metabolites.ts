@@ -321,6 +321,8 @@ export class Page {
         }
 
         (<any>this.datatable.row(this.app.model.metabolite.checked_index("id", metabolite.id))).invalidate("data");
+
+        this.app.reaction_page.solve();
     }
 
 }

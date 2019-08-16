@@ -1,4 +1,4 @@
-define(["require", "exports", "jquery", "datatables.net"], function (require, exports, $) {
+define(["require", "exports", "./metabolic_model", "jquery", "datatables.net"], function (require, exports, mm, $) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     let template = document.createElement('template');
@@ -9,6 +9,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             <th>Name</th>
             <th>Reaction</th>
             <th>Constraint</th>
+            <th>Flux</th>
             <th>Active</th>
             <th></th>
         </tr>
@@ -62,6 +63,7 @@ Create new metabolite
 `;
     class Page {
         constructor(where, app) {
+            this.flux = {};
             this.source_element = where;
             where.appendChild(template.content.cloneNode(true));
             this.table_element = where.getElementsByClassName("cyano-reaction-list")[0];
@@ -69,6 +71,7 @@ Create new metabolite
             this.datatable = $(this.table_element).DataTable({
                 "deferRender": true,
                 columns: [
+                    {},
                     {},
                     {},
                     {},
@@ -113,6 +116,18 @@ Create new metabolite
                     },
                     {
                         "targets": 3,
+                        "width": "10%",
+                        "orderable": false,
+                        "searchable": false,
+                        "data": function (rowData) {
+                            if (rowData.id in self.flux) {
+                                return self.flux[rowData.id];
+                            }
+                            return "";
+                        }
+                    },
+                    {
+                        "targets": 4,
                         "width": "12%",
                         "orderable": false,
                         "searchable": false,
@@ -130,7 +145,7 @@ Create new metabolite
                         }
                     },
                     {
-                        "targets": 4,
+                        "targets": 5,
                         "width": "8%",
                         "orderable": false,
                         "searchable": false,
@@ -142,7 +157,7 @@ Create new metabolite
                         }
                     },
                     {
-                        "targets": 5,
+                        "targets": 6,
                         "visible": false,
                         "orderable": true,
                         "data": function (rowData, type, set, meta) {
@@ -294,8 +309,8 @@ Create new metabolite
                 const met = self.app.model.metabolite.checked_get("id", this.dataset.id);
                 self.app.dialog_metabolite.show(met);
             });
-            // Enabled in 4th col
-            $(this.table_element).delegate('tr td:nth-child(4) input', 'change', function () {
+            // Enabled in 5th col
+            $(this.table_element).delegate('tr td:nth-child(5) input', 'change', function () {
                 let row = self.datatable.row($(this).closest("tr"));
                 let reaction = row.data();
                 reaction.enabled = ($(this).is(":checked"));
@@ -337,6 +352,104 @@ Create new metabolite
             }
             this.app.metabolite_page.datatable.draw();
             this.datatable.row(this.app.model.reaction.checked_index("id", reaction.id)).invalidate();
+            this.solve();
+        }
+        solve() {
+            this.app.glpk_worker.onerror = (err) => {
+                console.log(err);
+            };
+            this.app.glpk_worker.onmessage = (evt) => {
+                //console.log(JSON.stringify(evt.data, null, 2));
+                this.flux = {};
+                const vars = evt.data.result.vars;
+                for (const key in vars) {
+                    this.flux[key] = vars[key];
+                }
+                this.datatable.rows().invalidate();
+            };
+            if (this.app.settings_page.getObjective() == "") {
+                return;
+            }
+            let objective = {
+                name: "z",
+                direction: this.app.settings_page.maximizeObjective() ? 2 : 1,
+                vars: [{
+                        name: this.app.settings_page.getObjective(),
+                        coef: 1.0
+                    }]
+            };
+            let subjectTo = [];
+            let bounds = [];
+            let transport_reacs = [];
+            for (const met of this.app.model.metabolites) {
+                subjectTo.push({
+                    name: met.id,
+                    vars: [],
+                    bnds: { type: 5, ub: 0.0, lb: 0.0 }
+                });
+                if (met.isExternal(this.app.model)) {
+                    let r = new mm.Reaction();
+                    r.id = met.id + " <-> TRANSPORT";
+                    r.reversible = true;
+                    r.lower_bound = -10000.0;
+                    r.upper_bound = 10000.0;
+                    let mr = new mm.MetaboliteReference();
+                    mr.id = met.id;
+                    mr.stoichiometry = 1.0;
+                    r.products.push(mr);
+                    transport_reacs.push(r);
+                }
+            }
+            for (const reac of this.app.model.reactions) {
+                for (const s of reac.substrates) {
+                    subjectTo[this.app.model.metabolite.index("id", s.id)]["vars"].push({
+                        name: reac.id,
+                        coef: -s.stoichiometry
+                    });
+                }
+                for (const p of reac.products) {
+                    subjectTo[this.app.model.metabolite.index("id", p.id)]["vars"].push({
+                        name: reac.id,
+                        coef: p.stoichiometry
+                    });
+                }
+                if (reac.enabled) {
+                    bounds.push({
+                        name: reac.id,
+                        type: 4,
+                        ub: reac.upper_bound,
+                        lb: reac.lower_bound
+                    });
+                }
+                else {
+                    bounds.push({
+                        name: reac.id,
+                        type: 5,
+                        ub: 0.0,
+                        lb: 0.0
+                    });
+                }
+            }
+            for (const reac of transport_reacs) {
+                for (const p of reac.products) {
+                    subjectTo[this.app.model.metabolite.index("id", p.id)]["vars"].push({
+                        name: reac.id,
+                        coef: p.stoichiometry
+                    });
+                }
+                bounds.push({
+                    name: reac.id,
+                    type: 4,
+                    ub: reac.upper_bound,
+                    lb: reac.lower_bound
+                });
+            }
+            this.app.glpk_worker.postMessage({
+                name: 'LP',
+                objective: objective,
+                subjectTo: subjectTo,
+                bounds: bounds
+            });
         }
     }
     exports.Page = Page;
