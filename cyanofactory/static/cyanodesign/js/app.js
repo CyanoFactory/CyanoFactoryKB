@@ -1,4 +1,4 @@
-define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites", "./page_settings", "./page_simulation", "./page_history", "./dialog_reaction", "./dialog_reaction_bulkadd", "./dialog_reaction_delete", "./dialog_metabolite", "./dialog_save", "./request_handler"], function (require, exports, $, reactions, metabolites, settings, simulation, history, dialog_reaction, dialog_reaction_bulkadd, dialog_reaction_delete, dialog_metabolite, dialog_save, request_handler_1) {
+define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites", "./page_compartments", "./page_settings", "./page_simulation", "./page_history", "./dialog_reaction", "./dialog_reaction_bulkadd", "./dialog_reaction_delete", "./dialog_metabolite", "./dialog_save", "./dialog_compartment", "./request_handler"], function (require, exports, $, reactions, metabolites, compartments, settings, simulation, history, dialog_reaction, dialog_reaction_bulkadd, dialog_reaction_delete, dialog_metabolite, dialog_save, dialog_compartment, request_handler_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class AppManager {
@@ -15,8 +15,10 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
             this.dialog_reaction_delete = new dialog_reaction_delete.Dialog(this);
             this.dialog_metabolite = new dialog_metabolite.Dialog(this);
             this.dialog_save = new dialog_save.Dialog(this);
+            this.dialog_compartment = new dialog_compartment.Dialog(this);
             this.reaction_page = new reactions.Page(document.getElementById("reaction-tab"), this);
             this.metabolite_page = new metabolites.Page(document.getElementById("metabolite-tab"), this);
+            this.compartment_page = new compartments.Page(document.getElementById("compartment-tab"), this);
             //this.stoichiometry_page = new stoichiometry.Page(document.getElementById("chemical-tab")!, this);
             this.settings_page = new settings.Page(document.getElementById("settings-tab"), this);
             this.history_page = new history.Page(document.getElementById("history-tab"), this);
@@ -32,6 +34,7 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
             app = new AppManager(mm_cls, x, urls);
             app.reaction_page.init();
             app.metabolite_page.init();
+            app.compartment_page.init();
             //app.stoichiometry_page.init();
             app.settings_page.init();
             app.history_page.init();

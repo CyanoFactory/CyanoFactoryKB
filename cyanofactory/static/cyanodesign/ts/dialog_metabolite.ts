@@ -27,10 +27,10 @@ template.innerHTML = `
                             <label for="add-metabolite-name">Name</label>
                             <input type="text" class="metabolite-name form-control">
                         </div>
-
-                        <div class="checkbox">
-                            <input type="checkbox" class="metabolite-external">
-                            <label for="add-external">External</label>
+                        
+                        <div class="form-group">
+                            <label class="control-label">Compartment</label>
+                            <select class="metabolite-compartment" placeholder="Select a compartment"></select>                        
                         </div>
 
                         <div class="form-group">
@@ -58,7 +58,7 @@ export class Dialog {
 
     readonly id: ElementWrapper<string>;
     readonly name: ElementWrapper<string>;
-    readonly external: ElementWrapper<boolean>;
+    readonly compartment: ElementWrapper<string>;
     readonly formula: ElementWrapper<string>;
 
     constructor(app: app.AppManager) {
@@ -73,7 +73,7 @@ export class Dialog {
 
         this.id = ElementWrapper.byClass<string>("metabolite-id", this.dialog_element);
         this.name = ElementWrapper.byClass<string>("metabolite-name", this.dialog_element);
-        this.external = ElementWrapper.byClass<boolean>("metabolite-external", this.dialog_element);
+        this.compartment = ElementWrapper.byClass<string>("metabolite-compartment", this.dialog_element);
         this.formula = ElementWrapper.byClass<string>("metabolite-chemical", this.dialog_element);
     }
 
@@ -89,8 +89,32 @@ export class Dialog {
         // Copy to dialog
         this.id.value = this.item.id;
         this.name.value = this.item.name;
-        this.external.value = this.item.isExternal();
         this.formula.value = this.item.formula;
+
+        // add compartments
+        $(this.compartment.element).selectize({
+            valueField: 'id',
+            labelField: 'name',
+            searchField: ['name', 'id'],
+            options: this.app.model.compartments,
+            persist: false,
+            render: {
+                item: function (item: mm.Compartment, escape: any) {
+                    return "<div>" + escape(item.get_name_or_id()) + "</div>";
+                },
+                option: function (item: mm.Compartment, escape: any) {
+                    return "<div>" + escape(item.get_name_or_id()) + "</div>";
+                }
+            }
+        });
+        let sel: any = this.compartment.element.selectize;
+        sel.clearOptions();
+        for (let c of this.app.model.compartments) {
+            sel.addOption(c);
+        }
+        sel.clear();
+
+        sel.addItem(this.item.compartment);
 
         // clean up
         $(this.dialog_element).find("div").removeClass("has-error");
@@ -131,15 +155,13 @@ export class Dialog {
         let any_changed: boolean = this.create ||
             metabolite.id != this.id.value ||
             metabolite.name != this.name.value ||
-            metabolite.isExternal() != this.external.value ||
+            metabolite.compartment != this.compartment.value ||
             metabolite.formula != this.formula.value;
 
         let old_id = metabolite.id;
         metabolite.updateId(this.id.value, this.app.model);
 
-        // FIXME: Compartment configuration?
-        metabolite.compartment = this.external.value ? "e" : "c";
-
+        metabolite.compartment = this.compartment.value;
         metabolite.name = this.name.value;
         metabolite.formula = this.formula.value;
 
@@ -151,12 +173,13 @@ export class Dialog {
                 "object": {
                     "id": metabolite.id,
                     "name": metabolite.name,
-                    "external": metabolite.external,
+                    "compartment": metabolite.compartment,
                     "formula": metabolite.formula
                 }
             });
 
             this.app.metabolite_page.invalidate(metabolite);
+            this.app.compartment_page.invalidate();
         }
 
         if (this.create) {

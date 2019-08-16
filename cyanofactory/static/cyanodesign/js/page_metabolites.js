@@ -7,6 +7,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
     <thead>
         <tr>
             <th>Name</th>
+            <th>Compartment</th>
             <th>Consumed by</th>
             <th>Produced by</th>
             <th>Is External</th>
@@ -55,6 +56,7 @@ Delete unused metabolites
                     {},
                     {},
                     {},
+                    {},
                     {}
                 ],
                 columnDefs: [
@@ -66,6 +68,16 @@ Delete unused metabolites
                     },
                     {
                         "targets": 1,
+                        "data": function (rowData, type, set, meta) {
+                            const c = app.model.compartment.get("id", rowData.compartment);
+                            if (c != null) {
+                                return c.get_name_or_id();
+                            }
+                            return "";
+                        }
+                    },
+                    {
+                        "targets": 2,
                         "orderable": false,
                         "data": function (rowData, type, set, meta) {
                             return rowData.consumed;
@@ -81,7 +93,7 @@ Delete unused metabolites
                         }
                     },
                     {
-                        "targets": 2,
+                        "targets": 3,
                         "orderable": false,
                         "data": function (rowData, type, set, meta) {
                             return rowData.produced;
@@ -97,11 +109,11 @@ Delete unused metabolites
                         }
                     },
                     {
-                        "targets": 3,
+                        "targets": 4,
                         "orderable": false,
                         "searchable": false,
                         "data": function (rowData, type, set, meta) {
-                            return rowData.isExternal();
+                            return rowData.isExternal(app.model);
                         },
                         render: function (data, type, row, meta) {
                             if (type === 'copy') {
@@ -172,8 +184,8 @@ Delete unused metabolites
                     }).get();
                     const d = self.datatable.data()[dataIndex];
                     const f = [
-                        function (e) { return !e.isExternal(); },
-                        function (e) { return e.isExternal(); }
+                        function (e) { return !e.isExternal(app.model); },
+                        function (e) { return e.isExternal(app.model); }
                     ];
                     if (!(arr[0] || arr[1])) {
                         return false;
@@ -211,7 +223,7 @@ Delete unused metabolites
                 app.dialog_reaction.show(reaction);
             });
             // 4th column: External checkbox
-            $(this.table_element).delegate('tr td:nth-child(4) input', 'change', function () {
+            $(this.table_element).delegate('tr td:nth-child(5) input', 'change', function () {
                 let row = self.datatable.row($(this).closest("tr"));
                 let metabolite = row.data();
                 metabolite.compartment = $(this).is(":checked") ? "e" : "c";
@@ -222,7 +234,7 @@ Delete unused metabolites
                     "object": {
                         "id": metabolite.id,
                         "name": metabolite.name,
-                        "external": metabolite.isExternal()
+                        "compartment": metabolite.isExternal(app.model) ? app.model.getExternalCompartment().id : app.model.getDefaultCompartment().id
                     }
                 });
                 self.invalidate(metabolite);

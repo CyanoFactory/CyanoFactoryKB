@@ -9,6 +9,7 @@ template.innerHTML = `
     <thead>
         <tr>
             <th>Name</th>
+            <th>Compartment</th>
             <th>Consumed by</th>
             <th>Produced by</th>
             <th>Is External</th>
@@ -66,6 +67,7 @@ export class Page {
                     {},
                     {},
                     {},
+                    {},
                     {}
                 ],
             columnDefs: [
@@ -77,6 +79,16 @@ export class Page {
                 },
                 {
                     "targets": 1,
+                    "data": function (rowData, type, set, meta) {
+                        const c: mm.Compartment | null = app.model.compartment.get("id", rowData.compartment);
+                        if (c != null) {
+                            return c.get_name_or_id();
+                        }
+                        return "";
+                    }
+                },
+                {
+                    "targets": 2,
                     "orderable": false,
                     "data": function (rowData, type, set, meta) {
                         return rowData.consumed;
@@ -92,7 +104,7 @@ export class Page {
                     }
                 },
                 {
-                    "targets": 2,
+                    "targets": 3,
                     "orderable": false,
                     "data": function (rowData, type, set, meta) {
                         return rowData.produced;
@@ -108,11 +120,11 @@ export class Page {
                     }
                 },
                 {
-                    "targets": 3,
+                    "targets": 4,
                     "orderable": false,
                     "searchable": false,
                     "data": function (rowData, type, set, meta) {
-                        return rowData.isExternal();
+                        return rowData.isExternal(app.model);
                     },
                     render: function(data, type, row, meta) {
                         if (type === 'copy') {
@@ -191,8 +203,8 @@ export class Page {
 
                     const d = self.datatable.data()[dataIndex];
                     const f = [
-                        function(e) { return !e.isExternal() },
-                        function(e) { return e.isExternal() }
+                        function(e) { return !e.isExternal(app.model) },
+                        function(e) { return e.isExternal(app.model) }
                     ];
 
                     if (!(arr[0] || arr[1])) {
@@ -242,7 +254,7 @@ export class Page {
         });
 
         // 4th column: External checkbox
-        $(this.table_element).delegate('tr td:nth-child(4) input', 'change', function() {
+        $(this.table_element).delegate('tr td:nth-child(5) input', 'change', function() {
             let row = self.datatable.row($(this).closest("tr"));
             let metabolite = (<mm.Metabolite>row.data());
 
@@ -255,7 +267,7 @@ export class Page {
                 "object": {
                     "id": metabolite.id,
                     "name": metabolite.name,
-                    "external": metabolite.isExternal()
+                    "compartment": metabolite.isExternal(app.model) ? app.model.getExternalCompartment().id : app.model.getDefaultCompartment().id
                 }
             });
 

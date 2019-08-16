@@ -24,10 +24,10 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                             <label for="add-metabolite-name">Name</label>
                             <input type="text" class="metabolite-name form-control">
                         </div>
-
-                        <div class="checkbox">
-                            <input type="checkbox" class="metabolite-external">
-                            <label for="add-external">External</label>
+                        
+                        <div class="form-group">
+                            <label class="control-label">Compartment</label>
+                            <select class="metabolite-compartment" placeholder="Select a compartment"></select>                        
                         </div>
 
                         <div class="form-group">
@@ -58,7 +58,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             });
             this.id = dialog_helper_1.ElementWrapper.byClass("metabolite-id", this.dialog_element);
             this.name = dialog_helper_1.ElementWrapper.byClass("metabolite-name", this.dialog_element);
-            this.external = dialog_helper_1.ElementWrapper.byClass("metabolite-external", this.dialog_element);
+            this.compartment = dialog_helper_1.ElementWrapper.byClass("metabolite-compartment", this.dialog_element);
             this.formula = dialog_helper_1.ElementWrapper.byClass("metabolite-chemical", this.dialog_element);
         }
         show(metabolite = null) {
@@ -73,8 +73,30 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             // Copy to dialog
             this.id.value = this.item.id;
             this.name.value = this.item.name;
-            this.external.value = this.item.isExternal();
             this.formula.value = this.item.formula;
+            // add compartments
+            $(this.compartment.element).selectize({
+                valueField: 'id',
+                labelField: 'name',
+                searchField: ['name', 'id'],
+                options: this.app.model.compartments,
+                persist: false,
+                render: {
+                    item: function (item, escape) {
+                        return "<div>" + escape(item.get_name_or_id()) + "</div>";
+                    },
+                    option: function (item, escape) {
+                        return "<div>" + escape(item.get_name_or_id()) + "</div>";
+                    }
+                }
+            });
+            let sel = this.compartment.element.selectize;
+            sel.clearOptions();
+            for (let c of this.app.model.compartments) {
+                sel.addOption(c);
+            }
+            sel.clear();
+            sel.addItem(this.item.compartment);
             // clean up
             $(this.dialog_element).find("div").removeClass("has-error");
             $(this.dialog_element).find(".help-block").remove();
@@ -106,12 +128,11 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             let any_changed = this.create ||
                 metabolite.id != this.id.value ||
                 metabolite.name != this.name.value ||
-                metabolite.isExternal() != this.external.value ||
+                metabolite.compartment != this.compartment.value ||
                 metabolite.formula != this.formula.value;
             let old_id = metabolite.id;
             metabolite.updateId(this.id.value, this.app.model);
-            // FIXME: Compartment configuration?
-            metabolite.compartment = this.external.value ? "e" : "c";
+            metabolite.compartment = this.compartment.value;
             metabolite.name = this.name.value;
             metabolite.formula = this.formula.value;
             if (any_changed) {
@@ -122,11 +143,12 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                     "object": {
                         "id": metabolite.id,
                         "name": metabolite.name,
-                        "external": metabolite.external,
+                        "compartment": metabolite.compartment,
                         "formula": metabolite.formula
                     }
                 });
                 this.app.metabolite_page.invalidate(metabolite);
+                this.app.compartment_page.invalidate();
             }
             if (this.create) {
                 this.app.metabolite_page.datatable.row.add(metabolite);

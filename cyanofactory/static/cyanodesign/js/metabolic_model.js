@@ -111,6 +111,7 @@ define(["require", "exports"], function (require, exports) {
             this.reactions = [];
             this.compartments = [];
             this.parameters = [];
+            this.external_compartment = null;
         }
         get metabolite() {
             return new Internal.LstOp(this.metabolites, "Metabolites");
@@ -153,6 +154,46 @@ define(["require", "exports"], function (require, exports) {
                 reaction.upper_bound = param_names[reaction.upper_bound_name].value;
             }
         }
+        getDefaultCompartment() {
+            if (this.compartments.length < 1) {
+                return null;
+            }
+            if (this.compartments[0] == this.getExternalCompartment()) {
+                if (this.compartments.length < 2) {
+                    return null;
+                }
+                return this.compartments[1];
+            }
+            return this.compartments[0];
+        }
+        refreshExternalCompartment() {
+            this.external_compartment = null;
+            return this.getExternalCompartment();
+        }
+        getExternalCompartment() {
+            if (this.external_compartment != null) {
+                return this.external_compartment;
+            }
+            // based on cobrapy
+            const ext_list = ["e", "extracellular", "extraorganism", "out", "extracellular space",
+                "extra organism", "extra cellular", "extra-organism", "external",
+                "external medium"];
+            for (const c of this.compartments) {
+                for (const ext of ext_list) {
+                    if (c.id.toLowerCase() == ext) {
+                        this.external_compartment = c;
+                        return c;
+                    }
+                }
+            }
+            for (const c of this.compartments) {
+                if (c.id.toLowerCase().startsWith("e")) {
+                    this.external_compartment = c;
+                    return c;
+                }
+            }
+            return null;
+        }
     }
     exports.Model = Model;
     class Compartment extends ElementBase {
@@ -160,6 +201,21 @@ define(["require", "exports"], function (require, exports) {
             super(...arguments);
             this.constant = false;
             this.units = "";
+        }
+        updateId(new_id, model) {
+            if (new_id == this.id) {
+                return;
+            }
+            let idx = model.compartment.get("id", new_id);
+            if (idx != null) {
+                throw new Error("Compartment with ID " + new_id + " already exists");
+            }
+            for (let met of model.metabolites) {
+                if (met.compartment == this.id) {
+                    met.compartment = new_id;
+                }
+            }
+            this.id = new_id;
         }
         readAttributes(attrs) {
             for (const k in attrs) {
@@ -530,7 +586,7 @@ define(["require", "exports"], function (require, exports) {
             span.classList.add("cyano-metabolite");
             span.dataset.id = this.id;
             span.append(amount + inst.name);
-            if (inst.isExternal()) {
+            if (inst.isExternal(model)) {
                 span.classList.add("cyano-external-metabolite");
             }
             return span;
@@ -640,8 +696,8 @@ define(["require", "exports"], function (require, exports) {
         getReactions() {
             return this.consumed.concat(this.produced);
         }
-        isExternal() {
-            return this.compartment == "e";
+        isExternal(model) {
+            return this.compartment == model.getExternalCompartment().id;
         }
     }
     exports.Metabolite = Metabolite;
