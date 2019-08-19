@@ -205,6 +205,13 @@ export class Page {
         $(this.design_obj.element).selectize(obj_options);
         $(this.target_obj.element).selectize(obj_options);
 
+        const self: Page = this;
+
+        let main_obj_selectize: SelectizeType = this.main_obj.element.selectize;
+        main_obj_selectize.on('change', function() {
+            self.app.reaction_page.solve();
+        });
+
         this.refresh();
     }
 

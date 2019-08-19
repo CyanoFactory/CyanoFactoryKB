@@ -179,6 +179,11 @@ define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "se
             $(this.main_obj.element).selectize(obj_options);
             $(this.design_obj.element).selectize(obj_options);
             $(this.target_obj.element).selectize(obj_options);
+            const self = this;
+            let main_obj_selectize = this.main_obj.element.selectize;
+            main_obj_selectize.on('change', function () {
+                self.app.reaction_page.solve();
+            });
             this.refresh();
         }
         refresh(reactions = null) {

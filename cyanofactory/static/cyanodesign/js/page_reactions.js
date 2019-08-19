@@ -355,6 +355,14 @@ Create new metabolite
             this.solve();
         }
         solve() {
+            const solutions = [
+                "Undefined",
+                "Feasible",
+                "Infeasible",
+                "Not feasible",
+                "Optimal",
+                "Unbound"
+            ];
             this.app.glpk_worker.onerror = (err) => {
                 console.log(err);
             };
@@ -366,6 +374,9 @@ Create new metabolite
                     this.flux[key] = vars[key];
                 }
                 this.datatable.rows().invalidate();
+                const fn = evt.data.result.status == 5 ? this.app.simulation_page.notifyInfo : this.app.simulation_page.notifyWarning;
+                fn("The solution is " + solutions[evt.data.result.status - 1] + ". Flux of objective is " +
+                    evt.data.result.z.toFixed(4));
             };
             if (this.app.settings_page.getObjective() == "") {
                 return;

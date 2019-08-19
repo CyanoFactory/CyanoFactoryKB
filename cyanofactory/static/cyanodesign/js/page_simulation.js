@@ -122,7 +122,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             });
             let self = this;
             $(this.source_element).find(".design-submit").click(function (event) {
-                app.request_handler.simulate();
+                self.simulate();
             });
             /*FIXME$("#visual_fba").on("click", "g.node", function() {
                 var idx = Metabolite.indexByName($(this).children("text").text());
@@ -171,32 +171,32 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
         }
         ;
         notifyInfo(text) {
-            this.simulation_result_element.innerHTML = '<div class="alert alert-info" role="alert">\
+            document.getElementById("wedesign-notify-box").innerHTML = '<div class="alert alert-info" role="alert">\
             <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>\
             <span class="sr-only">Info:</span>' + text + '</div>';
         }
         notifyWarning(text) {
-            this.simulation_result_element.innerHTML = '<div class="alert alert-warning" role="alert">\
+            document.getElementById("wedesign-notify-box").innerHTML = '<div class="alert alert-warning" role="alert">\
             <span class="glyphicon glyphicon-warning-sign" aria-hidden="true"></span>\
             <span class="sr-only">Info:</span>' + text + '</div>';
         }
         notifyError(text) {
-            this.simulation_result_element.innerHTML = '<div class="alert alert-danger" role="alert">\
+            document.getElementById("wedesign-notify-box").innerHTML = '<div class="alert alert-danger" role="alert">\
             <span class="glyphicon glyphicon-exclamation-sign" aria-hidden="true"></span>\
             <span class="sr-only">Error:</span>' + text + '</div>';
         }
-        simulate(simulation_result) {
+        simulate() {
             let symtype = this.app.settings_page.getSimulationType();
             this.last_sim_type = symtype;
             if (symtype == "fba") {
-                let graph = Viz(simulation_result["graphstr"], "svg", "dot");
-                if (simulation_result["solution"] == "Optimal") {
+                let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
+                /*if (simulation_result["solution"] == "Optimal") {
                     var obj = this.app.settings_page.getObjective();
                     this.notifyInfo("The solution is " + simulation_result["solution"] + ". Flux of objective is " + simulation_result["flux"][obj].toFixed(4));
-                }
-                else {
+                } else {
                     this.notifyWarning("The solution is " + simulation_result["solution"] + ". Check if your constraints are too strict.");
                 }
+    */
                 $(this.visual_graph_element).hide();
                 $(this.visual_fba_element).show();
                 this.visual_fba_element.innerHTML = graph;
@@ -204,11 +204,8 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                 let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
                 svgPan.zoom(1);
                 this.datatable_flux.clear();
-                for (let key in simulation_result["flux"]) {
-                    if (simulation_result["flux"].hasOwnProperty(key)) {
-                        if (key.indexOf("_transp") == -1)
-                            this.datatable_flux.row.add([this.app.model.reaction.get("id", key).name, simulation_result["flux"][key]]);
-                    }
+                for (const reac of this.app.model.reactions) {
+                    this.datatable_flux.row.add([reac.get_name_or_id(), this.app.reaction_page.flux[reac.id]]);
                 }
                 this.datatable_flux.draw();
                 /*$("svg").find(".edge text").each(function() {
@@ -298,6 +295,66 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                 this.last_sim_flux = simulation_result["flux"];
                 this.updateLabels();
             }
+        }
+        createGraph(flux) {
+            let graph = 'strict digraph "" {\n' +
+                'graph [overlap=False,\n' +
+                'rankdir=LR,\n' +
+                'splines=True\n' +
+                '];\n' +
+                'node [colorscheme=pastel19,\n' +
+                'label="\\N",' +
+                'style=filled\n' +
+                '];\n';
+            const reac_offset = this.app.model.metabolites.length;
+            // Create sparse array
+            let edges = [];
+            // A_ext -> A
+            let i = 0;
+            for (const met of this.app.model.metabolites) {
+                graph += "" + i + "[color=" + ((i % 10) + 1) + ",\n" +
+                    'label=' + met.name + ',\n' +
+                    'shape=oval];\n';
+                ++i;
+            }
+            // Pen scaling factor calculation
+            let max_flux = Number.MIN_SAFE_INTEGER;
+            for (const f in flux) {
+                max_flux = Math.max(flux[f] < 0.0 ? -flux[f] : flux[f], max_flux);
+            }
+            max_flux = 10 / max_flux;
+            const obj = this.app.settings_page.getObjective();
+            for (const reac of this.app.model.reactions) {
+                for (const p of reac.products) {
+                    for (const s of reac.substrates) {
+                        let f = flux[reac.id];
+                        edges.push({
+                            label: reac.name,
+                            flux: f,
+                            color: f < 0.0 ? "red" : f > 0.0 ? "green" : "black",
+                            penwidth: f == 0.0 ? 1 : f * max_flux,
+                            left: this.app.model.metabolite.index("id", s.id),
+                            right: this.app.model.metabolite.index("id", p.id),
+                            reverse: reac.reversible,
+                            obj: reac.id == obj
+                        });
+                    }
+                }
+            }
+            i = reac_offset;
+            for (const edge of edges) {
+                graph += edge.left + " -> " + edge.right + " [color=" + edge.color + ",\n" +
+                    'label="' + edge.label + ' (' + edge.flux + ')",\n' +
+                    'penwidth=' + edge.penwidth + (edge.obj ? ',style=dashed' : '') + '];\n';
+                if (edge.reverse) {
+                    graph += edge.right + " -> " + edge.left + " [\n" +
+                        'label="' + edge.label + '",\n' +
+                        '];\n';
+                }
+                ++i;
+            }
+            graph += '}\n';
+            return graph;
         }
     }
     exports.Page = Page;
