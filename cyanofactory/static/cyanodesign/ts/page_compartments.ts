@@ -88,6 +88,8 @@ export class Page {
                         if (app.model.getDefaultCompartment() == row) {
                             return "Default Compartment";
                         }
+
+                        return "";
                     }
                 }
             ],

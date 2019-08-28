@@ -102,7 +102,7 @@ define(["require", "exports", "./metabolic_model", "jquery", "./metabolic_model"
                             metabolite.id = substrate.id;
                             metabolite.name = substrate.name;
                             this.app.model.metabolites.push(metabolite);
-                            this.app.command_list.push({
+                            this.app.history_manager.push({
                                 "type": "metabolite",
                                 "op": "add",
                                 "id": metabolite.id,
@@ -123,7 +123,7 @@ define(["require", "exports", "./metabolic_model", "jquery", "./metabolic_model"
                             metabolite.id = product.id;
                             metabolite.name = product.name;
                             this.app.model.metabolites.push(metabolite);
-                            this.app.command_list.push({
+                            this.app.history_manager.push({
                                 "type": "metabolite",
                                 "op": "add",
                                 "id": metabolite.id,
@@ -174,7 +174,7 @@ define(["require", "exports", "./metabolic_model", "jquery", "./metabolic_model"
                             this.app.metabolite_page.invalidate(met);
                         }
                     }
-                    this.app.command_list.push(command);
+                    this.app.history_manager.push(command);
                     this.app.metabolite_page.datatable.draw();
                     this.app.reaction_page.datatable.sort();
                     this.app.reaction_page.datatable.draw();

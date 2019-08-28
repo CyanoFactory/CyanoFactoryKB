@@ -16,6 +16,7 @@ import * as dialog_save from "./dialog_save"
 import * as dialog_compartment from "./dialog_compartment"
 
 import { RequestHandler } from "./request_handler"
+import { HistoryManager } from "./history_manager";
 
 declare var app : AppManager;
 
@@ -33,22 +34,23 @@ export class AppManager {
     readonly settings_page: settings.Page;
     readonly simulation_page: simulation.Page;
     readonly history_page: history.Page;
-    readonly model: mm.Model;
-    readonly original_model: mm.Model;
     readonly urls: any;
     readonly request_handler: RequestHandler;
     readonly glpk_worker: Worker;
-    public command_list: any = [];
+    readonly history_manager: HistoryManager;
+    model: mm.Model;
+    command_list: any = [];
+    old_models: string[] = [];
 
     constructor(mm_cls: any, model_json: any, urls: any, glpk_worker: Worker) {
         this.model = new mm_cls.Model();
         this.model.fromJson(model_json);
-        this.original_model = new mm_cls.Model();
-        this.original_model.fromJson(model_json);
+        this.old_models.push(model_json);
 
         this.urls = urls;
         this.request_handler = new RequestHandler(this, -1);
         this.glpk_worker = glpk_worker;
+        this.history_manager = new HistoryManager(this.command_list, this);
 
         this.dialog_reaction = new dialog_reaction.Dialog(this);
         this.dialog_reaction_bulk = new dialog_reaction_bulkadd.Dialog(this);

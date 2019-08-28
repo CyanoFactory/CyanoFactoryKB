@@ -131,7 +131,7 @@ export class Dialog {
                         metabolite.name = substrate.name;
                         this.app.model.metabolites.push(metabolite);
 
-                        this.app.command_list.push({
+                        this.app.history_manager.push({
                             "type": "metabolite",
                             "op": "add",
                             "id": metabolite.id,
@@ -155,7 +155,7 @@ export class Dialog {
                         metabolite.name = product.name;
                         this.app.model.metabolites.push(metabolite);
 
-                        this.app.command_list.push({
+                        this.app.history_manager.push({
                             "type": "metabolite",
                             "op": "add",
                             "id": metabolite.id,
@@ -214,7 +214,7 @@ export class Dialog {
                         this.app.metabolite_page.invalidate(met);
                     }
                 }
-                this.app.command_list.push(command);
+                this.app.history_manager.push(command);
 
                 this.app.metabolite_page.datatable.draw();
 

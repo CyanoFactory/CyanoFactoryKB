@@ -74,7 +74,7 @@ define(["require", "exports", "jquery"], function (require, exports, $) {
                 /*$("#dialog-save-model")["modal"]("hide");
                 endRequest($("#dialog-save-model").find(".modal-content"));
                 $("#simulation-result").html("")*/
-                self.app.command_list = [];
+                // FIXME self.app.command_list = [];
                 self.endRequest();
             }).fail(function (x) {
                 /*$("#dialog-save-model")["modal"]("hide");

@@ -373,7 +373,7 @@ export class Dialog {
                     this.app.metabolite_page.datatable.row.add(<any>met);
                     this.app.model.metabolites.push(met);
 
-                    this.app.command_list.push({
+                    this.app.history_manager.push({
                         "type": "metabolite",
                         "op": "add",
                         "id": met.id,
@@ -403,7 +403,7 @@ export class Dialog {
         reaction.updateMetaboliteReference(this.app.model);
 
         if (any_changed) {
-            this.app.command_list.push({
+            this.app.history_manager.push({
                 "type": "reaction",
                 "op": this.create ? "add" : "edit",
                 "id": old_id,

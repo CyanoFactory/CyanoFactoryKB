@@ -1,16 +1,17 @@
-define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites", "./page_compartments", "./page_settings", "./page_simulation", "./page_history", "./dialog_reaction", "./dialog_reaction_bulkadd", "./dialog_reaction_delete", "./dialog_metabolite", "./dialog_save", "./dialog_compartment", "./request_handler"], function (require, exports, $, reactions, metabolites, compartments, settings, simulation, history, dialog_reaction, dialog_reaction_bulkadd, dialog_reaction_delete, dialog_metabolite, dialog_save, dialog_compartment, request_handler_1) {
+define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites", "./page_compartments", "./page_settings", "./page_simulation", "./page_history", "./dialog_reaction", "./dialog_reaction_bulkadd", "./dialog_reaction_delete", "./dialog_metabolite", "./dialog_save", "./dialog_compartment", "./request_handler", "./history_manager"], function (require, exports, $, reactions, metabolites, compartments, settings, simulation, history, dialog_reaction, dialog_reaction_bulkadd, dialog_reaction_delete, dialog_metabolite, dialog_save, dialog_compartment, request_handler_1, history_manager_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class AppManager {
         constructor(mm_cls, model_json, urls, glpk_worker) {
             this.command_list = [];
+            this.old_models = [];
             this.model = new mm_cls.Model();
             this.model.fromJson(model_json);
-            this.original_model = new mm_cls.Model();
-            this.original_model.fromJson(model_json);
+            this.old_models.push(model_json);
             this.urls = urls;
             this.request_handler = new request_handler_1.RequestHandler(this, -1);
             this.glpk_worker = glpk_worker;
+            this.history_manager = new history_manager_1.HistoryManager(this.command_list, this);
             this.dialog_reaction = new dialog_reaction.Dialog(this);
             this.dialog_reaction_bulk = new dialog_reaction_bulkadd.Dialog(this);
             this.dialog_reaction_delete = new dialog_reaction_delete.Dialog(this);

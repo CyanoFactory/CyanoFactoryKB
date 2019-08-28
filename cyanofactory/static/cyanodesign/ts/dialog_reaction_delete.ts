@@ -75,7 +75,7 @@ export class Dialog {
             this.app.metabolite_page.invalidate(met);
         }
 
-        this.app.command_list.push({
+        this.app.history_manager.push({
             "op": "delete",
             "type": "reaction",
             "id": this.item.id,
@@ -94,7 +94,7 @@ export class Dialog {
 
                 m.remove(this.app.model);
 
-                this.app.command_list.push({
+                this.app.history_manager.push({
                     "type": "metabolite",
                     "op": "delete",
                     "id": m.id,

@@ -227,7 +227,7 @@ Delete unused metabolites
                 let row = self.datatable.row($(this).closest("tr"));
                 let metabolite = row.data();
                 metabolite.compartment = $(this).is(":checked") ? "e" : "c";
-                app.command_list.push({
+                app.history_manager.push({
                     "type": "metabolite",
                     "op": "edit",
                     "id": metabolite.id,
@@ -251,7 +251,7 @@ Delete unused metabolites
                     var idx = app.model.metabolite.checked_index("id", m.id);
                     app.metabolite_page.datatable.row(idx).remove();
                     m.remove(app.model);
-                    app.command_list.push({
+                    app.history_manager.push({
                         "type": "metabolite",
                         "op": "delete",
                         "id": m.id,

@@ -260,7 +260,7 @@ export class Page {
 
             metabolite.compartment = $(this).is(":checked") ? "e" : "c";
 
-            app.command_list.push({
+            app.history_manager.push({
                 "type": "metabolite",
                 "op": "edit",
                 "id": metabolite.id,
@@ -289,7 +289,7 @@ export class Page {
                 app.metabolite_page.datatable.row(idx).remove();
                 m.remove(app.model);
 
-                app.command_list.push({
+                app.history_manager.push({
                     "type": "metabolite",
                     "op": "delete",
                     "id": m.id,

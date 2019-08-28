@@ -11,10 +11,8 @@ All done
 Metabolites:
 - Consumed by Tooltips uses name, not id
 - Clicking reactions uses name, not id
-- Compartment handling
 
 Settings:
-- Max/Min Toggle
 - Sim Type Toggle
 - FBA settings Toggle
 - FBA select vis reaction

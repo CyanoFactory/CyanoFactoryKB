@@ -314,7 +314,7 @@ Create new metabolite
                 let row = self.datatable.row($(this).closest("tr"));
                 let reaction = row.data();
                 reaction.enabled = ($(this).is(":checked"));
-                app.command_list.push({
+                app.history_manager.push({
                     "type": "reaction",
                     "op": "edit",
                     "id": reaction.id,

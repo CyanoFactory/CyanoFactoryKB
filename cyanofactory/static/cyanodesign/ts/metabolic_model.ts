@@ -8,7 +8,7 @@ Released under the MIT license
 export const LOWER_BOUND_LIMIT = -100000.0;
 export const UPPER_BOUND_LIMIT = 100000.0;
 
-namespace Internal {
+export namespace Internal {
     export class ClassBuilder {
         constructor(private typeObj: any) {
 
@@ -21,11 +21,11 @@ namespace Internal {
 
     export class LstOp<T extends ElementBase> {
         readonly lst: T[];
-        readonly tname: string;
+        readonly type: any;
 
-        constructor(list: T[], typename: string) {
+        constructor(list: T[], type: any) {
             this.lst = list;
-            this.tname = typename;
+            this.type = type;
         }
 
         get(key: string, value: any): T | null {
@@ -40,7 +40,7 @@ namespace Internal {
         checked_get(key: string, value: any): T {
             let val = this.get(key, value);
             if (val == null) {
-                throw new Error(this.tname + ": No object (" + key + ", " + value + ") found");
+                throw new Error(this.type.constructor.name + ": No object (" + key + ", " + value + ") found");
             }
             return val;
         }
@@ -73,7 +73,34 @@ namespace Internal {
                 }
                 ++i;
             }
-            throw new Error(this.tname + ": No object (" + key + ", " + value + ") found");
+            throw new Error(this.type.constructor.name + ": No object (" + key + ", " + value + ") found");
+        }
+
+        add(item: T) {
+            if (this.has("id", item)) {
+                throw new Error(this.type.constructor.name + ": " + item.id + " is already in the list");
+            }
+
+            this.lst.push(item);
+        }
+
+        remove(key: string, value: any): boolean {
+            let i = 0;
+            let ret: boolean = false;
+            while (i < this.lst.length) {
+                const item: any = this.lst[i];
+                if (item[key] == value) {
+                    this.lst.splice(i, 1);
+                    ret = true;
+                } else {
+                    ++i;
+                }
+            }
+            return ret;
+        }
+
+        create(): T {
+            return new this.type();
         }
     }
 }
@@ -123,19 +150,19 @@ export class Model extends ElementBase {
     external_compartment: Compartment = null;
 
     get metabolite() {
-        return new Internal.LstOp(this.metabolites, "Metabolites");
+        return new Internal.LstOp(this.metabolites, Metabolite);
     }
 
     get reaction() {
-        return new Internal.LstOp(this.reactions, "Reactions");
+        return new Internal.LstOp(this.reactions, Reaction);
     }
 
     get compartment() {
-        return new Internal.LstOp(this.compartments, "Compartments");
+        return new Internal.LstOp(this.compartments, Compartment);
     }
 
     get parameter() {
-        return new Internal.LstOp(this.parameters, "Parameters");
+        return new Internal.LstOp(this.parameters, Parameter);
     }
 
     //objectives;
@@ -221,6 +248,8 @@ export class Model extends ElementBase {
 
         return null;
     }
+
+    fba():
 }
 
 export class Compartment extends ElementBase {

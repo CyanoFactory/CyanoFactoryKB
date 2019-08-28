@@ -356,7 +356,7 @@ export class Page {
 
             reaction.enabled = ($(this).is(":checked"));
 
-            app.command_list.push({
+            app.history_manager.push({
                 "type": "reaction",
                 "op": "edit",
                 "id": reaction.id,

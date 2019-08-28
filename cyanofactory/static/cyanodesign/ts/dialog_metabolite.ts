@@ -166,7 +166,7 @@ export class Dialog {
         metabolite.formula = this.formula.value;
 
         if (any_changed) {
-            this.app.command_list.push({
+            this.app.history_manager.push({
                 "type": "metabolite",
                 "op": this.create ? "add" : "edit",
                 "id": old_id,

@@ -119,7 +119,7 @@ export class Dialog {
         compartment.name = this.name.value;
 
         if (any_changed) {
-            this.app.command_list.push({
+            this.app.history_manager.push({
                 "type": "compartment",
                 "op": this.create ? "add" : "edit",
                 "id": old_id,

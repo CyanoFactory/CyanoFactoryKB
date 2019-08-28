@@ -310,7 +310,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                         met.name = i;
                         this.app.metabolite_page.datatable.row.add(met);
                         this.app.model.metabolites.push(met);
-                        this.app.command_list.push({
+                        this.app.history_manager.push({
                             "type": "metabolite",
                             "op": "add",
                             "id": met.id,
@@ -334,7 +334,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             this.app.metabolite_page.datatable.draw();
             reaction.updateMetaboliteReference(this.app.model);
             if (any_changed) {
-                this.app.command_list.push({
+                this.app.history_manager.push({
                     "type": "reaction",
                     "op": this.create ? "add" : "edit",
                     "id": old_id,

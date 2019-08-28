@@ -57,7 +57,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             for (let met of this.item.getMetabolites(this.app.model)) {
                 this.app.metabolite_page.invalidate(met);
             }
-            this.app.command_list.push({
+            this.app.history_manager.push({
                 "op": "delete",
                 "type": "reaction",
                 "id": this.item.id,
@@ -72,7 +72,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                 }).forEach((m) => {
                     this.app.metabolite_page.datatable.row(this.app.model.metabolite.checked_index("id", m.id)).remove();
                     m.remove(this.app.model);
-                    this.app.command_list.push({
+                    this.app.history_manager.push({
                         "type": "metabolite",
                         "op": "delete",
                         "id": m.id,

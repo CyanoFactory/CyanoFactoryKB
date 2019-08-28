@@ -21,9 +21,9 @@ define(["require", "exports"], function (require, exports) {
         }
         Internal.ClassBuilder = ClassBuilder;
         class LstOp {
-            constructor(list, typename) {
+            constructor(list, type) {
                 this.lst = list;
-                this.tname = typename;
+                this.type = type;
             }
             get(key, value) {
                 for (let item of this.lst) {
@@ -36,7 +36,7 @@ define(["require", "exports"], function (require, exports) {
             checked_get(key, value) {
                 let val = this.get(key, value);
                 if (val == null) {
-                    throw new Error(this.tname + ": No object (" + key + ", " + value + ") found");
+                    throw new Error(this.type.constructor.name + ": No object (" + key + ", " + value + ") found");
                 }
                 return val;
             }
@@ -66,11 +66,35 @@ define(["require", "exports"], function (require, exports) {
                     }
                     ++i;
                 }
-                throw new Error(this.tname + ": No object (" + key + ", " + value + ") found");
+                throw new Error(this.type.constructor.name + ": No object (" + key + ", " + value + ") found");
+            }
+            add(item) {
+                if (this.has("id", item)) {
+                    throw new Error(this.type.constructor.name + ": " + item.id + " is already in the list");
+                }
+                this.lst.push(item);
+            }
+            remove(key, value) {
+                let i = 0;
+                let ret = false;
+                while (i < this.lst.length) {
+                    const item = this.lst[i];
+                    if (item[key] == value) {
+                        this.lst.splice(i, 1);
+                        ret = true;
+                    }
+                    else {
+                        ++i;
+                    }
+                }
+                return ret;
+            }
+            create() {
+                return new this.type();
             }
         }
         Internal.LstOp = LstOp;
-    })(Internal || (Internal = {}));
+    })(Internal = exports.Internal || (exports.Internal = {}));
     class ElementBase {
         constructor() {
             this.id = "";
@@ -114,16 +138,16 @@ define(["require", "exports"], function (require, exports) {
             this.external_compartment = null;
         }
         get metabolite() {
-            return new Internal.LstOp(this.metabolites, "Metabolites");
+            return new Internal.LstOp(this.metabolites, Metabolite);
         }
         get reaction() {
-            return new Internal.LstOp(this.reactions, "Reactions");
+            return new Internal.LstOp(this.reactions, Reaction);
         }
         get compartment() {
-            return new Internal.LstOp(this.compartments, "Compartments");
+            return new Internal.LstOp(this.compartments, Compartment);
         }
         get parameter() {
-            return new Internal.LstOp(this.parameters, "Parameters");
+            return new Internal.LstOp(this.parameters, Parameter);
         }
         //objectives;
         //groups;
