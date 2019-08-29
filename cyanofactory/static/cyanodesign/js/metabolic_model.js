@@ -218,6 +218,88 @@ define(["require", "exports"], function (require, exports) {
             }
             return null;
         }
+        fba(glpk_worker, obj, maximize) {
+            let objective = {
+                name: "z",
+                direction: maximize ? 2 : 1,
+                vars: [{
+                        name: obj.id,
+                        coef: 1.0
+                    }]
+            };
+            let subjectTo = [];
+            let bounds = [];
+            let transport_reacs = [];
+            for (const met of this.metabolites) {
+                subjectTo.push({
+                    name: met.id,
+                    vars: [],
+                    bnds: { type: 5, ub: 0.0, lb: 0.0 }
+                });
+                if (met.isExternal(this)) {
+                    let r = new Reaction();
+                    r.id = met.id + " <-> TRANSPORT";
+                    r.reversible = true;
+                    r.lower_bound = -10000.0;
+                    r.upper_bound = 10000.0;
+                    let mr = new MetaboliteReference();
+                    mr.id = met.id;
+                    mr.stoichiometry = 1.0;
+                    r.products.push(mr);
+                    transport_reacs.push(r);
+                }
+            }
+            for (const reac of this.reactions) {
+                for (const s of reac.substrates) {
+                    subjectTo[this.metabolite.index("id", s.id)]["vars"].push({
+                        name: reac.id,
+                        coef: -s.stoichiometry
+                    });
+                }
+                for (const p of reac.products) {
+                    subjectTo[this.metabolite.index("id", p.id)]["vars"].push({
+                        name: reac.id,
+                        coef: p.stoichiometry
+                    });
+                }
+                if (reac.enabled) {
+                    bounds.push({
+                        name: reac.id,
+                        type: 4,
+                        ub: reac.upper_bound,
+                        lb: reac.lower_bound
+                    });
+                }
+                else {
+                    bounds.push({
+                        name: reac.id,
+                        type: 5,
+                        ub: 0.0,
+                        lb: 0.0
+                    });
+                }
+            }
+            for (const reac of transport_reacs) {
+                for (const p of reac.products) {
+                    subjectTo[this.metabolite.index("id", p.id)]["vars"].push({
+                        name: reac.id,
+                        coef: p.stoichiometry
+                    });
+                }
+                bounds.push({
+                    name: reac.id,
+                    type: 4,
+                    ub: reac.upper_bound,
+                    lb: reac.lower_bound
+                });
+            }
+            glpk_worker.postMessage({
+                name: 'LP',
+                objective: objective,
+                subjectTo: subjectTo,
+                bounds: bounds
+            });
+        }
     }
     exports.Model = Model;
     class Compartment extends ElementBase {

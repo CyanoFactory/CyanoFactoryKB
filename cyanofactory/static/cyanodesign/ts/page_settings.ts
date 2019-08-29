@@ -209,7 +209,7 @@ export class Page {
 
         let main_obj_selectize: SelectizeType = this.main_obj.element.selectize;
         main_obj_selectize.on('change', function() {
-            self.app.reaction_page.solve();
+            self.app.simulation_page.solve();
         });
 
         this.refresh();

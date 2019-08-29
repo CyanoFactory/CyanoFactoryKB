@@ -13,7 +13,6 @@ Metabolites:
 - Clicking reactions uses name, not id
 
 Settings:
-- Sim Type Toggle
 - FBA settings Toggle
 - FBA select vis reaction
 - Axis labeling
@@ -21,8 +20,7 @@ Settings:
 Simulation:
 - Export as image
 - Export as vector
-- MBA sim
-- RA sim
+- RA sim (-> Chart)
 - Combine with previous sim
 
 Dialog Reaction:
@@ -32,3 +30,7 @@ Dialog Reaction:
 - Invalidate rendering of metabolites that are not used anymore
 
 Dialog Bulk add reaction
+- Reactions not added
+
+Graph:
+- Reduce graph when the network is huge

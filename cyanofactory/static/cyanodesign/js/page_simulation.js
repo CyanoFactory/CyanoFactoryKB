@@ -70,6 +70,8 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
         constructor(where, app) {
             this.last_sim_type = "";
             this.last_sim_flux = 0;
+            this.last_sim_objective = null;
+            this.last_sim_design_objecive = null;
             this.simulation_chart = null;
             this.is_dragging = false;
             this.source_element = where;
@@ -188,15 +190,9 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
         simulate() {
             let symtype = this.app.settings_page.getSimulationType();
             this.last_sim_type = symtype;
+            this.last_sim_objective = this.app.model.reaction.get("id", this.app.settings_page.getObjective());
             if (symtype == "fba") {
                 let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
-                /*if (simulation_result["solution"] == "Optimal") {
-                    var obj = this.app.settings_page.getObjective();
-                    this.notifyInfo("The solution is " + simulation_result["solution"] + ". Flux of objective is " + simulation_result["flux"][obj].toFixed(4));
-                } else {
-                    this.notifyWarning("The solution is " + simulation_result["solution"] + ". Check if your constraints are too strict.");
-                }
-    */
                 $(this.visual_graph_element).hide();
                 $(this.visual_fba_element).show();
                 this.visual_fba_element.innerHTML = graph;
@@ -219,82 +215,357 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             else if (symtype == "mba") {
                 $(this.visual_graph_element).show();
                 $(this.visual_fba_element).hide();
-                if (!$("#remember-simulation").prop("checked") || this.simulation_chart === undefined) {
-                    var chart = {
-                        bindto: ".visual-graph",
-                        data: {
-                            x: 'x',
-                            columns: simulation_result["graph"],
-                            type: 'bar',
-                            axes: {} /*,
-                            onclick: chart_clicked*/
-                        },
-                        axis: {
-                            x: {
-                                label: {
-                                    position: "outer-center"
-                                },
-                                type: 'category'
-                            },
-                            y: {
-                                label: {
-                                    position: "outer-middle"
-                                }
-                            }
-                        }
-                    };
-                    chart["data"]["axes"][this.app.settings_page.getObjective()] = "y";
-                    this.simulation_chart = c3.generate(chart);
-                }
-                else {
-                    this.simulation_chart.load({
-                        columns: [
-                        //FIXME[cyano_design_design_objective_select.val()].concat(simulation_result["graph"][1])
-                        ],
-                        type: 'bar'
-                    });
-                }
-                this.last_sim_flux = simulation_result["flux"];
-                this.updateLabels();
+                this.design_fba();
             }
             else if (symtype == "sa") {
                 $(this.visual_graph_element).show();
                 $(this.visual_fba_element).hide();
-                let chart = {
-                    bindto: '.visual-graph',
-                    data: {
-                        x: 'x',
-                        columns: simulation_result["graph"],
-                        type: 'bar',
-                        axes: {} /*,
-                        onclick: chart_clicked*/
-                    },
-                    axis: {
-                        x: {
-                            label: {
-                                position: "outer-center"
-                            },
-                            type: 'category'
-                        },
-                        y: {
-                            label: {
-                                position: "outer-middle"
-                            }
-                        },
-                        y2: {
-                            label: {
-                                position: "outer-middle"
-                            },
-                            show: true
-                        }
-                    }
-                };
-                chart["data"]["axes"][this.app.settings_page.getObjective()] = "y";
-                //FIXMEchart["data"]["axes"][cyano_design_design_objective_select.val()] = "y2";
-                this.simulation_chart = c3.generate(chart);
-                this.last_sim_flux = simulation_result["flux"];
-                this.updateLabels();
+                this.target_fba();
             }
+        }
+        solve() {
+            const solutions = [
+                "Undefined",
+                "Feasible",
+                "Infeasible",
+                "Not feasible",
+                "Optimal",
+                "Unbound"
+            ];
+            this.app.glpk_worker.onerror = (err) => {
+                console.log(err);
+            };
+            this.app.glpk_worker.onmessage = (evt) => {
+                this.app.reaction_page.flux = {};
+                const vars = evt.data.result.vars;
+                for (const key in vars) {
+                    this.app.reaction_page.flux[key] = vars[key];
+                }
+                this.app.reaction_page.datatable.rows().invalidate();
+                const fn = evt.data.result.status == 5 ? this.app.simulation_page.notifyInfo : this.app.simulation_page.notifyWarning;
+                fn("The solution is " + solutions[evt.data.result.status - 1] + ". Flux of objective is " +
+                    evt.data.result.z.toFixed(4));
+            };
+            this.app.model.fba(this.app.glpk_worker, this.app.model.reaction.get("id", this.app.settings_page.getObjective()), this.app.settings_page.maximizeObjective());
+        }
+        design_fba() {
+            const obj = this.app.model.reaction.get("id", this.app.settings_page.getObjective());
+            const design_obj = this.app.model.reaction.get("id", this.app.settings_page.getDesignObjective());
+            const obj_copy = Object.assign({}, obj);
+            let all_flux = [];
+            let units = [];
+            this.app.glpk_worker.onerror = (err) => {
+                console.log(err);
+            };
+            const chart_clicked = (d) => {
+                const solutions = [
+                    "Undefined",
+                    "Feasible",
+                    "Infeasible",
+                    "Not feasible",
+                    "Optimal",
+                    "Unbound"
+                ];
+                this.app.glpk_worker.onmessage = (evt) => {
+                    obj.lower_bound = obj_copy.lower_bound;
+                    obj.upper_bound = obj_copy.upper_bound;
+                    this.app.reaction_page.flux = {};
+                    const vars = evt.data.result.vars;
+                    for (const key in vars) {
+                        this.app.reaction_page.flux[key] = vars[key];
+                    }
+                    this.app.reaction_page.datatable.rows().invalidate();
+                    const fn = evt.data.result.status == 5 ? this.app.simulation_page.notifyInfo : this.app.simulation_page.notifyWarning;
+                    fn("The solution is " + solutions[evt.data.result.status - 1] + ". Flux of objective is " +
+                        evt.data.result.z.toFixed(4));
+                    // create FBA graph
+                    let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
+                    $(this.visual_fba_element).show();
+                    this.visual_fba_element.innerHTML = graph;
+                    $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
+                    let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
+                    svgPan.zoom(1);
+                    this.datatable_flux.clear();
+                    for (const reac of this.app.model.reactions) {
+                        this.datatable_flux.row.add([reac.get_name_or_id(), this.app.reaction_page.flux[reac.id]]);
+                    }
+                    this.datatable_flux.draw();
+                };
+                const constraint = this.simulation_chart.categories()[d.index];
+                obj.lower_bound = constraint;
+                obj.upper_bound = constraint;
+                this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective());
+            };
+            // Determine max and min of obj by constraining obj from 0 to nothing
+            this.app.glpk_worker.onmessage = (evt) => {
+                const max_flux = evt.data.result.z;
+                for (let i = 0; i < 9; ++i) {
+                    units.push((max_flux * (i / 9)) /*.toFixed(2)*/);
+                }
+                units.push(max_flux);
+                const simulate_fn = () => {
+                    if (units.length == 0) {
+                        // Done, restore defaults
+                        obj.lower_bound = obj_copy.lower_bound;
+                        obj.upper_bound = obj_copy.upper_bound;
+                        // Render chart
+                        $(this.visual_graph_element).show();
+                        $(this.visual_fba_element).hide();
+                        let graph = [['x'], []];
+                        graph[1].push(design_obj.get_name_or_id());
+                        for (const fluxes of all_flux) {
+                            graph[0].push(fluxes[0]);
+                            graph[1].push(fluxes[1]);
+                        }
+                        if (!$("#remember-simulation").prop("checked") || this.simulation_chart === undefined) {
+                            let chart = {
+                                bindto: ".visual-graph",
+                                data: {
+                                    x: 'x',
+                                    columns: graph,
+                                    type: 'bar',
+                                    axes: {},
+                                    onclick: chart_clicked
+                                },
+                                axis: {
+                                    x: {
+                                        label: {
+                                            position: "outer-center"
+                                        },
+                                        type: 'category'
+                                    },
+                                    y: {
+                                        label: {
+                                            position: "outer-middle"
+                                        }
+                                    }
+                                }
+                            };
+                            chart["data"]["axes"][obj.get_name_or_id()] = "y";
+                            this.simulation_chart = c3.generate(chart);
+                        }
+                        else {
+                            this.simulation_chart.load({
+                                columns: [
+                                //FIXME[cyano_design_design_objective_select.val()].concat(simulation_result["graph"][1])
+                                ],
+                                type: 'bar'
+                            });
+                        }
+                        //this.last_sim_flux = flux;
+                        this.updateLabels();
+                        return;
+                    }
+                    const unit = units[0];
+                    units.splice(0, 1);
+                    obj.lower_bound = unit;
+                    obj.upper_bound = unit;
+                    this.app.glpk_worker.onmessage = (evt) => {
+                        all_flux.push([unit, evt.data.result.z]);
+                        simulate_fn();
+                    };
+                    this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective());
+                };
+                simulate_fn();
+            };
+            this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective());
+        }
+        target_fba() {
+            const obj = this.app.model.reaction.get("id", this.app.settings_page.getObjective());
+            const design_obj = this.app.model.reaction.get("id", this.app.settings_page.getDesignObjective());
+            const target_obj = this.app.model.reaction.get("id", this.app.settings_page.getTargetObjective());
+            const obj_copy = Object.assign({}, obj);
+            const target_copy = Object.assign({}, target_obj);
+            let design_result;
+            const chart_clicked = (d) => {
+                const solutions = [
+                    "Undefined",
+                    "Feasible",
+                    "Infeasible",
+                    "Not feasible",
+                    "Optimal",
+                    "Unbound"
+                ];
+                /*
+    
+                    // Limit target reaction to measured growth
+                    var reaction = getEnzymeByName(cyano_design_target_objective_select.val());
+                    var constraint = simulation_chart.categories()[d.index]; // Upper constraint
+    
+                    var command = {
+                        "type": "reaction",
+                        "id": reaction.id,
+                        "op": "edit",
+                        "object": jQuery.extend(true, {}, reaction)
+                    };
+    
+                    if (command["object"].constraints.length == 0) {
+                        command["object"].constraints = [0, 0];
+                    }
+    
+                    command["object"].constraints[1] = last_sim_flux[last_sim_flux.length - 1] * last_sim_flux[d.index][0];
+    
+                    command_list.push(command);
+    
+                    reaction = getEnzymeByName(cyano_design_objective_select.val());
+                    constraint = last_sim_flux[d.index][1][reaction.name];
+    
+                    var command = {
+                        "type": "reaction",
+                        "id": reaction.id,
+                        "op": "edit",
+                        "object": jQuery.extend(true, {}, reaction)
+                    };
+    
+                    command["object"].constraints = [constraint, constraint];
+    
+                    command_list.push(command);
+    
+                    var data = beginRequest();
+    
+                    command_list.pop();
+                    command_list.pop();
+    
+                 */
+                this.app.glpk_worker.onmessage = (evt) => {
+                    obj.lower_bound = obj_copy.lower_bound;
+                    obj.upper_bound = obj_copy.upper_bound;
+                    this.app.reaction_page.flux = {};
+                    const vars = evt.data.result.vars;
+                    for (const key in vars) {
+                        this.app.reaction_page.flux[key] = vars[key];
+                    }
+                    this.app.reaction_page.datatable.rows().invalidate();
+                    const fn = evt.data.result.status == 5 ? this.app.simulation_page.notifyInfo : this.app.simulation_page.notifyWarning;
+                    fn("The solution is " + solutions[evt.data.result.status - 1] + ". Flux of objective is " +
+                        evt.data.result.z.toFixed(4));
+                    // create FBA graph
+                    let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
+                    $(this.visual_fba_element).show();
+                    this.visual_fba_element.innerHTML = graph;
+                    $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
+                    let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
+                    svgPan.zoom(1);
+                    this.datatable_flux.clear();
+                    for (const reac of this.app.model.reactions) {
+                        this.datatable_flux.row.add([reac.get_name_or_id(), this.app.reaction_page.flux[reac.id]]);
+                    }
+                    this.datatable_flux.draw();
+                };
+                const constraint = this.simulation_chart.categories()[d.index];
+                obj.lower_bound = constraint;
+                obj.upper_bound = constraint;
+                target_obj.lower_bound = 0.0;
+                target_obj.upper_bound = design_result;
+                this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective());
+            };
+            this.app.glpk_worker.onerror = (err) => {
+                console.log(err);
+            };
+            this.app.glpk_worker.onmessage = (evt) => {
+                let target_flux = 0.0;
+                const vars = evt.data.result.vars;
+                for (const key in vars) {
+                    if (key == target_obj.id) {
+                        target_flux = vars[key];
+                        break;
+                    }
+                }
+                design_result = [["x"], [obj.id], [design_obj.id], ["Yield"]];
+                let perc = [1.0, 0.8, 0.6, 0.4, 0.2, 0.0];
+                //let dflux: any[] = [];
+                const simulate_fn = () => {
+                    if (perc.length == 0) {
+                        // Done, restore defaults
+                        obj.lower_bound = obj_copy.lower_bound;
+                        obj.upper_bound = obj_copy.upper_bound;
+                        target_obj.lower_bound = target_copy.lower_bound;
+                        target_obj.upper_bound = target_copy.upper_bound;
+                        // Render chart
+                        $(this.visual_graph_element).show();
+                        $(this.visual_fba_element).hide();
+                        if (!$("#remember-simulation").prop("checked") || this.simulation_chart === undefined) {
+                            let chart = {
+                                bindto: ".visual-graph",
+                                data: {
+                                    x: 'x',
+                                    columns: design_result,
+                                    type: 'bar',
+                                    axes: {},
+                                    onclick: chart_clicked
+                                },
+                                axis: {
+                                    x: {
+                                        label: {
+                                            position: "outer-center"
+                                        },
+                                        type: 'category'
+                                    },
+                                    y: {
+                                        label: {
+                                            position: "outer-middle"
+                                        }
+                                    },
+                                    y2: {
+                                        label: {
+                                            position: "outer-middle"
+                                        },
+                                        show: true
+                                    }
+                                }
+                            };
+                            chart["data"]["axes"][obj.get_name_or_id()] = "y";
+                            chart["data"]["axes"][design_obj.get_name_or_id()] = "y2";
+                            this.simulation_chart = c3.generate(chart);
+                        }
+                        else {
+                            this.simulation_chart.load({
+                                columns: [
+                                //FIXME[cyano_design_design_objective_select.val()].concat(simulation_result["graph"][1])
+                                ],
+                                type: 'bar'
+                            });
+                        }
+                        //this.last_sim_flux = flux;
+                        this.updateLabels();
+                        return;
+                    }
+                    // Limit to a % of the target flux
+                    const unit = perc[0] * target_flux;
+                    const per = perc[0];
+                    perc.splice(0, 1);
+                    target_obj.upper_bound = unit;
+                    // Optimize limited growth
+                    this.app.glpk_worker.onmessage = (evt) => {
+                        const growth = evt.data.result.z;
+                        // Optimize production
+                        obj.lower_bound = growth;
+                        obj.upper_bound = growth;
+                        this.app.glpk_worker.onmessage = (evt) => {
+                            const production = evt.data.result.z;
+                            // Reset production constraint
+                            obj.lower_bound = 0;
+                            obj.upper_bound = 100000;
+                            design_result[0].push((per * 100) + "%");
+                            design_result[1].push(growth);
+                            design_result[2].push(production);
+                            design_result[3].push(growth * production);
+                            /*let f: any = {};
+                            dflux.push(f);
+    
+                            const vars = evt.data.result.vars;
+                            for (const key in vars) {
+                                f[key] = vars[key];
+                            }*/
+                            simulate_fn();
+                        };
+                        this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective());
+                    };
+                    this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective());
+                };
+                simulate_fn();
+            };
+            this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective());
         }
         createGraph(flux) {
             let graph = 'strict digraph "" {\n' +
