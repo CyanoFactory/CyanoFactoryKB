@@ -33,135 +33,45 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
         except KeyError:
             raise ValueError("Bad command " + str(command))
 
-        if typ not in ["reaction", "metabolite", "group"]:
+        if typ not in ["reaction", "metabolite", "compartment"]:
             raise ValueError("Bad object type {} in command {}".format(typ, command))
 
         if op not in ["add", "edit", "delete"]:
             raise ValueError("Bad operation {} in command {}".format(op, command))
 
-        if typ == "reaction":
-            reaction = model.reaction.get(id=idd)  # type: metabolic_model.Reaction
+        if op in ["add", "edit"]:
+            if "id" not in obj:
+                raise ValueError("Invalid object")
 
-            verify_object(obj, command)
+        fn: metabolic_model.LstOp = getattr(model, typ)
 
-            if op == "add":
-                if reaction is not None:
-                    raise ValueError("Reaction already in model: " + idd)
-                if idd != obj["id"]:
-                    raise ValueError("Reaction ID mismatch: " + idd)
+        if op == "add":
+            if fn.has(id=idd):
+                raise ValueError("{} {} already in model".format(typ, idd))
 
-                obj["listOfReactants"] = obj["substrates"]
-                obj["listOfProducts"] = obj["products"]
+            if idd != obj["id"]:
+                raise ValueError("{} vs {} ID mismatch".format(idd, obj["id"]))
 
-                del obj["substrates"]
-                del obj["products"]
+            instance = fn.create()
 
-                model.reactions.append(metabolic_model.Reaction.from_json(obj))
+            instance.apply(obj)
 
-                model.reactions[-1].lower_bound = obj["lower_bound"]
-                model.reactions[-1].upper_bound = obj["upper_bound"]
-            elif op == "edit":
-                if reaction is None:
-                    raise ValueError("Reaction not in model: " + idd)
+            fn.add(instance)
+        elif op == "edit":
+            instance = fn.get(id=idd)
 
-                if obj["id"] != reaction.id:
-                    model.reaction.change_id(obj["id"], id=reaction.id)
+            if instance is None:
+                raise ValueError("{} {} is not in the model".format(typ, idd))
 
-                reaction.id = obj["id"]
-                if "name" in obj:
-                    reaction.name = obj["name"]
+            if instance.id != obj["id"] and fn.has(id=obj["id"]):
+                raise ValueError("Rename {} {} -> {} is already in the model".format(typ, instance.id, obj["id"]))
 
-                if "substrates" in obj and "products" in obj:
-                    reaction.substrates = list(
-                        metabolic_model.MetaboliteReference.from_json(j) for j in obj["substrates"])
-                    reaction.products = list(
-                        metabolic_model.MetaboliteReference.from_json(j) for j in obj["products"])
+            instance.apply(obj)
+        elif op == "delete":
+            if not fn.has(id=idd):
+                raise ValueError("{} {} not in model".format(typ, idd))
 
-                try:
-                    reaction.reversible = obj["reversible"]
-                except KeyError:
-                    pass
-
-                try:
-                    reaction.lower_bound = obj["lower_bound"]
-                    reaction.upper_bound = obj["upper_bound"]
-                except KeyError:
-                    pass
-
-                # FIXME
-                #try:
-                #    reaction.pathway = obj["pathway"]
-                #except KeyError:
-                #    pass
-
-                try:
-                    reaction.enabled = obj["enabled"]
-                except KeyError:
-                    pass
-            elif op == "delete":
-                model.reaction.remove(id=reaction.id)
-            else:
-                raise ValueError("Invalid operation " + op)
-
-        elif typ == "metabolite":
-            if op in ["add", "edit"] and "id" not in obj:
-                raise ValueError("Metabolite: Bad command " + str(command))
-
-            if op == "add":
-                if idd != obj["id"]:
-                    raise ValueError("Metabolite ID mismatch: " + idd)
-
-                if "external" in obj:
-                    obj["compartment"] = "e" if obj["external"] else "c"
-                model.metabolite.add(metabolic_model.Metabolite.from_json(obj))
-            elif op == "edit":
-                metabolite = model.metabolite.get(id=idd)
-                if metabolite is None:
-                    raise ValueError("Metabolite not in model: " + idd)
-
-                try:
-                    metabolite.compartment = obj["compartment"]
-                except KeyError:
-                    if "external" in obj:
-                        metabolite.compartment = "e" if obj["external"] else "c"
-                    pass
-
-                try:
-                    metabolite.name = obj["name"]
-                except KeyError:
-                    pass
-
-                if idd != obj["id"]:
-                    model.metabolite.change_id(obj["id"], id=idd)
-
-                    for reac in model.reactions:
-                        for substrate in reac.substrates:
-                            if substrate.id == idd:
-                                substrate.id = obj["id"]
-                        for product in reac.products:
-                            if product.id == idd:
-                                product.id = obj["id"]
-
-            elif op == "delete":
-                model.metabolite.remove(idd)
-            else:
-                raise ValueError("Invalid operation " + op)
-
-        # FIXME
-        #elif typ == "pathway":
-        #    if "id" not in obj:
-        #        raise ValueError("Bad command " + str(command))
-
-        #    if op == "edit":
-        #        for reac in model.enzymes:
-        #            if reac.pathway == name:
-        #                reac.pathway = obj["id"]
-
-        #    else:
-        #        raise ValueError("Invalid operation " + op)
-
-        else:
-            raise ValueError("Invalid command " + typ)
+            fn.remove(id=idd)
 
     return model
 

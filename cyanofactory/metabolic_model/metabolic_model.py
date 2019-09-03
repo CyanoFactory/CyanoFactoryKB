@@ -113,14 +113,21 @@ class ElementBase(object):
             for item in jlst:
                 lst.append(cls.from_json(item))
 
+    def apply(self, new_obj):
+        raise ValueError("Apply not implemented for object {}".format(type(self)))
+
 class LstOp:
-    def __init__(self, lst):
+    def __init__(self, lst, cls):
         self.lst = lst
+        self.cls = cls
 
     def add(self, obj):
         if self.has(id=obj.id):
             raise ValueError("{} already in list".format(obj))
         self.lst.append(obj)
+
+    def create(self):
+        return self.cls()
 
     def has(self, **kwargs):
         return self.get(**kwargs) is not None
@@ -183,20 +190,24 @@ class MetabolicModel(ElementBase):
         super().__init__()
 
     @property
+    def compartment(self):
+        return LstOp(self.compartments, Compartment)
+
+    @property
     def reaction(self):
-        return LstOp(self.reactions)
+        return LstOp(self.reactions, Reaction)
 
     @property
     def metabolite(self):
-        return LstOp(self.metabolites)
+        return LstOp(self.metabolites, Metabolite)
 
     @property
     def group(self):
-        return LstOp(self.groups)
+        return LstOp(self.groups, Group)
 
     @property
     def parameter(self):
-        return LstOp(self.parameters)
+        return LstOp(self.parameters, Parameter)
 
     def read_attributes(self, attrs):
         for k, v in attrs.items():
@@ -486,6 +497,10 @@ class Compartment(ElementBase):
 
         super().__init__()
 
+    def apply(self, new_obj):
+        self.id = new_obj.get("id", self.id)
+        self.name = new_obj.get("name", self.name)
+
     def read_attributes(self, attrs):
         for k, v in attrs.items():
             if k == "constant":
@@ -522,6 +537,12 @@ class Metabolite(ElementBase):
         self.has_only_substance_units = False
 
         super().__init__()
+
+    def apply(self, new_obj):
+        self.id = new_obj.get("id", self.id)
+        self.name = new_obj.get("name", self.name)
+        self.compartment = new_obj.get("compartment", self.compartment)
+        self.formula = new_obj.get("formula", self.formula)
 
     def is_external(self):
         return self.compartment == "e"
@@ -581,6 +602,35 @@ class Reaction(ElementBase):
         self.enabled = True
 
         super().__init__()
+
+    def apply(self, new_obj):
+        self.id = new_obj.get("id", self.id)
+        self.name = new_obj.get("name", self.name)
+        self.lower_bound = new_obj.get("lower_bound", self.lower_bound)
+        self.upper_bound = new_obj.get("upper_bound", self.upper_bound)
+        self.enabled = new_obj.get("enabled", self.enabled)
+
+        if "substrates" in new_obj:
+            if type(new_obj["substrates"]) is not list:
+                raise ValueError("substrates is not a list")
+
+            self.substrates = []
+            new_obj_subst = new_obj["substrates"]
+            for subst in new_obj_subst:
+                mr = MetaboliteReference()
+                mr.stoichiometry = subst.get("stoichiometry")
+                self.substrates.append(mr)
+
+        if "products" in new_obj:
+            if type(new_obj["products"]) is not list:
+                raise ValueError("products is not a list")
+
+            self.products = []
+            new_obj_prod = new_obj["products"]
+            for prod in new_obj_prod:
+                mr = MetaboliteReference()
+                mr.stoichiometry = prod.get("stoichiometry")
+                self.products.append(mr)
 
     def is_constrained(self, model: MetabolicModel):
         return self.lower_bound != model.lower_bound_ref.value or self.upper_bound != model.upper_bound_ref
