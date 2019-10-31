@@ -27,13 +27,11 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                             <label for="reaction-pathway">Pathway</label>
                             <select class="reaction-pathway" placeholder="Select or enter pathway"></select>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group reaction-substrates">
                             <label for="reaction-substrates">Substrates</label>
-                            <input class="reaction-substrates" type="text">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group reaction-products">
                             <label for="reaction-products">Products</label>
-                            <input class="reaction-products" type="text">
                         </div>
                         <div class="checkbox">
                             <input type="checkbox" name="enabled" class="enabled">
@@ -68,12 +66,37 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
     </div>
 </div>
 `;
+    let template_metabolite = document.createElement('template');
+    template_metabolite.innerHTML = `
+<div class="form-group form-inline metabolites">
+<input class="form-control metabolite-amount" style="width:10%;" type="text">
+<input class="form-control metabolite-id" style="width:85%" type="text">
+</div>
+`;
     class Dialog {
         constructor(app) {
             this.item = null;
             this.create = true;
-            this.substrate_refs = [];
-            this.product_refs = [];
+            this.obj_options = {
+                maxItems: 1,
+                valueField: 'id',
+                searchField: ['name', 'id'],
+                create: function (input) {
+                    let met = new mm.Metabolite();
+                    met.id = input; // todo: sluggify
+                    met.name = input;
+                    return met;
+                },
+                render: {
+                    item: function (item, escape) {
+                        return "<div>" + escape(item.get_name_or_id()) + "</div>";
+                    },
+                    option: function (item, escape) {
+                        return "<div>" + escape(item.get_name_or_id()) + "</div>";
+                    }
+                },
+                placeholder: "Select metabolite to add"
+            };
             this.app = app;
             document.body.appendChild(template.content.cloneNode(true));
             this.dialog_element = document.body.getElementsByClassName("dialog-reaction")[0];
@@ -83,25 +106,13 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             });
             this.id = dialog_helper_1.ElementWrapper.byClass("reaction-id", this.dialog_element);
             this.name = dialog_helper_1.ElementWrapper.byClass("reaction-name", this.dialog_element);
-            this.substrates = dialog_helper_1.ElementWrapper.byClass("reaction-substrates", this.dialog_element);
-            this.products = dialog_helper_1.ElementWrapper.byClass("reaction-products", this.dialog_element);
+            this.substrates = this.dialog_element.getElementsByClassName("reaction-substrates")[0];
+            this.products = this.dialog_element.getElementsByClassName("reaction-products")[0];
             this.enabled = dialog_helper_1.ElementWrapper.byClass("enabled", this.dialog_element);
             this.reversible = dialog_helper_1.ElementWrapper.byClass("reversible", this.dialog_element);
             this.constrained = dialog_helper_1.ElementWrapper.byClass("constrained", this.dialog_element);
             this.constrained_min = dialog_helper_1.ElementWrapper.byClass("constrained-min", this.dialog_element);
             this.constrained_max = dialog_helper_1.ElementWrapper.byClass("constrained-max", this.dialog_element);
-            for (const met of this.app.model.metabolites) {
-                let sref = new mm.MetaboliteReference();
-                let pref = new mm.MetaboliteReference();
-                sref.id = met.id;
-                sref.name = met.name;
-                sref.stoichiometry = 1;
-                pref.id = met.id;
-                pref.name = met.name;
-                pref.stoichiometry = 1;
-                this.substrate_refs.push(sref);
-                this.product_refs.push(pref);
-            }
         }
         show(reaction) {
             if (reaction == null) {
@@ -122,101 +133,17 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             this.constrained.value = this.item.isConstrained();
             this.constrained_min.value = this.item.lower_bound.toString();
             this.constrained_max.value = this.item.upper_bound.toString();
-            this.substrate_refs = [];
-            this.product_refs = [];
-            for (const met of this.app.model.metabolites) {
-                let sref = new mm.MetaboliteReference();
-                let pref = new mm.MetaboliteReference();
-                sref.id = met.id;
-                sref.name = met.name;
-                sref.stoichiometry = 1;
-                pref.id = met.id;
-                pref.name = met.name;
-                pref.stoichiometry = 1;
-                this.substrate_refs.push(sref);
-                this.product_refs.push(pref);
-            }
-            // FIXME: HACK
-            for (let substrate of this.item.substrates) {
-                for (let ref of this.substrate_refs) {
-                    if (substrate.id == ref.id) {
-                        ref.stoichiometry = substrate.stoichiometry;
-                        break;
-                    }
-                }
-            }
-            for (let product of this.item.products) {
-                for (let ref of this.product_refs) {
-                    if (product.id == ref.id) {
-                        ref.stoichiometry = product.stoichiometry;
-                        break;
-                    }
-                }
-            }
+            // cleanup
+            $(this.dialog_element).find(".metabolites").remove();
             // Update dropdowns
-            let obj_options = {
-                valueField: 'id',
-                labelField: 'name',
-                searchField: ['name', 'id'],
-                options: this.substrate_refs,
-                persist: false,
-                plugins: {
-                    'drag_drop': {},
-                    'remove_button': {},
-                    'restore_on_backspace': {
-                        'text': function (item) {
-                            return item.toString();
-                        }
-                    },
-                    'add_option_hook': {}
-                },
-                render: {
-                    item: function (item, escape) {
-                        return "<div>" + escape(item.toString()) + "</div>";
-                    },
-                    option: function (item, escape) {
-                        return "<div>" + escape(item.get_name_or_id()) + "</div>";
-                    }
-                },
-                create: function (input) {
-                    let met = new mm.MetaboliteReference();
-                    met.id = input; // todo: sluggify
-                    met.name = input;
-                    met.stoichiometry = 1;
-                    const split = input.split(/\s+/, 1);
-                    if (split.length == 1) {
-                        const num = dialog_helper_1.DialogHelper.getFloat(split[0]);
-                        if (Number.isFinite(num) && num > 0) {
-                            met.stoichiometry = num;
-                            let remain = input.substring(split[0].length + 1);
-                            met.id = remain;
-                            met.name = remain;
-                        }
-                    }
-                    return met;
-                }
-            };
-            $(this.substrates.element).selectize(obj_options);
-            let substrates_selectize = this.substrates.element.selectize;
-            substrates_selectize.clearOptions();
-            for (let ref of this.substrate_refs) {
-                substrates_selectize.addOption(ref);
-            }
-            substrates_selectize.clear();
             for (const metref of reaction.substrates) {
-                substrates_selectize.addItem(metref.id);
+                this.addSubstrate(metref);
             }
-            obj_options["options"] = this.product_refs;
-            $(this.products.element)["selectize"](obj_options);
-            let products_selectize = this.products.element.selectize;
-            products_selectize.clearOptions();
-            for (let ref of this.product_refs) {
-                products_selectize.addOption(ref);
-            }
-            products_selectize.clear();
+            this.addSubstrate(null);
             for (const metref of reaction.products) {
-                products_selectize.addItem(metref.id);
+                this.addProduct(metref);
             }
+            this.addProduct(null);
             // constraint div visibility
             const constraint_div = $(this.dialog_element).find(".constraints-min-max");
             if (reaction.isConstrained()) {
@@ -263,6 +190,14 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                     valid = valid && dialog_helper_1.DialogHelper.checkBool(this.constrained_min.element, cmin_float <= cmax_float, "Min constraint must less or equal to Max constraint");
                 }
             }
+            for (const met of this.substrates.getElementsByClassName("metabolites")) {
+                const amount = dialog_helper_1.DialogHelper.getFloat(met.getElementsByClassName("metabolite-amount")[0].value);
+                valid = valid && dialog_helper_1.DialogHelper.checkBool(met.getElementsByClassName("metabolite-amount")[0], Number.isFinite(amount), "Value must be numerc");
+            }
+            for (const met of this.products.getElementsByClassName("metabolites")) {
+                const amount = dialog_helper_1.DialogHelper.getFloat(met.getElementsByClassName("metabolite-amount")[0].value);
+                valid = valid && dialog_helper_1.DialogHelper.checkBool(met.getElementsByClassName("metabolite-amount")[0], Number.isFinite(amount), "Value must be numerc");
+            }
             if (!valid) {
                 return false;
             }
@@ -294,20 +229,23 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                 reaction.upper_bound = cmax_float;
             }
             /* substrates & products */
-            let substrates_selectize = this.substrates.element.selectize;
-            let products_selectize = this.products.element.selectize;
             // remove all metabolites
             reaction.substrates = [];
             reaction.products = [];
             // add metabolites
             const met_adder = (mets, target) => {
-                for (const i of mets.items) {
-                    let met = this.app.model.metabolite.get("id", i);
+                for (const i of mets.getElementsByClassName("metabolites")) {
+                    const amount = i.getElementsByClassName("metabolite-amount")[0].value;
+                    const id = i.getElementsByClassName("metabolite-id")[0].value;
+                    if (id == "") {
+                        continue;
+                    }
+                    let met = this.app.model.metabolite.get("id", id);
                     if (met == null) {
                         // is a new metabolite
                         met = new mm.Metabolite();
-                        met.id = i; // Todo: Sluggify
-                        met.name = i;
+                        met.id = id; // Todo: Sluggify
+                        met.name = id;
                         this.app.metabolite_page.datatable.row.add(met);
                         this.app.model.metabolites.push(met);
                         this.app.history_manager.push({
@@ -323,13 +261,13 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                         });
                     }
                     let metref = new mm.MetaboliteReference();
-                    metref.id = i;
-                    metref.stoichiometry = mets.options[metref.id].stoichiometry;
+                    metref.id = id;
+                    metref.stoichiometry = amount;
                     target.push(metref);
                 }
             };
-            met_adder(substrates_selectize, reaction.substrates);
-            met_adder(products_selectize, reaction.products);
+            met_adder(this.substrates, reaction.substrates);
+            met_adder(this.products, reaction.products);
             this.app.metabolite_page.datatable.sort();
             this.app.metabolite_page.datatable.draw();
             reaction.updateMetaboliteReference(this.app.model);
@@ -360,6 +298,60 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
             this.app.history_page.refresh();
             $(this.dialog_element)["modal"]("hide");
             return true;
+        }
+        addSubstrate(metabolite) {
+            let child = template_metabolite.content.cloneNode(true);
+            const amount = child.children[0].children[0];
+            const name = child.children[0].children[1];
+            this.substrates.appendChild(child);
+            amount.value = "1";
+            $(name).selectize(this.obj_options);
+            let selectize = name.selectize;
+            for (const met of this.app.model.metabolites) {
+                selectize.addOption(met);
+            }
+            if (metabolite != null) {
+                amount.value = metabolite.stoichiometry;
+                selectize.setValue(metabolite.id);
+            }
+            const self = this;
+            selectize.on("blur", function () {
+                if (this.$dropdown.get()[0] == $(self.substrates).find(".metabolite-id").last().get()[0]) {
+                    if (this.getValue() != "") {
+                        self.addSubstrate(null);
+                    }
+                }
+                else if (this.getValue() == "") {
+                    this.$dropdown.get()[0].parentNode.parentNode.remove();
+                }
+            });
+        }
+        addProduct(metabolite) {
+            let child = template_metabolite.content.cloneNode(true);
+            const amount = child.children[0].children[0];
+            const name = child.children[0].children[1];
+            this.products.appendChild(child);
+            amount.value = "1";
+            $(name).selectize(this.obj_options);
+            let selectize = name.selectize;
+            for (const met of this.app.model.metabolites) {
+                selectize.addOption(met);
+            }
+            if (metabolite != null) {
+                amount.value = metabolite.stoichiometry;
+                selectize.setValue(metabolite.id);
+            }
+            const self = this;
+            selectize.on("blur", function () {
+                if (this.$dropdown.get()[0] == $(self.products).find(".metabolite-id").last().get()[0]) {
+                    if (this.getValue() != "") {
+                        self.addProduct(null);
+                    }
+                }
+                else if (this.getValue() == "") {
+                    this.$dropdown.get()[0].parentNode.parentNode.remove();
+                }
+            });
         }
     }
     exports.Dialog = Dialog;

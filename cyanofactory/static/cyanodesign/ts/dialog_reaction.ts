@@ -31,13 +31,11 @@ template.innerHTML = `
                             <label for="reaction-pathway">Pathway</label>
                             <select class="reaction-pathway" placeholder="Select or enter pathway"></select>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group reaction-substrates">
                             <label for="reaction-substrates">Substrates</label>
-                            <input class="reaction-substrates" type="text">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group reaction-products">
                             <label for="reaction-products">Products</label>
-                            <input class="reaction-products" type="text">
                         </div>
                         <div class="checkbox">
                             <input type="checkbox" name="enabled" class="enabled">
@@ -73,6 +71,14 @@ template.innerHTML = `
 </div>
 `;
 
+let template_metabolite = document.createElement('template');
+template_metabolite.innerHTML = `
+<div class="form-group form-inline metabolites">
+<input class="form-control metabolite-amount" style="width:10%;" type="text">
+<input class="form-control metabolite-id" style="width:85%" type="text">
+</div>
+`;
+
 export class Dialog {
     readonly app: app.AppManager;
     readonly datatable: DataTables.Api;
@@ -82,16 +88,34 @@ export class Dialog {
 
     readonly id: ElementWrapper<string>;
     readonly name: ElementWrapper<string>;
-    readonly substrates: ElementWrapper<string>;
-    readonly products: ElementWrapper<string>;
+    readonly substrates: HTMLDivElement;
+    readonly products: HTMLDivElement;
     readonly enabled: ElementWrapper<boolean>;
     readonly reversible: ElementWrapper<boolean>;
     readonly constrained: ElementWrapper<boolean>;
     readonly constrained_min: ElementWrapper<string>;
     readonly constrained_max: ElementWrapper<string>;
 
-    public substrate_refs: mm.MetaboliteReference[] = [];
-    public product_refs: mm.MetaboliteReference[] = [];
+    readonly obj_options: any = {
+        maxItems: 1,
+        valueField: 'id',
+        searchField: ['name', 'id'],
+        create: function (input: string) {
+            let met = new mm.Metabolite();
+            met.id = input; // todo: sluggify
+            met.name = input;
+            return met;
+        },
+        render: {
+            item: function(item: mm.Reaction, escape: any) {
+                return "<div>" + escape(item.get_name_or_id()) + "</div>";
+            },
+            option: function(item: mm.Reaction, escape: any) {
+                return "<div>" + escape(item.get_name_or_id()) + "</div>";
+            }
+        },
+        placeholder: "Select metabolite to add"
+    };
 
     constructor(app: app.AppManager) {
         this.app = app;
@@ -105,29 +129,13 @@ export class Dialog {
 
         this.id = ElementWrapper.byClass<string>("reaction-id", this.dialog_element);
         this.name = ElementWrapper.byClass<string>("reaction-name", this.dialog_element);
-        this.substrates = ElementWrapper.byClass<string>("reaction-substrates", this.dialog_element);
-        this.products = ElementWrapper.byClass<string>("reaction-products", this.dialog_element);
+        this.substrates = <HTMLDivElement>this.dialog_element.getElementsByClassName("reaction-substrates")[0]!;
+        this.products = <HTMLDivElement>this.dialog_element.getElementsByClassName("reaction-products")[0]!;
         this.enabled = ElementWrapper.byClass<boolean>("enabled", this.dialog_element);
         this.reversible = ElementWrapper.byClass<boolean>("reversible", this.dialog_element);
         this.constrained = ElementWrapper.byClass<boolean>("constrained", this.dialog_element);
         this.constrained_min = ElementWrapper.byClass<string>("constrained-min", this.dialog_element);
         this.constrained_max = ElementWrapper.byClass<string>("constrained-max", this.dialog_element);
-
-        for (const met of this.app.model.metabolites) {
-            let sref = new mm.MetaboliteReference();
-            let pref = new mm.MetaboliteReference();
-
-            sref.id = met.id;
-            sref.name = met.name;
-            sref.stoichiometry = 1;
-
-            pref.id = met.id;
-            pref.name = met.name;
-            pref.stoichiometry = 1;
-
-            this.substrate_refs.push(sref);
-            this.product_refs.push(pref);
-        }
     }
 
     show(reaction: mm.Reaction) {
@@ -150,117 +158,19 @@ export class Dialog {
         this.constrained_min.value = this.item.lower_bound.toString();
         this.constrained_max.value = this.item.upper_bound.toString();
 
-        this.substrate_refs = [];
-        this.product_refs = [];
-
-        for (const met of this.app.model.metabolites) {
-            let sref = new mm.MetaboliteReference();
-            let pref = new mm.MetaboliteReference();
-
-            sref.id = met.id;
-            sref.name = met.name;
-            sref.stoichiometry = 1;
-
-            pref.id = met.id;
-            pref.name = met.name;
-            pref.stoichiometry = 1;
-
-            this.substrate_refs.push(sref);
-            this.product_refs.push(pref);
-        }
-
-        // FIXME: HACK
-        for (let substrate of this.item.substrates) {
-            for (let ref of this.substrate_refs) {
-                if (substrate.id == ref.id) {
-                    ref.stoichiometry = substrate.stoichiometry;
-                    break;
-                }
-            }
-        }
-
-        for (let product of this.item.products) {
-            for (let ref of this.product_refs) {
-                if (product.id == ref.id) {
-                    ref.stoichiometry = product.stoichiometry;
-                    break;
-                }
-            }
-        }
+        // cleanup
+        $(this.dialog_element).find(".metabolites").remove();
 
         // Update dropdowns
-        let obj_options: any = {
-            valueField: 'id',
-            labelField: 'name',
-            searchField: ['name', 'id'],
-            options: this.substrate_refs,
-            persist: false,
-            plugins: {
-                'drag_drop' : {},
-                'remove_button': {},
-                'restore_on_backspace' : {
-                    'text': function(item: mm.MetaboliteReference) {
-                        return item.toString();
-                    }
-                },
-                'add_option_hook' : {}
-            },
-            render: {
-                item: function(item: mm.MetaboliteReference, escape: any) {
-                    return "<div>" + escape(item.toString()) + "</div>";
-                },
-                option: function(item: mm.MetaboliteReference, escape: any) {
-                    return "<div>" + escape(item.get_name_or_id()) + "</div>";
-                }
-            },
-            create: function (input: string) {
-                let met = new mm.MetaboliteReference();
-                met.id = input; // todo: sluggify
-                met.name = input;
-                met.stoichiometry = 1;
-
-                const split: string[] = input.split(/\s+/, 1);
-                if (split.length == 1) {
-                    const num: number = DialogHelper.getFloat(split[0]);
-                    if (Number.isFinite(num) && num > 0) {
-                        met.stoichiometry = num;
-
-                        let remain = input.substring(split[0].length + 1);
-                        met.id = remain;
-                        met.name = remain;
-                    }
-                }
-
-                return met;
-           }
-        };
-
-        $(this.substrates.element).selectize(obj_options);
-        let substrates_selectize: any = this.substrates.element.selectize;
-        substrates_selectize.clearOptions();
-        for (let ref of this.substrate_refs) {
-            substrates_selectize.addOption(ref);
-        }
-
-        substrates_selectize.clear();
-
         for (const metref of reaction.substrates) {
-            substrates_selectize.addItem(metref.id);
+            this.addSubstrate(metref);
         }
-
-        obj_options["options"] = this.product_refs;
-        $(this.products.element)["selectize"](obj_options);
-        let products_selectize: any = this.products.element.selectize;
-        products_selectize.clearOptions();
-        for (let ref of this.product_refs) {
-            products_selectize.addOption(ref);
-        }
-
-        products_selectize.clear();
+        this.addSubstrate(null);
 
         for (const metref of reaction.products) {
-            products_selectize.addItem(metref.id);
+            this.addProduct(metref);
         }
+        this.addProduct(null);
 
         // constraint div visibility
         const constraint_div: JQuery<HTMLElement> = $(this.dialog_element).find(".constraints-min-max");
@@ -318,6 +228,15 @@ export class Dialog {
             }
         }
 
+        for (const met of this.substrates.getElementsByClassName("metabolites")) {
+            const amount = DialogHelper.getFloat(met.getElementsByClassName("metabolite-amount")[0]!.value);
+            valid = valid && DialogHelper.checkBool(met.getElementsByClassName("metabolite-amount")[0]!, Number.isFinite(amount), "Value must be numerc");
+        }
+        for (const met of this.products.getElementsByClassName("metabolites")) {
+            const amount = DialogHelper.getFloat(met.getElementsByClassName("metabolite-amount")[0]!.value);
+            valid = valid && DialogHelper.checkBool(met.getElementsByClassName("metabolite-amount")[0]!, Number.isFinite(amount), "Value must be numerc");
+        }
+
         if (!valid) {
             return false;
         }
@@ -354,8 +273,6 @@ export class Dialog {
         }
 
         /* substrates & products */
-        let substrates_selectize: any = this.substrates.element.selectize;
-        let products_selectize: any = this.products.element.selectize;
 
         // remove all metabolites
         reaction.substrates = [];
@@ -363,13 +280,20 @@ export class Dialog {
 
         // add metabolites
         const met_adder = (mets: any, target: mm.MetaboliteReference[]) => {
-            for (const i of mets.items) {
-                let met: mm.Metabolite | null = this.app.model.metabolite.get("id", i);
+            for (const i of mets.getElementsByClassName("metabolites")) {
+                const amount = i.getElementsByClassName("metabolite-amount")[0]!.value;
+                const id = i.getElementsByClassName("metabolite-id")[0]!.value;
+
+                if (id == "") {
+                    continue;
+                }
+
+                let met: mm.Metabolite | null = this.app.model.metabolite.get("id", id);
                 if (met == null) {
                     // is a new metabolite
                     met = new mm.Metabolite();
-                    met.id = i; // Todo: Sluggify
-                    met.name = i;
+                    met.id = id; // Todo: Sluggify
+                    met.name = id;
                     this.app.metabolite_page.datatable.row.add(<any>met);
                     this.app.model.metabolites.push(met);
 
@@ -387,15 +311,15 @@ export class Dialog {
                 }
 
                 let metref = new mm.MetaboliteReference();
-                metref.id = i;
-                metref.stoichiometry = mets.options[metref.id].stoichiometry;
+                metref.id = id;
+                metref.stoichiometry = amount;
 
                 target.push(metref);
             }
         };
 
-        met_adder(substrates_selectize, reaction.substrates);
-        met_adder(products_selectize, reaction.products);
+        met_adder(this.substrates, reaction.substrates);
+        met_adder(this.products, reaction.products);
 
         this.app.metabolite_page.datatable.sort();
         this.app.metabolite_page.datatable.draw();
@@ -435,5 +359,73 @@ export class Dialog {
         $(this.dialog_element)["modal"]("hide");
 
         return true;
+    }
+
+    private addSubstrate(metabolite: mm.MetaboliteReference | null) {
+        let child: any = template_metabolite.content.cloneNode(true);
+        const amount = child.children[0].children[0];
+        const name = child.children[0].children[1];
+
+        this.substrates.appendChild(child);
+
+        amount.value = "1";
+
+        $(name).selectize(this.obj_options);
+
+        let selectize: any = name.selectize;
+        for (const met of this.app.model.metabolites) {
+            selectize.addOption(met);
+        }
+
+        if (metabolite != null) {
+            amount.value = metabolite.stoichiometry;
+            selectize.setValue(metabolite.id);
+        }
+
+        const self: Dialog = this;
+
+        selectize.on("blur", function() {
+            if (this.$dropdown.get()[0] == $(self.substrates).find(".metabolite-id").last().get()[0]) {
+                if (this.getValue() != "") {
+                    self.addSubstrate(null);
+                }
+            } else if (this.getValue() == "") {
+                this.$dropdown.get()[0].parentNode.parentNode.remove();
+            }
+        });
+    }
+
+    private addProduct(metabolite: mm.MetaboliteReference | null) {
+        let child: any = template_metabolite.content.cloneNode(true);
+        const amount = child.children[0].children[0];
+        const name = child.children[0].children[1];
+
+        this.products.appendChild(child);
+
+        amount.value = "1";
+
+        $(name).selectize(this.obj_options);
+
+        let selectize: any = name.selectize;
+        for (const met of this.app.model.metabolites) {
+            selectize.addOption(met);
+        }
+
+        if (metabolite != null) {
+            amount.value = metabolite.stoichiometry;
+            selectize.setValue(metabolite.id);
+        }
+
+        const self: Dialog = this;
+
+        selectize.on("blur", function() {
+            if (this.$dropdown.get()[0] == $(self.products).find(".metabolite-id").last().get()[0]) {
+                if (this.getValue() != "") {
+                    self.addProduct(null);
+                }
+            } else if (this.getValue() == "") {
+                this.$dropdown.get()[0].parentNode.parentNode.remove();
+            }
+        });
     }
 }

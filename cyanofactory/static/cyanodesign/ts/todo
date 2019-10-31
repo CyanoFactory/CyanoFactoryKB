@@ -24,8 +24,7 @@ Simulation:
 - Combine with previous sim
 
 Dialog Reaction:
-- Edit reaction (FIXME: stoichiometry)
-- UX for changing Metabolite amount and creating new metabolites
+- Edit reaction (FIXME: stoichiometry UI)
 - Constraints min/max must be from model
 - Invalidate rendering of metabolites that are not used anymore
 
