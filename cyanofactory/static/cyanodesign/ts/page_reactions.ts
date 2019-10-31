@@ -126,7 +126,7 @@ export class Page {
                     "orderable": false,
                     "searchable": false,
                     "data": function (rowData: mm.Reaction) {
-                        return rowData.constraintsToString();
+                        return rowData.constraintsToString(self.app.model);
                     }
                 },
                 {
@@ -308,8 +308,8 @@ export class Page {
                     const f = [
                         function(e) { return e.enabled },
                         function(e) { return !e.enabled },
-                        function(e) { return e.isConstrained() },
-                        function(e) { return !e.isConstrained() },
+                        function(e) { return e.isConstrained(self.app.model) },
+                        function(e) { return !e.isConstrained(self.app.model) },
                         function(e) { return e.reversible },
                         function(e) { return !e.reversible }
                     ];

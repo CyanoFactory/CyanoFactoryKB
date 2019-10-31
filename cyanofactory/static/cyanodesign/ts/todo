@@ -25,7 +25,6 @@ Simulation:
 
 Dialog Reaction:
 - Edit reaction (FIXME: stoichiometry UI)
-- Constraints min/max must be from model
 - Invalidate rendering of metabolites that are not used anymore
 
 Dialog Bulk add reaction

@@ -7,8 +7,6 @@ Released under the MIT license
 define(["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.LOWER_BOUND_LIMIT = -100000.0;
-    exports.UPPER_BOUND_LIMIT = 100000.0;
     var Internal;
     (function (Internal) {
         class ClassBuilder {
@@ -136,6 +134,8 @@ define(["require", "exports"], function (require, exports) {
             this.compartments = [];
             this.parameters = [];
             this.external_compartment = null;
+            this.lower_bound_limit = 0;
+            this.upper_bound_limit = 0;
         }
         get metabolite() {
             return new Internal.LstOp(this.metabolites, Metabolite);
@@ -175,7 +175,9 @@ define(["require", "exports"], function (require, exports) {
             }
             for (let reaction of this.reactions) {
                 reaction.lower_bound = param_names[reaction.lower_bound_name].value;
+                this.lower_bound_limit = Math.min(this.lower_bound_limit, reaction.lower_bound);
                 reaction.upper_bound = param_names[reaction.upper_bound_name].value;
+                this.upper_bound_limit = Math.max(this.upper_bound_limit, reaction.upper_bound);
             }
         }
         getDefaultCompartment() {
@@ -512,12 +514,17 @@ define(["require", "exports"], function (require, exports) {
             this.read_list(j["listOfReactants"], this.substrates, new Internal.ClassBuilder(MetaboliteReference));
             this.read_list(j["listOfProducts"], this.products, new Internal.ClassBuilder(MetaboliteReference));
         }
-        isConstrained() {
-            return this.lower_bound != exports.LOWER_BOUND_LIMIT && this.upper_bound != exports.UPPER_BOUND_LIMIT;
+        isConstrained(model) {
+            if (this.reversible) {
+                return this.lower_bound != model.lower_bound_limit || this.upper_bound != model.upper_bound_limit;
+            }
+            else {
+                return this.lower_bound != 0 || this.upper_bound != model.upper_bound_limit;
+            }
         }
-        makeUnconstrained() {
-            this.lower_bound = exports.LOWER_BOUND_LIMIT;
-            this.upper_bound = exports.UPPER_BOUND_LIMIT;
+        makeUnconstrained(model) {
+            this.lower_bound = model.lower_bound_limit;
+            this.upper_bound = model.upper_bound_limit;
         }
         updateId(new_id, model) {
             if (new_id == this.id) {
@@ -576,8 +583,8 @@ define(["require", "exports"], function (require, exports) {
             element = element.concat(this.reactionToString(model));
             return element;
         }
-        constraintsToString() {
-            if (!this.isConstrained()) {
+        constraintsToString(model) {
+            if (!this.isConstrained(model)) {
                 return "";
             }
             else {

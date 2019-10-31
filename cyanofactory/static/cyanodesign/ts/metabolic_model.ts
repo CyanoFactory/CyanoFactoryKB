@@ -5,9 +5,6 @@ Hochschule Mittweida, University of Applied Sciences
 Released under the MIT license
 */
 
-export const LOWER_BOUND_LIMIT = -100000.0;
-export const UPPER_BOUND_LIMIT = 100000.0;
-
 export namespace Internal {
     export class ClassBuilder {
         constructor(private typeObj: any) {
@@ -149,6 +146,9 @@ export class Model extends ElementBase {
 
     external_compartment: Compartment = null;
 
+    lower_bound_limit: number = 0;
+    upper_bound_limit: number = 0;
+
     get metabolite() {
         return new Internal.LstOp(this.metabolites, Metabolite);
     }
@@ -196,7 +196,9 @@ export class Model extends ElementBase {
 
         for (let reaction of this.reactions) {
             reaction.lower_bound = param_names[reaction.lower_bound_name].value;
+            this.lower_bound_limit = Math.min(this.lower_bound_limit, reaction.lower_bound);
             reaction.upper_bound = param_names[reaction.upper_bound_name].value;
+            this.upper_bound_limit = Math.max(this.upper_bound_limit, reaction.upper_bound);
         }
     }
 
@@ -568,13 +570,17 @@ export class Reaction extends ElementBase {
         this.read_list(j["listOfProducts"], this.products, new Internal.ClassBuilder(MetaboliteReference));
     }
 
-    isConstrained(): boolean {
-        return this.lower_bound != LOWER_BOUND_LIMIT && this.upper_bound != UPPER_BOUND_LIMIT;
+    isConstrained(model: Model): boolean {
+        if (this.reversible) {
+            return this.lower_bound != model.lower_bound_limit || this.upper_bound != model.upper_bound_limit;
+        } else {
+            return this.lower_bound != 0 || this.upper_bound != model.upper_bound_limit;
+        }
     }
 
-    makeUnconstrained(): void {
-        this.lower_bound = LOWER_BOUND_LIMIT;
-        this.upper_bound = UPPER_BOUND_LIMIT;
+    makeUnconstrained(model: Model): void {
+        this.lower_bound = model.lower_bound_limit;
+        this.upper_bound = model.upper_bound_limit;
     }
 
     updateId(new_id: string, model: Model) {
@@ -648,8 +654,8 @@ export class Reaction extends ElementBase {
         return element;
     }
 
-    constraintsToString(): string {
-        if (!this.isConstrained()) {
+    constraintsToString(model: Model): string {
+        if (!this.isConstrained(model)) {
             return "";
         } else {
             return "[" + this.lower_bound + ", " + this.upper_bound + "]";

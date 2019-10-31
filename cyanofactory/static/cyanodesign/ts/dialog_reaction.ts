@@ -143,7 +143,7 @@ export class Dialog {
             this.item = new mm.Reaction();
             reaction = this.item;
             this.create = true;
-            this.item.makeUnconstrained();
+            this.item.makeUnconstrained(this.app.model);
         } else {
             this.item = reaction;
             this.create = false;
@@ -154,7 +154,7 @@ export class Dialog {
         this.name.value = this.item.name;
         this.enabled.value = this.item.enabled;
         this.reversible.value = this.item.reversible;
-        this.constrained.value = this.item.isConstrained();
+        this.constrained.value = this.item.isConstrained(this.app.model);
         this.constrained_min.value = this.item.lower_bound.toString();
         this.constrained_max.value = this.item.upper_bound.toString();
 
@@ -175,7 +175,7 @@ export class Dialog {
         // constraint div visibility
         const constraint_div: JQuery<HTMLElement> = $(this.dialog_element).find(".constraints-min-max");
 
-        if (reaction.isConstrained()) {
+        if (reaction.isConstrained(this.app.model)) {
             constraint_div.show();
         } else {
             constraint_div.hide();
@@ -253,7 +253,7 @@ export class Dialog {
             reaction.name != this.id.value ||
             reaction.enabled != this.enabled.value ||
             reaction.reversible != this.reversible.value ||
-            reaction.isConstrained() != constraints_enabled ||
+            reaction.isConstrained(this.app.model) != constraints_enabled ||
             reaction.lower_bound != cmin_float ||
             reaction.upper_bound != cmax_float;
 
@@ -266,7 +266,7 @@ export class Dialog {
 
         /* constraints */
         if (!constraints_enabled) {
-            reaction.makeUnconstrained();
+            reaction.makeUnconstrained(this.app.model);
         } else {
             reaction.lower_bound = cmin_float;
             reaction.upper_bound = cmax_float;
