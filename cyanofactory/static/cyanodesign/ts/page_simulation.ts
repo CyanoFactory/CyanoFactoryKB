@@ -263,6 +263,10 @@ export class Page {
     }
 
     solve() {
+        if (this.app.settings_page.getObjective() == "") {
+            return;
+        }
+
         const solutions = [
             "Undefined",
             "Feasible",

@@ -224,6 +224,9 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             }
         }
         solve() {
+            if (this.app.settings_page.getObjective() == "") {
+                return;
+            }
             const solutions = [
                 "Undefined",
                 "Feasible",
