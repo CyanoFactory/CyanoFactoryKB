@@ -74,7 +74,7 @@ export namespace Internal {
         }
 
         add(item: T) {
-            if (this.has("id", item)) {
+            if (this.has("id", item.id)) {
                 throw new Error(this.type.constructor.name + ": " + item.id + " is already in the list");
             }
 

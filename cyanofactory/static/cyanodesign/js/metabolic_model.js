@@ -67,7 +67,7 @@ define(["require", "exports"], function (require, exports) {
                 throw new Error(this.type.constructor.name + ": No object (" + key + ", " + value + ") found");
             }
             add(item) {
-                if (this.has("id", item)) {
+                if (this.has("id", item.id)) {
                     throw new Error(this.type.constructor.name + ": " + item.id + " is already in the list");
                 }
                 this.lst.push(item);
