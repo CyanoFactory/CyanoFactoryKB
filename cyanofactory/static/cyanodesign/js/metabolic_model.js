@@ -360,7 +360,7 @@ define(["require", "exports"], function (require, exports) {
             //gene_products;
             this.enabled = true;
         }
-        static fromBioOptString(bioopt_string) {
+        static fromBioOptString(bioopt_string, model) {
             function takeWhile(predicate, iterable, inclusive) {
                 let arr = [];
                 iterable.every(function (x) {
@@ -473,7 +473,7 @@ define(["require", "exports"], function (require, exports) {
                 throw { "enzyme": enzyme, message: "No products found" };
             }
             enzyme.reversible = arrow == "<->";
-            enzyme.makeUnconstrained();
+            enzyme.makeUnconstrained(model);
             return enzyme;
         }
         ;
@@ -523,7 +523,12 @@ define(["require", "exports"], function (require, exports) {
             }
         }
         makeUnconstrained(model) {
-            this.lower_bound = model.lower_bound_limit;
+            if (this.reversible) {
+                this.lower_bound = model.lower_bound_limit;
+            }
+            else {
+                this.lower_bound = 0.0;
+            }
             this.upper_bound = model.upper_bound_limit;
         }
         updateId(new_id, model) {

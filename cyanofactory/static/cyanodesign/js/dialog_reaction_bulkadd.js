@@ -47,26 +47,29 @@ define(["require", "exports", "./metabolic_model", "jquery", "./metabolic_model"
             });
             // event handlers
             $(this.bulkdata_element).keyup(function () {
+                self.reactions = [];
                 const lines = $(this).val().split(/\r*\n/);
                 $(self.bulkdata_preview_element).empty();
                 let buffered_line = "";
                 for (const line of lines) {
                     let e = "";
                     try {
-                        let last = line.split(/\s+/g).pop();
+                        let last = line.trim().split(/\s+/g).pop();
                         if (last == null) {
                             continue;
                         }
                         if (last == "<->" || last == "->" || last == "+") {
                             buffered_line += " " + line;
-                            return;
+                            continue;
                         }
                         buffered_line += " " + line;
                         buffered_line = buffered_line.trim();
                         if (buffered_line.length == 0) {
-                            return;
+                            continue;
                         }
-                        e = mm.Reaction.fromBioOptString(buffered_line).toString(app.model);
+                        const reac = mm.Reaction.fromBioOptString(buffered_line, self.app.model);
+                        self.reactions.push(reac);
+                        e = reac.toString(self.app.model);
                         buffered_line = "";
                     }
                     catch (err) {
@@ -80,8 +83,10 @@ define(["require", "exports", "./metabolic_model", "jquery", "./metabolic_model"
         }
         show() {
             // clean up
+            this.reactions = [];
             $(this.dialog_element).find("div").removeClass("has-error");
             $(this.dialog_element).find(".help-block").remove();
+            $(this.bulkdata_element).val("");
             $(this.bulkdata_preview_element).empty();
             // show
             $(this.dialog_element)["modal"]("show");
@@ -90,12 +95,8 @@ define(["require", "exports", "./metabolic_model", "jquery", "./metabolic_model"
             // clean up
             $(this.dialog_element).find("div").removeClass("has-error");
             $(this.dialog_element).find(".help-block").remove();
-            const lines = $(this.bulkdata_element).val().split(/\r*\n/);
-            $(this.bulkdata_preview_element).empty();
-            for (const line of lines) {
+            for (const reaction of this.reactions) {
                 try {
-                    let mlen = this.app.model.metabolites.length;
-                    let reaction = mm.Reaction.fromBioOptString(line);
                     for (const substrate of reaction.substrates) {
                         if (!this.app.model.metabolite.has("id", substrate.id)) {
                             let metabolite = new metabolic_model_1.Metabolite();
@@ -140,7 +141,6 @@ define(["require", "exports", "./metabolic_model", "jquery", "./metabolic_model"
                     }
                     this.app.metabolite_page.datatable.sort();
                     this.app.metabolite_page.datatable.draw();
-                    reaction.makeUnconstrained();
                     let command = {
                         "type": "reaction",
                         "id": reaction.id,

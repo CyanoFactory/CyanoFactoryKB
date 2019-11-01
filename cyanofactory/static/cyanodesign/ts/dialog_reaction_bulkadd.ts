@@ -46,6 +46,8 @@ export class Dialog {
     readonly bulkdata_element: HTMLElement;
     readonly bulkdata_preview_element: HTMLElement;
 
+    reactions: mm.Reaction[];
+
     constructor(app: app.AppManager) {
         this.app = app;
 
@@ -61,6 +63,8 @@ export class Dialog {
 
         // event handlers
         $(this.bulkdata_element).keyup(function() {
+            self.reactions = [];
+
             const lines: string[] = (<string>$(this).val()).split(/\r*\n/);
 
             $(self.bulkdata_preview_element).empty();
@@ -69,14 +73,14 @@ export class Dialog {
             for (const line of lines) {
                 let e: string = "";
                 try {
-                    let last: string | null = line.split(/\s+/g).pop();
+                    let last: string | null = line.trim().split(/\s+/g).pop();
                     if (last == null) {
                         continue;
                     }
 
                     if (last == "<->" || last == "->" || last == "+") {
                         buffered_line += " " + line;
-                        return;
+                        continue;
                     }
 
                     buffered_line += " " + line;
@@ -84,10 +88,12 @@ export class Dialog {
                     buffered_line = buffered_line.trim();
 
                     if (buffered_line.length == 0) {
-                        return;
+                        continue;
                     }
 
-                    e = mm.Reaction.fromBioOptString(buffered_line).toString(app.model);
+                    const reac: mm.Reaction = mm.Reaction.fromBioOptString(buffered_line, self.app.model);
+                    self.reactions.push(reac);
+                    e = reac.toString(self.app.model);
 
                     buffered_line = "";
                 } catch (err) {
@@ -102,9 +108,12 @@ export class Dialog {
 
     show() {
         // clean up
+        this.reactions = [];
+
         $(this.dialog_element).find("div").removeClass("has-error");
         $(this.dialog_element).find(".help-block").remove();
 
+        $(this.bulkdata_element).val("");
         $(this.bulkdata_preview_element).empty();
 
         // show
@@ -116,14 +125,8 @@ export class Dialog {
         $(this.dialog_element).find("div").removeClass("has-error");
         $(this.dialog_element).find(".help-block").remove();
 
-        const lines: string[] = (<string>$(this.bulkdata_element).val()).split(/\r*\n/);
-        $(this.bulkdata_preview_element).empty();
-
-        for (const line of lines) {
+        for (const reaction of this.reactions) {
             try {
-                let mlen = this.app.model.metabolites.length;
-                let reaction: mm.Reaction = mm.Reaction.fromBioOptString(line);
-
                 for (const substrate of reaction.substrates) {
                     if (!this.app.model.metabolite.has("id", substrate.id)) {
                         let metabolite = new Metabolite();
@@ -174,8 +177,6 @@ export class Dialog {
 
                 this.app.metabolite_page.datatable.sort();
                 this.app.metabolite_page.datatable.draw();
-
-                reaction.makeUnconstrained();
 
                 let command = {
                     "type": "reaction",

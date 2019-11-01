@@ -400,7 +400,7 @@ export class Reaction extends ElementBase {
     //gene_products;
     enabled: boolean = true;
 
-    static fromBioOptString(bioopt_string: string): Reaction {
+    static fromBioOptString(bioopt_string: string, model: Model): Reaction {
         function takeWhile(predicate: any, iterable: any, inclusive: any) {
             let arr: string[] = [];
             iterable.every(function (x: string) {
@@ -531,7 +531,7 @@ export class Reaction extends ElementBase {
         }
 
         enzyme.reversible = arrow == "<->";
-        enzyme.makeUnconstrained();
+        enzyme.makeUnconstrained(model);
 
         return enzyme;
     };
@@ -579,7 +579,11 @@ export class Reaction extends ElementBase {
     }
 
     makeUnconstrained(model: Model): void {
-        this.lower_bound = model.lower_bound_limit;
+        if (this.reversible) {
+            this.lower_bound = model.lower_bound_limit;
+        } else {
+            this.lower_bound = 0.0;
+        }
         this.upper_bound = model.upper_bound_limit;
     }
 
