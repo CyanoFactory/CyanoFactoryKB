@@ -18,8 +18,6 @@ Settings:
 - Axis labeling
 
 Simulation:
-- Export as image
-- Export as vector
 - RA sim (-> Chart)
 - Combine with previous sim
 

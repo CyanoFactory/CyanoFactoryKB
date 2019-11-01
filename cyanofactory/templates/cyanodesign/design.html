@@ -40,30 +40,6 @@ Released under the MIT license
     $(function () {
         $($("#filter_row_flux").text()).appendTo($("#cyano-flux-list_wrapper").children()[1]);
 
-        /*$.fn.dataTable.ext.search.push(
-            function( settings, data, dataIndex ) {
-                if (settings.nTable == table_flux[0]) {
-                    var min = parseFloat($("#filter-flux-min").val());
-                    var max = parseFloat($("#filter-flux-max").val());
-
-                    var d = datatable_flux.data()[dataIndex];
-
-                    // Check flux values
-                    if (!isNaN(min) && d[1] < min) {
-                        return false;
-                    }
-
-                    if (!isNaN(max) && d[1] > max) {
-                        return false;
-                    }
-
-                    return true;
-                }
-
-                return true;
-            }
-        );*/
-
         $( ".check" ).button();
 
         var selectize_options = {
@@ -125,40 +101,6 @@ Released under the MIT license
                 event.preventDefault();
             });
 
-        var doExport = function(format) {
-            var data = beginRequest();
-            data["dry_run"] = true;
-
-            $.ajax({
-                url: "{% url "cyanodesign:simulate" pk=pk %}",
-                type: "POST",
-                data: data
-            }).done(function(x) {
-                if (x["solution"] == "Optimal") {
-                    notifyInfo("The solution is " + x["solution"] + ". The download starts in a few seconds. To update the result below press \"Run simulation\".");
-
-                    delete data["dry_run"];
-                    data["format"] = format;
-
-                    for (var d in data) {
-                        submit_form.append($("<input/>", {type:"text", name:d}).val(data[d]))
-                    }
-
-                    submit_form.submit();
-
-                } else {
-                    notifyWarning("The solution is " + x["solution"] + ". Check if your constraints are too strict.");
-                }
-
-                endRequest();
-            }).fail(function(x) {
-                $("#visual_graph").hide();
-                $("#visual_fba").hide();
-                notifyError(x.responseText);
-                endRequest();
-            });
-        };
-
         var endRequest = function(wait_position) {
             if (wait_position === undefined)
                 waitIndicator.hide($("#content"));
@@ -199,56 +141,6 @@ Released under the MIT license
                 notifyError(x.responseText);
                 endRequest($("#dialog-saveas-model").find(".modal-content"));
             });
-        });
-
-        $("#export-png").click(function(event) {
-            if (last_symtype == "mba" || last_symtype == "sa") {
-                $("#visual_graph > svg").find(".c3-axis path, .c3-axis line").css({"fill":"none","stroke":"black"});
-                $("#visual_graph > svg").css({"font":"10px sans-serif"});
-                $("#visual_graph > svg").find(".c3-legend-item").css({"font":"12px sans-serif"});
-
-                downloadPNG();
-            } else {
-                // save old style
-                var g = $("#visual_fba > svg > g");
-                var g_style = g.attr("style");
-                var g_transform = g.attr("transform");
-
-                // Clear style, otherwise SVG only shows a viewport
-                g.attr("style", "").attr("transform", "");
-
-                downloadPNG();
-
-                // Reset style
-                g.attr("style", g_style).attr("transform", g_transform);
-            }
-        });
-
-        $("#export-svg").click(function(event) {
-            if (last_symtype == "mba" || last_symtype == "sa") {
-                $("#visual_graph > svg").find(".c3-axis path, .c3-axis line").css({"fill":"none","stroke":"black"});
-                $("#visual_graph > svg").css({"font":"10px sans-serif"});
-                $("#visual_graph > svg").find(".c3-legend-item").css({"font":"12px sans-serif"});
-
-                downloadSVG();
-            } else {
-                // save old style
-                var g = $("#visual_fba > svg > g");
-                var g_style = g.attr("style");
-                var g_transform = g.attr("transform");
-
-                // Clear style, otherwise SVG only shows a viewport
-                g.attr("style", "").attr("transform", "");
-
-                downloadSVG();
-
-                // Reset style
-                g.attr("style", g_style).attr("transform", g_transform);
-            }
-        });
-
-        $("#export-csv").click(function(event) {
-            doExport("csv");
         });
 
         let startup_handler = function(callback, metabolic_model_cls, urls) {

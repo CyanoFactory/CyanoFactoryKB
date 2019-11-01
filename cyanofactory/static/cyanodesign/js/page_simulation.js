@@ -1,4 +1,4 @@
-define(["require", "exports", "jquery", "datatables.net"], function (require, exports, $) {
+define(["require", "exports", "jquery", "./design_utils", "datatables.net"], function (require, exports, $, design_utils_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     let template = document.createElement('template');
@@ -8,14 +8,26 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
     <label for="remember-simulation">Combine results with previous simulation</label>
 </div>
 <button type="button" class="design-submit btn btn-primary">Run simulation</button>
-<div class="export-button btn-group">
+<div class="export-button-graph btn-group">
     <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-    Export <span class="caret"></span>
+    Export Graph <span class="caret"></span>
     </button>
     <ul class="dropdown-menu" role="menu">
     <!--<li><a id="export-csv" href="#">As flux list</a></li>-->
-    <li><a id="export-png" href="#">As image</a></li>
-    <li><a id="export-svg" href="#">As vector graphic</a></li>
+    <li><a class="export-png" href="#">As image</a></li>
+    <li><a class="export-svg" href="#">As vector graphic</a></li>
+    <li><a class="export-dot" href="#">As GraphViz dot file</a></li>
+    </ul>
+</div>
+<div class="export-button-chart btn-group">
+    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+    Export Chart <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu" role="menu">
+    <!--<li><a id="export-csv" href="#">As flux list</a></li>-->
+    <li><a class="export-png" href="#">As image</a></li>
+    <li><a class="export-svg" href="#">As vector graphic</a></li>
+    <li><a class="export-csv" href="#">As CSV</a></li>
     </ul>
 </div>
 
@@ -37,41 +49,35 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
     </thead>
 </table>
 `;
-    /*
-    <script id="filter_row_flux" type="text/plain">
-    <div class="col-sm-3">
-        <div class="form-group">
-            <label class="control-label" for="filter-flux-min">Min Flux:</label>
-            <input id="filter-flux-min" class="form-control" type="text">
-        </div>
+    let template_filter = document.createElement('template');
+    template_filter.innerHTML = `
+<div class="col-sm-3">
+    <div class="form-group">
+        <label class="control-label" for="filter-flux-min">Min Flux:</label>
+        <input class="filter-flux-min form-control" type="text">
     </div>
-    <div class="col-sm-3">
-            <label class="control-label" for="filter-flux-max">Max Flux:</label>
-            <input id="filter-flux-max" class="form-control" type="text">
+</div>
+<div class="col-sm-3">
+        <label class="control-label" for="filter-flux-max">Max Flux:</label>
+        <input class="filter-flux-max form-control" type="text">
+</div>
+</div>
+<div class="col-sm-6">
+    <div class="dataTables_filter">
+    <div class="checkbox">
+    <input class="cyano-regex" type="checkbox">
+    <label for="cyano-regex">Search with RegExp</label>
     </div>
-    <!--
-    <label for="cyano-metabolite-list-filter-reactions">Filter metabolites</label>
-    <select id="cyano-metabolite-list-filter-reactions" class="form-control combobox" multiple="multiple">
-        <option selected="selected">Is internal</option>
-        <option selected="selected">Is external</option>
-    </select>-->
     </div>
-    <div class="col-sm-6">
-        <div class="dataTables_filter">
-        <div class="checkbox">
-        <input id="flux_regex" type="checkbox">
-        <label for="flux_regex">Search with RegExp</label>
-        </div>
-        </div>
-    </div>
-    </script>
-     */
+</div>
+`;
     class Page {
         constructor(where, app) {
             this.last_sim_type = "";
             this.last_sim_flux = 0;
             this.last_sim_objective = null;
             this.last_sim_design_objecive = null;
+            this.last_dot_graph = "";
             this.simulation_chart = null;
             this.is_dragging = false;
             this.source_element = where;
@@ -80,6 +86,8 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             this.simulation_result_element = where.getElementsByClassName("simulation-result")[0];
             this.visual_graph_element = where.getElementsByClassName("visual-graph")[0];
             this.visual_fba_element = where.getElementsByClassName("visual-fba")[0];
+            this.export_button_graph = where.getElementsByClassName("export-button-graph")[0];
+            this.export_button_chart = where.getElementsByClassName("export-button-chart")[0];
             this.app = app;
             this.datatable_flux = $(this.table_element_flux).DataTable({
                 "deferRender": true,
@@ -125,6 +133,37 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             let self = this;
             $(this.source_element).find(".design-submit").click(function (event) {
                 self.simulate();
+            });
+            $(this.export_button_graph).find(".export-svg").click(() => design_utils_1.DesignUtils.downloadSVG(this.visual_fba_element.children[0], "graph.svg"));
+            $(this.export_button_graph).find(".export-png").click(() => design_utils_1.DesignUtils.downloadPNG(this.visual_fba_element.children[0], "graph.png"));
+            $(this.export_button_graph).find(".export-dot").click(() => design_utils_1.DesignUtils.downloadText(this.last_dot_graph, "graph.dot"));
+            $(this.export_button_chart).find(".export-svg").click(() => design_utils_1.DesignUtils.downloadSVG(this.visual_graph_element.children[0], "chart.svg"));
+            $(this.export_button_chart).find(".export-png").click(() => design_utils_1.DesignUtils.downloadPNG(this.visual_graph_element.children[0], "chart.png"));
+            $(this.export_button_chart).find(".export-csv").click(() => design_utils_1.DesignUtils.downloadCSV(this.createCsv(), "chart.csv"));
+            $(this.export_button_graph).hide();
+            $(this.export_button_chart).hide();
+            // Filter
+            where.children[7].children[1].appendChild(template_filter.content.cloneNode(true));
+            $(where).find(".filter-flux-min").change(function () { self.datatable_flux.draw(); });
+            $(where).find(".filter-flux-max").change(function () { self.datatable_flux.draw(); });
+            $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+                if (settings.nTable == self.table_element_flux) {
+                    const min = parseFloat($(where).find(".filter-flux-min").val());
+                    const max = parseFloat($(where).find(".filter-flux-max").val());
+                    const d = self.datatable_flux.data()[dataIndex];
+                    // Check flux values
+                    if (!isNaN(min) && d[1] < min) {
+                        return false;
+                    }
+                    if (!isNaN(max) && d[1] > max) {
+                        return false;
+                    }
+                    return true;
+                }
+                return true;
+            });
+            where.getElementsByClassName("cyano-regex")[0].addEventListener("click", function () {
+                self.datatable_flux.search(self.datatable_flux.search(), $(this).prop("checked"), true).draw();
             });
             /*FIXME$("#visual_fba").on("click", "g.node", function() {
                 var idx = Metabolite.indexByName($(this).children("text").text());
@@ -195,6 +234,8 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                 let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
                 $(this.visual_graph_element).hide();
                 $(this.visual_fba_element).show();
+                $(this.export_button_graph).show();
+                $(this.export_button_chart).hide();
                 this.visual_fba_element.innerHTML = graph;
                 $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
                 let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
@@ -215,11 +256,15 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             else if (symtype == "mba") {
                 $(this.visual_graph_element).show();
                 $(this.visual_fba_element).hide();
+                $(this.export_button_graph).hide();
+                $(this.export_button_chart).show();
                 this.design_fba();
             }
             else if (symtype == "sa") {
                 $(this.visual_graph_element).show();
                 $(this.visual_fba_element).hide();
+                $(this.export_button_graph).hide();
+                $(this.export_button_chart).show();
                 this.target_fba();
             }
         }
@@ -284,6 +329,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                     // create FBA graph
                     let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
                     $(this.visual_fba_element).show();
+                    $(this.export_button_graph).show();
                     this.visual_fba_element.innerHTML = graph;
                     $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
                     let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
@@ -570,6 +616,23 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             };
             this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective());
         }
+        createCsv() {
+            const data = this.simulation_chart.data();
+            let csv = "x;" + data.map((x) => x["id"]).join(";") + "\n";
+            for (let i = 0; i < data[0]["values"].length; ++i) {
+                for (let j = 0; j < data.length; ++j) {
+                    if (j == 0) {
+                        csv += data[j]["values"][i]["x"] + ";";
+                    }
+                    csv += data[j]["values"][i]["value"];
+                    if (j != data.length - 1) {
+                        csv += ";";
+                    }
+                }
+                csv += "\n";
+            }
+            return csv;
+        }
         createGraph(flux) {
             let graph = 'strict digraph "" {\n' +
                 'graph [overlap=False,\n' +
@@ -628,6 +691,7 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                 ++i;
             }
             graph += '}\n';
+            this.last_dot_graph = graph;
             return graph;
         }
     }
