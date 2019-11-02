@@ -6,7 +6,7 @@ Released under the MIT license
 """
 
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Button
+from crispy_forms.layout import Layout, Button, HTML
 from crispy_forms.bootstrap import FormActions
 from django import forms
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
@@ -102,6 +102,54 @@ class ModelFromTemplateForm(forms.Form):
             DesignTemplate.objects.get(pk=choice)
         except ObjectDoesNotExist:
             raise ValidationError("Unknown template")
+
+        return choice
+
+
+class ModelFromBiGGForm(forms.Form):
+    class ChoiceFieldNoValidation(forms.ChoiceField):
+        def validate(self, value):
+            pass
+
+    name = forms.CharField(
+        required=True,
+        widget=forms.TextInput,
+        label="Name"
+    )
+    choice = ChoiceFieldNoValidation(
+        required=True,
+        choices=(),
+        label="BiGG model",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super(ModelFromBiGGForm, self).__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+        self.helper.form_action = reverse("cyanodesign:upload", kwargs={'pk': 3})
+        self.helper.layout = Layout(
+            ModalHeader(
+                'Create new model from BiGG model',
+            ),
+            ModalBody(
+                'name',
+                'choice',
+                HTML('The models are downloaded from the <a href="http://bigg.ucsd.edu/">BiGG Model Database</a>.')
+            ),
+            ModalFooter(
+                FormActions(
+                    Button('upload-submit', 'Create Model', css_class='btn-primary'),
+                    CancelButton('upload-cancel', 'Cancel')
+                )
+            ),
+        )
+
+    def clean_choice(self):
+        choice = self.cleaned_data['choice']
+        if len(choice) > 20:
+            raise ValidationError("bad choice")
+        if not choice.replace("_", "").isalnum():
+            raise ValidationError("bad choice")
 
         return choice
 

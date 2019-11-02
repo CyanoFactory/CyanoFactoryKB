@@ -111,6 +111,32 @@ $(document).ready(function() {
             });
         });
 
+        $("#dialog-bigg").on("click", ".btn-primary", function () {
+            var form = $("#dialog-bigg").find("form");
+
+            $.ajax({
+                url: "{% url 'cyanodesign:upload' pk=3 %}",
+                type: "POST",
+                data: new FormData(form[0]),
+                processData: false,
+                contentType: false,
+                success: function(data) {
+                    if (!(data['success'])) {
+                        form.replaceWith(data['form_html']);
+                    }
+                    else {
+                        location.reload();
+                    }
+                },
+                beforeSend: function() {
+                    waitIndicator.show($("#dialog-bigg").find(".modal-content"));
+                },
+                complete: function() {
+                    waitIndicator.hide($("#dialog-bigg").find(".modal-content"));
+                }
+            });
+        });
+
         $("#dialog-delete .btn-primary").click(function () {
             $.ajax({
                 type: "POST",
@@ -122,6 +148,23 @@ $(document).ready(function() {
             dialog_delete.modal("hide");
 
             dialog_delete.data("parent").fadeOut(200, function() { table.row(this).remove().draw(); });
+        });
+
+        $("#create-bigg").one("click", () => {
+            $.ajax({
+                url: "http://bigg.ucsd.edu/api/v2/models"
+            }).done((result) => {
+                const select = $("#dialog-bigg").find("select");
+                result["results"].sort(function(a,b) {
+                    return a["organism"].localeCompare(b["organism"]);
+                });
+                for (const elem of result["results"]) {
+                    select.append(($('<option>', {
+                        value: elem["bigg_id"],
+                        text: elem["organism"] + " (" + elem["bigg_id"] + ")"
+                    })));
+                }
+            });
         });
     });
 });
@@ -180,6 +223,7 @@ $(document).ready(function() {
     <ul class="dropdown-menu" role="menu">
     <li><a id="create-model" href="#" data-toggle="modal" data-target="#dialog-create">Upload your own model</a></li>
     <li><a id="create-template" href="#" data-toggle="modal" data-target="#dialog-template">Create from template</a></li>
+    <li><a id="create-bigg" href="#" data-toggle="modal" data-target="#dialog-bigg">Create from BiGG model</a></li>
     </ul>
 </div>
 {% endif %}
@@ -197,6 +241,14 @@ $(document).ready(function() {
     <div class="modal-dialog">
         <div class="modal-content">
             {% crispy template_form %}
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="dialog-bigg" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            {% crispy bigg_form %}
         </div>
     </div>
 </div>

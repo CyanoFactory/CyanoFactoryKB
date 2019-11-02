@@ -19,11 +19,13 @@ from jsonview.decorators import json_view
 from cyano.decorators import ajax_required, global_permission_required
 from cyano.helpers import render_queryset_to_response, render_queryset_to_response_error, render_crispy_form
 from cyano.models import UserProfile
-from cyanodesign.forms import UploadModelForm, ModelFromTemplateForm, SaveModelAsForm, SaveModelForm
+from cyanodesign.forms import UploadModelForm, ModelFromTemplateForm, SaveModelAsForm, SaveModelForm, ModelFromBiGGForm
 from cyanodesign.helpers import calc_reactions, get_selected_reaction
 from cyanodesign.command_list import apply_commandlist, compress_commandlist
 from metabolic_model.optgene import OptGeneParser
 from metabolic_model.sbml_xml_generator import SbmlXMLGenerator
+from urllib.error import URLError
+
 from .models import DesignModel, Revision, DesignTemplate
 import networkx as nx
 from networkx.readwrite import json_graph
@@ -40,13 +42,15 @@ def index(request):
     templates = DesignTemplate.objects.values_list("pk", "name")
     template_form = ModelFromTemplateForm(choices=templates)
 
+    bigg_form = ModelFromBiGGForm(None)
+
     models = DesignModel.objects.filter(user=UserProfile.get_profile(request.user))
 
     return render_queryset_to_response(
         request,
         template="cyanodesign/list.html",
         queryset=models,
-        data={'upload_form': upload_form, "template_form": template_form}
+        data={'upload_form': upload_form, "template_form": template_form, "bigg_form": bigg_form}
     )
 
 
@@ -638,7 +642,7 @@ def upload(request, pk):
             else:
                 form_html = render_crispy_form(form, context=request)
                 return {'success': False, 'form_html': form_html}
-        if pk == "2":
+        elif pk == "2":
             # from template
             templates = DesignTemplate.objects.values_list("pk", "name")
             form = ModelFromTemplateForm(templates, request.POST, request.FILES)
@@ -666,6 +670,52 @@ def upload(request, pk):
             else:
                 form_html = render_crispy_form(form, context=request)
                 return {'success': False, 'form_html': form_html}
+        elif pk == "3":
+            # from BiGG
+            form = ModelFromBiGGForm(request.POST, request.FILES)
+            if form.is_valid():
+                import urllib
+                import gzip
+
+                name = form.cleaned_data.get('name')
+                choice = form.cleaned_data.get('choice')
+                url = "http://bigg.ucsd.edu/static/models/" + choice + ".xml.gz"
+                try:
+                    response = urllib.request.urlopen(url)
+                except URLError:
+                    form_html = render_crispy_form(form, context=request)
+                    return {'success': False, 'form_html': form_html}
+
+                data = gzip.decompress(response.read())
+                binary = BytesIO()
+                binary.write(data)
+                binary.seek(0)
+
+                ss = TextIOWrapper(binary, encoding='utf-8')
+
+                sbml_handler = sbml_parser.SbmlHandler()
+                sbml_parser.push_handler(sbml_handler)
+                content = ss.read()
+                ss.seek(0)
+                # closes ss
+                sbml_parser.parser.parse(ss)
+                model = sbml_handler.model
+
+                dm = DesignModel.objects.create(
+                    user=request.user.profile,
+                    name=name,
+                    filename=choice + ".xml",
+                    content=content
+                )
+
+                Revision(
+                    model=dm,
+                    content="",
+                    sbml=model.to_json(),
+                    reason="Initial version"
+                ).save()
+
+                return {'success': True}
 
     return BadRequest()
 
