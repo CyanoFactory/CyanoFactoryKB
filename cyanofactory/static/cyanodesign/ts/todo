@@ -1,6 +1,3 @@
-List:
-- Export as BioOpt
-
 Design:
 - Save
 - Save as
@@ -10,7 +7,7 @@ Metabolites:
 - Clicking reactions uses name, not id
 
 Settings:
-- FBA settings Toggle
+- FBA settings Toggle (works except for RA)
 - FBA select vis reaction
 - Axis labeling
 
@@ -24,3 +21,22 @@ Dialog Reaction:
 
 Graph:
 - Reduce graph when the network is huge
+- Render single pathway
+
+Compartments:
+- Delete compartment
+
+Pathway:
+- ID | Name | Members
+- Create new Pathway
+- Delete Pathway
+
+Objective:
+- List all objectives
+- [Maximize|Minimize]
+- [Activate]
+- Delete
+- Add
+
+History:
+- Undo over multiple save states

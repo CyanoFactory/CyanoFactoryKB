@@ -610,27 +610,26 @@ class Reaction(ElementBase):
         self.upper_bound = new_obj.get("upper_bound", self.upper_bound)
         self.enabled = new_obj.get("enabled", self.enabled)
 
+        def met_adder(src_lst, target_lst):
+            for subst in target_lst:
+                mr = MetaboliteReference()
+                mr.id = subst.get("id")
+                mr.stoichiometry = subst.get("stoichiometry")
+                src_lst.append(mr)
+
         if "substrates" in new_obj:
             if type(new_obj["substrates"]) is not list:
                 raise ValueError("substrates is not a list")
 
             self.substrates = []
-            new_obj_subst = new_obj["substrates"]
-            for subst in new_obj_subst:
-                mr = MetaboliteReference()
-                mr.stoichiometry = subst.get("stoichiometry")
-                self.substrates.append(mr)
+            met_adder(self.substrates, new_obj["substrates"])
 
         if "products" in new_obj:
             if type(new_obj["products"]) is not list:
                 raise ValueError("products is not a list")
 
             self.products = []
-            new_obj_prod = new_obj["products"]
-            for prod in new_obj_prod:
-                mr = MetaboliteReference()
-                mr.stoichiometry = prod.get("stoichiometry")
-                self.products.append(mr)
+            met_adder(self.products, new_obj["products"])
 
     def is_constrained(self, model: MetabolicModel):
         return self.lower_bound != model.lower_bound_ref.value or self.upper_bound != model.upper_bound_ref
