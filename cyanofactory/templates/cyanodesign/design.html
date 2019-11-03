@@ -149,6 +149,7 @@ Released under the MIT license
             urls.save_as = "{% url "cyanodesign:save_as" pk=pk %}";
             urls.design = "{% url "cyanodesign:design" pk=pk %}";
             urls.get_reactions = "{% url "cyanodesign:get_reactions" pk=pk %}{% if revision %}?revision={{ revision.pk }}{% endif %}";
+            urls.get_revisions = "{% url "cyanodesign:get_revisions" pk=pk %}";
 
             const glpk_worker = new Worker("{% get_static_prefix %}cyanodesign/node_modules/glpk.js/glpk-worker.js");
 

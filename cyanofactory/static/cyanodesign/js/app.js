@@ -34,12 +34,14 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
             context: document.body
         }).done(function (x) {
             app = new AppManager(mm_cls, x, urls, glpk_worker);
+            $.ajax({
+                url: urls.get_revisions,
+            }).done((x) => app.history_page.init(x));
             app.reaction_page.init();
             app.metabolite_page.init();
             app.compartment_page.init();
             //app.stoichiometry_page.init();
             app.settings_page.init();
-            app.history_page.init();
             app.simulation_page.init();
             $(".create-enzyme-button").on("click", function () {
                 app.dialog_reaction.show(null);

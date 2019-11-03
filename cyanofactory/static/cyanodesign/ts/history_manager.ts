@@ -9,38 +9,34 @@ export class HistoryEntry {
     id: string;
     object: any;
     undo: boolean = true;
+    group: HistoryGroup;
 
     constructor() {}
+}
+
+export class HistoryGroup {
+    id: number;
+    summary: string;
+    date: string;
 }
 
 export class HistoryManager {
     readonly history: HistoryEntry[];
     private readonly app: AppManager;
 
-    /*
-    app.command_list.push({
-        "type": "reaction",
-        "op": "edit",
-        "id": reaction.id,
-        "object": {
-            "id": reaction.id,
-            "enabled": reaction.enabled
-        }
-    });
-    */
-
     constructor(history: HistoryEntry[], app: app.AppManager) {
         this.history = history;
         this.app = app;
     }
 
-    push(entry: any) {
+    push(entry: any, group: HistoryGroup | null = null) {
         let hentry = new HistoryEntry();
 
         hentry.type = entry["type"];
         hentry.op = entry["op"];
         hentry.id = entry["id"];
         hentry.object = entry["object"];
+        hentry.group = group;
 
         let i = 0;
         while (i < this.history.length) {

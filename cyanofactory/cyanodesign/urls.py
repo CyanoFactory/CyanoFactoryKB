@@ -18,6 +18,7 @@ urlpatterns = [
     url(r'^edit/' + pk_str, views.design, name="design"),
     url(r'^history/' + pk_str, views.history, name="history"),
     url(r'^get_reactions/' + pk_str, views.get_reactions, name="get_reactions"),
+    url(r'^get_revisions/' + pk_str, views.get_revisions, name="get_revisions"),
     url(r'^simulate/' + pk_str, views.simulate, name="simulate"),
     url(r'^export/' + pk_str, views.export, name="export"),
     url(r'^save/' + pk_str, views.save, name="save"),

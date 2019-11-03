@@ -7,28 +7,21 @@ define(["require", "exports", "./metabolic_model"], function (require, exports, 
         }
     }
     exports.HistoryEntry = HistoryEntry;
+    class HistoryGroup {
+    }
+    exports.HistoryGroup = HistoryGroup;
     class HistoryManager {
-        /*
-        app.command_list.push({
-            "type": "reaction",
-            "op": "edit",
-            "id": reaction.id,
-            "object": {
-                "id": reaction.id,
-                "enabled": reaction.enabled
-            }
-        });
-        */
         constructor(history, app) {
             this.history = history;
             this.app = app;
         }
-        push(entry) {
+        push(entry, group = null) {
             let hentry = new HistoryEntry();
             hentry.type = entry["type"];
             hentry.op = entry["op"];
             hentry.id = entry["id"];
             hentry.object = entry["object"];
+            hentry.group = group;
             let i = 0;
             while (i < this.history.length) {
                 if (!this.history[i].undo) {

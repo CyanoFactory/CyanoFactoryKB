@@ -1,4 +1,4 @@
-define(["require", "exports", "jquery", "datatables.net"], function (require, exports, $) {
+define(["require", "exports", "jquery", "./history_manager", "datatables.net"], function (require, exports, $, history_manager_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     let template = document.createElement('template');
@@ -22,9 +22,11 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
             this.table_element = where.getElementsByClassName("cyano-list")[0];
             this.app = app;
             const self = this;
+            const groupColumn = 5;
             this.datatable = $(this.table_element).DataTable({
                 "deferRender": true,
                 columns: [
+                    {},
                     {},
                     {},
                     {},
@@ -81,6 +83,13 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                             }
                         }
                     },
+                    {
+                        "targets": groupColumn,
+                        "visible": false,
+                        "data": function (data, type, set, meta) {
+                            return data["group"];
+                        }
+                    }
                 ],
                 "order": [[0, "desc"]],
                 "displayLength": 100,
@@ -88,26 +97,53 @@ define(["require", "exports", "jquery", "datatables.net"], function (require, ex
                     "<'row'>" +
                     "<'row'<'col-sm-12'tr>>" +
                     "<'row'<'col-sm-12'B>>" +
-                    "<'row'<'col-sm-6'i><'col-sm-6'p>>"
+                    "<'row'<'col-sm-6'i><'col-sm-6'p>>",
+                drawCallback: function (settings) {
+                    const api = this.api();
+                    const rows = api.rows({ page: 'current' }).nodes();
+                    let last = null;
+                    api.column(groupColumn, { page: 'current' }).data().each(function (group, i) {
+                        const id = group == undefined ? 0 : group["id"];
+                        const msg = group == undefined ? "Unsaved changes" : (group["date"] + ": " + group["summary"]);
+                        if (last !== id) {
+                            $(rows).eq(i).before('<tr class="group"><td colspan="5">' + msg + '</td></tr>');
+                            last = id;
+                        }
+                    });
+                }
             });
-            // 4th col: undo button clicked
+            // 5th col: undo button clicked
             $(this.table_element).on("click", ".undo-button", function () {
                 let row = self.datatable.row($(this).closest("tr"));
                 self.app.history_manager.undo(row.index());
             });
-            // 4th col: redo button clicked
+            // 5th col: redo button clicked
             $(this.table_element).on("click", ".redo-button", function () {
                 let row = self.datatable.row($(this).closest("tr"));
                 self.app.history_manager.redo(row.index());
             });
         }
-        init() {
+        init(revisions) {
             this.datatable.clear();
             this.datatable.rows.add(this.app.history_manager.history);
             this.datatable.draw();
+            if (revisions == null) {
+                return;
+            }
+            let i = 1;
+            for (const group of revisions) {
+                const hgroup = new history_manager_1.HistoryGroup();
+                hgroup.id = i;
+                hgroup.date = group["date"];
+                hgroup.summary = group["reason"];
+                for (const revs of group["changes"]) {
+                    this.app.history_manager.push(revs, hgroup);
+                }
+                ++i;
+            }
         }
         refresh() {
-            this.init();
+            this.init(null);
         }
     }
     exports.Page = Page;

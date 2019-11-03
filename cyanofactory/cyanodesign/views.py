@@ -108,6 +108,30 @@ def get_reactions(request, pk):
     return revision.sbml["sbml"]["model"]
 
 
+@ajax_required
+@global_permission_required("access_cyanodesign")
+@json_view
+def get_revisions(request, pk):
+    try:
+        item = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
+    except ObjectDoesNotExist:
+        return BadRequest("Bad Model")
+
+    revision = Revision.objects.filter(model=item).values("reason", "date", "changes")
+    if len(revision) == 0:
+        return BadRequest("Bad Revision")
+
+    for rev in revision:
+        # For historical reasons changes also contains an extra key objectives
+        if "changes" in rev["changes"]:
+            rev["changes"] = rev["changes"]["changes"]
+        else:
+            rev["changes"] = []
+        rev["date"] = str(rev["date"])
+
+    return list(revision)
+
+
 @global_permission_required("access_cyanodesign")
 def simulate(request, pk):
     if not all(x in request.POST for x in ["changes", "objectives", "design_objectives", "target_reactions", "display", "auto_flux", "type"]):

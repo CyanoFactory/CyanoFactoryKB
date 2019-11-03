@@ -619,14 +619,14 @@ class Reaction(ElementBase):
 
         if "substrates" in new_obj:
             if type(new_obj["substrates"]) is not list:
-                raise ValueError("substrates is not a list")
+                raise ValueError("substrate is not a list")
 
             self.substrates = []
             met_adder(self.substrates, new_obj["substrates"])
 
         if "products" in new_obj:
             if type(new_obj["products"]) is not list:
-                raise ValueError("products is not a list")
+                raise ValueError("product is not a list")
 
             self.products = []
             met_adder(self.products, new_obj["products"])

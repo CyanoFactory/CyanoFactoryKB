@@ -4,4 +4,5 @@ export namespace urls {
     let save_as: string;
     let design: string;
     let get_reactions: string;
+    let get_revisions: string;
 }

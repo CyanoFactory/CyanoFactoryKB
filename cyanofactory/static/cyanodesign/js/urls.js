@@ -8,5 +8,6 @@ define(["require", "exports"], function (require, exports) {
         let save_as;
         let design;
         let get_reactions;
+        let get_revisions;
     })(urls = exports.urls || (exports.urls = {}));
 });

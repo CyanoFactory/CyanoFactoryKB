@@ -76,12 +76,15 @@ export function run(mm_cls: any, urls: any, glpk_worker: Worker) {
     }).done(function(x: any) {
         app = new AppManager(mm_cls, x, urls, glpk_worker);
 
+        $.ajax({
+            url: urls.get_revisions,
+        }).done((x: any) => app.history_page.init(x));
+
         app.reaction_page.init();
         app.metabolite_page.init();
         app.compartment_page.init();
         //app.stoichiometry_page.init();
         app.settings_page.init();
-        app.history_page.init();
         app.simulation_page.init();
 
         $(".create-enzyme-button").on("click", function () {
