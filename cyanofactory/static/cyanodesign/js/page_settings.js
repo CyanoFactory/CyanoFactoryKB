@@ -120,6 +120,24 @@ define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "se
     </div>
 </div>
 
+<div class="panel panel-default other-settings-axis-panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">Other</h3>
+    </div>
+
+    <div class="panel-body">
+        <fieldset>
+            <label class="control-label" for="exchange-reaction-label">Add exchange reactions:</label>
+            <select class="exchange-reaction-setting">
+                <option value="auto" selected>Automatic (Recommended)</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+            </select>
+            When the model does not provide exchange reactions for external metabolites, select "Yes", otherwise "No". Keep it on "Auto" if you are not sure.
+        </fieldset>
+    </div>
+</div>
+
 `;
     class Page {
         constructor(where, app) {
@@ -129,6 +147,7 @@ define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "se
             this.main_obj = dialog_helper_1.ElementWrapper.byClass("cyano-design-objective-select", this.source_element);
             this.design_obj = dialog_helper_1.ElementWrapper.byClass("cyano-design-design-objective-select", this.source_element);
             this.target_obj = dialog_helper_1.ElementWrapper.byClass("cyano-design-target-objective-select", this.source_element);
+            this.exchange_reaction = dialog_helper_1.ElementWrapper.byClass("exchange-reaction-setting", this.source_element);
             this.maximize = dialog_helper_1.ElementWrapper.byClass("radio-maximize", this.source_element);
             this.fba_sim = dialog_helper_1.ElementWrapper.byClass("radio-fba", this.source_element);
             this.mba_sim = dialog_helper_1.ElementWrapper.byClass("radio-mba", this.source_element);
@@ -179,9 +198,14 @@ define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "se
             $(this.main_obj.element).selectize(obj_options);
             $(this.design_obj.element).selectize(obj_options);
             $(this.target_obj.element).selectize(obj_options);
+            $(this.exchange_reaction.element).selectize();
             const self = this;
             let main_obj_selectize = this.main_obj.element.selectize;
             main_obj_selectize.on('change', function () {
+                self.app.simulation_page.solve();
+            });
+            let exchange_reaction = this.exchange_reaction.element.selectize;
+            exchange_reaction.on('change', function () {
                 self.app.simulation_page.solve();
             });
             this.refresh();
@@ -228,6 +252,34 @@ define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "se
         }
         getTargetObjective() {
             return this.target_obj.element.selectize.getValue();
+        }
+        getCreateExchangeReactions() {
+            const val = this.exchange_reaction.element.selectize.getValue();
+            if (val == "yes") {
+                return true;
+            }
+            else if (val == "no") {
+                return false;
+            }
+            // Autodetect
+            // When the model follows the cobra convention the exchange reacs are prefixed with "EX_"
+            for (const met of this.app.model.getExternalMetabolites()) {
+                if (met.id.startsWith("M_")) {
+                    if (this.app.model.reaction.has("id", "EX_" + met.id.substr(2))) {
+                        return false;
+                    }
+                    if (this.app.model.reaction.has("id", "R_EX_" + met.id.substr(2))) {
+                        return false;
+                    }
+                }
+                if (this.app.model.reaction.has("id", "EX_" + met.id)) {
+                    return false;
+                }
+                if (this.app.model.reaction.has("id", "R_EX_" + met.id)) {
+                    return false;
+                }
+            }
+            return true;
         }
         maximizeObjective() {
             return this.maximize.value;

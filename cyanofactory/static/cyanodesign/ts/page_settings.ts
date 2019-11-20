@@ -126,6 +126,24 @@ template.innerHTML = `
     </div>
 </div>
 
+<div class="panel panel-default other-settings-axis-panel">
+    <div class="panel-heading">
+        <h3 class="panel-title">Other</h3>
+    </div>
+
+    <div class="panel-body">
+        <fieldset>
+            <label class="control-label" for="exchange-reaction-label">Add exchange reactions:</label>
+            <select class="exchange-reaction-setting">
+                <option value="auto" selected>Automatic (Recommended)</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+            </select>
+            When the model does not provide exchange reactions for external metabolites, select "Yes", otherwise "No". Keep it on "Auto" if you are not sure.
+        </fieldset>
+    </div>
+</div>
+
 `;
 
 export class Page {
@@ -134,6 +152,7 @@ export class Page {
     readonly main_obj: ElementWrapper<string>;
     readonly design_obj: ElementWrapper<string>;
     readonly target_obj: ElementWrapper<string>;
+    readonly exchange_reaction: ElementWrapper<string>;
     readonly maximize: ElementWrapper<boolean>;
     readonly fba_sim: ElementWrapper<boolean>;
     readonly mba_sim: ElementWrapper<boolean>;
@@ -147,6 +166,7 @@ export class Page {
         this.main_obj = ElementWrapper.byClass<string>("cyano-design-objective-select", this.source_element);
         this.design_obj = ElementWrapper.byClass<string>("cyano-design-design-objective-select", this.source_element);
         this.target_obj = ElementWrapper.byClass<string>("cyano-design-target-objective-select", this.source_element);
+        this.exchange_reaction = ElementWrapper.byClass<string>("exchange-reaction-setting", this.source_element);
         this.maximize = ElementWrapper.byClass<boolean>("radio-maximize", this.source_element);
         this.fba_sim = ElementWrapper.byClass<boolean>("radio-fba", this.source_element);
         this.mba_sim = ElementWrapper.byClass<boolean>("radio-mba", this.source_element);
@@ -204,11 +224,17 @@ export class Page {
         $(this.main_obj.element).selectize(obj_options);
         $(this.design_obj.element).selectize(obj_options);
         $(this.target_obj.element).selectize(obj_options);
+        $(this.exchange_reaction.element).selectize();
 
         const self: Page = this;
 
         let main_obj_selectize: SelectizeType = this.main_obj.element.selectize;
         main_obj_selectize.on('change', function() {
+            self.app.simulation_page.solve();
+        });
+
+        let exchange_reaction: SelectizeType = this.exchange_reaction.element.selectize;
+        exchange_reaction.on('change', function() {
             self.app.simulation_page.solve();
         });
 
@@ -263,6 +289,40 @@ export class Page {
 
     getTargetObjective(): string {
         return this.target_obj.element.selectize.getValue();
+    }
+
+    getCreateExchangeReactions(): boolean {
+        const val: string = this.exchange_reaction.element.selectize.getValue();
+        if (val == "yes") {
+            return true;
+        } else if (val == "no") {
+            return false;
+        }
+
+        // Autodetect
+
+        // When the model follows the cobra convention the exchange reacs are prefixed with "EX_"
+        for (const met of this.app.model.getExternalMetabolites()) {
+            if (met.id.startsWith("M_")) {
+                if (this.app.model.reaction.has("id", "EX_" + met.id.substr(2))) {
+                    return false;
+                }
+
+                if (this.app.model.reaction.has("id", "R_EX_" + met.id.substr(2))) {
+                    return false;
+                }
+            }
+
+            if (this.app.model.reaction.has("id", "EX_" + met.id)) {
+                return false;
+            }
+
+            if (this.app.model.reaction.has("id", "R_EX_" + met.id)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     maximizeObjective(): boolean {

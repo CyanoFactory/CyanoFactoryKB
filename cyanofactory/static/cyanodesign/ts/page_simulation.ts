@@ -364,7 +364,8 @@ export class Page {
 
         this.app.model.fba(this.app.glpk_worker,
             this.app.model.reaction.get("id", this.app.settings_page.getObjective()),
-            this.app.settings_page.maximizeObjective());
+            this.app.settings_page.maximizeObjective(),
+            this.app.settings_page.getCreateExchangeReactions());
     }
 
     design_fba() {
@@ -431,7 +432,8 @@ export class Page {
 
             this.app.model.fba(this.app.glpk_worker,
                 design_obj,
-                this.app.settings_page.maximizeObjective());
+                this.app.settings_page.maximizeObjective(),
+                this.app.settings_page.getCreateExchangeReactions());
         };
 
         // Determine max and min of obj by constraining obj from 0 to nothing
@@ -512,13 +514,17 @@ export class Page {
                     simulate_fn();
                 };
 
-                this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective());
+                this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective(),
+                    this.app.settings_page.getCreateExchangeReactions());
             };
 
             simulate_fn();
         };
 
-        this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective());
+        this.app.model.fba(this.app.glpk_worker,
+            obj,
+            this.app.settings_page.maximizeObjective(),
+            this.app.settings_page.getCreateExchangeReactions());
     }
 
     target_fba() {
@@ -626,7 +632,8 @@ export class Page {
 
             this.app.model.fba(this.app.glpk_worker,
                 design_obj,
-                this.app.settings_page.maximizeObjective());
+                this.app.settings_page.maximizeObjective(),
+                this.app.settings_page.getCreateExchangeReactions());
         };
 
         this.app.glpk_worker.onerror = (err) => {
@@ -745,16 +752,25 @@ export class Page {
                         simulate_fn();
                     };
 
-                    this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective());
+                    this.app.model.fba(this.app.glpk_worker,
+                        design_obj,
+                        this.app.settings_page.maximizeObjective(),
+                        this.app.settings_page.getCreateExchangeReactions());
                 };
 
-                this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective());
+                this.app.model.fba(this.app.glpk_worker,
+                    obj,
+                    this.app.settings_page.maximizeObjective(),
+                    this.app.settings_page.getCreateExchangeReactions());
             };
 
             simulate_fn();
         };
 
-        this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective());
+        this.app.model.fba(this.app.glpk_worker,
+            obj,
+            this.app.settings_page.maximizeObjective(),
+            this.app.settings_page.getCreateExchangeReactions());
     }
 
     createCsv(): string {

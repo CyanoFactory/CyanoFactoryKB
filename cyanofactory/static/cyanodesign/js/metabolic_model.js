@@ -220,7 +220,7 @@ define(["require", "exports"], function (require, exports) {
             }
             return null;
         }
-        fba(glpk_worker, obj, maximize) {
+        fba(glpk_worker, obj, maximize, create_exchange_reactions = false) {
             let objective = {
                 name: "z",
                 direction: maximize ? 2 : 1,
@@ -238,7 +238,7 @@ define(["require", "exports"], function (require, exports) {
                     vars: [],
                     bnds: { type: 5, ub: 0.0, lb: 0.0 }
                 });
-                if (met.isExternal(this)) {
+                if (create_exchange_reactions && met.isExternal(this)) {
                     let r = new Reaction();
                     r.id = met.id + " <-> TRANSPORT";
                     r.reversible = true;

@@ -294,7 +294,7 @@ define(["require", "exports", "jquery", "./design_utils", "datatables.net"], fun
                 fn("The solution is " + solutions[evt.data.result.status - 1] + ". Flux of objective is " +
                     evt.data.result.z.toFixed(4));
             };
-            this.app.model.fba(this.app.glpk_worker, this.app.model.reaction.get("id", this.app.settings_page.getObjective()), this.app.settings_page.maximizeObjective());
+            this.app.model.fba(this.app.glpk_worker, this.app.model.reaction.get("id", this.app.settings_page.getObjective()), this.app.settings_page.maximizeObjective(), this.app.settings_page.getCreateExchangeReactions());
         }
         design_fba() {
             const obj = this.app.model.reaction.get("id", this.app.settings_page.getObjective());
@@ -343,7 +343,7 @@ define(["require", "exports", "jquery", "./design_utils", "datatables.net"], fun
                 const constraint = this.simulation_chart.categories()[d.index];
                 obj.lower_bound = constraint;
                 obj.upper_bound = constraint;
-                this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective());
+                this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective(), this.app.settings_page.getCreateExchangeReactions());
             };
             // Determine max and min of obj by constraining obj from 0 to nothing
             this.app.glpk_worker.onmessage = (evt) => {
@@ -413,11 +413,11 @@ define(["require", "exports", "jquery", "./design_utils", "datatables.net"], fun
                         all_flux.push([unit, evt.data.result.z]);
                         simulate_fn();
                     };
-                    this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective());
+                    this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective(), this.app.settings_page.getCreateExchangeReactions());
                 };
                 simulate_fn();
             };
-            this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective());
+            this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective(), this.app.settings_page.getCreateExchangeReactions());
         }
         target_fba() {
             const obj = this.app.model.reaction.get("id", this.app.settings_page.getObjective());
@@ -506,7 +506,7 @@ define(["require", "exports", "jquery", "./design_utils", "datatables.net"], fun
                 obj.upper_bound = constraint;
                 target_obj.lower_bound = 0.0;
                 target_obj.upper_bound = design_result;
-                this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective());
+                this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective(), this.app.settings_page.getCreateExchangeReactions());
             };
             this.app.glpk_worker.onerror = (err) => {
                 console.log(err);
@@ -608,13 +608,13 @@ define(["require", "exports", "jquery", "./design_utils", "datatables.net"], fun
                             }*/
                             simulate_fn();
                         };
-                        this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective());
+                        this.app.model.fba(this.app.glpk_worker, design_obj, this.app.settings_page.maximizeObjective(), this.app.settings_page.getCreateExchangeReactions());
                     };
-                    this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective());
+                    this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective(), this.app.settings_page.getCreateExchangeReactions());
                 };
                 simulate_fn();
             };
-            this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective());
+            this.app.model.fba(this.app.glpk_worker, obj, this.app.settings_page.maximizeObjective(), this.app.settings_page.getCreateExchangeReactions());
         }
         createCsv() {
             const data = this.simulation_chart.data();

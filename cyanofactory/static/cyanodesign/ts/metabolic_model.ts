@@ -251,7 +251,7 @@ export class Model extends ElementBase {
         return null;
     }
 
-    fba(glpk_worker: Worker, obj: Reaction, maximize: boolean) {
+    fba(glpk_worker: Worker, obj: Reaction, maximize: boolean, create_exchange_reactions: boolean = false) {
         let objective = {
             name: "z",
             direction: maximize ? 2 : 1,
@@ -273,7 +273,7 @@ export class Model extends ElementBase {
                 bnds: { type: 5, ub: 0.0, lb: 0.0 }
             });
 
-            if (met.isExternal(this)) {
+            if (create_exchange_reactions && met.isExternal(this)) {
                 let r = new Reaction();
                 r.id = met.id + " <-> TRANSPORT";
                 r.reversible = true;
