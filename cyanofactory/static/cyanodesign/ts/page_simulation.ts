@@ -98,6 +98,7 @@ export class Page {
     last_sim_objective: mm.Reaction = null;
     last_sim_design_objecive: mm.Reaction = null;
     last_dot_graph: string = "";
+    last_target_obj_results = [];
     simulation_chart: any = null;
 
     is_dragging: boolean = false;
@@ -547,51 +548,11 @@ export class Page {
                 "Unbound"
             ];
 
-            /*
-
-                // Limit target reaction to measured growth
-                var reaction = getEnzymeByName(cyano_design_target_objective_select.val());
-                var constraint = simulation_chart.categories()[d.index]; // Upper constraint
-
-                var command = {
-                    "type": "reaction",
-                    "id": reaction.id,
-                    "op": "edit",
-                    "object": jQuery.extend(true, {}, reaction)
-                };
-
-                if (command["object"].constraints.length == 0) {
-                    command["object"].constraints = [0, 0];
-                }
-
-                command["object"].constraints[1] = last_sim_flux[last_sim_flux.length - 1] * last_sim_flux[d.index][0];
-
-                command_list.push(command);
-
-                reaction = getEnzymeByName(cyano_design_objective_select.val());
-                constraint = last_sim_flux[d.index][1][reaction.name];
-
-                var command = {
-                    "type": "reaction",
-                    "id": reaction.id,
-                    "op": "edit",
-                    "object": jQuery.extend(true, {}, reaction)
-                };
-
-                command["object"].constraints = [constraint, constraint];
-
-                command_list.push(command);
-
-                var data = beginRequest();
-
-                command_list.pop();
-                command_list.pop();
-
-             */
-
             this.app.glpk_worker.onmessage = (evt) => {
                 obj.lower_bound = obj_copy.lower_bound;
                 obj.upper_bound = obj_copy.upper_bound;
+                target_obj.lower_bound = target_copy.lower_bound;
+                target_obj.upper_bound = target_copy.upper_bound;
 
                 this.app.reaction_page.flux = {};
                 const vars = evt.data.result.vars;
@@ -623,12 +584,11 @@ export class Page {
                 this.datatable_flux.draw();
             };
 
-            const constraint = this.simulation_chart.categories()[d.index];
+            const constraint = this.simulation_chart.data()[0]["values"][d.index].value;
             obj.lower_bound = constraint;
             obj.upper_bound = constraint;
 
-            target_obj.lower_bound = 0.0;
-            target_obj.upper_bound = design_result
+            target_obj.upper_bound = this.last_target_obj_results[d.index];
 
             this.app.model.fba(this.app.glpk_worker,
                 design_obj,
@@ -721,6 +681,8 @@ export class Page {
 
                 target_obj.upper_bound = unit;
 
+                this.last_target_obj_results.push(unit);
+
                 // Optimize limited growth
                 this.app.glpk_worker.onmessage = (evt) => {
                     const growth = evt.data.result.z;
@@ -764,6 +726,7 @@ export class Page {
                     this.app.settings_page.getCreateExchangeReactions());
             };
 
+            this.last_target_obj_results = [];
             simulate_fn();
         };
 
@@ -830,7 +793,7 @@ export class Page {
                     let f = flux[reac.id];
                     edges.push({
                         label: reac.name,
-                        flux: f,
+                        flux: f.toFixed(2),
                         color: f < 0.0 ? "red" : f > 0.0 ? "green" : "black",
                         penwidth: f == 0.0 ? 1 : f * max_flux,
                         left: this.app.model.metabolite.index("id", s.id),
