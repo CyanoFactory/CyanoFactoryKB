@@ -77,6 +77,7 @@ Create new metabolite
                     {},
                     {},
                     {},
+                    {},
                     {}
                 ],
                 columnDefs: [
@@ -163,6 +164,14 @@ Create new metabolite
                         "data": function (rowData, type, set, meta) {
                             return "No Pathway";
                             // FIXME return rowData.pathway.length == 0 ? "No Pathway" : rowData.pathway;
+                        }
+                    },
+                    {
+                        "targets": 7,
+                        "visible": false,
+                        "orderable": true,
+                        "data": function (rowData) {
+                            return rowData.id;
                         }
                     }
                 ],

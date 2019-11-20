@@ -68,6 +68,7 @@ export class Page {
                     {},
                     {},
                     {},
+                    {},
                     {}
                 ],
             columnDefs: [
@@ -135,6 +136,14 @@ export class Page {
                         <input type='checkbox' id='external" + meta.row + "' " + (data ? "checked='checked'" : "") + "> \
                         <label for='external"  + meta.row + "'>External</label> \
                         </div>";
+                    }
+                },
+                {
+                    "targets": 5,
+                    "visible": false,
+                    "orderable": true,
+                    "data": function (rowData: mm.Reaction) {
+                        return rowData.id;
                     }
                 }
             ],

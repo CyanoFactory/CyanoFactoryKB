@@ -57,6 +57,7 @@ Delete unused metabolites
                     {},
                     {},
                     {},
+                    {},
                     {}
                 ],
                 columnDefs: [
@@ -123,6 +124,14 @@ Delete unused metabolites
                         <input type='checkbox' id='external" + meta.row + "' " + (data ? "checked='checked'" : "") + "> \
                         <label for='external" + meta.row + "'>External</label> \
                         </div>";
+                        }
+                    },
+                    {
+                        "targets": 5,
+                        "visible": false,
+                        "orderable": true,
+                        "data": function (rowData) {
+                            return rowData.id;
                         }
                     }
                 ],

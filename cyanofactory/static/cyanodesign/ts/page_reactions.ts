@@ -90,6 +90,7 @@ export class Page {
                     {},
                     {},
                     {},
+                    {},
                     {}
                 ],
             columnDefs: [
@@ -179,6 +180,14 @@ export class Page {
                     "data": function (rowData, type, set, meta) {
                         return "No Pathway";
                         // FIXME return rowData.pathway.length == 0 ? "No Pathway" : rowData.pathway;
+                    }
+                },
+                {
+                    "targets": 7,
+                    "visible": false,
+                    "orderable": true,
+                    "data": function (rowData: mm.Reaction) {
+                        return rowData.id;
                     }
                 }
             ],
