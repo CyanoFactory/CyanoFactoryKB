@@ -369,7 +369,7 @@ export class Model extends ElementBase {
 }
 
 export class Compartment extends ElementBase {
-    constant: boolean = false;
+    constant: boolean = true;
     units: string = "";
 
     updateId(new_id: string, model: Model) {
@@ -940,7 +940,7 @@ export class Metabolite extends ElementBase {
 }
 
 export class Parameter extends ElementBase {
-    constant: boolean = false;
+    constant: boolean = true;
     units: string = "";
     value: number = 0;
 

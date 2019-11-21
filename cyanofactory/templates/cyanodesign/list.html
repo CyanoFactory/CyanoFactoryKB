@@ -199,9 +199,10 @@ $(document).ready(function() {
                         Export model <span class="caret"></span>
                     </a>
                     <ul class="dropdown-menu" role="menu">
-                    <li><a id="export-bioopt" href="{% url "cyanodesign:export" pk=object.pk %}?format=bioopt">As BioOpt file</a></li>
                     <li><a id="export-sbml" href="{% url "cyanodesign:export" pk=object.pk %}?format=sbml">As SBML file</a></li>
-                    <li><a id="export-json" href="{% url "cyanodesign:export" pk=object.pk %}?format=json">As WeDesign JSON file</a></li>
+                    <li><a id="export-sbml-wedesign" href="{% url "cyanodesign:export" pk=object.pk %}?format=sbml_wedesign">As SBML file with WeDesign extension</a></li>
+                    <li><a id="export-bioopt" href="{% url "cyanodesign:export" pk=object.pk %}?format=bioopt">As BioOpt file</a></li>
+                    <li><a id="export-json" href="{% url "cyanodesign:export" pk=object.pk %}?format=json">As WeDesign JSON file (only for developers)</a></li>
                     </ul>
                 </div>
                 {% if request.user.is_authenticated %}

@@ -23,7 +23,7 @@ from cyanodesign.forms import UploadModelForm, ModelFromTemplateForm, SaveModelA
 from cyanodesign.helpers import calc_reactions, get_selected_reaction
 from cyanodesign.command_list import apply_commandlist, compress_commandlist
 from metabolic_model.optgene import OptGeneParser
-from metabolic_model.sbml_xml_generator import SbmlXMLGenerator
+from metabolic_model.sbml_xml_generator import SbmlXMLGenerator, SbmlXMLGeneratorWithWeDesign
 from urllib.error import URLError
 
 from .models import DesignModel, Revision, DesignTemplate
@@ -413,7 +413,7 @@ def simulate(request, pk):
 def export(request, pk):
     form = request.GET.get("format")
 
-    if form not in ["bioopt", "sbml", "json"]:
+    if form not in ["bioopt", "sbml", "sbml_wedesign", "json"]:
         return HttpResponseBadRequest("Bad format")
 
     try:
@@ -422,9 +422,10 @@ def export(request, pk):
     except ObjectDoesNotExist:
         return HttpResponseBadRequest("Bad Model")
 
-    if form == "sbml":
+    if form.startswith("sbml"):
         xml_handle = StringIO()
-        writer = SbmlXMLGenerator(xml_handle, "utf-8")
+        cls = SbmlXMLGenerator if form == "sbml" else SbmlXMLGeneratorWithWeDesign
+        writer = cls(xml_handle, "utf-8")
 
         writer.startDocument()
         metabolic_model.MetabolicModel.from_json(content).write_sbml(writer)
@@ -448,12 +449,14 @@ def export(request, pk):
     types = dict(
         bioopt="application/x-bioopt",
         sbml="application/sbml+xml",
+        sbml_wedesign="application/sbml+xml",
         json="application/json"
     )
 
     exts = dict(
         bioopt=".txt",
         sbml=".xml",
+        sbml_wedesign=".xml",
         json=".json"
     )
 

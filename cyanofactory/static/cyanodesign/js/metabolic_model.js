@@ -327,7 +327,7 @@ define(["require", "exports"], function (require, exports) {
     class Compartment extends ElementBase {
         constructor() {
             super(...arguments);
-            this.constant = false;
+            this.constant = true;
             this.units = "";
         }
         updateId(new_id, model) {
@@ -850,7 +850,7 @@ define(["require", "exports"], function (require, exports) {
     class Parameter extends ElementBase {
         constructor() {
             super(...arguments);
-            this.constant = false;
+            this.constant = true;
             this.units = "";
             this.value = 0;
         }

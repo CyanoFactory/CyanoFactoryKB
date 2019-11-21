@@ -6,7 +6,8 @@ Released under the MIT license
 """
 
 import json
-from .sbml_json_generator import SbmlJsonGenerator
+
+from .sbml_json_generator import SbmlJsonGeneratorWithWeDesign
 from typing import List
 
 class ElementBase(object):
@@ -81,7 +82,7 @@ class ElementBase(object):
             writer.endPrefixMapping("bqbiol")
 
     def to_json(self, **kwargs):
-        return json.dumps(self, cls=SbmlJsonGenerator, **kwargs)
+        return json.dumps(self, cls=SbmlJsonGeneratorWithWeDesign, **kwargs)
 
     @staticmethod
     def apply_by_id(lst, id, op):
@@ -231,7 +232,7 @@ class MetabolicModel(ElementBase):
         writer.startPrefixMapping("fbc", "http://www.sbml.org/sbml/level3/version1/fbc/version2")
         writer.startPrefixMapping("groups", "http://www.sbml.org/sbml/level3/version1/groups/version1")
         if getattr(writer, "enable_wedesign", False):
-            writer.startPrefixMapping("wedesign", "http://cyanofactory.hs-mittweida.de/wedesign/version1")
+            writer.startPrefixMapping("wedesign", "https://cyanofactory.hs-mittweida.de/wedesign/version1")
 
         attrs = ["fbc", "required", False,
                 "groups", "required", False,
@@ -496,7 +497,7 @@ class MetabolicModel(ElementBase):
 # Single compartment in listOfCompartments
 class Compartment(ElementBase):
     def __init__(self):
-        self.constant = False
+        self.constant = True
         self.units = ""
 
         super().__init__()
@@ -1000,7 +1001,7 @@ class FluxObjective(ElementBase):
 # Single parameter in listOfParameters
 class Parameter(ElementBase):
     def __init__(self):
-        self.constant = False
+        self.constant = True
         self.units = ""
         self.value = 0
 

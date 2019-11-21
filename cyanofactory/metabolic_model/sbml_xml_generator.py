@@ -50,7 +50,8 @@ class SbmlXMLGenerator(XMLGenerator):
             groups="http://www.sbml.org/sbml/level3/version1/groups/version1",
             rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#",
             bqbiol="http://biomodels.net/biology-qualifiers/",
-            bqmodel="http://biomodels.net/model-qualifiers/"
+            bqmodel="http://biomodels.net/model-qualifiers/",
+            wedesign="https://cyanofactory.hs-mittweida.de/wedesign/version1"
         )
 
         def __init__(self, parent, name, qname, attrs=None):
@@ -103,3 +104,9 @@ class SbmlXMLGenerator(XMLGenerator):
 
     def elementNS(self, ns, name, attrs=None, is_list=False):
         return SbmlXMLGenerator.ElementScopeHandlerNS(self, name, ns, attrs)
+
+class SbmlXMLGeneratorWithWeDesign(SbmlXMLGenerator):
+    def __init__(self, *args, **kwargs):
+        self.enable_wedesign = True
+
+        super().__init__(*args, **kwargs)

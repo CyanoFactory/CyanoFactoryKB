@@ -167,3 +167,9 @@ class SbmlJsonGenerator(json.JSONEncoder):
 
     def elementNS(self, ns, name, attrs=None, is_list=False):
         return SbmlJsonGenerator.ElementScopeHandlerNS(self, name, ns, attrs, is_list)
+
+class SbmlJsonGeneratorWithWeDesign(SbmlJsonGenerator):
+    def __init__(self, *args, **kwargs):
+        self.enable_wedesign = True
+
+        super().__init__(*args, **kwargs)
