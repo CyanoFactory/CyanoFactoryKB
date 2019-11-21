@@ -98,10 +98,13 @@ def get_reactions(request, pk):
 
     try:
         revision = request.GET["revision"]
-        try:
-            revision = Revision.objects.get(model=item, pk=revision)
-        except ObjectDoesNotExist:
-            return BadRequest("Bad Revision")
+        if len(revision) == 0:
+            revision = item.get_latest_revision()
+        else:
+            try:
+                revision = Revision.objects.get(model=item, pk=revision)
+            except ObjectDoesNotExist:
+                return BadRequest("Bad Revision")
     except KeyError:
         revision = item.get_latest_revision()
 
@@ -117,16 +120,18 @@ def get_revisions(request, pk):
     except ObjectDoesNotExist:
         return BadRequest("Bad Model")
 
-    revision = Revision.objects.filter(model=item).values("reason", "date", "changes")
+    revision = Revision.objects.filter(model=item).order_by("id").values("id", "reason", "date", "changes")
     if len(revision) == 0:
         return BadRequest("Bad Revision")
 
+    prev_id = None
     for rev in revision:
         # For historical reasons changes also contains an extra key objectives
         if "changes" in rev["changes"]:
             rev["changes"] = rev["changes"]["changes"]
         else:
             rev["changes"] = []
+        prev_id, rev["id"] = rev["id"], prev_id
         rev["date"] = str(rev["date"])
 
     return list(revision)
@@ -469,7 +474,7 @@ def export(request, pk):
 @global_permission_required("access_cyanodesign")
 @json_view
 def save(request, pk):
-    if not all(x in request.POST for x in ["changes", "objectives"]):
+    if not all(x in request.POST for x in ["changes"]):
         raise BadRequest("Request incomplete")
 
     try:
@@ -478,23 +483,38 @@ def save(request, pk):
         return HttpResponseBadRequest("Bad Model")
 
     try:
-        revision = request.POST["revision"]
-        try:
-            revision = Revision.objects.get(model=model, pk=revision)
-        except ObjectDoesNotExist:
-            return HttpResponseBadRequest("Bad Revision")
-    except KeyError:
-        revision = model.get_latest_revision()
-
-    org = metabolic_model.MetabolicModel.from_json(revision.sbml)
-
-    try:
         changes = json.loads(request.POST["changes"])
-        objectives = json.loads(request.POST["objectives"])
     except ValueError:
         return BadRequest("Invalid JSON data")
 
+    if len(changes) == 0:
+        raise BadRequest("Model not saved: No changes found")
+
     summary = request.POST.get("summary")
+
+    groups = []
+    # Sanitize:
+    # Check that group ID is the same everywhere
+    for change in changes:
+        group = change.get("group")
+        if group is None:
+            return BadRequest("Invalid JSON data")
+        idd = group.get("id")
+        groups.append(idd)
+    if len(set(groups)) != 1:
+        return BadRequest("Invalid history data")
+
+    # When group ID not -1 check if the revision exists
+    if groups[0] != -1:
+        try:
+            revision = Revision.objects.get(model=model, pk=groups[0])
+        except ObjectDoesNotExist:
+            return HttpResponseBadRequest("Bad Revision")
+    else:
+        revision = model.get_latest_revision()
+        pass
+
+    org = metabolic_model.MetabolicModel.from_json(revision.sbml)
 
     try:
         apply_commandlist(org, changes)
@@ -516,21 +536,24 @@ def save(request, pk):
     except ValueError as e:
         raise BadRequest("Model error: " + str(e))
 
-    if len(changes) == 0:
-        raise BadRequest("Model not saved: No changes found")
-
     for reac in org.reactions:
         reac.update_parameters_from_bounds(org)
 
-    Revision(
+    if groups[0] != -1:
+        # Delete all revisions after this one
+        Revision.objects.filter(model=model, date__gt=revision.date).delete()
+
+    rev = Revision(
         model=model,
         content="",
         sbml=org.to_json(),
-        changes=dict(changes=changes,objectives=objectives),
+        changes=dict(changes=changes),
         reason=summary
-    ).save()
+    )
 
-    return {}
+    rev.save()
+
+    return {"history_id": rev.pk}
 
 
 @login_required

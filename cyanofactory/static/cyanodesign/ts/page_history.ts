@@ -17,6 +17,8 @@ template.innerHTML = `
         </tr>
     </thead>
 </table>
+Warning: When you undo changes they will be permanently lost as soon as you click save or do any other change to the model.
+If you want to work on different forks of the model use the "Save as" button to create a copy of the model.
 `;
 
 export class Page {
@@ -152,16 +154,16 @@ export class Page {
             return;
         }
 
-        let i = 1;
+        this.app.history_manager.clear();
+
         for (const group of revisions) {
             const hgroup: HistoryGroup = new HistoryGroup();
-            hgroup.id = i;
+            hgroup.id = group["id"];
             hgroup.date = group["date"];
             hgroup.summary = group["reason"];
             for (const revs of group["changes"]) {
                 this.app.history_manager.push(revs, hgroup);
             }
-            ++i;
         }
     }
 

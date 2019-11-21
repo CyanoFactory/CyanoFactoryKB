@@ -21,11 +21,12 @@ export class HistoryGroup {
 }
 
 export class HistoryManager {
-    readonly history: HistoryEntry[];
+    history: HistoryEntry[];
     private readonly app: AppManager;
+    current_id: number = -1;
 
-    constructor(history: HistoryEntry[], app: app.AppManager) {
-        this.history = history;
+    constructor(app: app.AppManager) {
+        this.history = [];
         this.app = app;
     }
 
@@ -36,6 +37,12 @@ export class HistoryManager {
         hentry.op = entry["op"];
         hentry.id = entry["id"];
         hentry.object = entry["object"];
+        if (group == null) {
+            group = new HistoryGroup();
+            group.id = this.current_id;
+            group.date = new Date().toDateString();
+            group.summary = "Unsaved changes";
+        }
         hentry.group = group;
 
         let i = 0;
@@ -83,11 +90,6 @@ export class HistoryManager {
                 s += item + ": " + obj[item];
             }
             return s;
-
-            /*return "Edit reaction " + name;
-            if (name != obj["name"]) {
-                return "Renamed reaction " + name + " to " + obj["name"];
-            }*/
         } else if (op == "delete") {
             return `${id} (${obj["name"]})`;
         }
@@ -133,6 +135,8 @@ export class HistoryManager {
                 }
             }
 
+            obj.fixup();
+
             fn.add(obj);
         } else if (op == "edit") {
             let obj: any = fn.get("id", id);
@@ -154,6 +158,8 @@ export class HistoryManager {
                     }
                 }
             }
+
+            obj.fixup();
         } else if (op == "delete") {
             if (!fn.has("id", id)) {
                 throw new Error(entry.type + " " + entry.id + " is not in the model!");
@@ -164,33 +170,106 @@ export class HistoryManager {
     }
 
     undo(idx: number): void {
+        const undo_func = () => {
+            for (let i = 0; i < this.history.length; ++i) {
+                if (!this.history[i].undo) {
+                    break;
+                }
+
+                if (this.current_id == this.history[i].group.id) {
+                    console.log("Undo: " + this.history[i]);
+                    this.apply(i);
+                }
+            }
+
+            this.refresh();
+        };
+
         for (let i = idx; i < this.history.length; ++i) {
             this.history[i].undo = false;
         }
 
-        this.app.model = new mm.Model();
-        this.app.model.fromJson(this.app.old_models[0]);
+        if (this.history[idx].group.id != this.current_id) {
+            this.current_id = this.history[idx].group.id;
 
-        for (let i = 0; i < this.history.length; ++i) {
-            if (!this.history[i].undo) {
-                break;
-            }
+            // Is at a different savepoint, fetch that model and refresh
+            this.app.request_handler.beginRequest();
+            $.ajax({
+                url: this.app.urls.get_reactions,
+                context: document.body,
+                data: {
+                    revision: this.current_id == -1 ? "" : this.current_id
+                }
+            }).done((model: any) => {
+                this.app.model = new mm.Model();
+                this.app.model.fromJson(model);
+                this.app.old_model = model;
 
-            this.apply(i);
+                undo_func();
+
+                this.app.request_handler.endRequest();
+            });
+        } else {
+            this.app.model = new mm.Model();
+            this.app.model.fromJson(this.app.old_model);
+
+            undo_func();
         }
-
-        this.refresh();
     }
 
     redo(idx: number): void {
-        for (let i = 0; i <= idx && i < this.history.length; ++i) {
-            if (!this.history[i].undo) {
-                this.history[i].undo = true;
-                this.apply(i);
+        const redo_func = () => {
+            for (let i = 0; i <= idx && i < this.history.length; ++i) {
+                if (!this.history[i].undo) {
+                    this.history[i].undo = true;
+
+                    if (this.current_id == this.history[i].group.id) {
+                        console.log("Redo: " + this.history[i]);
+                        this.apply(i);
+                    }
+                }
+            }
+
+            this.refresh();
+        };
+
+        if (this.history[idx].group.id != this.current_id) {
+            this.current_id = this.history[idx].group.id;
+
+            // Is at a different savepoint, fetch that model and refresh
+            this.app.request_handler.beginRequest();
+            $.ajax({
+                url: this.app.urls.get_reactions,
+                context: document.body,
+                data: {
+                    revision: this.current_id == -1 ? "" : this.current_id
+                }
+            }).done((model: any) => {
+                this.app.model = new mm.Model();
+                this.app.model.fromJson(model);
+                this.app.old_model = model;
+
+                redo_func();
+                this.app.request_handler.endRequest();
+            });
+        } else {
+            redo_func();
+        }
+    }
+
+    current(): HistoryEntry[] {
+        let history = [];
+        for (const hist of this.history) {
+            if (hist.group.id == this.current_id && hist.undo) {
+                history.push(hist);
             }
         }
+        return history;
+    }
 
-        this.refresh();
+    clear(): void {
+        this.current_id = -1;
+        this.history = [];
     }
 
     refresh(): void {

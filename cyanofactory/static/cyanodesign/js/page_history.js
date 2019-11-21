@@ -14,6 +14,8 @@ define(["require", "exports", "jquery", "./history_manager", "datatables.net"], 
         </tr>
     </thead>
 </table>
+Warning: When you undo changes they will be permanently lost as soon as you click save or do any other change to the model.
+If you want to work on different forks of the model use the "Save as" button to create a copy of the model.
 `;
     class Page {
         constructor(where, app) {
@@ -130,16 +132,15 @@ define(["require", "exports", "jquery", "./history_manager", "datatables.net"], 
             if (revisions == null) {
                 return;
             }
-            let i = 1;
+            this.app.history_manager.clear();
             for (const group of revisions) {
                 const hgroup = new history_manager_1.HistoryGroup();
-                hgroup.id = i;
+                hgroup.id = group["id"];
                 hgroup.date = group["date"];
                 hgroup.summary = group["reason"];
                 for (const revs of group["changes"]) {
                     this.app.history_manager.push(revs, hgroup);
                 }
-                ++i;
             }
         }
         refresh() {

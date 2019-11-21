@@ -1,6 +1,7 @@
 import * as app from "./app"
 import * as mm from "./metabolic_model";
 import * as $ from "jquery";
+import {HistoryManager} from "./history_manager";
 
 declare var waitIndicator: any;
 
@@ -20,7 +21,7 @@ export class RequestHandler {
             waitIndicator.show(show_on);
 
         let result = {
-            "changes": JSON.stringify(this.app.command_list),
+            "changes": JSON.stringify(this.app.history_manager.current()),
             "objectives": JSON.stringify([{
                 "id": this.app.settings_page.getObjective(),
                 "maximize": this.app.settings_page.maximizeObjective()
@@ -83,20 +84,12 @@ export class RequestHandler {
             url: self.app.urls.save,
             type: "POST",
             data: data
-        }).done(function(x) {
-            /*if (revision !== undefined) {
-                location.replace(self.app.urls.design);
-            }*/
-            /*$("#dialog-save-model")["modal"]("hide");
-            endRequest($("#dialog-save-model").find(".modal-content"));
-            $("#simulation-result").html("")*/
-            // FIXME self.app.command_list = [];
+        }).done((x: any) => {
+            $.ajax({
+                url: this.app.urls.get_revisions,
+            }).done((x: any) => this.app.history_page.init(x));
             self.endRequest();
         }).fail(function(x) {
-            /*$("#dialog-save-model")["modal"]("hide");
-            $("#visual_graph").hide();
-            $("#visual_fba").hide();*/
-            //notifyError(JSON.parse(x.responseText)["message"]);
             self.endRequest();
         });
     }

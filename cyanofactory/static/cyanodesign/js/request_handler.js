@@ -12,7 +12,7 @@ define(["require", "exports", "jquery"], function (require, exports, $) {
             else
                 waitIndicator.show(show_on);
             let result = {
-                "changes": JSON.stringify(this.app.command_list),
+                "changes": JSON.stringify(this.app.history_manager.current()),
                 "objectives": JSON.stringify([{
                         "id": this.app.settings_page.getObjective(),
                         "maximize": this.app.settings_page.maximizeObjective()
@@ -67,20 +67,12 @@ define(["require", "exports", "jquery"], function (require, exports, $) {
                 url: self.app.urls.save,
                 type: "POST",
                 data: data
-            }).done(function (x) {
-                /*if (revision !== undefined) {
-                    location.replace(self.app.urls.design);
-                }*/
-                /*$("#dialog-save-model")["modal"]("hide");
-                endRequest($("#dialog-save-model").find(".modal-content"));
-                $("#simulation-result").html("")*/
-                // FIXME self.app.command_list = [];
+            }).done((x) => {
+                $.ajax({
+                    url: this.app.urls.get_revisions,
+                }).done((x) => this.app.history_page.init(x));
                 self.endRequest();
             }).fail(function (x) {
-                /*$("#dialog-save-model")["modal"]("hide");
-                $("#visual_graph").hide();
-                $("#visual_fba").hide();*/
-                //notifyError(JSON.parse(x.responseText)["message"]);
                 self.endRequest();
             });
         }

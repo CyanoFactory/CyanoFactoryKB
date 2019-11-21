@@ -37,20 +37,19 @@ export class AppManager {
     readonly urls: any;
     readonly request_handler: RequestHandler;
     readonly glpk_worker: Worker;
-    readonly history_manager: HistoryManager;
+    history_manager: HistoryManager = null;
     model: mm.Model;
-    command_list: any = [];
-    old_models: string[] = [];
+    old_model: string;
 
     constructor(mm_cls: any, model_json: any, urls: any, glpk_worker: Worker) {
         this.model = new mm_cls.Model();
         this.model.fromJson(model_json);
-        this.old_models.push(model_json);
+        this.old_model = model_json;
 
         this.urls = urls;
         this.request_handler = new RequestHandler(this, -1);
         this.glpk_worker = glpk_worker;
-        this.history_manager = new HistoryManager(this.command_list, this);
+        this.history_manager = new HistoryManager(this);
 
         this.dialog_reaction = new dialog_reaction.Dialog(this);
         this.dialog_reaction_bulk = new dialog_reaction_bulkadd.Dialog(this);

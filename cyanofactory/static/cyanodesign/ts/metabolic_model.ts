@@ -136,6 +136,8 @@ abstract class ElementBase {
     get_name_or_id(): string {
         return this.name.length == 0 ? this.id : this.name;
     }
+
+    fixup() {}
 }
 
 export class Model extends ElementBase {
@@ -568,6 +570,15 @@ export class Reaction extends ElementBase {
         this.readAttributes(j);
         this.read_list(j["listOfReactants"], this.substrates, new Internal.ClassBuilder(MetaboliteReference));
         this.read_list(j["listOfProducts"], this.products, new Internal.ClassBuilder(MetaboliteReference));
+    }
+
+    fixup() {
+        const substrates = this.substrates;
+        const products = this.products;
+        this.substrates = [];
+        this.products = [];
+        this.read_list(substrates, this.substrates, new Internal.ClassBuilder(MetaboliteReference));
+        this.read_list(products, this.products, new Internal.ClassBuilder(MetaboliteReference));
     }
 
     isConstrained(model: Model): boolean {
