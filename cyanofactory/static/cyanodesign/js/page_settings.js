@@ -1,4 +1,4 @@
-define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "selectize"], function (require, exports, dialog_helper_1, $) {
+define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", "datatables.net", "selectize"], function (require, exports, mm, dialog_helper_1, $) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     let template = document.createElement('template');
@@ -141,6 +141,7 @@ define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "se
 `;
     class Page {
         constructor(where, app) {
+            this.once = true;
             this.app = app;
             this.source_element = where;
             where.appendChild(template.content.cloneNode(true));
@@ -149,6 +150,7 @@ define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "se
             this.target_obj = dialog_helper_1.ElementWrapper.byClass("cyano-design-target-objective-select", this.source_element);
             this.exchange_reaction = dialog_helper_1.ElementWrapper.byClass("exchange-reaction-setting", this.source_element);
             this.maximize = dialog_helper_1.ElementWrapper.byClass("radio-maximize", this.source_element);
+            this.minimize = dialog_helper_1.ElementWrapper.byClass("radio-minimize", this.source_element);
             this.fba_sim = dialog_helper_1.ElementWrapper.byClass("radio-fba", this.source_element);
             this.mba_sim = dialog_helper_1.ElementWrapper.byClass("radio-mba", this.source_element);
             this.sa_sim = dialog_helper_1.ElementWrapper.byClass("radio-sa", this.source_element);
@@ -199,6 +201,51 @@ define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "se
             $(this.design_obj.element).selectize(obj_options);
             $(this.target_obj.element).selectize(obj_options);
             $(this.exchange_reaction.element).selectize();
+            // Callback for updating the objective
+            const obj_to_model = (id, value, update_min_max = false) => {
+                let obj = self.app.model.objective.get("id", id);
+                let op = "edit";
+                if (obj == null) {
+                    op = "add";
+                    obj = new mm.Objective();
+                    obj.id = id;
+                    obj.type = "maximize";
+                    if (update_min_max) {
+                        obj.type = self.maximize.value ? "maximize" : "minimize";
+                    }
+                    self.app.model.objectives.push(obj);
+                }
+                obj.flux_objectives = [];
+                let flux_obj = new mm.FluxObjective();
+                flux_obj.coefficient = 1.0;
+                flux_obj.reaction = value;
+                obj.flux_objectives.push(flux_obj);
+                self.app.history_manager.push({
+                    "type": "objective",
+                    "op": op,
+                    "id": obj.id,
+                    "object": {
+                        "id": obj.id,
+                        "type": obj.type,
+                        "flux_objectives": [{
+                                "coefficient": flux_obj.coefficient,
+                                "reaction": flux_obj.reaction
+                            }]
+                    }
+                });
+            };
+            if (this.once) {
+                this.main_obj.element.selectize.on('change', function () {
+                    obj_to_model("obj", this.getValue(), true);
+                });
+                this.design_obj.element.selectize.on('change', function () {
+                    obj_to_model("design_obj", this.getValue(), true);
+                });
+                this.target_obj.element.selectize.on('change', function () {
+                    obj_to_model("target_obj", this.getValue(), true);
+                });
+                this.once = false;
+            }
             const self = this;
             let main_obj_selectize = this.main_obj.element.selectize;
             main_obj_selectize.on('change', function () {
@@ -209,6 +256,22 @@ define(["require", "exports", "./dialog_helper", "jquery", "datatables.net", "se
                 self.app.simulation_page.solve();
             });
             this.refresh();
+            // Fetch objectives from model
+            const obj_from_model = (id, target, update_min_max = false) => {
+                let obj = this.app.model.objective.get("id", id);
+                if (obj != null) {
+                    if (obj.flux_objectives.length > 0) {
+                        target.element.selectize.setValue(obj.flux_objectives[0].reaction, true);
+                        if (update_min_max) {
+                            this.maximize.value = obj.type == "maximize";
+                            this.minimize.value = !this.maximize.value;
+                        }
+                    }
+                }
+            };
+            obj_from_model("obj", this.main_obj, true);
+            obj_from_model("design_obj", this.design_obj);
+            obj_from_model("target_obj", this.target_obj);
         }
         refresh(reactions = null) {
             let main_obj_selectize = this.main_obj.element.selectize;

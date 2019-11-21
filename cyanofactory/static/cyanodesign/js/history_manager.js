@@ -54,10 +54,7 @@ define(["require", "exports", "./metabolic_model", "jquery"], function (require,
             const typ = this.history[idx]["type"];
             const id = this.history[idx]["id"];
             const obj = this.history[idx]["object"];
-            if (op == "add") {
-                return `${id} (${obj["name"]})`;
-            }
-            else if (op == "edit") {
+            if (op == "add" || op == "edit") {
                 let s = "";
                 let first = true;
                 for (const item in obj) {
@@ -70,7 +67,7 @@ define(["require", "exports", "./metabolic_model", "jquery"], function (require,
                 return s;
             }
             else if (op == "delete") {
-                return `${id} (${obj["name"]})`;
+                return `${id}`;
             }
         }
         apply(idx) {

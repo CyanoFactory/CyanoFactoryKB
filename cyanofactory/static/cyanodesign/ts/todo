@@ -1,5 +1,4 @@
 Design:
-- Save
 - Save as
 
 Metabolites:
@@ -12,7 +11,6 @@ Settings:
 - Axis labeling
 
 Simulation:
-- RA sim (-> Chart)
 - Combine with previous sim
 
 Dialog Reaction:
@@ -37,6 +35,3 @@ Objective:
 - [Activate]
 - Delete
 - Add
-
-History:
-- Undo over multiple save states

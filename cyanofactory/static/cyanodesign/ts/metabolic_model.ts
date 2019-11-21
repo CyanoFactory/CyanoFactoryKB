@@ -145,6 +145,7 @@ export class Model extends ElementBase {
     reactions: Reaction[] = [];
     compartments: Compartment[] = [];
     parameters: Parameter[] = [];
+    objectives: Objective[] = [];
 
     external_compartment: Compartment = null;
 
@@ -167,7 +168,10 @@ export class Model extends ElementBase {
         return new Internal.LstOp(this.parameters, Parameter);
     }
 
-    //objectives;
+    get objective() {
+        return new Internal.LstOp(this.objectives, Objective);
+    }
+
     //groups;
 
     readAttributes(attrs: object) {
@@ -176,10 +180,28 @@ export class Model extends ElementBase {
 
     fromJson(j: any) {
         this.readAttributes(j);
+
+        if (j["listOfSpecies"] == null) {
+            j["listOfSpecies"] = [];
+        }
+        if (j["listOfReactions"] == null) {
+            j["listOfReactions"] = [];
+        }
+        if (j["listOfCompartments"] == null) {
+            j["listOfCompartments"] = [];
+        }
+        if (j["listOfParameters"] == null) {
+            j["listOfParameters"] = [];
+        }
+        if (j["fbc:listOfObjectives"] == null) {
+            j["fbc:listOfObjectives"] = [];
+        }
+
         this.read_list(j["listOfSpecies"], this.metabolites, new Internal.ClassBuilder(Metabolite));
         this.read_list(j["listOfReactions"], this.reactions, new Internal.ClassBuilder(Reaction));
         this.read_list(j["listOfCompartments"], this.compartments, new Internal.ClassBuilder(Compartment));
         this.read_list(j["listOfParameters"], this.parameters, new Internal.ClassBuilder(Parameter));
+        this.read_list(j["fbc:listOfObjectives"], this.objectives, new Internal.ClassBuilder(Objective));
 
         this.refreshConstraints();
     }
@@ -944,3 +966,61 @@ export class Parameter extends ElementBase {
     }
 }
 
+export class Objective extends ElementBase {
+    type: string = "";
+
+    flux_objectives: FluxObjective[] = [];
+
+    get flux_objective() {
+        return new Internal.LstOp(this.objectives, FluxObjective);
+    }
+
+    readAttributes(attrs: any) {
+        for (const k in attrs) {
+            if (attrs.hasOwnProperty(k)) {
+                const v = attrs[k];
+                if (k == "fbc:id") {
+                    this.id = v;
+                } else if (k == "fbc:type") {
+                    this.type = v;
+                } else {
+                    this.read_common_attribute(k, v);
+                }
+            }
+        }
+    }
+
+    fromJson(j: any) {
+        this.readAttributes(j);
+
+        if (j["fbc:listOfFluxObjectives"] == null) {
+            j["fbc:listOfFluxObjectives"] = [];
+        }
+
+        this.read_list(j["fbc:listOfFluxObjectives"], this.flux_objectives, new Internal.ClassBuilder(FluxObjective));
+    }
+}
+
+export class FluxObjective extends ElementBase {
+    coefficient: number = 0.0;
+    reaction: string = "";
+
+    readAttributes(attrs: any) {
+        for (const k in attrs) {
+            if (attrs.hasOwnProperty(k)) {
+                const v = attrs[k];
+                if (k == "fbc:coefficient") {
+                    this.coefficient = v;
+                } else if (k == "fbc:reaction") {
+                    this.reaction = v;
+                } else {
+                    this.read_common_attribute(k, v);
+                }
+            }
+        }
+    }
+
+    fromJson(j: any) {
+        this.readAttributes(j);
+    }
+}

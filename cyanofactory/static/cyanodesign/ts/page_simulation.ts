@@ -350,6 +350,11 @@ export class Page {
         };
 
         this.app.glpk_worker.onmessage = (evt) => {
+            if (evt.data.initialized == true) {
+                // ignore init message
+                return;
+            }
+
             this.app.reaction_page.flux = {};
             const vars = evt.data.result.vars;
             for (const key in vars) {

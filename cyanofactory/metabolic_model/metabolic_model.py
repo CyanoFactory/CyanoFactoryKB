@@ -209,6 +209,10 @@ class MetabolicModel(ElementBase):
     def parameter(self):
         return LstOp(self.parameters, Parameter)
 
+    @property
+    def objective(self):
+        return LstOp(self.objectives, Objective)
+
     def read_attributes(self, attrs):
         for k, v in attrs.items():
             if k == "extentUnits":
@@ -934,6 +938,21 @@ class Objective(ElementBase):
             for obj in self.flux_objectives:
                 with writer.elementNS(ns="fbc", name="listOfFluxObjectives", is_list=True):
                     obj.write_sbml(writer)
+
+    def apply(self, new_obj):
+        self.id = new_obj.get("id", self.id)
+        self.type = new_obj.get("type", self.type)
+
+        if "flux_objectives" in new_obj:
+            if type(new_obj["flux_objectives"]) is not list:
+                raise ValueError("flux_objectives is not a list")
+
+            self.flux_objectives = []
+            for obj in new_obj["flux_objectives"]:
+                fobj = FluxObjective()
+                fobj.reaction = obj.get("reaction")
+                fobj.coefficient = obj.get("coefficient")
+                self.flux_objectives.append(fobj)
 
     @staticmethod
     def from_json(j):

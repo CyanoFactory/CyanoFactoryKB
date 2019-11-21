@@ -33,7 +33,7 @@ def apply_commandlist(model: metabolic_model.MetabolicModel, commandlist):
         except KeyError:
             raise ValueError("Bad command " + str(command))
 
-        if typ not in ["reaction", "metabolite", "compartment"]:
+        if typ not in ["reaction", "metabolite", "compartment", "objective"]:
             raise ValueError("Bad object type {} in command {}".format(typ, command))
 
         if op not in ["add", "edit", "delete"]:

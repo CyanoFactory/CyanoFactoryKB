@@ -75,9 +75,7 @@ export class HistoryManager {
         const id: string = this.history[idx]["id"];
         const obj: any = this.history[idx]["object"];
 
-        if (op == "add") {
-            return `${id} (${obj["name"]})`;
-        } else if (op == "edit") {
+        if (op == "add" || op == "edit") {
             let s = "";
 
             let first: boolean = true;
@@ -91,7 +89,7 @@ export class HistoryManager {
             }
             return s;
         } else if (op == "delete") {
-            return `${id} (${obj["name"]})`;
+            return `${id}`;
         }
     }
 

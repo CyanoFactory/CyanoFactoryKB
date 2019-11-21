@@ -154,9 +154,11 @@ export class Page {
     readonly target_obj: ElementWrapper<string>;
     readonly exchange_reaction: ElementWrapper<string>;
     readonly maximize: ElementWrapper<boolean>;
+    readonly minimize: ElementWrapper<boolean>;
     readonly fba_sim: ElementWrapper<boolean>;
     readonly mba_sim: ElementWrapper<boolean>;
     readonly sa_sim: ElementWrapper<boolean>;
+    private once: boolean = true;
 
     constructor(where: HTMLElement, app: app.AppManager) {
         this.app = app;
@@ -168,6 +170,7 @@ export class Page {
         this.target_obj = ElementWrapper.byClass<string>("cyano-design-target-objective-select", this.source_element);
         this.exchange_reaction = ElementWrapper.byClass<string>("exchange-reaction-setting", this.source_element);
         this.maximize = ElementWrapper.byClass<boolean>("radio-maximize", this.source_element);
+        this.minimize = ElementWrapper.byClass<boolean>("radio-minimize", this.source_element);
         this.fba_sim = ElementWrapper.byClass<boolean>("radio-fba", this.source_element);
         this.mba_sim = ElementWrapper.byClass<boolean>("radio-mba", this.source_element);
         this.sa_sim = ElementWrapper.byClass<boolean>("radio-sa", this.source_element);
@@ -226,6 +229,56 @@ export class Page {
         $(this.target_obj.element).selectize(obj_options);
         $(this.exchange_reaction.element).selectize();
 
+        // Callback for updating the objective
+        const obj_to_model = (id: string, value: string, update_min_max: boolean = false) => {
+            let obj: mm.Objective = self.app.model.objective.get("id", id);
+            let op: string = "edit";
+            if (obj == null) {
+                op = "add";
+                obj = new mm.Objective();
+                obj.id = id;
+                obj.type = "maximize";
+
+                if (update_min_max) {
+                    obj.type = self.maximize.value ? "maximize" : "minimize";
+                }
+
+                self.app.model.objectives.push(obj);
+            }
+            obj.flux_objectives = [];
+            let flux_obj = new mm.FluxObjective();
+            flux_obj.coefficient = 1.0;
+            flux_obj.reaction = value;
+            obj.flux_objectives.push(flux_obj);
+
+            self.app.history_manager.push({
+                "type": "objective",
+                "op": op,
+                "id": obj.id,
+                "object": {
+                    "id": obj.id,
+                    "type": obj.type,
+                    "flux_objectives": [{
+                        "coefficient": flux_obj.coefficient,
+                        "reaction": flux_obj.reaction
+                    }]
+                }
+            });
+        };
+
+        if (this.once) {
+            this.main_obj.element.selectize.on('change', function () {
+                obj_to_model("obj", this.getValue(), true);
+            });
+            this.design_obj.element.selectize.on('change', function () {
+                obj_to_model("design_obj", this.getValue(), true);
+            });
+            this.target_obj.element.selectize.on('change', function () {
+                obj_to_model("target_obj", this.getValue(), true);
+            });
+            this.once = false;
+        }
+
         const self: Page = this;
 
         let main_obj_selectize: SelectizeType = this.main_obj.element.selectize;
@@ -239,6 +292,25 @@ export class Page {
         });
 
         this.refresh();
+
+        // Fetch objectives from model
+        const obj_from_model = (id: string, target: any, update_min_max: boolean = false) => {
+            let obj: mm.Objective = this.app.model.objective.get("id", id);
+            if (obj != null) {
+                if (obj.flux_objectives.length > 0) {
+                    target.element.selectize.setValue(obj.flux_objectives[0].reaction, true);
+
+                    if (update_min_max) {
+                        this.maximize.value = obj.type == "maximize";
+                        this.minimize.value = !this.maximize.value;
+                    }
+                }
+            }
+        };
+
+        obj_from_model("obj", this.main_obj, true);
+        obj_from_model("design_obj", this.design_obj);
+        obj_from_model("target_obj", this.target_obj);
     }
 
     refresh(reactions: mm.Reaction[] = null) {
