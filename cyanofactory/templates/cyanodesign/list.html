@@ -152,7 +152,8 @@ $(document).ready(function() {
 
         $("#create-bigg").one("click", () => {
             $.ajax({
-                url: "http://bigg.ucsd.edu/api/v2/models"
+                // Initially this linked to bigg directly but they do not provide HTTPS connections -_-
+                url: "{% get_static_prefix %}cyanodesign/bigg.json"
             }).done((result) => {
                 const select = $("#dialog-bigg").find("select");
                 result["results"].sort(function(a,b) {
