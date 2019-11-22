@@ -94,11 +94,11 @@ export class RequestHandler {
         });
     }
 
-    saveas() {
+    saveas(summary: string, new_id: string) {
         let form = $("#dialog-saveas-model").find("form");
-        let data = this.beginRequest($("#dialog-saveas-model").find(".modal-content"));
-        data["saveas_name"] = form.find("#id_saveas_name").val();
-        data["saveas_summary"] = form.find("#id_saveas_summary").val();
+        let data = this.beginRequest();
+        data["saveas_name"] = new_id;
+        data["saveas_summary"] = summary;
         const self: RequestHandler = this;
         $.ajax({
             url: this.app.urls.saveas,
@@ -112,9 +112,6 @@ export class RequestHandler {
             }
             self.endRequest($("#dialog-saveas-model").find(".modal-content"));
         }).fail(function(x) {
-            $("#visual_graph").hide();
-            $("#visual_fba").hide();
-            //DialogHelper.notnotifyError(x.responseText);
             self.endRequest($("#dialog-saveas-model").find(".modal-content"));
         });
     }

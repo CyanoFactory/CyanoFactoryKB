@@ -207,7 +207,7 @@ class SaveModelAsForm(forms.Form):
             ),
             ModalBody(
                 'saveas_name',
-                'saveas_summary',
+                HTML("Currently save as will only clone the model since the last savepoint. Unsaved changes are lost!")
             ),
             ModalFooter(
                 FormActions(

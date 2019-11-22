@@ -33,7 +33,7 @@ Released under the MIT license
 
             var op = command["op"];
             var typ = command["type"];
-            var name = command["name"];
+            var name = command["id"];
             var obj = command["object"];
 
             if (typ == "reaction") {
@@ -88,6 +88,8 @@ Released under the MIT license
 
 {% block content %}
 {% url "cyanodesign:design" pk=model.pk as url %}
+Here you can find a list of all changes to the model. If you want to rollback to an old version you have to use the "History" tab in the WeDesign designer.
+
 {% for revision in revisions %}
 <div class="panel panel-primary">
     <table class="table table-striped table-hover">
@@ -99,9 +101,9 @@ Released under the MIT license
     <tbody>
         {% for field in revision.1 %}
         <tr data-changes='{{ field.changes|safe }}'>
-            <th><a href="{{ url }}?revision={{ field.pk }}">{{ field.date }}</a></th>
-            <td><a href="{{ url }}?revision={{ field.pk }}">{{ field.name }}</a></td>
-            <td><a href="{{ url }}?revision={{ field.pk }}">{{ field.reason }}</a></td>
+            <th><a href="{{ url }}">{{ field.date }}</a></th>
+            <td><a href="{{ url }}">{{ field.name }}</a></td>
+            <td><a href="{{ url }}">{{ field.reason }}</a></td>
             <td>
                 {% if not forloop.last or not forloop.parentloop.last %}
                 <div class="btn-group" role="group">

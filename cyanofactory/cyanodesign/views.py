@@ -120,7 +120,7 @@ def get_revisions(request, pk):
     except ObjectDoesNotExist:
         return BadRequest("Bad Model")
 
-    revision = Revision.objects.filter(model=item).order_by("id").values("id", "reason", "date", "changes")
+    revision = Revision.objects.filter(model=item).order_by("date").values("id", "reason", "date", "changes")
     if len(revision) == 0:
         return BadRequest("Bad Revision")
 
@@ -504,6 +504,8 @@ def save(request, pk):
             return BadRequest("Invalid JSON data")
         idd = group.get("id")
         groups.append(idd)
+        # Delete group, storing not needed
+        del change["group"]
     if len(set(groups)) != 1:
         return BadRequest("Invalid history data")
 
@@ -521,21 +523,6 @@ def save(request, pk):
 
     try:
         apply_commandlist(org, changes)
-        # FIXME
-        #org = Metabolism(StringIO(revision.content))
-        #changes = compress_command_list(changes)
-        #apply_commandlist(org, changes)
-
-        #if objectives:
-        #    org.objectives = []
-        #    for obj in objectives:
-        #        if len(obj["name"]) > 0:
-        #            obj_reac = org.get_reaction(obj["name"])
-        #            if obj_reac is None:
-        #                raise BadRequest("Objective not in model: " + obj["name"])
-
-        #            org.obj = []
-        #            org.obj.append([obj_reac.id, "1" if obj["maximize"] else "-1"])
     except ValueError as e:
         raise BadRequest("Model error: " + str(e))
 
@@ -560,35 +547,34 @@ def save(request, pk):
 
 
 @login_required
+@ajax_required
 @global_permission_required("access_cyanodesign")
 @json_view
 def save_as(request, pk):
+    # TODO: This currently only clones the model and ignores all changes
     if request.method == 'POST':
         form = SaveModelAsForm(request.POST, request.FILES)
 
         if form.is_valid():
             name = form.cleaned_data.get('saveas_name')
-            summary = form.cleaned_data.get('saveas_summary')
 
-            request.POST = request.POST.copy()
-            request.POST["summary"] = summary
-            save(request, pk)
+            try:
+                model = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
+            except ObjectDoesNotExist:
+                return HttpResponseBadRequest("Bad Model")
 
-            model = DesignModel.objects.get(user=UserProfile.get_profile(request.user), pk=pk)
+            all_revs = model.revisions.order_by("date")
 
-            dm = DesignModel.objects.create(
-                user=request.user.profile,
-                name=name,
-                filename=model.filename,
-                content=model.content
-            )
+            model.name = name
+            model.pk = None
+            model.save()
 
-            # Repoint to new model
-            rev = model.get_latest_revision()
-            rev.model = dm
-            rev.save()
+            for rev in all_revs:
+                rev.model = model
+                rev.pk = None
+                rev.save()
 
-            return {'success': True, 'url': reverse("cyanodesign:design", kwargs={"pk":dm.pk})}
+            return {'success': True, 'url': reverse("cyanodesign:design", kwargs={"pk":model.pk})}
         else:
             form_html = render_crispy_form(form, context=request)
             return {'success': False, 'form_html': form_html}

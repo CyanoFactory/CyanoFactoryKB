@@ -1,4 +1,4 @@
-define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites", "./page_compartments", "./page_settings", "./page_simulation", "./page_history", "./dialog_reaction", "./dialog_reaction_bulkadd", "./dialog_reaction_delete", "./dialog_metabolite", "./dialog_save", "./dialog_compartment", "./request_handler", "./history_manager"], function (require, exports, $, reactions, metabolites, compartments, settings, simulation, history, dialog_reaction, dialog_reaction_bulkadd, dialog_reaction_delete, dialog_metabolite, dialog_save, dialog_compartment, request_handler_1, history_manager_1) {
+define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites", "./page_compartments", "./page_settings", "./page_simulation", "./page_history", "./dialog_reaction", "./dialog_reaction_bulkadd", "./dialog_reaction_delete", "./dialog_metabolite", "./dialog_save", "./dialog_saveas", "./dialog_compartment", "./request_handler", "./history_manager"], function (require, exports, $, reactions, metabolites, compartments, settings, simulation, history, dialog_reaction, dialog_reaction_bulkadd, dialog_reaction_delete, dialog_metabolite, dialog_save, dialog_saveas, dialog_compartment, request_handler_1, history_manager_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class AppManager {
@@ -16,6 +16,7 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
             this.dialog_reaction_delete = new dialog_reaction_delete.Dialog(this);
             this.dialog_metabolite = new dialog_metabolite.Dialog(this);
             this.dialog_save = new dialog_save.Dialog(this);
+            this.dialog_saveas = new dialog_saveas.Dialog(this);
             this.dialog_compartment = new dialog_compartment.Dialog(this);
             this.reaction_page = new reactions.Page(document.getElementById("reaction-tab"), this);
             this.metabolite_page = new metabolites.Page(document.getElementById("metabolite-tab"), this);

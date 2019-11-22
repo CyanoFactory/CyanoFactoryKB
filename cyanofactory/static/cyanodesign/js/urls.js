@@ -5,7 +5,7 @@ define(["require", "exports"], function (require, exports) {
     (function (urls) {
         let simulate;
         let save;
-        let save_as;
+        let saveas;
         let design;
         let get_reactions;
         let get_revisions;

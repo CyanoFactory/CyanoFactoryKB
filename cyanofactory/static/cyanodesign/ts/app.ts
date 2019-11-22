@@ -13,6 +13,7 @@ import * as dialog_reaction_bulkadd from "./dialog_reaction_bulkadd"
 import * as dialog_reaction_delete from "./dialog_reaction_delete"
 import * as dialog_metabolite from "./dialog_metabolite"
 import * as dialog_save from "./dialog_save"
+import * as dialog_saveas from "./dialog_saveas"
 import * as dialog_compartment from "./dialog_compartment"
 
 import { RequestHandler } from "./request_handler"
@@ -26,6 +27,7 @@ export class AppManager {
     readonly dialog_reaction_delete: dialog_reaction_delete.Dialog;
     readonly dialog_metabolite: dialog_metabolite.Dialog;
     readonly dialog_save: dialog_save.Dialog;
+    readonly dialog_saveas: dialog_saveas.Dialog;
     readonly dialog_compartment: dialog_compartment.Dialog;
     readonly reaction_page: reactions.Page;
     readonly metabolite_page: metabolites.Page;
@@ -56,6 +58,7 @@ export class AppManager {
         this.dialog_reaction_delete = new dialog_reaction_delete.Dialog(this);
         this.dialog_metabolite = new dialog_metabolite.Dialog(this);
         this.dialog_save = new dialog_save.Dialog(this);
+        this.dialog_saveas = new dialog_saveas.Dialog(this);
         this.dialog_compartment = new dialog_compartment.Dialog(this);
 
         this.reaction_page = new reactions.Page(document.getElementById("reaction-tab")!, this);

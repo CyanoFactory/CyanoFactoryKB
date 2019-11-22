@@ -35,7 +35,6 @@ Released under the MIT license
 
     var app = undefined;
     var startup = undefined;
-    var revision = {% if revision %}{{ revision.pk }}{% else %}undefined{% endif %};
 
     $(function () {
         $($("#filter_row_flux").text()).appendTo($("#cyano-flux-list_wrapper").children()[1]);
@@ -111,44 +110,16 @@ Released under the MIT license
         $("#design-saveas").click(function(event) {
             var txt = "";
 
-            if (revision !== undefined) {
-                txt = "Rollback to revision " + revision;
-            }
-
             $("#id_saveas_summary").val(txt);
             $("#dialog-saveas-model").modal("show");
-        });
-
-        $("#dialog-saveas-model").on("click", ".btn-primary", function(event) {
-            var form = $("#dialog-saveas-model").find("form");
-            var data = beginRequest($("#dialog-saveas-model").find(".modal-content"));
-            data["saveas_name"] = form.find("#id_saveas_name").val();
-            data["saveas_summary"] = form.find("#id_saveas_summary").val();
-            $.ajax({
-                url: "{% url "cyanodesign:save_as" pk=pk %}",
-                type: "POST",
-                data: data
-            }).done(function(x) {
-                if (!(x['success'])) {
-                    form.replaceWith(x['form_html']);
-                } else {
-                    location.replace(x['url'])
-                }
-                endRequest($("#dialog-saveas-model").find(".modal-content"));
-            }).fail(function(x) {
-                $("#visual_graph").hide();
-                $("#visual_fba").hide();
-                notifyError(x.responseText);
-                endRequest($("#dialog-saveas-model").find(".modal-content"));
-            });
         });
 
         let startup_handler = function(callback, metabolic_model_cls, urls) {
             urls.simulate = "{% url "cyanodesign:simulate" pk=pk %}";
             urls.save = "{% url "cyanodesign:save" pk=pk %}";
-            urls.save_as = "{% url "cyanodesign:save_as" pk=pk %}";
+            urls.saveas = "{% url "cyanodesign:save_as" pk=pk %}";
             urls.design = "{% url "cyanodesign:design" pk=pk %}";
-            urls.get_reactions = "{% url "cyanodesign:get_reactions" pk=pk %}{% if revision %}?revision={{ revision.pk }}{% endif %}";
+            urls.get_reactions = "{% url "cyanodesign:get_reactions" pk=pk %}";
             urls.get_revisions = "{% url "cyanodesign:get_revisions" pk=pk %}";
 
             const glpk_worker = new Worker("{% get_static_prefix %}cyanodesign/node_modules/glpk.js/glpk-worker.js");
@@ -158,7 +129,7 @@ Released under the MIT license
 
         let load_model = function(callback) {
             $.ajax({
-                url: "{% url "cyanodesign:get_reactions" pk=pk %}{% if revision %}?revision={{ revision.pk }}{% endif %}",
+                url: "{% url "cyanodesign:get_reactions" pk=pk %}",
                 context: document.body
             }).done(function(x) {
                 let model = new MetabolicModel.Model();
@@ -239,12 +210,6 @@ svg text
 <div class="alert alert-info" role="alert">
         <span class="glyphicon glyphicon-info-sign" aria-hidden="true"></span>
         <span class="sr-only">Info:</span>You are not logged in. Making permanent changes to models or uploading new ones is disabled.</div>
-</div>
-{% endif %}
-
-{% if revision %}
-<div class="alert alert-info" role="alert">
-Viewing old model from {{ revision.date }}. Simulating and saving will be based on this old version of the model.
 </div>
 {% endif %}
 
