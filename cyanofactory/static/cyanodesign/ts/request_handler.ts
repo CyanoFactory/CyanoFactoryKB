@@ -21,24 +21,7 @@ export class RequestHandler {
             waitIndicator.show(show_on);
 
         let result = {
-            "changes": JSON.stringify(this.app.history_manager.current()),
-            "objectives": JSON.stringify([{
-                "id": this.app.settings_page.getObjective(),
-                "maximize": this.app.settings_page.maximizeObjective()
-            }]),
-            "design_objectives": JSON.stringify([{
-                "id": this.app.settings_page.getDesignObjective(),
-                "maximize": true
-            }]),
-            "target_reactions": JSON.stringify([{
-                "id": this.app.settings_page.getTargetObjective(),
-                "maximize": true
-            }]),
-            "type": JSON.stringify(this.app.settings_page.getSimulationType()),
-            //"display": JSON.stringify(design_objective_visible_combobox[0].selectize.getValue().split("\x00")),
-            //"auto_flux": JSON.stringify($("#auto_flux").prop("checked"))
-            "display": JSON.stringify([]),
-            "auto_flux": JSON.stringify(true)
+            "changes": JSON.stringify(this.app.history_manager.current())
         };
 
         if (this.revision != -1) {

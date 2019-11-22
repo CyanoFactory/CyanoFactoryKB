@@ -223,6 +223,7 @@ define(["require", "exports", "./metabolic_model", "jquery"], function (require,
             this.app.settings_page.init();
             this.app.compartment_page.init();
             this.app.history_page.refresh();
+            this.app.simulation_page.solve();
         }
     }
     exports.HistoryManager = HistoryManager;

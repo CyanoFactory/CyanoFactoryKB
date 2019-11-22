@@ -50,7 +50,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
         </div>
     </div>
 </div>
-
+<!--
 <div class="panel panel-default fba-settings-panel">
     <div class="panel-heading">
         <h3 class="panel-title">FBA settings</h3>
@@ -82,7 +82,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
         </div>
     </div>
 </div>
-
+-->
 <div class="panel panel-default sa-settings-panel">
     <div class="panel-heading">
         <h3 class="panel-title">Sensitivity/RA settings</h3>
@@ -94,7 +94,7 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                 <label class="control-label" for="cyano-design-design-objective-select">Design objective</label>
                 <select class="cyano-design-design-objective-select" placeholder="Select a design objective"></select>
             </div>
-            <div class="form-group" class="sa-settings-target-function-panel">
+            <div class="form-group sa-settings-target-function-panel">
                 <label class="control-label" for="cyano-design-target-objective-select">Target reaction</label>
                 <select class="cyano-design-target-objective-select" placeholder="Select a target reaction"></select>
             </div>
@@ -267,6 +267,9 @@ define(["require", "exports", "./metabolic_model", "./dialog_helper", "jquery", 
                             this.minimize.value = !this.maximize.value;
                         }
                     }
+                }
+                else {
+                    target.element.selectize.clear(true);
                 }
             };
             obj_from_model("obj", this.main_obj, true);

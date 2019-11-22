@@ -277,5 +277,7 @@ export class HistoryManager {
         this.app.compartment_page.init();
 
         this.app.history_page.refresh();
+
+        this.app.simulation_page.solve();
     }
 }
