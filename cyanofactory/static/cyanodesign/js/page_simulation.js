@@ -601,24 +601,24 @@ define(["require", "exports", "jquery", "./design_utils", "datatables.net"], fun
             return csv;
         }
         createGraph(flux) {
-            let graph = 'strict digraph "" {\n' +
-                'graph [overlap=False,\n' +
-                'rankdir=LR,\n' +
-                'splines=True\n' +
-                '];\n' +
-                'node [colorscheme=pastel19,\n' +
-                'label="\\N",' +
-                'style=filled\n' +
-                '];\n';
+            // the ugly indent is intentional because template strings preserve leading whitespace
+            let graph = `strict digraph {
+graph [overlap=False, rankdir=LR, splines=True];
+node [colorscheme=pastel19, label="\\N", style=filled];
+`;
             const reac_offset = this.app.model.metabolites.length;
             // Create sparse array
             let edges = [];
             // A_ext -> A
             let i = 0;
             for (const met of this.app.model.metabolites) {
-                graph += "" + i + "[color=" + ((i % 10) + 1) + ",\n" +
-                    'label=' + met.name + ',\n' +
-                    'shape=oval];\n';
+                const color = (i % 10) + 1;
+                graph += `${i} [
+    color=${color},
+    label="${met.name}",
+    shape=oval
+];
+`;
                 ++i;
             }
             // Pen scaling factor calculation
@@ -632,28 +632,34 @@ define(["require", "exports", "jquery", "./design_utils", "datatables.net"], fun
                 for (const p of reac.products) {
                     for (const s of reac.substrates) {
                         let f = flux[reac.id];
+                        const flux_norm = Math.abs(f) * max_flux;
                         edges.push({
                             label: reac.name,
                             flux: f.toFixed(2),
                             color: f < 0.0 ? "red" : f > 0.0 ? "green" : "black",
-                            penwidth: f == 0.0 ? 1 : f * max_flux,
+                            penwidth: (flux_norm - 1.0 < 1.0) ? 1 : flux_norm,
                             left: this.app.model.metabolite.index("id", s.id),
                             right: this.app.model.metabolite.index("id", p.id),
                             reverse: reac.reversible,
-                            obj: reac.id == obj
+                            style: reac.id == obj ? "dashed" : "solid"
                         });
                     }
                 }
             }
             i = reac_offset;
             for (const edge of edges) {
-                graph += edge.left + " -> " + edge.right + " [color=" + edge.color + ",\n" +
-                    'label="' + edge.label + ' (' + edge.flux + ')",\n' +
-                    'penwidth=' + edge.penwidth + (edge.obj ? ',style=dashed' : '') + '];\n';
+                graph += `${edge.left} -> ${edge.right} [
+    color=${edge.color},
+    label="${edge.label} (${edge.flux})",
+    penwidth=${edge.penwidth},
+    style=${edge.style},
+];
+`;
                 if (edge.reverse) {
-                    graph += edge.right + " -> " + edge.left + " [\n" +
-                        'label="' + edge.label + '",\n' +
-                        '];\n';
+                    graph += `${edge.left} -> ${edge.right} [
+    label="${edge.label}",
+]
+`;
                 }
                 ++i;
             }
