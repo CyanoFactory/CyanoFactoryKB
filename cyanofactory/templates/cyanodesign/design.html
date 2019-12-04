@@ -22,7 +22,7 @@ Released under the MIT license
 <script src="{% get_static_prefix %}cyanodesign/js/d3.v3.js"></script>
 <link href="{% get_static_prefix %}cyanodesign/css/c3.css" rel="stylesheet" type="text/css">
 <script src="{% get_static_prefix %}cyanodesign/js/c3.js"></script>
-<script async src="{% get_static_prefix %}cyanodesign/js/viz.js"></script>
+<script src="{% get_static_prefix %}cyanodesign/js/viz.js"></script>
 <script type="text/javascript" src="{% get_static_prefix %}boehringer/js/svg-pan-zoom.js"></script>
 <script src="{% get_static_prefix %}cyanodesign/node_modules/requirejs/require.js"
         data-main="{% get_static_prefix %}cyanodesign/js/main"></script>
@@ -123,8 +123,9 @@ Released under the MIT license
             urls.get_revisions = "{% url "cyanodesign:get_revisions" pk=pk %}";
 
             const glpk_worker = new Worker("{% get_static_prefix %}cyanodesign/node_modules/glpk.js/glpk-worker.js");
+            const viz = new Viz({ workerURL: "{% get_static_prefix %}cyanodesign/js/viz.lite.render.js" });
 
-            callback(metabolic_model_cls, urls, glpk_worker);
+            callback(metabolic_model_cls, urls, glpk_worker, viz);
         };
 
         let load_model = function(callback) {

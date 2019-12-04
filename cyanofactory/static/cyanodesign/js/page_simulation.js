@@ -232,15 +232,19 @@ define(["require", "exports", "jquery", "./design_utils", "datatables.net"], fun
             this.last_sim_type = symtype;
             this.last_sim_objective = this.app.model.reaction.get("id", this.app.settings_page.getObjective());
             if (symtype == "fba") {
-                let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
+                this.app.viz.renderSVGElement(this.createGraph(this.app.reaction_page.flux), {
+                    engine: "dot"
+                }).then((graph) => {
+                    this.visual_fba_element.innerHTML = "";
+                    this.visual_fba_element.appendChild(graph);
+                    $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
+                    let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
+                    svgPan.zoom(1);
+                });
                 $(this.visual_graph_element).hide();
                 $(this.visual_fba_element).show();
                 $(this.export_button_graph).show();
                 $(this.export_button_chart).hide();
-                this.visual_fba_element.innerHTML = graph;
-                $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
-                let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
-                svgPan.zoom(1);
                 this.datatable_flux.clear();
                 for (const reac of this.app.model.reactions) {
                     this.datatable_flux.row.add([reac.get_name_or_id(), this.app.reaction_page.flux[reac.id]]);
@@ -332,13 +336,18 @@ define(["require", "exports", "jquery", "./design_utils", "datatables.net"], fun
                     fn("The solution is " + solutions[evt.data.result.status - 1] + ". Flux of objective is " +
                         evt.data.result.z.toFixed(4));
                     // create FBA graph
-                    let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
+                    this.app.viz.renderSVGElement(this.createGraph(this.app.reaction_page.flux), {
+                        engine: "dot"
+                    }).then((graph) => {
+                        this.visual_fba_element.innerHTML = "";
+                        this.visual_fba_element.appendChild(graph);
+                        $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
+                        let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
+                        svgPan.zoom(1);
+                    });
                     $(this.visual_fba_element).show();
                     $(this.export_button_graph).show();
                     this.visual_fba_element.innerHTML = graph;
-                    $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
-                    let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
-                    svgPan.zoom(1);
                     this.datatable_flux.clear();
                     for (const reac of this.app.model.reactions) {
                         this.datatable_flux.row.add([reac.get_name_or_id(), this.app.reaction_page.flux[reac.id]]);
@@ -455,12 +464,16 @@ define(["require", "exports", "jquery", "./design_utils", "datatables.net"], fun
                     fn("The solution is " + solutions[evt.data.result.status - 1] + ". Flux of objective is " +
                         evt.data.result.z.toFixed(4));
                     // create FBA graph
-                    let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
+                    this.app.viz.renderSVGElement(this.createGraph(this.app.reaction_page.flux), {
+                        engine: "dot"
+                    }).then((graph) => {
+                        this.visual_fba_element.innerHTML = "";
+                        this.visual_fba_element.appendChild(graph);
+                        $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
+                        let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
+                        svgPan.zoom(1);
+                    });
                     $(this.visual_fba_element).show();
-                    this.visual_fba_element.innerHTML = graph;
-                    $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
-                    let svgPan = svgPanZoom('.visual-fba > svg', { minZoom: 0.1, fit: false });
-                    svgPan.zoom(1);
                     this.datatable_flux.clear();
                     for (const reac of this.app.model.reactions) {
                         this.datatable_flux.row.add([reac.get_name_or_id(), this.app.reaction_page.flux[reac.id]]);
@@ -612,7 +625,7 @@ node [colorscheme=pastel19, label="\\N", style=filled];
             // A_ext -> A
             let i = 0;
             for (const met of this.app.model.metabolites) {
-                const color = (i % 10) + 1;
+                const color = (i % 9) + 1;
                 graph += `${i} [
     color=${color},
     label="${met.name}",

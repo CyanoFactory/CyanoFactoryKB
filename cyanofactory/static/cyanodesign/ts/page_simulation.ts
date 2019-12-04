@@ -287,17 +287,21 @@ export class Page {
         this.last_sim_objective = this.app.model.reaction.get("id", this.app.settings_page.getObjective());
 
         if (symtype == "fba") {
-            let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
+            this.app.viz.renderSVGElement(this.createGraph(this.app.reaction_page.flux), {
+                engine: "dot"
+            }).then((graph: any) => {
+                this.visual_fba_element.innerHTML = "";
+                this.visual_fba_element.appendChild(graph);
+
+                $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
+                let svgPan: any = svgPanZoom('.visual-fba > svg', {minZoom: 0.1, fit: false});
+                svgPan.zoom(1);
+            });
 
             $(this.visual_graph_element).hide();
             $(this.visual_fba_element).show();
             $(this.export_button_graph).show();
             $(this.export_button_chart).hide();
-            this.visual_fba_element.innerHTML = graph;
-
-            $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
-            let svgPan: any = svgPanZoom('.visual-fba > svg', {minZoom: 0.1, fit: false});
-            svgPan.zoom(1);
 
             this.datatable_flux.clear();
 
@@ -414,14 +418,20 @@ export class Page {
                     evt.data.result.z.toFixed(4));
 
                 // create FBA graph
-                let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
+                this.app.viz.renderSVGElement(this.createGraph(this.app.reaction_page.flux), {
+                    engine: "dot"
+                }).then((graph: any) => {
+                    this.visual_fba_element.innerHTML = "";
+                    this.visual_fba_element.appendChild(graph);
+
+                    $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
+                    let svgPan: any = svgPanZoom('.visual-fba > svg', {minZoom: 0.1, fit: false});
+                    svgPan.zoom(1);
+                });
+
                 $(this.visual_fba_element).show();
                 $(this.export_button_graph).show();
                 this.visual_fba_element.innerHTML = graph;
-
-                $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
-                let svgPan: any = svgPanZoom('.visual-fba > svg', {minZoom: 0.1, fit: false});
-                svgPan.zoom(1);
 
                 this.datatable_flux.clear();
 
@@ -572,13 +582,18 @@ export class Page {
                     evt.data.result.z.toFixed(4));
 
                 // create FBA graph
-                let graph = Viz(this.createGraph(this.app.reaction_page.flux), "svg", "dot");
-                $(this.visual_fba_element).show();
-                this.visual_fba_element.innerHTML = graph;
+                this.app.viz.renderSVGElement(this.createGraph(this.app.reaction_page.flux), {
+                    engine: "dot"
+                }).then((graph: any) => {
+                    this.visual_fba_element.innerHTML = "";
+                    this.visual_fba_element.appendChild(graph);
 
-                $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
-                let svgPan: any = svgPanZoom('.visual-fba > svg', {minZoom: 0.1, fit: false});
-                svgPan.zoom(1);
+                    $(this.visual_fba_element).attr("width", "100%").attr("height", "400px");
+                    let svgPan: any = svgPanZoom('.visual-fba > svg', {minZoom: 0.1, fit: false});
+                    svgPan.zoom(1);
+                });
+
+                $(this.visual_fba_element).show();
 
                 this.datatable_flux.clear();
 
@@ -772,7 +787,7 @@ node [colorscheme=pastel19, label="\\N", style=filled];
         // A_ext -> A
         let i = 0;
         for (const met of this.app.model.metabolites) {
-            const color = (i % 10) + 1;
+            const color = (i % 9) + 1;
             graph += `${i} [
     color=${color},
     label="${met.name}",

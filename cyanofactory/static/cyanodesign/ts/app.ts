@@ -39,11 +39,12 @@ export class AppManager {
     readonly urls: any;
     readonly request_handler: RequestHandler;
     readonly glpk_worker: Worker;
+    readonly viz: any;
     history_manager: HistoryManager = null;
     model: mm.Model;
     old_model: string;
 
-    constructor(mm_cls: any, model_json: any, urls: any, glpk_worker: Worker) {
+    constructor(mm_cls: any, model_json: any, urls: any, glpk_worker: Worker, viz: any) {
         this.model = new mm_cls.Model();
         this.model.fromJson(model_json);
         this.old_model = model_json;
@@ -51,6 +52,7 @@ export class AppManager {
         this.urls = urls;
         this.request_handler = new RequestHandler(this, -1);
         this.glpk_worker = glpk_worker;
+        this.viz = viz;
         this.history_manager = new HistoryManager(this);
 
         this.dialog_reaction = new dialog_reaction.Dialog(this);
@@ -71,12 +73,12 @@ export class AppManager {
     }
 }
 
-export function run(mm_cls: any, urls: any, glpk_worker: Worker) {
+export function run(mm_cls: any, urls: any, glpk_worker: Worker, viz: any) {
     $.ajax({
         url: urls.get_reactions,
         context: document.body
     }).done(function(x: any) {
-        app = new AppManager(mm_cls, x, urls, glpk_worker);
+        app = new AppManager(mm_cls, x, urls, glpk_worker, viz);
 
         $.ajax({
             url: urls.get_revisions,

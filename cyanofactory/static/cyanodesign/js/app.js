@@ -2,7 +2,7 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     class AppManager {
-        constructor(mm_cls, model_json, urls, glpk_worker) {
+        constructor(mm_cls, model_json, urls, glpk_worker, viz) {
             this.history_manager = null;
             this.model = new mm_cls.Model();
             this.model.fromJson(model_json);
@@ -10,6 +10,7 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
             this.urls = urls;
             this.request_handler = new request_handler_1.RequestHandler(this, -1);
             this.glpk_worker = glpk_worker;
+            this.viz = viz;
             this.history_manager = new history_manager_1.HistoryManager(this);
             this.dialog_reaction = new dialog_reaction.Dialog(this);
             this.dialog_reaction_bulk = new dialog_reaction_bulkadd.Dialog(this);
@@ -28,12 +29,12 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
         }
     }
     exports.AppManager = AppManager;
-    function run(mm_cls, urls, glpk_worker) {
+    function run(mm_cls, urls, glpk_worker, viz) {
         $.ajax({
             url: urls.get_reactions,
             context: document.body
         }).done(function (x) {
-            app = new AppManager(mm_cls, x, urls, glpk_worker);
+            app = new AppManager(mm_cls, x, urls, glpk_worker, viz);
             $.ajax({
                 url: urls.get_revisions,
             }).done((x) => app.history_page.init(x));
