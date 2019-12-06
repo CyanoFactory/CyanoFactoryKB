@@ -38,6 +38,11 @@ template.innerHTML = `
     <li><a class="export-csv" href="#">As CSV</a></li>
     </ul>
 </div>
+<div class="export-button-flux btn-group">
+    <button type="button" class="btn btn-primary export-flux-escher" aria-expanded="false">
+    Export Flux (for Escher)</span>
+    </button>
+</div>
 
 <div class="simulation-result">
 </div>
@@ -92,6 +97,7 @@ export class Page {
     readonly table_element_flux: HTMLElement;
     readonly export_button_graph: HTMLElement;
     readonly export_button_chart: HTMLElement;
+    readonly export_button_flux: HTMLElement;
 
     last_sim_type: string = "";
     last_sim_flux: number = 0;
@@ -113,6 +119,7 @@ export class Page {
         this.visual_fba_element = <HTMLElement>where.getElementsByClassName("visual-fba")[0]!;
         this.export_button_graph = <HTMLElement>where.getElementsByClassName("export-button-graph")[0]!;
         this.export_button_chart = <HTMLElement>where.getElementsByClassName("export-button-chart")[0]!;
+        this.export_button_flux = <HTMLElement>where.getElementsByClassName("export-button-flux")[0]!;
         
         this.app = app;
 
@@ -176,12 +183,36 @@ export class Page {
             () => DesignUtils.downloadPNG(this.visual_graph_element.children[0], "chart.png"));
         $(this.export_button_chart).find(".export-csv").click(
             () => DesignUtils.downloadCSV(this.createCsv(), "chart.csv"));
+        $(this.export_button_flux).find(".export-flux-escher").click(() => {
+                if (this.app.settings_page.getObjective() == "") {
+                    return;
+                }
+
+                let out_flux = {};
+
+                for (let k in this.app.reaction_page.flux) {
+                    if (!this.app.reaction_page.flux.hasOwnProperty(k)) {
+                        continue;
+                    }
+
+                    let kk = k;
+
+                    if (k.startsWith("R_")) {
+                        kk = k.substr(2);
+                    }
+
+                    out_flux[kk] = this.app.reaction_page.flux[k];
+                }
+
+                DesignUtils.downloadJson(JSON.stringify(out_flux), "flux.json");
+            }
+        );
 
         $(this.export_button_graph).hide();
         $(this.export_button_chart).hide();
 
         // Filter
-        where.children[7].children[1].appendChild(template_filter.content.cloneNode(true));
+        where.children[8].children[1].appendChild(template_filter.content.cloneNode(true));
 
         $(where).find(".filter-flux-min").change(function() { self.datatable_flux.draw(); });
         $(where).find(".filter-flux-max").change(function() { self.datatable_flux.draw(); });

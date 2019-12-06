@@ -15,6 +15,11 @@ export namespace DesignUtils {
         downloadURI(d, filename);
     }
 
+    export function downloadJson(json: string, filename: string): void {
+        const d: string = "data:application/json;base64," + window.btoa(json);
+        downloadURI(d, filename);
+    }
+
     export function downloadURI(uri: string, name: string) {
         const link = document.createElement("a");
         link.download = name;

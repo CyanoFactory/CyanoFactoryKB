@@ -19,6 +19,11 @@ define(["require", "exports"], function (require, exports) {
             downloadURI(d, filename);
         }
         DesignUtils.downloadCSV = downloadCSV;
+        function downloadJson(json, filename) {
+            const d = "data:application/json;base64," + window.btoa(json);
+            downloadURI(d, filename);
+        }
+        DesignUtils.downloadJson = downloadJson;
         function downloadURI(uri, name) {
             const link = document.createElement("a");
             link.download = name;

@@ -107,6 +107,8 @@ export function run(mm_cls: any, urls: any, glpk_worker: Worker, viz: any) {
             app.dialog_save.show();
         });
 
+        app.simulation_page.solve();
+
         app.request_handler.endRequest($("#content"));
     });
 }

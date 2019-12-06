@@ -56,6 +56,7 @@ define(["require", "exports", "jquery", "./page_reactions", "./page_metabolites"
             $("#design-save").on("click", function () {
                 app.dialog_save.show();
             });
+            app.simulation_page.solve();
             app.request_handler.endRequest($("#content"));
         });
     }
